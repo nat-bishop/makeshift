@@ -41,6 +41,8 @@ class RuleResolver:
         self, tags_a: list[Tag], tags_b: list[Tag]
     ) -> list[InteractionRule]:
         matched: dict[str, InteractionRule] = {}
+        set_a = set(tags_a)
+        set_b = set(tags_b)
 
         # Pair lookup
         for ta in tags_a:
@@ -48,17 +50,24 @@ class RuleResolver:
                 for tb in tags_b:
                     if tb in self._pair_index[ta]:
                         for rule in self._pair_index[ta][tb]:
-                            # Verify all required tags are present
-                            if rule.tags_required_a <= set(tags_a) and rule.tags_required_b <= set(tags_b):
-                                matched[rule.rule_id] = rule
-                            elif rule.bidirectional and rule.tags_required_a <= set(tags_b) and rule.tags_required_b <= set(tags_a):
+                            fwd = (
+                                rule.tags_required_a <= set_a
+                                and rule.tags_required_b <= set_b
+                            )
+                            rev = (
+                                rule.bidirectional
+                                and rule.tags_required_a <= set_b
+                                and rule.tags_required_b <= set_a
+                            )
+                            if fwd or rev:
                                 matched[rule.rule_id] = rule
 
         # Wildcard rules
         for rule in self._wildcard_rules:
-            if rule.tags_required_a <= set(tags_a):
-                matched[rule.rule_id] = rule
-            elif rule.bidirectional and rule.tags_required_a <= set(tags_b):
+            if rule.tags_required_a <= set_a or (
+                rule.bidirectional
+                and rule.tags_required_a <= set_b
+            ):
                 matched[rule.rule_id] = rule
 
         # Sort by priority descending

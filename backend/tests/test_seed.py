@@ -4,7 +4,6 @@ from app.models.tags import (
     OBJECT_TAG_BUDGET,
     TAG_CONTRADICTIONS,
     TAG_POWER_COSTS,
-    Tag,
 )
 from app.seed.objects import SEED_OBJECTS
 
@@ -45,22 +44,22 @@ def test_seed_power_costs_match_plan():
     """Verify specific seed object costs match the plan."""
     by_name = {obj.name: obj for obj in SEED_OBJECTS}
 
-    # Costs computed from TAG_POWER_COSTS (plan table has minor discrepancies)
-    assert by_name["Wooden Plank"].power_cost == 6   # SOLID(1)+RIGID(1)+FLAMMABLE(1)+BREAKABLE(1)+CLIMBABLE(2)
-    assert by_name["Rope"].power_cost == 6            # SOLID(1)+FLEXIBLE(1)+FLAMMABLE(1)+CLIMBABLE(2)+LIGHT(1)
-    assert by_name["Boulder"].power_cost == 5         # SOLID(1)+RIGID(1)+HEAVY(2)+BREAKABLE(1)
-    assert by_name["Torch"].power_cost == 10          # SOLID(1)+RIGID(1)+HEAT_SOURCE(3)+HOT(2)+GLOWING(2)+LIGHT(1)
-    assert by_name["Bucket of Water"].power_cost == 3 # LIQUID(1)+HEAVY(2)
-    assert by_name["Trampoline"].power_cost == 5      # SOLID(1)+FLEXIBLE(1)+BOUNCY(2)+BREAKABLE(1)
-    assert by_name["Ladder"].power_cost == 6          # SOLID(1)+RIGID(1)+CLIMBABLE(2)+BREAKABLE(1)+FLAMMABLE(1)
-    assert by_name["Shield"].power_cost == 8          # SOLID(1)+RIGID(1)+HEAVY(2)+REFLECTIVE(2)+WEARABLE(2)
-    assert by_name["Sword"].power_cost == 6           # SOLID(1)+RIGID(1)+SHARP(2)+TOOL(2)
-    assert by_name["Ice Block"].power_cost == 7       # SOLID(1)+RIGID(1)+FROZEN(2)+COLD(1)+BREAKABLE(1)+SLIPPERY(1)
-    assert by_name["Fan"].power_cost == 8             # SOLID(1)+RIGID(1)+WIND_SOURCE(3)+LIGHT(1)+TOOL(2)
-    assert by_name["Balloon"].power_cost == 6         # GAS(1)+LIGHT(1)+FLOATING(2)+BREAKABLE(1)+FLEXIBLE(1)
-    assert by_name["Metal Plate"].power_cost == 9     # SOLID(1)+RIGID(1)+HEAVY(2)+CONDUCTING(2)+MAGNETIC(3)
-    assert by_name["TNT"].power_cost == 9             # SOLID(1)+RIGID(1)+EXPLOSIVE(5)+FLAMMABLE(1)+BREAKABLE(1)
-    assert by_name["Umbrella"].power_cost == 8        # SOLID(1)+FLEXIBLE(1)+WEARABLE(2)+WIND_SOURCE(3)+LIGHT(1)
+    # Costs computed from TAG_POWER_COSTS
+    assert by_name["Wooden Plank"].power_cost == 6
+    assert by_name["Rope"].power_cost == 6
+    assert by_name["Boulder"].power_cost == 5
+    assert by_name["Torch"].power_cost == 10
+    assert by_name["Bucket of Water"].power_cost == 3
+    assert by_name["Trampoline"].power_cost == 5
+    assert by_name["Ladder"].power_cost == 6
+    assert by_name["Shield"].power_cost == 8
+    assert by_name["Sword"].power_cost == 6
+    assert by_name["Ice Block"].power_cost == 7
+    assert by_name["Fan"].power_cost == 8
+    assert by_name["Balloon"].power_cost == 6
+    assert by_name["Metal Plate"].power_cost == 9
+    assert by_name["TNT"].power_cost == 9
+    assert by_name["Umbrella"].power_cost == 8
 
 
 def test_seed_durability_values():

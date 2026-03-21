@@ -1,31 +1,47 @@
 """Tests for rule engine: resolver indexing, matching, priority sorting."""
 
-from tests.rule_resolver import RuleResolver
 from app.engine.rules_data import ALL_RULES
-from app.models.effects import Effect, EffectType
+from app.models.effects import Effect, EffectTarget, EffectType
 from app.models.rules import InteractionRule
 from app.models.tags import Tag
 
+from tests.rule_resolver import RuleResolver
 
-def _make_rule(**overrides) -> InteractionRule:
-    defaults = dict(
-        rule_id="test_rule",
-        name="Test Rule",
-        tags_required_a={Tag.HEAT_SOURCE},
-        tags_required_b={Tag.FLAMMABLE},
-        priority=10,
-        bidirectional=True,
-        cascade_eligible=False,
-        effects=[
-            Effect(
-                effect_type=EffectType.IGNITE,
-                target="b",
-                message="Test effect",
-            )
-        ],
+_DEFAULT_EFFECTS = [
+    Effect(
+        effect_type=EffectType.IGNITE,
+        target=EffectTarget.B,
+        message="Test effect",
     )
-    defaults.update(overrides)
-    return InteractionRule(**defaults)
+]
+
+
+def _make_rule(
+    rule_id: str = "test_rule",
+    name: str = "Test Rule",
+    tags_required_a: set[Tag] | None = None,
+    tags_required_b: set[Tag] | None = None,
+    priority: int = 10,
+    bidirectional: bool = True,
+    cascade_eligible: bool = False,
+    effects: list[Effect] | None = None,
+) -> InteractionRule:
+    return InteractionRule(
+        rule_id=rule_id,
+        name=name,
+        tags_required_a=(
+            tags_required_a if tags_required_a is not None
+            else {Tag.HEAT_SOURCE}
+        ),
+        tags_required_b=(
+            tags_required_b if tags_required_b is not None
+            else {Tag.FLAMMABLE}
+        ),
+        priority=priority,
+        bidirectional=bidirectional,
+        cascade_eligible=cascade_eligible,
+        effects=effects if effects is not None else _DEFAULT_EFFECTS,
+    )
 
 
 class TestRuleResolver:
