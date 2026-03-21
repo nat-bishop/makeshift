@@ -2,16 +2,21 @@ from __future__ import annotations
 
 import asyncio
 import base64
+from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, FastAPI, HTTPException, Request
 from pydantic import BaseModel
 
 from app.config import settings
 from app.creator.agent import create_object
-from app.images.pipeline import full_pipeline, SIZE_MAP
+from app.images.pipeline import SIZE_MAP
+from app.models.blueprint import VisualDescriptor
+from app.models.tags import Tag
 from app.sessions.manager import SessionManager
 
 router = APIRouter(prefix="/api/sessions/{session_id}/objects", tags=["objects"])
+
+_background_tasks: set[asyncio.Task[Any]] = set()
 
 
 class CreateObjectRequest(BaseModel):
@@ -59,15 +64,21 @@ async def create_object_endpoint(
 
     # Schedule async sprite generation (will deliver via WebSocket)
     rembg_session = request.app.state.rembg_session
-    asyncio.create_task(
+    task = asyncio.create_task(
         _generate_and_deliver_sprite(
             request.app, session_id, blueprint.id,
             blueprint.visual_descriptor, blueprint.tags, rembg_session,
         )
     )
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
 
     # Track image cost async (~$0.04 per call)
-    asyncio.create_task(manager.track_cost(session_id, 0.04))
+    cost_task = asyncio.create_task(
+        manager.track_cost(session_id, 0.04)
+    )
+    _background_tasks.add(cost_task)
+    cost_task.add_done_callback(_background_tasks.discard)
 
     return {
         "blueprint": blueprint.model_dump(mode="json"),
@@ -77,8 +88,12 @@ async def create_object_endpoint(
 
 
 async def _generate_and_deliver_sprite(
-    app, session_id: str, object_id: str,
-    visual_descriptor, tags, rembg_session,
+    app: FastAPI,
+    session_id: str,
+    object_id: str,
+    visual_descriptor: VisualDescriptor,
+    tags: list[Tag],
+    rembg_session: object,
 ) -> None:
     """Background task: generate sprite and push via WebSocket."""
     from app.images.pipeline import generate_sprite

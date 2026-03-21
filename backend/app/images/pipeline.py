@@ -41,7 +41,11 @@ TAG_COLOR_MAP: dict[Tag, str] = {
 
 def _descriptor_hash(vd: VisualDescriptor) -> str:
     """Stable hash of a VisualDescriptor for cache keying."""
-    data = f"{vd.base_form}|{vd.material}|{vd.color_primary}|{vd.color_secondary}|{','.join(sorted(vd.visual_effects))}|{vd.size_category}"
+    effects = ",".join(sorted(vd.visual_effects))
+    data = (
+        f"{vd.base_form}|{vd.material}|{vd.color_primary}"
+        f"|{vd.color_secondary}|{effects}|{vd.size_category}"
+    )
     return hashlib.sha256(data.encode()).hexdigest()[:16]
 
 
@@ -75,7 +79,11 @@ def generate_placeholder(
 
 def build_prompt(visual_descriptor: VisualDescriptor) -> str:
     """Build a Flux image generation prompt from a VisualDescriptor."""
-    effects_str = ", ".join(visual_descriptor.visual_effects) if visual_descriptor.visual_effects else ""
+    effects_str = (
+        ", ".join(visual_descriptor.visual_effects)
+        if visual_descriptor.visual_effects
+        else ""
+    )
     parts = [
         "2D game sprite, side view",
         f"{visual_descriptor.size_category} {visual_descriptor.base_form}",
@@ -124,7 +132,6 @@ async def generate_sprite(
         raw_bytes = await generate_image(prompt)
 
         # Remove background with rembg
-        input_img = Image.open(io.BytesIO(raw_bytes)).convert("RGBA")
         output_bytes = rembg_remove(
             data=raw_bytes,
             session=rembg_session,

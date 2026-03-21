@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-import json
 import uuid
-from datetime import datetime, timezone
+from collections.abc import Callable, Sequence
+from datetime import UTC, datetime
+from typing import Any
 
 import aiosqlite
 
@@ -24,10 +25,11 @@ class SessionManager:
     async def create_session(self) -> Session:
         """Create a new session with default state."""
         session_id = str(uuid.uuid4())
-        created_at = datetime.now(timezone.utc).isoformat()
+        created_at = datetime.now(UTC).isoformat()
 
         await self._db.execute(
-            "INSERT INTO sessions (id, created_at, budget_used, level_progress) VALUES (?, ?, 0.0, 0)",
+            "INSERT INTO sessions (id, created_at, budget_used, level_progress)"
+            " VALUES (?, ?, 0.0, 0)",
             (session_id, created_at),
         )
 
@@ -142,7 +144,13 @@ class SessionManager:
         )
         await self._db.commit()
 
-    async def _replace_rows(self, table: str, session_id: str, rows, to_tuple_fn) -> None:
+    async def _replace_rows(
+        self,
+        table: str,
+        session_id: str,
+        rows: Sequence[Any],
+        to_tuple_fn: Callable[[str, Any], tuple[Any, ...]],
+    ) -> None:
         """DELETE all rows for a session in *table*, then INSERT new ones."""
         await self._db.execute(
             f"DELETE FROM {table} WHERE session_id = ?", (session_id,)
@@ -171,7 +179,10 @@ class SessionManager:
 
         await self._replace_rows(
             "objects", session_id, objects,
-            lambda sid, obj: (sid, obj.object_id, obj.blueprint.model_dump_json(), obj.x, obj.y, obj.durability),
+            lambda sid, obj: (
+                sid, obj.object_id, obj.blueprint.model_dump_json(),
+                obj.x, obj.y, obj.durability,
+            ),
         )
         await self._replace_rows(
             "inventory", session_id, inventory,
