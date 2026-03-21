@@ -1,0 +1,18 @@
+[gd_scene load_steps=6 format=3 uid="uid://game_scene"]
+
+[ext_resource type="Script" path="res://scenes/game/game.gd" id="1_game"]
+[ext_resource type="PackedScene" uid="uid://world_scene" path="res://scenes/world/world.tscn" id="2_world"]
+[ext_resource type="PackedScene" uid="uid://hud_scene" path="res://scenes/hud/hud.tscn" id="3_hud"]
+[ext_resource type="PackedScene" uid="uid://player_scene" path="res://scenes/player/player.tscn" id="4_player"]
+[ext_resource type="PackedScene" uid="uid://feedback_scene" path="res://scenes/hud/interaction_feedback.tscn" id="5_feedback"]
+
+[node name="Game" type="Node2D"]
+script = ExtResource("1_game")
+
+[node name="World" parent="." instance=ExtResource("2_world")]
+
+[node name="Player" parent="." instance=ExtResource("4_player")]
+
+[node name="InteractionFeedback" parent="." instance=ExtResource("5_feedback")]
+
+[node name="HUD" parent="." instance=ExtResource("3_hud")]

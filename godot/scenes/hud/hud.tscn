@@ -1,0 +1,55 @@
+[gd_scene load_steps=5 format=3 uid="uid://hud_scene"]
+
+[ext_resource type="Script" path="res://scenes/hud/hud.gd" id="1_hud"]
+[ext_resource type="PackedScene" uid="uid://hotbar_scene" path="res://scenes/hud/hotbar.tscn" id="2_hotbar"]
+[ext_resource type="PackedScene" uid="uid://tooltip_scene" path="res://scenes/hud/item_tooltip.tscn" id="3_tooltip"]
+[ext_resource type="PackedScene" uid="uid://creation_panel" path="res://scenes/hud/object_creation_panel.tscn" id="4_panel"]
+
+[node name="HUD" type="CanvasLayer"]
+layer = 10
+script = ExtResource("1_hud")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="ObjectiveLabel" type="Label" parent="MarginContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 0
+text = ""
+horizontal_alignment = 0
+
+[node name="TopCenter" type="CenterContainer" parent="MarginContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 0
+
+[node name="ObjectCreationPanel" parent="MarginContainer/TopCenter" instance=ExtResource("4_panel")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="BottomCenter" type="CenterContainer" parent="MarginContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 8
+
+[node name="HotbarContainer" type="VBoxContainer" parent="MarginContainer/BottomCenter"]
+layout_mode = 2
+
+[node name="ItemTooltip" parent="MarginContainer/BottomCenter/HotbarContainer" instance=ExtResource("3_tooltip")]
+unique_name_in_owner = true
+layout_mode = 2
+visible = false
+
+[node name="Hotbar" parent="MarginContainer/BottomCenter/HotbarContainer" instance=ExtResource("2_hotbar")]
+unique_name_in_owner = true
+layout_mode = 2

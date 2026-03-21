@@ -1,0 +1,138 @@
+extends Node
+
+var _cooldowns: Dictionary = {}  # "objA_id:objB_id" -> timestamp
+const COOLDOWN_TIME: float = 0.5
+const MAX_CASCADE_DEPTH: int = 3
+const CASCADE_RADIUS: float = 96.0
+
+var _effect_executor: Node
+
+
+func _ready() -> void:
+	# Find or create the EffectExecutor
+	_effect_executor = preload("res://scripts/systems/effect_executor.gd").new()
+	add_child(_effect_executor)
+
+
+func resolve_collision(body_a: Node, body_b: Node, cascade_depth: int = 0) -> void:
+	if cascade_depth > MAX_CASCADE_DEPTH:
+		return
+
+	# Build cooldown key from sorted IDs
+	var id_a: String = _get_body_id(body_a)
+	var id_b: String = _get_body_id(body_b)
+	var pair_key: String
+	if id_a < id_b:
+		pair_key = "%s:%s" % [id_a, id_b]
+	else:
+		pair_key = "%s:%s" % [id_b, id_a]
+
+	# Check cooldown
+	var now: float = Time.get_ticks_msec() / 1000.0
+	if pair_key in _cooldowns:
+		if now - _cooldowns[pair_key] < COOLDOWN_TIME:
+			return
+
+	# Get tags from bodies
+	var tags_a: Array = _get_body_tags(body_a)
+	var tags_b: Array = _get_body_tags(body_b)
+
+	if tags_a.is_empty() and tags_b.is_empty():
+		return
+
+	# Find matching rules
+	var rules: Array = RuleEngine.find_matching_rules(tags_a, tags_b)
+	if rules.is_empty():
+		return
+
+	# Record tags before effects for cascade detection
+	var tags_a_before: Array = tags_a.duplicate()
+	var tags_b_before: Array = tags_b.duplicate()
+
+	# Execute effects for each rule
+	var any_cascade_eligible: bool = false
+	for rule in rules:
+		_effect_executor.execute(rule, body_a, body_b)
+		if rule.get("cascade_eligible", false):
+			any_cascade_eligible = true
+
+	# Set cooldown
+	_cooldowns[pair_key] = now
+
+	# Check for cascade
+	if any_cascade_eligible and cascade_depth < MAX_CASCADE_DEPTH:
+		var tags_a_after: Array = _get_body_tags(body_a)
+		var tags_b_after: Array = _get_body_tags(body_b)
+		var a_changed: bool = not _arrays_equal(tags_a_before, tags_a_after)
+		var b_changed: bool = not _arrays_equal(tags_b_before, tags_b_after)
+
+		if a_changed:
+			_cascade_to_neighbors(body_a, cascade_depth + 1)
+		if b_changed:
+			_cascade_to_neighbors(body_b, cascade_depth + 1)
+
+
+func _cascade_to_neighbors(body: Node, cascade_depth: int) -> void:
+	if body is not Node2D:
+		return
+
+	if body.has_method("get_cascade_neighbors"):
+		var neighbors = body.get_cascade_neighbors()
+		for neighbor in neighbors:
+			if not is_instance_valid(neighbor):
+				continue
+			resolve_collision(body, neighbor, cascade_depth)
+		return
+
+	# Fallback: use physics space query
+	_cascade_via_space_query(body, cascade_depth)
+
+
+func _cascade_via_space_query(body: Node2D, cascade_depth: int) -> void:
+	var space_state := body.get_world_2d().direct_space_state
+	var query := PhysicsShapeQueryParameters2D.new()
+	var circle := CircleShape2D.new()
+	circle.radius = CASCADE_RADIUS
+	query.shape = circle
+	query.transform = Transform2D(0, body.global_position)
+	query.collision_mask = 0b00100  # Layer 3 = Objects
+	query.exclude = [body.get_rid()] if body is PhysicsBody2D else []
+
+	var results: Array = space_state.intersect_shape(query, 32)
+	for result in results:
+		var neighbor: Node = result.get("collider", null)
+		if neighbor == null or neighbor == body:
+			continue
+		if not is_instance_valid(neighbor):
+			continue
+		resolve_collision(body, neighbor, cascade_depth)
+
+
+func _get_body_id(body: Node) -> String:
+	# Use the object's unique id or instance_id
+	if body.has_method("get_object_id"):
+		return body.get_object_id()
+	return str(body.get_instance_id())
+
+
+func _get_body_tags(body: Node) -> Array:
+	# Player has get_effective_tags (base + equipment), objects have get_tags
+	if body.has_method("get_effective_tags"):
+		return body.get_effective_tags()
+	if body.has_method("get_tags"):
+		return body.get_tags()
+	return []
+
+
+func _arrays_equal(a: Array, b: Array) -> bool:
+	if a.size() != b.size():
+		return false
+	var sorted_a: Array = a.duplicate()
+	var sorted_b: Array = b.duplicate()
+	sorted_a.sort()
+	sorted_b.sort()
+	return sorted_a == sorted_b
+
+
+func clear_cooldowns() -> void:
+	_cooldowns.clear()

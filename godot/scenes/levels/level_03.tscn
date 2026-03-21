@@ -1,0 +1,35 @@
+[gd_scene load_steps=3 format=3 uid="uid://level_03"]
+
+[ext_resource type="Script" path="res://scenes/levels/level_03.gd" id="1_level03"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_goal"]
+size = Vector2(128, 64)
+
+[node name="Level03" type="Node2D"]
+script = ExtResource("1_level03")
+level_id = 2
+objective_text = "Reach the top!"
+next_level_path = ""
+
+[node name="SpawnPoint" type="Marker2D" parent="."]
+position = Vector2(384, 636)
+
+[node name="Goal" type="Area2D" parent="."]
+position = Vector2(384, 40)
+collision_layer = 16
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Goal"]
+shape = SubResource("RectangleShape2D_goal")
+
+[node name="GoalVisual" type="ColorRect" parent="Goal"]
+offset_left = -64.0
+offset_top = -32.0
+offset_right = 64.0
+offset_bottom = 32.0
+color = Color(0.2, 0.8, 0.2, 0.4)
+
+[node name="ObjectiveLabel" type="Label" parent="."]
+position = Vector2(250, 680)
+text = "Reach the top!"
+horizontal_alignment = 1
