@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.models.effects import Effect, EffectType
+from app.models.effects import Effect, EffectTarget, EffectType
 from app.models.rules import InteractionRule
 from app.models.tags import Tag
 
@@ -20,7 +20,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.IGNITE,
-                target="b",
+                target=EffectTarget.B,
                 damage_amount=10.0,
                 tags_to_add=[Tag.HEAT_SOURCE, Tag.HOT],
                 message="Ignited! Fire spreads.",
@@ -39,7 +39,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.MELT,
-                target="b",
+                target=EffectTarget.B,
                 tags_to_remove=[Tag.FROZEN, Tag.RIGID],
                 tags_to_add=[Tag.LIQUID],
                 message="The ice melts into water.",
@@ -58,13 +58,13 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.EXTINGUISH,
-                target="b",
+                target=EffectTarget.B,
                 tags_to_remove=[Tag.HEAT_SOURCE, Tag.HOT],
                 message="The flames are doused!",
             ),
             Effect(
                 effect_type=EffectType.SPAWN,
-                target="b",
+                target=EffectTarget.B,
                 spawn_description="steam cloud",
                 message="Steam billows out.",
             ),
@@ -82,7 +82,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.DAMAGE,
-                target="b",
+                target=EffectTarget.B,
                 damage_amount=25.0,
                 message="Sliced! 25 damage.",
             ),
@@ -100,7 +100,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.FREEZE,
-                target="b",
+                target=EffectTarget.B,
                 tags_to_add=[Tag.FROZEN, Tag.RIGID, Tag.SOLID],
                 tags_to_remove=[Tag.LIQUID],
                 message="The liquid freezes solid!",
@@ -119,13 +119,13 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.DESTROY,
-                target="a",
+                target=EffectTarget.A,
                 damage_amount=80.0,
                 message="BOOM! Massive explosion!",
             ),
             Effect(
                 effect_type=EffectType.DAMAGE,
-                target="b",
+                target=EffectTarget.B,
                 damage_amount=80.0,
                 force_magnitude=500.0,
                 message="Caught in the blast! 80 damage.",
@@ -144,7 +144,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.ELECTRIFY,
-                target="b",
+                target=EffectTarget.B,
                 damage_amount=30.0,
                 tags_to_add=[Tag.ELECTRIC],
                 message="Electricity arcs through! 30 damage.",
@@ -163,7 +163,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.ELECTRIFY,
-                target="b",
+                target=EffectTarget.B,
                 damage_amount=30.0,
                 tags_to_add=[Tag.ELECTRIC],
                 message="The liquid becomes electrified! 30 damage.",
@@ -182,7 +182,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.CHANGE_PROPERTY,
-                target="b",
+                target=EffectTarget.B,
                 message="The insulation blocks the electricity.",
             ),
         ],
@@ -199,7 +199,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.CORRODE,
-                target="b",
+                target=EffectTarget.B,
                 damage_amount=15.0,
                 message="Dissolving! 15 damage per second.",
             ),
@@ -217,7 +217,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.APPLY_FORCE,
-                target="b",
+                target=EffectTarget.B,
                 force_magnitude=100.0,
                 message="Blown away by the wind!",
             ),
@@ -235,7 +235,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.CHANGE_PROPERTY,
-                target="b",
+                target=EffectTarget.B,
                 message="The wind fans the flames, spreading fire further!",
             ),
         ],
@@ -252,7 +252,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.APPLY_FORCE,
-                target="b",
+                target=EffectTarget.B,
                 force_magnitude=150.0,
                 message="The gas is dispersed by the wind.",
             ),
@@ -270,7 +270,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.APPLY_FORCE,
-                target="b",
+                target=EffectTarget.B,
                 force_magnitude=-80.0,
                 message="Pulled by magnetic force!",
             ),
@@ -288,7 +288,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.DAMAGE,
-                target="b",
+                target=EffectTarget.B,
                 damage_amount=10.0,
                 message="Poisoned! 10 damage per second.",
             ),
@@ -306,7 +306,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.CHANGE_PROPERTY,
-                target="a",
+                target=EffectTarget.A,
                 message="Too heavy to bounce much. Bounce reduced.",
             ),
         ],
@@ -323,7 +323,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.CHANGE_PROPERTY,
-                target="both",
+                target=EffectTarget.BOTH,
                 message="Stuck together!",
             ),
         ],
@@ -340,7 +340,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.DAMAGE,
-                target="b",
+                target=EffectTarget.B,
                 damage_amount=10.0,
                 message="Heat reflected back to source!",
             ),
@@ -358,7 +358,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.FREEZE,
-                target="b",
+                target=EffectTarget.B,
                 tags_to_remove=[Tag.MOLTEN, Tag.LIQUID],
                 tags_to_add=[Tag.SOLID, Tag.RIGID],
                 message="The molten material solidifies into rock!",
@@ -377,7 +377,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.DAMAGE,
-                target="b",
+                target=EffectTarget.B,
                 damage_amount=30.0,
                 message="Electricity bounces off the reflective surface!",
             ),
@@ -398,7 +398,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.DAMAGE,
-                target="b",
+                target=EffectTarget.B,
                 damage_amount=20.0,
                 message="Crushed under the weight! 20 damage.",
             ),
@@ -416,7 +416,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.DAMAGE,
-                target="both",
+                target=EffectTarget.BOTH,
                 damage_amount=40.0,
                 force_magnitude=300.0,
                 message="Shrapnel flies everywhere! 40 damage.",
@@ -435,7 +435,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.CHANGE_PROPERTY,
-                target="both",
+                target=EffectTarget.BOTH,
                 message="The heat intensifies!",
             ),
         ],
@@ -452,7 +452,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.CORRODE,
-                target="b",
+                target=EffectTarget.B,
                 damage_amount=10.0,
                 message="The rigid structure corrodes. 10 damage.",
             ),
@@ -470,7 +470,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.IGNITE,
-                target="b",
+                target=EffectTarget.B,
                 damage_amount=15.0,
                 tags_to_add=[Tag.HEAT_SOURCE, Tag.HOT],
                 message="Molten contact ignites the material!",
@@ -489,7 +489,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.DAMAGE,
-                target="b",
+                target=EffectTarget.B,
                 damage_amount=40.0,
                 message="Severely burned by molten material! 40 damage.",
             ),
@@ -507,7 +507,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.DAMAGE,
-                target="b",
+                target=EffectTarget.B,
                 damage_amount=5.0,
                 message="Ouch! Burned! 5 damage.",
             ),
@@ -525,7 +525,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.DAMAGE,
-                target="b",
+                target=EffectTarget.B,
                 damage_amount=35.0,
                 message="Frozen and shattered! 35 damage.",
             ),
@@ -543,7 +543,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.DAMAGE,
-                target="b",
+                target=EffectTarget.B,
                 damage_amount=30.0,
                 message="Electrocuted! 30 damage.",
             ),
@@ -561,7 +561,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.APPLY_FORCE,
-                target="b",
+                target=EffectTarget.B,
                 force_magnitude=200.0,
                 message="Launched skyward by the wind!",
             ),
@@ -579,7 +579,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.DAMAGE,
-                target="b",
+                target=EffectTarget.B,
                 damage_amount=20.0,
                 message="Acid burns! 20 damage.",
             ),
@@ -597,7 +597,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.APPLY_FORCE,
-                target="both",
+                target=EffectTarget.BOTH,
                 force_magnitude=-60.0,
                 message="Magnets snap together!",
             ),
@@ -615,7 +615,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.APPLY_FORCE,
-                target="b",
+                target=EffectTarget.B,
                 force_magnitude=-30.0,
                 message="Drawn to the light...",
             ),
@@ -633,7 +633,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.APPLY_FORCE,
-                target="a",
+                target=EffectTarget.A,
                 force_magnitude=150.0,
                 message="Bounces off the hard surface!",
             ),
@@ -651,7 +651,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.TRANSFORM,
-                target="b",
+                target=EffectTarget.B,
                 tags_to_remove=[Tag.LIQUID],
                 tags_to_add=[Tag.GAS],
                 message="The liquid evaporates into steam!",
@@ -670,7 +670,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.DESTROY,
-                target="b",
+                target=EffectTarget.B,
                 damage_amount=80.0,
                 force_magnitude=400.0,
                 message="Obliterated by the explosion! 80 damage.",
@@ -689,7 +689,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.DAMAGE,
-                target="b",
+                target=EffectTarget.B,
                 damage_amount=8.0,
                 message="Frostbite! 8 damage.",
             ),
@@ -707,7 +707,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.APPLY_FORCE,
-                target="b",
+                target=EffectTarget.B,
                 force_magnitude=120.0,
                 message="Slides on the slippery surface!",
             ),
@@ -725,7 +725,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.CHANGE_PROPERTY,
-                target="b",
+                target=EffectTarget.B,
                 message="Wind makes the material more combustible!",
             ),
         ],
@@ -742,7 +742,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.CORRODE,
-                target="b",
+                target=EffectTarget.B,
                 damage_amount=20.0,
                 message="The acid dissolves the metal! 20 damage.",
             ),
@@ -760,7 +760,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.DAMAGE,
-                target="b",
+                target=EffectTarget.B,
                 damage_amount=25.0,
                 message="Cut deeply! 25 damage.",
             ),
@@ -778,7 +778,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.REMOVE_TAG,
-                target="a",
+                target=EffectTarget.A,
                 tags_to_remove=[Tag.FLOATING],
                 message="Too heavy to float! Sinks down.",
             ),
@@ -796,7 +796,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.CHANGE_PROPERTY,
-                target="b",
+                target=EffectTarget.B,
                 message="Chilled to the bone. Movement slowed.",
             ),
         ],
@@ -813,7 +813,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.DESTROY,
-                target="a",
+                target=EffectTarget.A,
                 damage_amount=80.0,
                 force_magnitude=500.0,
                 message="Electrical detonation! Massive blast!",
@@ -832,7 +832,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.DAMAGE,
-                target="a",
+                target=EffectTarget.A,
                 damage_amount=10.0,
                 message="Flexible material absorbs some of the cut. 10 damage.",
             ),
@@ -850,7 +850,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.CHANGE_PROPERTY,
-                target="both",
+                target=EffectTarget.BOTH,
                 message="Two living things regard each other.",
             ),
         ],
@@ -867,7 +867,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.ADD_TAG,
-                target="b",
+                target=EffectTarget.B,
                 tags_to_add=[Tag.HOT],
                 message="Heat conducts through the material!",
             ),
@@ -885,7 +885,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.ADD_TAG,
-                target="b",
+                target=EffectTarget.B,
                 tags_to_add=[Tag.COLD],
                 message="Cold spreads through the conductor!",
             ),
@@ -903,7 +903,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.CHANGE_PROPERTY,
-                target="b",
+                target=EffectTarget.B,
                 message="Insulation blocks the heat transfer.",
             ),
         ],
@@ -920,7 +920,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.CHANGE_PROPERTY,
-                target="b",
+                target=EffectTarget.B,
                 message="Insulation blocks the cold transfer.",
             ),
         ],
@@ -937,7 +937,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.DESTROY,
-                target="b",
+                target=EffectTarget.B,
                 damage_amount=50.0,
                 message="Melted by molten material! 50 damage.",
             ),
@@ -955,7 +955,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.ADD_TAG,
-                target="b",
+                target=EffectTarget.B,
                 tags_to_add=[Tag.TOXIC],
                 message="A toxic cloud forms and spreads!",
             ),
@@ -973,7 +973,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.CHANGE_PROPERTY,
-                target="b",
+                target=EffectTarget.B,
                 message="A climbable surface!",
             ),
         ],
@@ -992,7 +992,7 @@ ALL_RULES: list[InteractionRule] = [
         effects=[
             Effect(
                 effect_type=EffectType.DAMAGE,
-                target="b",
+                target=EffectTarget.B,
                 damage_amount=30.0,
                 message="Electrical surge! 30 damage.",
             ),
