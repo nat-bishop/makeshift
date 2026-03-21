@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 
-class Tag(str, Enum):
+class Tag(StrEnum):
     # Physical State (7)
     SOLID = "SOLID"
     LIQUID = "LIQUID"

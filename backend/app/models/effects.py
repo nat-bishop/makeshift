@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel
 
 from app.models.tags import Tag
 
 
-class EffectType(str, Enum):
+class EffectType(StrEnum):
     DAMAGE = "DAMAGE"
     DESTROY = "DESTROY"
     IGNITE = "IGNITE"
@@ -24,7 +24,7 @@ class EffectType(str, Enum):
     REMOVE_TAG = "REMOVE_TAG"
 
 
-class EffectTarget(str, Enum):
+class EffectTarget(StrEnum):
     A = "a"
     B = "b"
     BOTH = "both"
