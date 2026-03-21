@@ -3,12 +3,12 @@ from __future__ import annotations
 import logging
 import uuid
 
-logger = logging.getLogger(__name__)
-
 from pydantic_ai import Agent
 
 from app.models.blueprint import CreatorOutput, GameObjectBlueprint, VisualDescriptor
-from app.models.tags import TAG_CONTRADICTIONS, TAG_POWER_COSTS, OBJECT_TAG_BUDGET, Tag
+from app.models.tags import Tag
+
+logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """You are a game object designer for a 2D sandbox game. Given a player's text description, \
 you create a game object by choosing a name, assigning tags, and describing its visual appearance.
