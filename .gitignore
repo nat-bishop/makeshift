@@ -32,4 +32,6 @@ Thumbs.db
 assets/staging/
 
 # Claude Code
-.claude/
+.claude/*
+!.claude/agents/
+.claude/settings.local.json
