@@ -32,28 +32,54 @@ uv run mypy backend/                  # type checking
 
 **Backend** (`backend/app/`): FastAPI application with these key subsystems:
 
-- **Object creation pipeline** (`creator/agent.py` → `routers/objects.py` → `images/pipeline.py` → `ws/handler.py`): Player text → Pydantic-AI agent (Gemini 3.1 Flash Lite Preview) produces `CreatorOutput` (name, tags, visual descriptor) → placeholder PNG returned immediately → background Flux Pro Kontext (fal.ai) sprite generation → delivered via WebSocket `sprite_ready` message.
+- **Object creation pipeline** (`creator/agent.py` → `routers/objects.py` → `images/pipeline.py` → `ws/handler.py`): Player text → PydanticAI agent (Gemini) → `CreatorOutput` → placeholder PNG immediate response → background Flux sprite generation → WebSocket `sprite_ready` delivery. See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for full 9-step flow.
 
-- **Tag system** (`models/tags.py`): 33 `Tag` StrEnum values across 8 categories. Each has a power cost (1-5); objects have a budget of 10. 13 contradiction pairs enforced by model validators. Tags drive the entire interaction/rule system.
+- **Tag system** (`models/tags.py`): 33 `Tag` StrEnum values, 8 categories, power costs 1-5, budget of 10. 12 contradiction pairs enforced via `ModelRetry`. Tags drive physics, interactions, equipment, and durability. See [GAME_DESIGN.md](docs/GAME_DESIGN.md) for design rationale.
 
-- **Rule engine** (`engine/resolver.py`, `engine/rules_data.py`): `RuleResolver` uses two-tier matching — O(1) pair index for tag-pair lookups, O(n) scan for wildcard rules. ~55 `InteractionRule` definitions. Rules are also mirrored client-side in Godot's `RuleEngine` autoload.
+- **Rule engine** (`engine/resolver.py`, `engine/rules_data.py`): `RuleResolver` — two-tier matching (O(1) pair index + O(n) wildcard scan). ~55 rules. Mirrored client-side in Godot's `RuleEngine` autoload.
 
-- **Session persistence** (`sessions/manager.py`): aiosqlite with tables: sessions, objects, inventory, equipment. All async. DB initialized in FastAPI lifespan (`main.py`).
+- **Image pipeline** (`images/pipeline.py`, `images/flux_client.py`): Cache-first. Flux Pro Kontext → bg removal (local rembg or cloud birefnet) → resize by size_category → cache by visual descriptor hash.
 
-- **WebSocket** (`ws/handler.py`): Per-session multi-client broadcast. Handles sprite delivery and ping/pong keepalive.
+- **Session persistence** (`sessions/manager.py`): aiosqlite, 4 tables (sessions, objects, inventory, equipment). 15 seed objects per session. Budget: $1.00 at $0.041/object.
 
-**Godot Client** (`godot/`): Godot 4 with GDScript. Key autoloads: `EventBus` (signals), `GameManager` (state), `RuleEngine` (client-side rule matching), `Backend` (HTTP + WebSocket to FastAPI).
+- **WebSocket** (`ws/handler.py`): Per-session multi-client broadcast. Messages: sprite_ready, sprite_failed, ping/pong.
+
+**Godot Client** (`godot/`): Godot 4.3, GDScript.
+
+| Autoload | Purpose |
+|----------|---------|
+| `EventBus` | Central signal bus (15 signals: interaction_triggered, sprite_ready, object_created, etc.) |
+| `Backend` | HTTP + WebSocket client, session persistence, sprite cache, 10s sync timer |
+| `GameManager` | Game state (MENU/PLAYING/PAUSED), level management, scene transitions |
+| `RuleEngine` | Client-side rule matching (mirrors backend resolver) |
+| `CollisionResolver` | Per-frame collision resolution, cooldowns, cascade (depth 3, 96px radius) |
+| `Logger` | Structured logging |
+
+Key systems: `EffectExecutor` (14 effect types including DOT), `PhysicsApplicator` (tag-to-physics mapping), `PlayerEquipment` (3 slots, tag transfer), `PlayerInventory` (8 hotbar slots).
+
+## API Endpoints
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | `/api/sessions` | Create session (returns seed objects, rules, ws_url) |
+| GET | `/api/sessions/{id}` | Restore session |
+| PUT | `/api/sessions/{id}/sync` | Batch state sync from client |
+| POST | `/api/sessions/{id}/objects` | Create object from description |
+| GET | `/api/rules` | Download rules (ETag caching) |
+| GET | `/health` | Health check |
+| WS | `/ws/{session_id}` | Sprite delivery + keepalive |
 
 ## Data Model Flow
 
-`CreatorOutput` (LLM output) → `GameObjectBlueprint` (adds id, computed durability/weight/power_cost) → `WorldObject` (adds position, session context) → persisted as `objects` table row.
+`CreatorOutput` (LLM output) → `GameObjectBlueprint` (adds id, computed durability/power_cost/equip_slot/equip_tags) → `WorldObject` (adds position, session context) → persisted as `objects` table row.
 
 ## Environment
 
 Requires `.env` file (see `.env.example`):
 - `GOOGLE_API_KEY` — Gemini LLM
 - `FAL_KEY` — fal.ai Flux image generation
-- Other settings have sensible defaults
+- `BG_REMOVAL_BACKEND` — `local` (rembg) or `cloud` (fal.ai birefnet). Default: local
+- Other settings have sensible defaults (budget $1.00, timeouts 15s/30s, max 3 concurrent images)
 
 ## Code Conventions
 
@@ -70,3 +96,10 @@ Requires `.env` file (see `.env.example`):
 - Background `asyncio.Task`s must be held in a module-level `set` to prevent GC before completion (see `routers/objects.py`)
 - Pydantic-AI validators raise `ModelRetry` (not `ValidationError`) to trigger agent retries with feedback
 - `@computed_field` properties require `# type: ignore[prop-decorator]` — mypy still doesn't support decorators above `@property`
+- WebSocket connection rejected with close code 4004 if session doesn't exist
+- Sprite cache keyed by visual descriptor hash, not object ID — identical descriptors share sprites
+
+## Documentation
+
+- [Architecture](docs/ARCHITECTURE.md) — object creation pipeline, image generation, rule engine, collision/cascade, physics, persistence, WebSocket protocol
+- [Game Design](docs/GAME_DESIGN.md) — tag system, rule philosophy, object economy, equipment, durability, levels
