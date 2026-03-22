@@ -98,6 +98,8 @@ func _cascade_to_neighbors(body: Node, cascade_depth: int) -> void:
 
 
 func _cascade_via_space_query(body: Node2D, cascade_depth: int) -> void:
+	if not body.is_inside_tree():
+		return
 	var space_state := body.get_world_2d().direct_space_state
 	var query := PhysicsShapeQueryParameters2D.new()
 	var circle := CircleShape2D.new()

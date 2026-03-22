@@ -42,7 +42,7 @@ func _format_tag(tags: Array) -> String:
 func _spawn_label(text: String, world_pos: Vector2) -> void:
 	# Remove oldest if at capacity
 	while _active_labels.size() >= MAX_ACTIVE:
-		var oldest := _active_labels.pop_front()
+		var oldest = _active_labels.pop_front()
 		if is_instance_valid(oldest):
 			oldest.queue_free()
 
