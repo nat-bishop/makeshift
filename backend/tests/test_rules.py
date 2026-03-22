@@ -1,11 +1,10 @@
 """Tests for rule engine: resolver indexing, matching, priority sorting."""
 
+from app.engine.resolver import RuleResolver
 from app.engine.rules_data import ALL_RULES
 from app.models.effects import Effect, EffectTarget, EffectType
 from app.models.rules import InteractionRule
 from app.models.tags import Tag
-
-from tests.rule_resolver import RuleResolver
 
 _DEFAULT_EFFECTS = [
     Effect(
@@ -49,7 +48,7 @@ class TestRuleResolver:
         rule = _make_rule()
         resolver = RuleResolver([rule])
         matches = resolver.find_matching_rules(
-            [Tag.HEAT_SOURCE, Tag.SOLID], [Tag.FLAMMABLE, Tag.BREAKABLE]
+            {Tag.HEAT_SOURCE, Tag.SOLID}, {Tag.FLAMMABLE, Tag.BREAKABLE}
         )
         assert len(matches) == 1
         assert matches[0].rule_id == "test_rule"
@@ -58,7 +57,7 @@ class TestRuleResolver:
         rule = _make_rule()
         resolver = RuleResolver([rule])
         matches = resolver.find_matching_rules(
-            [Tag.COLD], [Tag.RIGID]
+            {Tag.COLD}, {Tag.RIGID}
         )
         assert len(matches) == 0
 
@@ -67,7 +66,7 @@ class TestRuleResolver:
         resolver = RuleResolver([rule])
         # Reversed: b has HEAT_SOURCE, a has FLAMMABLE
         matches = resolver.find_matching_rules(
-            [Tag.FLAMMABLE, Tag.SOLID], [Tag.HEAT_SOURCE, Tag.RIGID]
+            {Tag.FLAMMABLE, Tag.SOLID}, {Tag.HEAT_SOURCE, Tag.RIGID}
         )
         assert len(matches) == 1
 
@@ -75,7 +74,7 @@ class TestRuleResolver:
         rule = _make_rule(bidirectional=False)
         resolver = RuleResolver([rule])
         matches = resolver.find_matching_rules(
-            [Tag.FLAMMABLE], [Tag.HEAT_SOURCE]
+            {Tag.FLAMMABLE}, {Tag.HEAT_SOURCE}
         )
         assert len(matches) == 0
 
@@ -88,7 +87,7 @@ class TestRuleResolver:
         )
         resolver = RuleResolver([rule])
         matches = resolver.find_matching_rules(
-            [Tag.STICKY, Tag.SOLID], [Tag.RIGID, Tag.HEAVY]
+            {Tag.STICKY, Tag.SOLID}, {Tag.RIGID, Tag.HEAVY}
         )
         assert len(matches) == 1
 
@@ -100,7 +99,7 @@ class TestRuleResolver:
         )
         resolver = RuleResolver([rule])
         matches = resolver.find_matching_rules(
-            [Tag.SOLID], [Tag.RIGID]
+            {Tag.SOLID}, {Tag.RIGID}
         )
         assert len(matches) == 0
 
@@ -109,7 +108,7 @@ class TestRuleResolver:
         high = _make_rule(rule_id="high", priority=15)
         resolver = RuleResolver([low, high])
         matches = resolver.find_matching_rules(
-            [Tag.HEAT_SOURCE], [Tag.FLAMMABLE]
+            {Tag.HEAT_SOURCE}, {Tag.FLAMMABLE}
         )
         assert len(matches) == 2
         assert matches[0].rule_id == "high"
@@ -123,7 +122,7 @@ class TestRuleResolver:
         )
         resolver = RuleResolver([rule])
         matches = resolver.find_matching_rules(
-            [Tag.HEAT_SOURCE, Tag.HOT], [Tag.FLAMMABLE, Tag.BREAKABLE]
+            {Tag.HEAT_SOURCE, Tag.HOT}, {Tag.FLAMMABLE, Tag.BREAKABLE}
         )
         assert len(matches) == 1
 
@@ -136,12 +135,12 @@ class TestRuleResolver:
         resolver = RuleResolver([rule])
         # Only HEAT_SOURCE, missing SHARP
         matches = resolver.find_matching_rules(
-            [Tag.HEAT_SOURCE], [Tag.FLAMMABLE]
+            {Tag.HEAT_SOURCE}, {Tag.FLAMMABLE}
         )
         assert len(matches) == 0
         # Both present
         matches = resolver.find_matching_rules(
-            [Tag.HEAT_SOURCE, Tag.SHARP], [Tag.FLAMMABLE]
+            {Tag.HEAT_SOURCE, Tag.SHARP}, {Tag.FLAMMABLE}
         )
         assert len(matches) == 1
 
@@ -172,7 +171,7 @@ class TestAllRules:
     def test_heat_flammable_ignite(self):
         resolver = RuleResolver(ALL_RULES)
         matches = resolver.find_matching_rules(
-            [Tag.HEAT_SOURCE], [Tag.FLAMMABLE]
+            {Tag.HEAT_SOURCE}, {Tag.FLAMMABLE}
         )
         rule_ids = [m.rule_id for m in matches]
         assert "heat_flammable_ignite" in rule_ids
@@ -180,7 +179,7 @@ class TestAllRules:
     def test_explosive_heat_detonate(self):
         resolver = RuleResolver(ALL_RULES)
         matches = resolver.find_matching_rules(
-            [Tag.EXPLOSIVE], [Tag.HEAT_SOURCE]
+            {Tag.EXPLOSIVE}, {Tag.HEAT_SOURCE}
         )
         rule_ids = [m.rule_id for m in matches]
         assert "explosive_heat_detonate" in rule_ids
@@ -188,7 +187,7 @@ class TestAllRules:
     def test_electric_insulating_block(self):
         resolver = RuleResolver(ALL_RULES)
         matches = resolver.find_matching_rules(
-            [Tag.ELECTRIC], [Tag.INSULATING]
+            {Tag.ELECTRIC}, {Tag.INSULATING}
         )
         rule_ids = [m.rule_id for m in matches]
         assert "electric_insulating_block" in rule_ids

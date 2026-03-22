@@ -74,16 +74,23 @@ func restore_session(id: String) -> Dictionary:
 
 func create_object(description: String) -> Dictionary:
 	if session_id.is_empty():
+		EventBus.creation_failed.emit("No active session")
 		return {"error": true, "message": "No active session"}
+
+	EventBus.creation_started.emit(description)
 
 	var result: Dictionary = await _post(
 		"/api/sessions/%s/objects" % session_id,
 		{"description": description}
 	)
 
-	if not result.get("error", false):
+	if result.get("error", false):
+		var error_msg: String = result.get("message", "Object creation failed")
+		EventBus.creation_failed.emit(error_msg)
+	else:
 		var blueprint: Dictionary = result.get("blueprint", result)
 		EventBus.object_created.emit(blueprint)
+		EventBus.creation_finished.emit(blueprint)
 		# Track pending sprite
 		var object_id: String = blueprint.get("id", "")
 		if object_id != "":

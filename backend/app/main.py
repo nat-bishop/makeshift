@@ -39,7 +39,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             id TEXT PRIMARY KEY,
             created_at TEXT NOT NULL,
             budget_used REAL NOT NULL DEFAULT 0.0,
-            level_progress INTEGER NOT NULL DEFAULT 0
+            budget_limit REAL NOT NULL DEFAULT 1.0,
+            current_level INTEGER NOT NULL DEFAULT 1,
+            levels_completed TEXT NOT NULL DEFAULT '[]'
         )
         """
     )
@@ -72,9 +74,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         """
         CREATE TABLE IF NOT EXISTS equipment (
             session_id TEXT NOT NULL,
-            slot_name TEXT NOT NULL,
-            object_id TEXT,
-            PRIMARY KEY (session_id, slot_name),
+            equipment_json TEXT NOT NULL DEFAULT '{}',
+            PRIMARY KEY (session_id),
             FOREIGN KEY (session_id) REFERENCES sessions(id)
         )
         """

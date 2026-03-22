@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import uuid
 from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
@@ -7,9 +8,10 @@ from typing import Any
 
 import aiosqlite
 
+from app.config import settings
 from app.models.blueprint import GameObjectBlueprint
 from app.models.session import (
-    EquipmentSlot,
+    EquipmentSlots,
     InventorySlot,
     Session,
     WorldObject,
@@ -22,15 +24,24 @@ class SessionManager:
     def __init__(self, db: aiosqlite.Connection) -> None:
         self._db = db
 
+    async def session_exists(self, session_id: str) -> bool:
+        """Check if a session exists without loading full state."""
+        cursor = await self._db.execute(
+            "SELECT 1 FROM sessions WHERE id = ?", (session_id,)
+        )
+        return await cursor.fetchone() is not None
+
     async def create_session(self) -> Session:
         """Create a new session with default state."""
         session_id = str(uuid.uuid4())
         created_at = datetime.now(UTC).isoformat()
+        budget_limit = settings.session_budget_usd
 
         await self._db.execute(
-            "INSERT INTO sessions (id, created_at, budget_used, level_progress)"
-            " VALUES (?, ?, 0.0, 0)",
-            (session_id, created_at),
+            "INSERT INTO sessions (id, created_at, budget_used, budget_limit,"
+            " current_level, levels_completed)"
+            " VALUES (?, ?, 0.0, ?, 1, '[]')",
+            (session_id, created_at, budget_limit),
         )
 
         # Initialize 8 empty inventory slots
@@ -40,12 +51,11 @@ class SessionManager:
                 (session_id, slot),
             )
 
-        # Initialize 3 equipment slots
-        for slot_name in ("hand", "back", "head"):
-            await self._db.execute(
-                "INSERT INTO equipment (session_id, slot_name, object_id) VALUES (?, ?, NULL)",
-                (session_id, slot_name),
-            )
+        # Initialize equipment (single row with JSON)
+        await self._db.execute(
+            "INSERT INTO equipment (session_id, equipment_json) VALUES (?, ?)",
+            (session_id, EquipmentSlots().model_dump_json()),
+        )
 
         await self._db.commit()
 
@@ -53,27 +63,27 @@ class SessionManager:
             id=session_id,
             created_at=created_at,
             budget_used=0.0,
-            level_progress=0,
+            budget_limit=budget_limit,
+            current_level=1,
+            levels_completed=[],
             objects=[],
             inventory=[InventorySlot(slot=i) for i in range(8)],
-            equipment=[
-                EquipmentSlot(slot_name="hand"),
-                EquipmentSlot(slot_name="back"),
-                EquipmentSlot(slot_name="head"),
-            ],
+            equipment=EquipmentSlots(),
         )
 
     async def get_session(self, session_id: str) -> Session | None:
         """Load a session from the database."""
         cursor = await self._db.execute(
-            "SELECT id, created_at, budget_used, level_progress FROM sessions WHERE id = ?",
+            "SELECT id, created_at, budget_used, budget_limit,"
+            " current_level, levels_completed"
+            " FROM sessions WHERE id = ?",
             (session_id,),
         )
         row = await cursor.fetchone()
         if row is None:
             return None
 
-        sid, created_at, budget_used, level_progress = row
+        sid, created_at, budget_used, budget_limit, current_level, levels_completed_json = row
 
         # Load objects
         obj_cursor = await self._db.execute(
@@ -106,19 +116,23 @@ class SessionManager:
 
         # Load equipment
         eq_cursor = await self._db.execute(
-            "SELECT slot_name, object_id FROM equipment WHERE session_id = ?",
+            "SELECT equipment_json FROM equipment WHERE session_id = ?",
             (session_id,),
         )
-        equipment = []
-        async for eq_row in eq_cursor:
-            slot_name, object_id = eq_row
-            equipment.append(EquipmentSlot(slot_name=slot_name, object_id=object_id))
+        eq_row = await eq_cursor.fetchone()
+        equipment = (
+            EquipmentSlots.model_validate_json(eq_row[0])
+            if eq_row
+            else EquipmentSlots()
+        )
 
         return Session(
             id=sid,
             created_at=created_at,
             budget_used=budget_used,
-            level_progress=level_progress,
+            budget_limit=budget_limit,
+            current_level=current_level,
+            levels_completed=json.loads(levels_completed_json) if levels_completed_json else [],
             objects=objects,
             inventory=inventory,
             equipment=equipment,
@@ -165,35 +179,57 @@ class SessionManager:
     async def save_state(
         self,
         session_id: str,
-        objects: list[WorldObject],
-        inventory: list[InventorySlot],
-        equipment: list[EquipmentSlot],
-        level_progress: int,
+        objects: list[WorldObject] | None = None,
+        inventory: list[InventorySlot] | None = None,
+        equipment: EquipmentSlots | None = None,
+        current_level: int | None = None,
+        levels_completed: list[int] | None = None,
     ) -> None:
-        """Batch sync of full session state."""
-        # Update session level progress
-        await self._db.execute(
-            "UPDATE sessions SET level_progress = ? WHERE id = ?",
-            (level_progress, session_id),
-        )
+        """Batch sync of session state. Only provided fields are updated."""
+        dirty = False
 
-        await self._replace_rows(
-            "objects", session_id, objects,
-            lambda sid, obj: (
-                sid, obj.object_id, obj.blueprint.model_dump_json(),
-                obj.x, obj.y, obj.durability,
-            ),
-        )
-        await self._replace_rows(
-            "inventory", session_id, inventory,
-            lambda sid, inv: (sid, inv.slot, inv.object_id),
-        )
-        await self._replace_rows(
-            "equipment", session_id, equipment,
-            lambda sid, eq: (sid, eq.slot_name, eq.object_id),
-        )
+        if current_level is not None or levels_completed is not None:
+            updates = []
+            params: list[Any] = []
+            if current_level is not None:
+                updates.append("current_level = ?")
+                params.append(current_level)
+            if levels_completed is not None:
+                updates.append("levels_completed = ?")
+                params.append(json.dumps(levels_completed))
+            params.append(session_id)
+            await self._db.execute(
+                f"UPDATE sessions SET {', '.join(updates)} WHERE id = ?",
+                tuple(params),
+            )
+            dirty = True
 
-        await self._db.commit()
+        if objects is not None:
+            await self._replace_rows(
+                "objects", session_id, objects,
+                lambda sid, obj: (
+                    sid, obj.object_id, obj.blueprint.model_dump_json(),
+                    obj.x, obj.y, obj.durability,
+                ),
+            )
+            dirty = True
+
+        if inventory is not None:
+            await self._replace_rows(
+                "inventory", session_id, inventory,
+                lambda sid, inv: (sid, inv.slot, inv.object_id),
+            )
+            dirty = True
+
+        if equipment is not None:
+            await self._db.execute(
+                "UPDATE equipment SET equipment_json = ? WHERE session_id = ?",
+                (equipment.model_dump_json(), session_id),
+            )
+            dirty = True
+
+        if dirty:
+            await self._db.commit()
 
     async def track_cost(self, session_id: str, amount: float) -> float:
         """Add cost to session budget and return new total."""
