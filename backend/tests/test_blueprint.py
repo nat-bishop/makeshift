@@ -1,6 +1,8 @@
 """Tests for blueprint models: CreatorOutput validation, GameObjectBlueprint computed fields."""
 
 import pytest
+from typing import Literal
+
 from app.models.blueprint import (
     DURABILITY_BREAKABLE,
     DURABILITY_DEFAULT,
@@ -14,22 +16,30 @@ from app.models.tags import Tag
 from pydantic import ValidationError
 from pydantic_ai import ModelRetry
 
+SizeCategory = Literal["tiny", "small", "medium", "large", "huge"]
+
 
 def _make_visual(
     base_form: str = "cube",
     material: str = "stone",
     color_primary: str = "#888888",
+    color_primary_name: str = "gray",
     color_secondary: str = "#666666",
+    color_secondary_name: str = "dark gray",
     visual_effects: list[str] | None = None,
-    size_category: str = "medium",
+    size_category: SizeCategory = "medium",
+    bg_color: str = "#808080",
 ) -> VisualDescriptor:
     return VisualDescriptor(
         base_form=base_form,
         material=material,
         color_primary=color_primary,
+        color_primary_name=color_primary_name,
         color_secondary=color_secondary,
+        color_secondary_name=color_secondary_name,
         visual_effects=visual_effects if visual_effects is not None else [],
         size_category=size_category,
+        bg_color=bg_color,
     )
 
 
@@ -61,7 +71,7 @@ class TestVisualDescriptor:
 
     def test_invalid_size_category_raises(self) -> None:
         with pytest.raises(ValidationError):
-            _make_visual(size_category="gigantic")
+            _make_visual(size_category="gigantic")  # type: ignore[arg-type]
 
 
 class TestCreatorOutput:
@@ -139,8 +149,13 @@ class TestCreatorOutput:
             CreatorOutput(
                 name="Overloaded",
                 tags=[
-                    Tag.SOLID, Tag.RIGID, Tag.LIGHT, Tag.COLD,
-                    Tag.SLIPPERY, Tag.BREAKABLE, Tag.FLAMMABLE,
+                    Tag.SOLID,
+                    Tag.RIGID,
+                    Tag.LIGHT,
+                    Tag.COLD,
+                    Tag.SLIPPERY,
+                    Tag.BREAKABLE,
+                    Tag.FLAMMABLE,
                 ],  # 7 tags, all cost 1, under budget but over count
                 visual_descriptor=_make_visual(),
             )
@@ -185,8 +200,7 @@ class TestGameObjectBlueprint:
             description=description,
             tags=tags if tags is not None else [Tag.SOLID, Tag.RIGID],
             visual_descriptor=(
-                visual_descriptor if visual_descriptor is not None
-                else _make_visual()
+                visual_descriptor if visual_descriptor is not None else _make_visual()
             ),
         )
 

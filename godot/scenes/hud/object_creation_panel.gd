@@ -62,11 +62,11 @@ func _submit() -> void:
 	_is_creating = false
 	create_button.disabled = false
 
-	if result.is_empty():
-		status_label.text = "Creation failed. Try again."
+	if result.get("error", false):
+		var error_msg: String = result.get("message", "Creation failed. Try again.")
+		status_label.text = error_msg
 		status_label.add_theme_color_override("font_color", Color(1.0, 0.3, 0.3))
 	else:
 		status_label.text = ""
 		description_input.text = ""
-		EventBus.object_created.emit(result)
 		visible = false

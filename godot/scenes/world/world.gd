@@ -8,6 +8,10 @@ const GAME_OBJECT_SCENE: PackedScene = preload("res://scenes/game_object/game_ob
 var _current_level: Node2D = null
 
 
+func _ready() -> void:
+	add_to_group("world")
+
+
 func spawn_object(blueprint: Dictionary, pos: Vector2) -> Node:
 	var obj: RigidBody2D = GAME_OBJECT_SCENE.instantiate()
 	objects_container.add_child(obj)
@@ -21,8 +25,18 @@ func clear_objects() -> void:
 		child.queue_free()
 
 
+func get_objects_data() -> Array:
+	var data: Array = []
+	for child in objects_container.get_children():
+		if child.has_method("get_blueprint"):
+			data.append({
+				"blueprint": child.get_blueprint(),
+				"position": {"x": child.global_position.x, "y": child.global_position.y},
+			})
+	return data
+
+
 func load_level(level_scene: PackedScene) -> void:
-	# Remove current level
 	if _current_level:
 		_current_level.queue_free()
 		_current_level = null

@@ -1,4 +1,3 @@
-
 from typing import Literal
 
 from pydantic import BaseModel, Field, computed_field, field_validator
@@ -22,9 +21,12 @@ class VisualDescriptor(BaseModel):
     base_form: str
     material: str
     color_primary: str = Field(pattern=r"^#[0-9a-fA-F]{6}$")
+    color_primary_name: str
     color_secondary: str = Field(pattern=r"^#[0-9a-fA-F]{6}$")
+    color_secondary_name: str
     visual_effects: list[str]
     size_category: Literal["tiny", "small", "medium", "large", "huge"]
+    bg_color: str = Field(pattern=r"^#[0-9a-fA-F]{6}$")
 
 
 class CreatorOutput(BaseModel):
@@ -42,9 +44,7 @@ class CreatorOutput(BaseModel):
             raise ModelRetry("Name cannot be empty.")
         words = name.split()
         if len(words) > 3:
-            raise ModelRetry(
-                f'Name "{name}" has {len(words)} words. Use 1-3 words maximum.'
-            )
+            raise ModelRetry(f'Name "{name}" has {len(words)} words. Use 1-3 words maximum.')
         return name
 
     @field_validator("tags")

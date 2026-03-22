@@ -20,10 +20,9 @@ func _on_new_game_pressed() -> void:
 
 	var result: Dictionary = await Backend.create_session()
 	if result.get("error", false):
-		# Even in offline mode, allow playing
-		Logger.warn("MainMenu: Session creation failed, starting in offline mode")
+		Log.warn("MainMenu: Session creation failed, starting in offline mode")
 
-	GameManager.change_scene_to_file("res://scenes/game/game.tscn")
+	GameManager.start_game(0)
 
 
 func _on_continue_pressed() -> void:
@@ -35,12 +34,12 @@ func _on_continue_pressed() -> void:
 
 	var result: Dictionary = await Backend.restore_session(Backend.session_id)
 	if result.get("error", false):
-		Logger.warn("MainMenu: Failed to restore session")
+		Log.warn("MainMenu: Failed to restore session")
 		new_game_button.disabled = false
 		continue_button.disabled = false
 		return
 
-	GameManager.change_scene_to_file("res://scenes/game/game.tscn")
+	GameManager.start_game(GameManager.current_level)
 
 
 func _on_quit_pressed() -> void:

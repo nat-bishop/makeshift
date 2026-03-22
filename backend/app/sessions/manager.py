@@ -1,4 +1,3 @@
-
 import json
 import uuid
 from collections.abc import Sequence
@@ -25,9 +24,7 @@ class SessionManager:
 
     async def session_exists(self, session_id: str) -> bool:
         """Check if a session exists without loading full state."""
-        cursor = await self._db.execute(
-            "SELECT 1 FROM sessions WHERE id = ?", (session_id,)
-        )
+        cursor = await self._db.execute("SELECT 1 FROM sessions WHERE id = ?", (session_id,))
         return await cursor.fetchone() is not None
 
     async def get_budget_info(self, session_id: str) -> tuple[float, float] | None:
@@ -130,11 +127,7 @@ class SessionManager:
             (session_id,),
         )
         eq_row = await eq_cursor.fetchone()
-        equipment = (
-            EquipmentSlots.model_validate_json(eq_row[0])
-            if eq_row
-            else EquipmentSlots()
-        )
+        equipment = EquipmentSlots.model_validate_json(eq_row[0]) if eq_row else EquipmentSlots()
 
         return Session(
             id=sid,
@@ -201,7 +194,8 @@ class SessionManager:
         """Sync objects: remove deleted, upsert current."""
         if not objects:
             await self._db.execute(
-                "DELETE FROM objects WHERE session_id = ?", (session_id,),
+                "DELETE FROM objects WHERE session_id = ?",
+                (session_id,),
             )
             return
 
@@ -230,9 +224,7 @@ class SessionManager:
             ],
         )
 
-    async def _sync_inventory(
-        self, session_id: str, inventory: list[InventorySlot]
-    ) -> None:
+    async def _sync_inventory(self, session_id: str, inventory: list[InventorySlot]) -> None:
         """Sync inventory slots via upsert (fixed 8 slots, no deletion needed)."""
         await self._db.executemany(
             "INSERT OR REPLACE INTO inventory (session_id, slot, object_id) VALUES (?, ?, ?)",
@@ -285,9 +277,7 @@ class SessionManager:
         if dirty:
             await self._db.commit()
 
-    async def track_cost(
-        self, session_id: str, amount: float, *, commit: bool = True
-    ) -> float:
+    async def track_cost(self, session_id: str, amount: float, *, commit: bool = True) -> float:
         """Add cost to session budget and return new total."""
         await self._db.execute(
             "UPDATE sessions SET budget_used = budget_used + ? WHERE id = ?",

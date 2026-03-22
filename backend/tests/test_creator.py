@@ -38,9 +38,12 @@ def test_fallback_object_structure():
             base_form="cube",
             material="stone",
             color_primary="#888888",
+            color_primary_name="gray",
             color_secondary="#666666",
+            color_secondary_name="dark gray",
             visual_effects=["sparkling"],
             size_category="medium",
+            bg_color="#4A6741",
         ),
     )
     bp = GameObjectBlueprint(

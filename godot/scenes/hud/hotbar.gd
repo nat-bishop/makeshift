@@ -28,15 +28,7 @@ func _ready() -> void:
 
 	_update_selection_visuals()
 	EventBus.inventory_changed.connect(_on_inventory_changed)
-
-
-func _unhandled_input(event: InputEvent) -> void:
-	for i in SLOT_COUNT:
-		var action := "hotbar_%d" % (i + 1)
-		if event.is_action_pressed(action):
-			set_selected(i)
-			get_viewport().set_input_as_handled()
-			return
+	EventBus.slot_selected.connect(_on_slot_selected)
 
 
 func _create_slot(index: int) -> PanelContainer:
@@ -115,6 +107,18 @@ func get_selected_item() -> Dictionary:
 	return _slot_data[_selected_index]
 
 
+func get_slot_data(index: int) -> Dictionary:
+	if index < 0 or index >= SLOT_COUNT:
+		return {}
+	return _slot_data[index]
+
+
+func get_slot_control(index: int) -> PanelContainer:
+	if index < 0 or index >= SLOT_COUNT:
+		return null
+	return _slots[index]
+
+
 func _update_selection_visuals() -> void:
 	for i in _slots.size():
 		var style: StyleBoxFlat = _slots[i].get_theme_stylebox("panel")
@@ -148,8 +152,17 @@ func _on_slot_mouse_exited() -> void:
 
 func _on_slot_gui_input(event: InputEvent, index: int) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		set_selected(index)
+		# Route through inventory so the slot_selected signal keeps everything in sync
+		var player = get_tree().get_first_node_in_group("player")
+		if player and player.has_node("PlayerInventory"):
+			player.get_node("PlayerInventory").select_slot(index)
+		else:
+			set_selected(index)
 
 
 func _on_inventory_changed(slot: int, item: Dictionary) -> void:
 	update_slot(slot, item)
+
+
+func _on_slot_selected(slot: int) -> void:
+	set_selected(slot)

@@ -15,24 +15,16 @@ func _ready() -> void:
 	interaction_area.body_exited.connect(_on_body_exited)
 
 
-func _on_body_entered(body: Node2D) -> void:
-	if body != player and body.has_method("get_tags"):
-		nearby_objects.append(body)
-
-
-func _on_body_exited(body: Node2D) -> void:
-	nearby_objects.erase(body)
-
-
 func pickup_nearest() -> bool:
+	# Filter out stale references from destroyed objects
+	nearby_objects = nearby_objects.filter(func(obj): return is_instance_valid(obj))
+
 	if nearby_objects.is_empty():
 		return false
 
 	var closest: Node2D = null
 	var closest_dist: float = INF
 	for obj in nearby_objects:
-		if not is_instance_valid(obj):
-			continue
 		var dist: float = player.global_position.distance_to(obj.global_position)
 		if dist < closest_dist:
 			closest_dist = dist
@@ -70,13 +62,32 @@ func equip_item() -> void:
 
 
 func _spawn_object_in_world(blueprint: Dictionary) -> void:
+	var drop_offset := Vector2(
+		50.0 * sign(player.velocity.x) if player.velocity.x != 0.0 else 50.0,
+		-20.0,
+	)
+	var spawn_pos: Vector2 = player.global_position + drop_offset
+
+	var world = player.get_tree().get_first_node_in_group("world")
+	if world and world.has_method("spawn_object"):
+		world.spawn_object(blueprint, spawn_pos)
+		return
+
+	# Fallback: load and add to scene directly
 	var game_object_scene: PackedScene = load("res://scenes/game_object/game_object.tscn")
 	if game_object_scene == null:
 		return
 	var obj: Node2D = game_object_scene.instantiate()
-	var drop_offset := Vector2(50.0 * sign(player.velocity.x) if player.velocity.x != 0.0 else 50.0, -20.0)
-	obj.global_position = player.global_position + drop_offset
+	obj.global_position = spawn_pos
 	if obj.has_method("init_from_blueprint"):
 		obj.init_from_blueprint(blueprint)
-	var world: Node = player.get_tree().current_scene
-	world.add_child(obj)
+	player.get_tree().current_scene.add_child(obj)
+
+
+func _on_body_entered(body: Node2D) -> void:
+	if body != player and body.has_method("get_tags"):
+		nearby_objects.append(body)
+
+
+func _on_body_exited(body: Node2D) -> void:
+	nearby_objects.erase(body)

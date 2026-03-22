@@ -91,19 +91,27 @@ GAS↔RIGID, GAS↔HEAVY, SOLID↔LIQUID, SOLID↔GAS, LIQUID↔GAS, STICKY↔SL
 - base_form: The basic shape/silhouette (e.g., "sword", "shield", "plank", "sphere", "cube", "bottle", "axe")
 - material: What it appears made of (e.g., "metal", "wood", "crystal", "ice", "stone", "cloth")
 - color_primary: Primary color as hex (e.g., "#FF4444")
+- color_primary_name: Natural language color name for image generation (e.g., "fiery red", "pale blue", "dark forest green")
 - color_secondary: Secondary/accent color as hex (e.g., "#222222")
+- color_secondary_name: Natural language accent color name (e.g., "dark orange", "silver", "charcoal")
 - visual_effects: List of visual effects like "glowing", "flaming", "sparkling", "dripping", "smoking", "frozen_particles"
 - size_category: One of "tiny", "small", "medium", "large", "huge" — pick based on what the object naturally is
+- bg_color: Solid background color hex for sprite generation. Pick a color that (1) contrasts with the subject's \
+colors so background removal works cleanly, and (2) is close to a natural/earthy tone (this is a 2D sandbox — \
+use tones like #4A6741 for outdoor, #4A6B8A for sky/water, #2A2A2A for dark, #808080 as generic fallback). \
+Never use the subject's primary or secondary color.
 
 ## Examples
 
 "fire sword" → name="Fire Sword", tags=[SOLID, RIGID, SHARP, HEAT_SOURCE, TOOL], \
-visual={base_form="sword", material="metal", color_primary="#CC3300", color_secondary="#FF6600", \
-visual_effects=["flaming"], size_category="medium"}
+visual={base_form="sword", material="metal", color_primary="#CC3300", color_primary_name="fiery red", \
+color_secondary="#FF6600", color_secondary_name="bright orange", \
+visual_effects=["flaming"], size_category="medium", bg_color="#4A6741"}
 
 "ice wall" → name="Ice Wall", tags=[SOLID, RIGID, FROZEN, COLD, BREAKABLE], \
-visual={base_form="wall", material="ice", color_primary="#88CCFF", color_secondary="#FFFFFF", \
-visual_effects=["frozen_particles"], size_category="large"}
+visual={base_form="wall", material="ice", color_primary="#88CCFF", color_primary_name="pale ice blue", \
+color_secondary="#FFFFFF", color_secondary_name="white", \
+visual_effects=["frozen_particles"], size_category="large", bg_color="#5A4A3A"}
 """
 
 _agent: Agent[None, CreatorOutput] | None = None
@@ -132,9 +140,7 @@ async def create_object(description: str) -> GameObjectBlueprint:
     t0 = time.monotonic()
     try:
         agent = _get_agent()
-        result = await agent.run(
-            f"Create a game object for: {description}"
-        )
+        result = await agent.run(f"Create a game object for: {description}")
         creator_output = result.output
         logger.info(
             "llm_create_success",
@@ -154,9 +160,12 @@ async def create_object(description: str) -> GameObjectBlueprint:
                 base_form="cube",
                 material="stone",
                 color_primary="#888888",
+                color_primary_name="gray",
                 color_secondary="#666666",
+                color_secondary_name="dark gray",
                 visual_effects=["sparkling"],
                 size_category="medium",
+                bg_color="#4A6741",
             ),
         )
 

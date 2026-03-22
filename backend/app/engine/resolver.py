@@ -1,6 +1,5 @@
 """Rule engine: two-tier index (pair O(1) + wildcard O(n)) with priority sorting."""
 
-
 from app.models.rules import InteractionRule
 from app.models.tags import Tag
 
@@ -20,23 +19,11 @@ class RuleResolver:
             else:
                 for ta in rule.tags_required_a:
                     for tb in rule.tags_required_b:
-                        (
-                            self._pair_index
-                            .setdefault(ta, {})
-                            .setdefault(tb, [])
-                            .append(rule)
-                        )
+                        (self._pair_index.setdefault(ta, {}).setdefault(tb, []).append(rule))
                         if rule.bidirectional:
-                            (
-                                self._pair_index
-                                .setdefault(tb, {})
-                                .setdefault(ta, [])
-                                .append(rule)
-                            )
+                            (self._pair_index.setdefault(tb, {}).setdefault(ta, []).append(rule))
 
-    def find_matching_rules(
-        self, tags_a: set[Tag], tags_b: set[Tag]
-    ) -> list[InteractionRule]:
+    def find_matching_rules(self, tags_a: set[Tag], tags_b: set[Tag]) -> list[InteractionRule]:
         """Find all rules matching the two tag sets, sorted by priority descending."""
         matched: dict[str, InteractionRule] = {}
 
@@ -47,8 +34,7 @@ class RuleResolver:
                     if tb in self._pair_index[ta]:
                         for rule in self._pair_index[ta][tb]:
                             if (
-                                rule.tags_required_a <= tags_a
-                                and rule.tags_required_b <= tags_b
+                                rule.tags_required_a <= tags_a and rule.tags_required_b <= tags_b
                             ) or (
                                 rule.bidirectional
                                 and rule.tags_required_a <= tags_b

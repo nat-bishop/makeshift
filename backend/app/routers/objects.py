@@ -68,17 +68,18 @@ async def create_object_endpoint(
     # Generate placeholder and kick off async sprite generation
     from app.images.pipeline import generate_placeholder
 
-    placeholder_bytes = generate_placeholder(
-        blueprint.visual_descriptor, blueprint.tags
-    )
+    placeholder_bytes = generate_placeholder(blueprint.visual_descriptor, blueprint.tags)
     placeholder_b64 = base64.b64encode(placeholder_bytes).decode()
 
     # Schedule async sprite generation (will deliver via WebSocket)
     remove_bg = request.app.state.remove_bg
     task = asyncio.create_task(
         _generate_and_deliver_sprite(
-            session_id, blueprint.id,
-            blueprint.visual_descriptor, blueprint.tags, remove_bg,
+            session_id,
+            blueprint.id,
+            blueprint.visual_descriptor,
+            blueprint.tags,
+            remove_bg,
         )
     )
     _background_tasks.add(task)
@@ -102,9 +103,7 @@ async def _generate_and_deliver_sprite(
     from app.images.pipeline import generate_sprite
 
     try:
-        sprite_bytes = await generate_sprite(
-            object_id, visual_descriptor, tags, remove_bg
-        )
+        sprite_bytes = await generate_sprite(object_id, visual_descriptor, tags, remove_bg)
         if sprite_bytes is None:
             await send_sprite_failed(session_id, object_id, "generation_failed")
             return

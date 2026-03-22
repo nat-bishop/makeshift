@@ -1,17 +1,27 @@
 extends Node
 
+const CL = preload("res://scripts/data/collision_layers.gd")
+
 var _cooldowns: Dictionary = {}  # "objA_id:objB_id" -> timestamp
 const COOLDOWN_TIME: float = 0.5
 const MAX_CASCADE_DEPTH: int = 3
 const CASCADE_RADIUS: float = 96.0
+const COOLDOWN_CLEANUP_INTERVAL: float = 5.0
 
 var _effect_executor: Node
+var _cleanup_timer: float = 0.0
 
 
 func _ready() -> void:
-	# Find or create the EffectExecutor
 	_effect_executor = preload("res://scripts/systems/effect_executor.gd").new()
 	add_child(_effect_executor)
+
+
+func _process(delta: float) -> void:
+	_cleanup_timer += delta
+	if _cleanup_timer >= COOLDOWN_CLEANUP_INTERVAL:
+		_cleanup_timer = 0.0
+		_cleanup_cooldowns()
 
 
 func resolve_collision(body_a: Node, body_b: Node, cascade_depth: int = 0) -> void:
@@ -84,7 +94,6 @@ func _cascade_to_neighbors(body: Node, cascade_depth: int) -> void:
 			resolve_collision(body, neighbor, cascade_depth)
 		return
 
-	# Fallback: use physics space query
 	_cascade_via_space_query(body, cascade_depth)
 
 
@@ -95,7 +104,7 @@ func _cascade_via_space_query(body: Node2D, cascade_depth: int) -> void:
 	circle.radius = CASCADE_RADIUS
 	query.shape = circle
 	query.transform = Transform2D(0, body.global_position)
-	query.collision_mask = 0b00100  # Layer 3 = Objects
+	query.collision_mask = CL.OBJECTS
 	query.exclude = [body.get_rid()] if body is PhysicsBody2D else []
 
 	var results: Array = space_state.intersect_shape(query, 32)
@@ -109,14 +118,12 @@ func _cascade_via_space_query(body: Node2D, cascade_depth: int) -> void:
 
 
 func _get_body_id(body: Node) -> String:
-	# Use the object's unique id or instance_id
 	if body.has_method("get_object_id"):
 		return body.get_object_id()
 	return str(body.get_instance_id())
 
 
 func _get_body_tags(body: Node) -> Array:
-	# Player has get_effective_tags (base + equipment), objects have get_tags
 	if body.has_method("get_effective_tags"):
 		return body.get_effective_tags()
 	if body.has_method("get_tags"):
@@ -132,6 +139,16 @@ func _arrays_equal(a: Array, b: Array) -> bool:
 	sorted_a.sort()
 	sorted_b.sort()
 	return sorted_a == sorted_b
+
+
+func _cleanup_cooldowns() -> void:
+	var now: float = Time.get_ticks_msec() / 1000.0
+	var to_remove: Array = []
+	for key in _cooldowns:
+		if now - _cooldowns[key] > COOLDOWN_TIME:
+			to_remove.append(key)
+	for key in to_remove:
+		_cooldowns.erase(key)
 
 
 func clear_cooldowns() -> void:

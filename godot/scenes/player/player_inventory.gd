@@ -43,9 +43,14 @@ func get_selected_item() -> Dictionary:
 func select_slot(slot: int) -> void:
 	if slot >= 0 and slot < MAX_SLOTS:
 		selected_slot = slot
+		EventBus.slot_selected.emit(slot)
 
 
 func has_item(slot: int) -> bool:
 	if slot < 0 or slot >= MAX_SLOTS:
 		return false
 	return not slots[slot].is_empty()
+
+
+func get_data() -> Array:
+	return slots.duplicate(true)

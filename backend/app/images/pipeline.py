@@ -43,15 +43,13 @@ def _descriptor_hash(vd: VisualDescriptor) -> str:
     """Stable hash of a VisualDescriptor for cache keying."""
     effects = ",".join(sorted(vd.visual_effects))
     data = (
-        f"{vd.base_form}|{vd.material}|{vd.color_primary}"
-        f"|{vd.color_secondary}|{effects}|{vd.size_category}"
+        f"{vd.base_form}|{vd.material}|{vd.color_primary_name}"
+        f"|{vd.color_secondary_name}|{effects}|{vd.size_category}|{vd.bg_color}"
     )
     return hashlib.sha256(data.encode()).hexdigest()[:16]
 
 
-def generate_placeholder(
-    visual_descriptor: VisualDescriptor, tags: list[Tag]
-) -> bytes:
+def generate_placeholder(visual_descriptor: VisualDescriptor, tags: list[Tag]) -> bytes:
     """Generate a colored rectangle placeholder PNG from the visual descriptor and tags."""
     size = SIZE_PIXEL_MAP[visual_descriptor.size_category]
 
@@ -79,20 +77,15 @@ def generate_placeholder(
 
 def build_prompt(visual_descriptor: VisualDescriptor) -> str:
     """Build a Flux image generation prompt from a VisualDescriptor."""
-    effects_str = (
-        ", ".join(visual_descriptor.visual_effects)
-        if visual_descriptor.visual_effects
-        else ""
-    )
+    vd = visual_descriptor
     parts = [
-        "2D game sprite, side view",
-        f"{visual_descriptor.size_category} {visual_descriptor.base_form}",
-        f"made of {visual_descriptor.material}",
-        f"{visual_descriptor.color_primary} with {visual_descriptor.color_secondary} accents",
+        "pixel art game sprite, side view, flat lighting, clean edges",
+        f"{vd.size_category} {vd.base_form} made of {vd.material}",
+        f"{vd.color_primary_name} with {vd.color_secondary_name} accents",
     ]
-    if effects_str:
-        parts.append(effects_str)
-    parts.append("pixel art, clean edges, white background, game asset, no text")
+    if vd.visual_effects:
+        parts.append(", ".join(vd.visual_effects))
+    parts.append(f"single centered object, solid {vd.bg_color} background, no text")
     return ", ".join(parts)
 
 
@@ -132,9 +125,7 @@ async def generate_sprite(
 
         # Resize to target size
         target_size = SIZE_PIXEL_MAP[visual_descriptor.size_category]
-        output_img = output_img.resize(
-            (target_size, target_size), Image.Resampling.LANCZOS
-        )
+        output_img = output_img.resize((target_size, target_size), Image.Resampling.LANCZOS)
 
         # Save to cache
         cache_path.parent.mkdir(parents=True, exist_ok=True)

@@ -42,10 +42,12 @@ async def websocket_handler(websocket: WebSocket, session_id: str) -> None:
             if msg_type == "ping":
                 await websocket.send_json({"type": "pong"})
             else:
-                await websocket.send_json({
-                    "type": "error",
-                    "message": f"Unknown message type: {msg_type}",
-                })
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "message": f"Unknown message type: {msg_type}",
+                    }
+                )
     except WebSocketDisconnect:
         logger.info("ws_disconnected", session_id=session_id)
     finally:
@@ -76,13 +78,16 @@ async def send_sprite_ready(
 ) -> None:
     """Push a sprite to all connected clients for a session."""
     sprite_b64 = base64.b64encode(sprite_bytes).decode()
-    await _broadcast(session_id, {
-        "type": "sprite_ready",
-        "object_id": object_id,
-        "sprite_png_base64": sprite_b64,
-        "width": width,
-        "height": height,
-    })
+    await _broadcast(
+        session_id,
+        {
+            "type": "sprite_ready",
+            "object_id": object_id,
+            "sprite_png_base64": sprite_b64,
+            "width": width,
+            "height": height,
+        },
+    )
 
 
 async def send_error(session_id: str, error_message: str) -> None:
@@ -92,8 +97,11 @@ async def send_error(session_id: str, error_message: str) -> None:
 
 async def send_sprite_failed(session_id: str, object_id: str, reason: str = "") -> None:
     """Notify clients that sprite generation failed for an object."""
-    await _broadcast(session_id, {
-        "type": "sprite_failed",
-        "object_id": object_id,
-        "reason": reason,
-    })
+    await _broadcast(
+        session_id,
+        {
+            "type": "sprite_failed",
+            "object_id": object_id,
+            "reason": reason,
+        },
+    )

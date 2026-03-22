@@ -1,4 +1,4 @@
-extends "res://scenes/levels/base_level.gd"
+extends BaseLevel
 ## Level 2: The Burning Bridge
 ## Two platforms connected by a wooden bridge (FLAMMABLE+BREAKABLE segments).
 ## Lava below (hazard). A torch (HEAT_SOURCE) sits on the bridge.
@@ -82,27 +82,6 @@ func _spawn_bridge_and_torch() -> void:
 	torch.init_from_blueprint(TORCH_BLUEPRINT.duplicate(true))
 
 
-func _create_platform(pos: Vector2, size: Vector2) -> void:
-	var body := StaticBody2D.new()
-	body.position = pos
-	body.collision_layer = 1  # Terrain
-	body.collision_mask = 0
-
-	var shape := CollisionShape2D.new()
-	var rect := RectangleShape2D.new()
-	rect.size = size
-	shape.shape = rect
-	shape.position = size / 2
-	body.add_child(shape)
-
-	var visual := ColorRect.new()
-	visual.size = size
-	visual.color = Color(0.35, 0.28, 0.2)
-	body.add_child(visual)
-
-	add_child(body)
-
-
 func _create_lava_zone(pos: Vector2, size: Vector2) -> void:
 	# Visual lava
 	var visual := ColorRect.new()
@@ -114,8 +93,8 @@ func _create_lava_zone(pos: Vector2, size: Vector2) -> void:
 	# Hazard area
 	var area := Area2D.new()
 	area.position = pos
-	area.collision_layer = 8  # Hazards
-	area.collision_mask = 2 | 4  # Player + Objects
+	area.collision_layer = CollisionLayers.HAZARDS
+	area.collision_mask = CollisionLayers.PLAYER | CollisionLayers.OBJECTS
 
 	var shape := CollisionShape2D.new()
 	var rect := RectangleShape2D.new()
@@ -128,10 +107,8 @@ func _create_lava_zone(pos: Vector2, size: Vector2) -> void:
 	add_child(area)
 
 
-func _on_lava_entered(body: Node) -> void:
-	if body is CharacterBody2D and body.has_method("get_effective_tags"):
-		# Respawn at spawn point
-		body.global_position = spawn_point.global_position
-		body.velocity = Vector2.ZERO
+func _on_lava_entered(body: Node2D) -> void:
+	if _is_player(body):
+		_respawn_player(body)
 	elif body.has_method("take_damage"):
-		body.take_damage(999)
+		body.take_damage(999.0)

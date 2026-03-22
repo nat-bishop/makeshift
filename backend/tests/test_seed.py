@@ -33,18 +33,14 @@ def test_seed_unique_names():
 def test_seed_within_budget():
     for obj in SEED_OBJECTS:
         cost = sum(TAG_POWER_COSTS[t] for t in obj.tags)
-        assert cost <= OBJECT_TAG_BUDGET, (
-            f"{obj.name} exceeds budget: cost={cost}, tags={obj.tags}"
-        )
+        assert cost <= OBJECT_TAG_BUDGET, f"{obj.name} exceeds budget: cost={cost}, tags={obj.tags}"
 
 
 def test_seed_no_contradictions():
     for obj in SEED_OBJECTS:
         tag_set = set(obj.tags)
         for pair in TAG_CONTRADICTIONS:
-            assert not (pair <= tag_set), (
-                f"{obj.name} has contradictory tags: {pair}"
-            )
+            assert not (pair <= tag_set), f"{obj.name} has contradictory tags: {pair}"
 
 
 def test_seed_power_costs_match_plan():

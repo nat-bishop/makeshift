@@ -1,4 +1,4 @@
-extends "res://scenes/levels/base_level.gd"
+extends BaseLevel
 ## Level 1: Cross the Gap
 ## Two platforms separated by a gap (~384px). Spawn left, goal right.
 
@@ -12,7 +12,6 @@ func _ready() -> void:
 
 
 func _build_terrain() -> void:
-	# Build platforms using StaticBody2D with collision shapes
 	# Left platform: 8 tiles wide (512px)
 	_create_platform(Vector2(0, 400), Vector2(512, 64))
 	# Right platform: 8 tiles wide, after 384px gap
@@ -21,32 +20,11 @@ func _build_terrain() -> void:
 	_create_kill_zone(Vector2(512, 700), Vector2(384, 64))
 
 
-func _create_platform(pos: Vector2, size: Vector2) -> void:
-	var body := StaticBody2D.new()
-	body.position = pos
-	body.collision_layer = 1  # Terrain layer
-	body.collision_mask = 0
-
-	var shape := CollisionShape2D.new()
-	var rect := RectangleShape2D.new()
-	rect.size = size
-	shape.shape = rect
-	shape.position = size / 2
-	body.add_child(shape)
-
-	var visual := ColorRect.new()
-	visual.size = size
-	visual.color = Color(0.35, 0.28, 0.2)  # Brown terrain
-	body.add_child(visual)
-
-	add_child(body)
-
-
 func _create_kill_zone(pos: Vector2, size: Vector2) -> void:
 	var area := Area2D.new()
 	area.position = pos
-	area.collision_layer = 8  # Hazards layer
-	area.collision_mask = 2  # Player
+	area.collision_layer = CollisionLayers.HAZARDS
+	area.collision_mask = CollisionLayers.PLAYER
 
 	var shape := CollisionShape2D.new()
 	var rect := RectangleShape2D.new()
@@ -59,8 +37,6 @@ func _create_kill_zone(pos: Vector2, size: Vector2) -> void:
 	add_child(area)
 
 
-func _on_kill_zone_entered(body: Node) -> void:
-	if body is CharacterBody2D and body.has_method("get_effective_tags"):
-		# Respawn player at spawn point
-		body.global_position = spawn_point.global_position
-		body.velocity = Vector2.ZERO
+func _on_kill_zone_entered(body: Node2D) -> void:
+	if _is_player(body):
+		_respawn_player(body)

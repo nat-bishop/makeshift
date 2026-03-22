@@ -27,5 +27,8 @@ Thumbs.db
 *.db
 *.sqlite
 
+# Asset staging
+assets/staging/
+
 # Claude Code
 .claude/

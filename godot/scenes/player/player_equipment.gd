@@ -75,3 +75,7 @@ func _get_slot(blueprint: Dictionary) -> String:
 	var visual: Dictionary = blueprint.get("visual_descriptor", {})
 	var base_form: String = visual.get("base_form", "")
 	return EQUIP_SLOT_MAP.get(base_form, "hand")
+
+
+func get_data() -> Array:
+	return [equipped.duplicate(true)]

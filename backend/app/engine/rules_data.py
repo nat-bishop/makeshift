@@ -1,4 +1,3 @@
-
 from app.models.effects import Effect, EffectTarget, EffectType
 from app.models.rules import InteractionRule
 from app.models.tags import Tag

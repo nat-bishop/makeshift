@@ -3,7 +3,6 @@ extends Node
 var base_url: String = "http://localhost:8000"
 var ws_url: String = "ws://localhost:8000"
 var session_id: String = ""
-var _http: HTTPRequest
 var _ws: WebSocketPeer
 var _ws_connected: bool = false
 var _reconnect_timer: float = 0.0
@@ -21,9 +20,6 @@ const MAX_RECONNECT_DELAY: float = 30.0
 
 
 func _ready() -> void:
-	_http = HTTPRequest.new()
-	_http.timeout = 15.0
-	add_child(_http)
 	_load_session_id()
 
 
@@ -36,7 +32,7 @@ func _process(delta: float) -> void:
 # --- Session Management ---
 
 func create_session() -> Dictionary:
-	var result: Dictionary = await _post("/api/sessions", {})
+	var result: Dictionary = await _http_post("/api/sessions", {})
 	if result.get("error", false):
 		offline_mode = true
 		return result
@@ -56,7 +52,7 @@ func create_session() -> Dictionary:
 
 
 func restore_session(id: String) -> Dictionary:
-	var result: Dictionary = await _get("/api/sessions/%s" % id)
+	var result: Dictionary = await _http_get("/api/sessions/%s" % id)
 	if result.get("error", false):
 		return result
 
@@ -79,7 +75,7 @@ func create_object(description: String) -> Dictionary:
 
 	EventBus.creation_started.emit(description)
 
-	var result: Dictionary = await _post(
+	var result: Dictionary = await _http_post(
 		"/api/sessions/%s/objects" % session_id,
 		{"description": description}
 	)
@@ -104,7 +100,7 @@ func fetch_rules() -> Array:
 	if _etag != "":
 		headers.append("If-None-Match: %s" % _etag)
 
-	var result: Dictionary = await _get("/api/rules", headers)
+	var result: Dictionary = await _http_get("/api/rules", headers)
 
 	if result.get("status_code", 0) == 304:
 		return []  # Not modified, use cached
@@ -122,7 +118,7 @@ func fetch_rules() -> Array:
 func sync_state(state: Dictionary) -> void:
 	if session_id.is_empty() or offline_mode:
 		return
-	await _put("/api/sessions/%s/sync" % session_id, state)
+	await _http_put("/api/sessions/%s/sync" % session_id, state)
 
 
 func get_cached_sprite(object_id: String) -> Texture2D:
@@ -139,7 +135,7 @@ func _connect_websocket() -> void:
 	var url: String = "%s/ws/%s" % [ws_url, session_id]
 	var err: int = _ws.connect_to_url(url)
 	if err != OK:
-		Logger.warn("Backend: WebSocket connection failed: %d" % err)
+		Log.warn("Backend: WebSocket connection failed: %d" % err)
 		_ws_connected = false
 		_reconnect_timer = _reconnect_delay
 	else:
@@ -158,7 +154,7 @@ func _process_websocket(_delta: float) -> void:
 			if not _ws_connected:
 				_ws_connected = true
 				_reconnect_delay = 1.0
-				Logger.info("Backend: WebSocket connected to session %s" % session_id)
+				Log.info("Backend: WebSocket connected to session %s" % session_id)
 				# Re-request pending sprites
 				for obj_id in _pending_sprites:
 					_ws.send_text(JSON.stringify({
@@ -183,7 +179,7 @@ func _handle_ws_message(text: String) -> void:
 	var json := JSON.new()
 	var err: int = json.parse(text)
 	if err != OK:
-		Logger.warn("Backend: Failed to parse WS message")
+		Log.warn("Backend: Failed to parse WS message")
 		return
 
 	var data: Dictionary = json.data
@@ -195,7 +191,7 @@ func _handle_ws_message(text: String) -> void:
 		"sprite_failed":
 			_handle_sprite_failed(data)
 		"error":
-			Logger.warn("Backend WS error: %s" % data.get("message", "unknown"))
+			Log.warn("Backend WS error: %s" % data.get("message", "unknown"))
 
 
 func _handle_sprite_ready(data: Dictionary) -> void:
@@ -208,7 +204,7 @@ func _handle_sprite_ready(data: Dictionary) -> void:
 	var image := Image.new()
 	var err: int = image.load_png_from_buffer(png_data)
 	if err != OK:
-		Logger.warn("Backend: Failed to decode sprite PNG for %s" % object_id)
+		Log.warn("Backend: Failed to decode sprite PNG for %s" % object_id)
 		return
 
 	var texture := ImageTexture.create_from_image(image)
@@ -224,7 +220,7 @@ func _handle_sprite_failed(data: Dictionary) -> void:
 		return
 	var reason: String = data.get("reason", "unknown")
 	_pending_sprites.erase(object_id)
-	Logger.warn("Backend: Sprite generation failed for %s: %s" % [object_id, reason])
+	Log.warn("Backend: Sprite generation failed for %s: %s" % [object_id, reason])
 	EventBus.sprite_failed.emit(object_id, reason)
 
 
@@ -294,15 +290,15 @@ func _gather_game_state() -> Dictionary:
 
 # --- HTTP Helpers ---
 
-func _post(path: String, body: Dictionary) -> Dictionary:
+func _http_post(path: String, body: Dictionary) -> Dictionary:
 	return await _request(HTTPClient.METHOD_POST, path, body)
 
 
-func _get(path: String, extra_headers: PackedStringArray = PackedStringArray()) -> Dictionary:
+func _http_get(path: String, extra_headers: PackedStringArray = PackedStringArray()) -> Dictionary:
 	return await _request(HTTPClient.METHOD_GET, path, {}, extra_headers)
 
 
-func _put(path: String, body: Dictionary) -> Dictionary:
+func _http_put(path: String, body: Dictionary) -> Dictionary:
 	return await _request(HTTPClient.METHOD_PUT, path, body)
 
 

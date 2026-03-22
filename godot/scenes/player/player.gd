@@ -11,17 +11,20 @@ var is_climbing: bool = false
 @onready var player_interaction: Node = $PlayerInteraction
 
 
+func _ready() -> void:
+	add_to_group("player")
+
+
 func _physics_process(delta: float) -> void:
 	var effective_gravity: float = GRAVITY
 	var effective_speed: float = SPEED
 
 	# Equipment modifiers
 	if player_equipment.has_tag("FLOATING"):
-		effective_gravity *= -0.3
+		effective_gravity *= 0.3
 	if player_equipment.has_tag("HEAVY"):
 		effective_speed *= 0.7
 
-	# Climbing
 	if is_climbing:
 		_process_climbing(effective_speed, delta)
 	else:
@@ -48,8 +51,6 @@ func _process_climbing(_speed: float, _delta: float) -> void:
 	var vertical: float = 0.0
 	if Input.is_action_pressed("jump"):
 		vertical = -1.0
-	elif Input.is_action_pressed("move_left") or Input.is_action_pressed("move_right"):
-		pass
 
 	var horizontal: float = Input.get_axis("move_left", "move_right")
 	velocity.x = horizontal * _speed * 0.5
