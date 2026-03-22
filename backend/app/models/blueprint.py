@@ -1,5 +1,7 @@
 
-from pydantic import BaseModel, computed_field, field_validator
+from typing import Literal
+
+from pydantic import BaseModel, Field, computed_field, field_validator
 
 from app.models.tags import (
     EQUIP_SLOT_MAP,
@@ -10,20 +12,40 @@ from app.models.tags import (
     Tag,
 )
 
+DURABILITY_BREAKABLE = 50
+DURABILITY_RIGID = 200
+DURABILITY_FLEXIBLE = 100
+DURABILITY_DEFAULT = 150
+
 
 class VisualDescriptor(BaseModel):
     base_form: str
     material: str
-    color_primary: str
-    color_secondary: str
+    color_primary: str = Field(pattern=r"^#[0-9a-fA-F]{6}$")
+    color_secondary: str = Field(pattern=r"^#[0-9a-fA-F]{6}$")
     visual_effects: list[str]
-    size_category: str  # tiny | small | medium | large | huge
+    size_category: Literal["tiny", "small", "medium", "large", "huge"]
 
 
 class CreatorOutput(BaseModel):
     name: str
-    tags: list[Tag]
+    tags: list[Tag] = Field(min_length=2, max_length=6)
     visual_descriptor: VisualDescriptor
+
+    @field_validator("name")
+    @classmethod
+    def check_name_length(cls, name: str) -> str:
+        from pydantic_ai import ModelRetry
+
+        name = name.strip()
+        if not name:
+            raise ModelRetry("Name cannot be empty.")
+        words = name.split()
+        if len(words) > 3:
+            raise ModelRetry(
+                f'Name "{name}" has {len(words)} words. Use 1-3 words maximum.'
+            )
+        return name
 
     @field_validator("tags")
     @classmethod
@@ -84,9 +106,9 @@ class GameObjectBlueprint(BaseModel):
     @property
     def starting_durability(self) -> int:
         if Tag.BREAKABLE in self.tags:
-            return 50
+            return DURABILITY_BREAKABLE
         if Tag.RIGID in self.tags:
-            return 200
+            return DURABILITY_RIGID
         if Tag.FLEXIBLE in self.tags:
-            return 100
-        return 150
+            return DURABILITY_FLEXIBLE
+        return DURABILITY_DEFAULT

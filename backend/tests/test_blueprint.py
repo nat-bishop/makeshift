@@ -1,8 +1,17 @@
 """Tests for blueprint models: CreatorOutput validation, GameObjectBlueprint computed fields."""
 
 import pytest
-from app.models.blueprint import CreatorOutput, GameObjectBlueprint, VisualDescriptor
+from app.models.blueprint import (
+    DURABILITY_BREAKABLE,
+    DURABILITY_DEFAULT,
+    DURABILITY_FLEXIBLE,
+    DURABILITY_RIGID,
+    CreatorOutput,
+    GameObjectBlueprint,
+    VisualDescriptor,
+)
 from app.models.tags import Tag
+from pydantic import ValidationError
 from pydantic_ai import ModelRetry
 
 
@@ -22,6 +31,37 @@ def _make_visual(
         visual_effects=visual_effects if visual_effects is not None else [],
         size_category=size_category,
     )
+
+
+class TestVisualDescriptor:
+    def test_valid_hex_colors(self) -> None:
+        vd = _make_visual(color_primary="#FF4444", color_secondary="#222222")
+        assert vd.color_primary == "#FF4444"
+
+    def test_invalid_color_primary_raises(self) -> None:
+        with pytest.raises(ValidationError):
+            _make_visual(color_primary="red")
+
+    def test_invalid_color_secondary_raises(self) -> None:
+        with pytest.raises(ValidationError):
+            _make_visual(color_secondary="blue")
+
+    def test_short_hex_raises(self) -> None:
+        with pytest.raises(ValidationError):
+            _make_visual(color_primary="#FFF")
+
+    def test_missing_hash_raises(self) -> None:
+        with pytest.raises(ValidationError):
+            _make_visual(color_primary="FF4444")
+
+    def test_valid_size_categories(self) -> None:
+        for size in ("tiny", "small", "medium", "large", "huge"):
+            vd = _make_visual(size_category=size)
+            assert vd.size_category == size
+
+    def test_invalid_size_category_raises(self) -> None:
+        with pytest.raises(ValidationError):
+            _make_visual(size_category="gigantic")
 
 
 class TestCreatorOutput:
@@ -77,6 +117,57 @@ class TestCreatorOutput:
                 tags=[Tag.STICKY, Tag.SLIPPERY],
                 visual_descriptor=_make_visual(),
             )
+
+    def test_too_few_tags_raises(self) -> None:
+        with pytest.raises(ValidationError):
+            CreatorOutput(
+                name="Lonely",
+                tags=[Tag.SOLID],
+                visual_descriptor=_make_visual(),
+            )
+
+    def test_empty_tags_raises(self) -> None:
+        with pytest.raises(ValidationError):
+            CreatorOutput(
+                name="Empty",
+                tags=[],
+                visual_descriptor=_make_visual(),
+            )
+
+    def test_too_many_tags_raises(self) -> None:
+        with pytest.raises(ValidationError):
+            CreatorOutput(
+                name="Overloaded",
+                tags=[
+                    Tag.SOLID, Tag.RIGID, Tag.LIGHT, Tag.COLD,
+                    Tag.SLIPPERY, Tag.BREAKABLE, Tag.FLAMMABLE,
+                ],  # 7 tags, all cost 1, under budget but over count
+                visual_descriptor=_make_visual(),
+            )
+
+    def test_name_too_long_raises(self) -> None:
+        with pytest.raises(ModelRetry):
+            CreatorOutput(
+                name="The Great Big Sword",
+                tags=[Tag.SOLID, Tag.RIGID],
+                visual_descriptor=_make_visual(),
+            )
+
+    def test_empty_name_raises(self) -> None:
+        with pytest.raises(ModelRetry):
+            CreatorOutput(
+                name="",
+                tags=[Tag.SOLID, Tag.RIGID],
+                visual_descriptor=_make_visual(),
+            )
+
+    def test_name_stripped(self) -> None:
+        out = CreatorOutput(
+            name="  Fire Sword  ",
+            tags=[Tag.SOLID, Tag.RIGID],
+            visual_descriptor=_make_visual(),
+        )
+        assert out.name == "Fire Sword"
 
 
 class TestGameObjectBlueprint:
@@ -158,24 +249,24 @@ class TestGameObjectBlueprint:
 
     def test_durability_breakable(self) -> None:
         bp = self._make_blueprint(tags=[Tag.SOLID, Tag.BREAKABLE])
-        assert bp.starting_durability == 50
+        assert bp.starting_durability == DURABILITY_BREAKABLE
 
     def test_durability_rigid(self) -> None:
         bp = self._make_blueprint(tags=[Tag.SOLID, Tag.RIGID])
-        assert bp.starting_durability == 200
+        assert bp.starting_durability == DURABILITY_RIGID
 
     def test_durability_flexible(self) -> None:
         bp = self._make_blueprint(tags=[Tag.SOLID, Tag.FLEXIBLE])
-        assert bp.starting_durability == 100
+        assert bp.starting_durability == DURABILITY_FLEXIBLE
 
     def test_durability_default(self) -> None:
         bp = self._make_blueprint(tags=[Tag.LIQUID, Tag.HEAVY])
-        assert bp.starting_durability == 150
+        assert bp.starting_durability == DURABILITY_DEFAULT
 
     def test_durability_breakable_takes_precedence(self) -> None:
         """BREAKABLE check comes first, even if RIGID is also present."""
         bp = self._make_blueprint(tags=[Tag.SOLID, Tag.RIGID, Tag.BREAKABLE])
-        assert bp.starting_durability == 50
+        assert bp.starting_durability == DURABILITY_BREAKABLE
 
     def test_serialization_includes_computed_fields(self) -> None:
         bp = self._make_blueprint(tags=[Tag.SOLID, Tag.RIGID, Tag.TOOL])

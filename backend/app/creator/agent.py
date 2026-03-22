@@ -146,7 +146,7 @@ async def create_object(description: str) -> GameObjectBlueprint:
         logger.error("llm_create_failed", elapsed=round(elapsed, 2), error=str(e))
         # Fallback: generic object with player's typed description as name
         words = description.strip().split()
-        fallback_name = " ".join(w.capitalize() for w in words[:3]) if words else "Mysterious Object"
+        fallback_name = " ".join(w.capitalize() for w in words[:2]) if words else "Object"
         creator_output = CreatorOutput(
             name=f"Mysterious {fallback_name}",
             tags=[Tag.SOLID, Tag.RIGID],

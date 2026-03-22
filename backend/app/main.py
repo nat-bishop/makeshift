@@ -45,7 +45,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # Ensure directories exist
     STATIC_DIR.mkdir(parents=True, exist_ok=True)
     (STATIC_DIR / "sprites").mkdir(exist_ok=True)
-    (STATIC_DIR / "placeholders").mkdir(exist_ok=True)
     DATA_DIR.mkdir(parents=True, exist_ok=True)
 
     # Initialize background removal callable

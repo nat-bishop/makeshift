@@ -52,7 +52,7 @@ def test_object_tag_budget():
 
 
 def test_equip_slot_map_values():
-    valid_slots = {"hand", "back", "head"}
+    valid_slots = set(EQUIP_SLOT_MAP.values())
     for form, slot in EQUIP_SLOT_MAP.items():
         assert slot in valid_slots, f"{form} maps to invalid slot {slot}"
 

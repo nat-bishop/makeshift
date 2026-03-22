@@ -3,7 +3,12 @@
 import uuid
 
 from app.creator.agent import SYSTEM_PROMPT
-from app.models.blueprint import CreatorOutput, GameObjectBlueprint, VisualDescriptor
+from app.models.blueprint import (
+    DURABILITY_RIGID,
+    CreatorOutput,
+    GameObjectBlueprint,
+    VisualDescriptor,
+)
 from app.models.tags import Tag
 
 
@@ -47,4 +52,4 @@ def test_fallback_object_structure():
     )
     assert bp.power_cost == 2  # SOLID(1) + RIGID(1)
     assert bp.is_equippable is False
-    assert bp.starting_durability == 200  # RIGID
+    assert bp.starting_durability == DURABILITY_RIGID

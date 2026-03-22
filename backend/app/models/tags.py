@@ -122,6 +122,14 @@ EQUIP_SLOT_MAP: dict[str, str] = {
     "goggles": "head",
 }
 
+SIZE_PIXEL_MAP: dict[str, int] = {
+    "tiny": 32,
+    "small": 48,
+    "medium": 64,
+    "large": 96,
+    "huge": 128,
+}
+
 TRANSFERABLE_TAGS: set[Tag] = {
     Tag.HEAT_SOURCE,
     Tag.COLD,

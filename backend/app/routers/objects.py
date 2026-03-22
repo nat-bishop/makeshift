@@ -9,9 +9,9 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from app.creator.agent import create_object
-from app.images.pipeline import SIZE_MAP, RemoveBg
+from app.images.pipeline import RemoveBg
 from app.models.blueprint import VisualDescriptor
-from app.models.tags import Tag
+from app.models.tags import SIZE_PIXEL_MAP, Tag
 from app.sessions.manager import SessionManager
 from app.ws.handler import send_sprite_failed, send_sprite_ready
 
@@ -109,7 +109,7 @@ async def _generate_and_deliver_sprite(
             await send_sprite_failed(session_id, object_id, "generation_failed")
             return
 
-        size = SIZE_MAP.get(visual_descriptor.size_category, 64)
+        size = SIZE_PIXEL_MAP[visual_descriptor.size_category]
         await send_sprite_ready(session_id, object_id, sprite_bytes, size, size)
     except Exception:
         logger.error(

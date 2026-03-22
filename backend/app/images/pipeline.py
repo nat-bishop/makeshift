@@ -11,21 +11,13 @@ import structlog
 from PIL import Image, ImageDraw
 
 from app.models.blueprint import VisualDescriptor
-from app.models.tags import Tag
+from app.models.tags import SIZE_PIXEL_MAP, Tag
 
 logger = structlog.get_logger()
 
 RemoveBg: TypeAlias = Callable[[bytes], Awaitable[bytes]]
 
 STATIC_DIR = Path(__file__).resolve().parent.parent.parent / "static"
-
-SIZE_MAP: dict[str, int] = {
-    "tiny": 32,
-    "small": 48,
-    "medium": 64,
-    "large": 96,
-    "huge": 128,
-}
 
 # Tag-based placeholder colors
 TAG_COLOR_MAP: dict[Tag, str] = {
@@ -61,7 +53,7 @@ def generate_placeholder(
     visual_descriptor: VisualDescriptor, tags: list[Tag]
 ) -> bytes:
     """Generate a colored rectangle placeholder PNG from the visual descriptor and tags."""
-    size = SIZE_MAP.get(visual_descriptor.size_category, 64)
+    size = SIZE_PIXEL_MAP[visual_descriptor.size_category]
 
     # Pick color: first matching tag color, or use primary color from descriptor
     color = visual_descriptor.color_primary
@@ -110,11 +102,6 @@ def get_cached_sprite_path(visual_descriptor: VisualDescriptor) -> Path:
     return STATIC_DIR / "sprites" / f"{h}.png"
 
 
-def get_placeholder_path(object_id: str) -> Path:
-    """Return the placeholder path for an object."""
-    return STATIC_DIR / "placeholders" / f"{object_id}.png"
-
-
 async def generate_sprite(
     object_id: str,
     visual_descriptor: VisualDescriptor,
@@ -144,7 +131,7 @@ async def generate_sprite(
         output_img = Image.open(io.BytesIO(output_bytes)).convert("RGBA")
 
         # Resize to target size
-        target_size = SIZE_MAP.get(visual_descriptor.size_category, 64)
+        target_size = SIZE_PIXEL_MAP[visual_descriptor.size_category]
         output_img = output_img.resize(
             (target_size, target_size), Image.Resampling.LANCZOS
         )
@@ -172,31 +159,3 @@ async def generate_sprite(
             exc_info=True,
         )
         return None
-
-
-async def full_pipeline(
-    object_id: str,
-    visual_descriptor: VisualDescriptor,
-    tags: list[Tag],
-    remove_bg: RemoveBg,
-) -> tuple[bytes, bytes | None]:
-    """Run the full image pipeline.
-
-    Returns (placeholder_bytes, sprite_bytes_or_none).
-    Placeholder is always generated synchronously.
-    Sprite generation is attempted async and may fail.
-    """
-    # Always generate placeholder
-    placeholder_bytes = generate_placeholder(visual_descriptor, tags)
-
-    # Save placeholder to disk
-    placeholder_path = get_placeholder_path(object_id)
-    placeholder_path.parent.mkdir(parents=True, exist_ok=True)
-    placeholder_path.write_bytes(placeholder_bytes)
-
-    # Attempt sprite generation
-    sprite_bytes = await generate_sprite(
-        object_id, visual_descriptor, tags, remove_bg
-    )
-
-    return placeholder_bytes, sprite_bytes

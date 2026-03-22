@@ -1,7 +1,14 @@
 """Tests for seed objects: all 15 valid, within budget, no contradictions."""
 
+from app.models.blueprint import (
+    DURABILITY_BREAKABLE,
+    DURABILITY_DEFAULT,
+    DURABILITY_FLEXIBLE,
+    DURABILITY_RIGID,
+)
 from app.models.tags import (
     OBJECT_TAG_BUDGET,
+    SIZE_PIXEL_MAP,
     TAG_CONTRADICTIONS,
     TAG_POWER_COSTS,
 )
@@ -65,28 +72,28 @@ def test_seed_power_costs_match_plan():
 def test_seed_durability_values():
     by_name = {obj.name: obj for obj in SEED_OBJECTS}
 
-    # BREAKABLE objects → 50
-    assert by_name["Wooden Plank"].starting_durability == 50
-    assert by_name["Boulder"].starting_durability == 50
-    assert by_name["Trampoline"].starting_durability == 50
-    assert by_name["Ladder"].starting_durability == 50
-    assert by_name["Ice Block"].starting_durability == 50
-    assert by_name["Balloon"].starting_durability == 50
-    assert by_name["TNT"].starting_durability == 50
+    # BREAKABLE objects
+    assert by_name["Wooden Plank"].starting_durability == DURABILITY_BREAKABLE
+    assert by_name["Boulder"].starting_durability == DURABILITY_BREAKABLE
+    assert by_name["Trampoline"].starting_durability == DURABILITY_BREAKABLE
+    assert by_name["Ladder"].starting_durability == DURABILITY_BREAKABLE
+    assert by_name["Ice Block"].starting_durability == DURABILITY_BREAKABLE
+    assert by_name["Balloon"].starting_durability == DURABILITY_BREAKABLE
+    assert by_name["TNT"].starting_durability == DURABILITY_BREAKABLE
 
-    # RIGID (no BREAKABLE) → 200
-    assert by_name["Torch"].starting_durability == 200
-    assert by_name["Shield"].starting_durability == 200
-    assert by_name["Sword"].starting_durability == 200
-    assert by_name["Fan"].starting_durability == 200
-    assert by_name["Metal Plate"].starting_durability == 200
+    # RIGID (no BREAKABLE)
+    assert by_name["Torch"].starting_durability == DURABILITY_RIGID
+    assert by_name["Shield"].starting_durability == DURABILITY_RIGID
+    assert by_name["Sword"].starting_durability == DURABILITY_RIGID
+    assert by_name["Fan"].starting_durability == DURABILITY_RIGID
+    assert by_name["Metal Plate"].starting_durability == DURABILITY_RIGID
 
-    # FLEXIBLE (no BREAKABLE, no RIGID) → 100
-    assert by_name["Rope"].starting_durability == 100
-    assert by_name["Umbrella"].starting_durability == 100
+    # FLEXIBLE (no BREAKABLE, no RIGID)
+    assert by_name["Rope"].starting_durability == DURABILITY_FLEXIBLE
+    assert by_name["Umbrella"].starting_durability == DURABILITY_FLEXIBLE
 
-    # LIQUID → default 150
-    assert by_name["Bucket of Water"].starting_durability == 150
+    # LIQUID → default
+    assert by_name["Bucket of Water"].starting_durability == DURABILITY_DEFAULT
 
 
 def test_seed_equippable_objects():
@@ -118,7 +125,7 @@ def test_seed_all_have_descriptions():
 
 
 def test_seed_all_have_valid_size_categories():
-    valid = {"tiny", "small", "medium", "large", "huge"}
+    valid = set(SIZE_PIXEL_MAP)
     for obj in SEED_OBJECTS:
         assert obj.visual_descriptor.size_category in valid, (
             f"{obj.name} has invalid size_category: {obj.visual_descriptor.size_category}"
