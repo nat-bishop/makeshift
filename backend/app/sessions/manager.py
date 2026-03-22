@@ -1,7 +1,7 @@
 
 import json
 import uuid
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any
 
@@ -30,6 +30,18 @@ class SessionManager:
         )
         return await cursor.fetchone() is not None
 
+    async def get_budget_info(self, session_id: str) -> tuple[float, float] | None:
+        """Return (budget_remaining, budget_limit) or None if session doesn't exist."""
+        cursor = await self._db.execute(
+            "SELECT budget_limit, budget_used FROM sessions WHERE id = ?",
+            (session_id,),
+        )
+        row = await cursor.fetchone()
+        if row is None:
+            return None
+        budget_limit, budget_used = row
+        return budget_limit - budget_used, budget_limit
+
     async def create_session(self) -> Session:
         """Create a new session with default state."""
         session_id = str(uuid.uuid4())
@@ -44,11 +56,10 @@ class SessionManager:
         )
 
         # Initialize 8 empty inventory slots
-        for slot in range(8):
-            await self._db.execute(
-                "INSERT INTO inventory (session_id, slot, object_id) VALUES (?, ?, NULL)",
-                (session_id, slot),
-            )
+        await self._db.executemany(
+            "INSERT INTO inventory (session_id, slot, object_id) VALUES (?, ?, NULL)",
+            [(session_id, slot) for slot in range(8)],
+        )
 
         # Initialize equipment (single row with JSON)
         await self._db.execute(
@@ -143,6 +154,8 @@ class SessionManager:
         blueprint: GameObjectBlueprint,
         x: float = 0.0,
         y: float = 0.0,
+        *,
+        commit: bool = True,
     ) -> None:
         """Save or update a world object in the session."""
         blueprint_json = blueprint.model_dump_json()
@@ -155,25 +168,76 @@ class SessionManager:
             """,
             (session_id, blueprint.id, blueprint_json, x, y, durability),
         )
+        if commit:
+            await self._db.commit()
+
+    async def save_objects_batch(
+        self,
+        session_id: str,
+        blueprints: Sequence[GameObjectBlueprint],
+    ) -> None:
+        """Save multiple objects in a single transaction."""
+        await self._db.executemany(
+            """
+            INSERT OR REPLACE INTO objects
+                (session_id, object_id, blueprint_json, x, y, durability)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            [
+                (
+                    session_id,
+                    bp.id,
+                    bp.model_dump_json(),
+                    0.0,
+                    0.0,
+                    float(bp.starting_durability),
+                )
+                for bp in blueprints
+            ],
+        )
         await self._db.commit()
 
-    async def _replace_rows(
-        self,
-        table: str,
-        session_id: str,
-        rows: Sequence[Any],
-        to_tuple_fn: Callable[[str, Any], tuple[Any, ...]],
-    ) -> None:
-        """DELETE all rows for a session in *table*, then INSERT new ones."""
-        await self._db.execute(
-            f"DELETE FROM {table} WHERE session_id = ?", (session_id,)
-        )
-        for row in rows:
-            values = to_tuple_fn(session_id, row)
-            placeholders = ", ".join("?" for _ in values)
+    async def _sync_objects(self, session_id: str, objects: list[WorldObject]) -> None:
+        """Sync objects: remove deleted, upsert current."""
+        if not objects:
             await self._db.execute(
-                f"INSERT INTO {table} VALUES ({placeholders})", values,
+                "DELETE FROM objects WHERE session_id = ?", (session_id,),
             )
+            return
+
+        current_ids = [obj.object_id for obj in objects]
+        placeholders = ",".join("?" for _ in current_ids)
+        await self._db.execute(
+            f"DELETE FROM objects WHERE session_id = ? AND object_id NOT IN ({placeholders})",
+            (session_id, *current_ids),
+        )
+        await self._db.executemany(
+            """
+            INSERT OR REPLACE INTO objects
+                (session_id, object_id, blueprint_json, x, y, durability)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            [
+                (
+                    session_id,
+                    obj.object_id,
+                    obj.blueprint.model_dump_json(),
+                    obj.x,
+                    obj.y,
+                    obj.durability,
+                )
+                for obj in objects
+            ],
+        )
+
+    async def _sync_inventory(
+        self, session_id: str, inventory: list[InventorySlot]
+    ) -> None:
+        """Sync inventory slots via upsert (fixed 8 slots, no deletion needed)."""
+        await self._db.executemany(
+            "INSERT OR REPLACE INTO inventory (session_id, slot, object_id) VALUES (?, ?, ?)",
+            [(session_id, inv.slot, inv.object_id) for inv in inventory],
+        )
 
     async def save_state(
         self,
@@ -204,20 +268,11 @@ class SessionManager:
             dirty = True
 
         if objects is not None:
-            await self._replace_rows(
-                "objects", session_id, objects,
-                lambda sid, obj: (
-                    sid, obj.object_id, obj.blueprint.model_dump_json(),
-                    obj.x, obj.y, obj.durability,
-                ),
-            )
+            await self._sync_objects(session_id, objects)
             dirty = True
 
         if inventory is not None:
-            await self._replace_rows(
-                "inventory", session_id, inventory,
-                lambda sid, inv: (sid, inv.slot, inv.object_id),
-            )
+            await self._sync_inventory(session_id, inventory)
             dirty = True
 
         if equipment is not None:
@@ -230,16 +285,31 @@ class SessionManager:
         if dirty:
             await self._db.commit()
 
-    async def track_cost(self, session_id: str, amount: float) -> float:
+    async def track_cost(
+        self, session_id: str, amount: float, *, commit: bool = True
+    ) -> float:
         """Add cost to session budget and return new total."""
         await self._db.execute(
             "UPDATE sessions SET budget_used = budget_used + ? WHERE id = ?",
             (amount, session_id),
         )
-        await self._db.commit()
+        if commit:
+            await self._db.commit()
 
         cursor = await self._db.execute(
             "SELECT budget_used FROM sessions WHERE id = ?", (session_id,)
         )
         row = await cursor.fetchone()
         return row[0] if row else 0.0
+
+    async def track_cost_and_save_object(
+        self,
+        session_id: str,
+        amount: float,
+        blueprint: GameObjectBlueprint,
+    ) -> float:
+        """Track cost and save object in a single transaction."""
+        new_total = await self.track_cost(session_id, amount, commit=False)
+        await self.save_object(session_id, blueprint, commit=False)
+        await self._db.commit()
+        return new_total

@@ -47,11 +47,12 @@ async def create_object_endpoint(
     db = request.app.state.db
     manager = SessionManager(db)
 
-    session = await manager.get_session(session_id)
-    if session is None:
+    budget_info = await manager.get_budget_info(session_id)
+    if budget_info is None:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    if session.budget_remaining <= 0:
+    budget_remaining, budget_limit = budget_info
+    if budget_remaining <= 0:
         raise HTTPException(status_code=402, detail="Session budget exceeded")
 
     logger.info("object_create_request", description_len=len(body.description))
@@ -59,11 +60,10 @@ async def create_object_endpoint(
     # Create object via LLM
     blueprint = await create_object(body.description)
 
-    # Track total object cost upfront (LLM + image generation)
-    new_total = await manager.track_cost(session_id, OBJECT_CREATION_COST)
-
-    # Save to session
-    await manager.save_object(session_id, blueprint)
+    # Track cost and save object in one transaction
+    new_total = await manager.track_cost_and_save_object(
+        session_id, OBJECT_CREATION_COST, blueprint
+    )
 
     # Generate placeholder and kick off async sprite generation
     from app.images.pipeline import generate_placeholder
@@ -87,7 +87,7 @@ async def create_object_endpoint(
     return CreateObjectResponse(
         blueprint=blueprint.model_dump(mode="json"),
         placeholder_png_base64=placeholder_b64,
-        budget_remaining=session.budget_limit - new_total,
+        budget_remaining=budget_limit - new_total,
     )
 
 

@@ -23,8 +23,7 @@ async def websocket_handler(websocket: WebSocket, session_id: str) -> None:
     manager = SessionManager(db)
 
     # Verify session exists before accepting
-    session = await manager.get_session(session_id)
-    if session is None:
+    if not await manager.session_exists(session_id):
         logger.warning("ws_rejected", session_id=session_id, reason="not_found")
         await websocket.close(code=4004, reason="Session not found")
         return

@@ -50,10 +50,8 @@ async def create_session(request: Request) -> CreateSessionResponse:
     logger.info("session_created", session_id=session.id, budget=session.budget_remaining)
 
     # Seed objects into the session
-    seed_blueprints = []
-    for bp in SEED_OBJECTS:
-        await manager.save_object(session.id, bp)
-        seed_blueprints.append(bp.model_dump(mode="json"))
+    await manager.save_objects_batch(session.id, SEED_OBJECTS)
+    seed_blueprints = [bp.model_dump(mode="json") for bp in SEED_OBJECTS]
 
     host = request.headers.get("host", f"{settings.host}:{settings.port}")
     ws_url = f"ws://{host}/ws/{session.id}"
