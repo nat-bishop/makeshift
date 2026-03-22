@@ -24,6 +24,11 @@ def setup_logging() -> None:
         else structlog.processors.JSONRenderer()
     )
 
+    if settings.logfire_enabled:
+        import logfire
+
+        shared_processors.append(logfire.StructlogProcessor())
+
     structlog.configure(
         processors=[*shared_processors, renderer],
         wrapper_class=structlog.make_filtering_bound_logger(level),
@@ -32,7 +37,6 @@ def setup_logging() -> None:
         cache_logger_on_first_use=True,
     )
 
-    # Bridge stdlib logging through structlog
     formatter = structlog.stdlib.ProcessorFormatter(
         processors=[*shared_processors, renderer],
     )
@@ -40,6 +44,5 @@ def setup_logging() -> None:
     handler.setFormatter(formatter)
     logging.basicConfig(level=level, handlers=[handler], force=True)
 
-    # Silence noisy libraries
     for lib in ("httpx", "httpcore", "fal_client", "PIL"):
         logging.getLogger(lib).setLevel(logging.WARNING)

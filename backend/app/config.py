@@ -23,8 +23,11 @@ class Settings(BaseSettings):
     bg_removal_backend: Literal["local", "cloud"] = "local"
 
     # Logging
-    log_level: str = "INFO"
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     log_format: Literal["console", "json"] = "console"
+
+    # Observability (run `logfire auth` first, then set to true)
+    logfire_enabled: bool = False
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

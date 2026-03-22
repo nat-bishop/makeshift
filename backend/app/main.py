@@ -25,6 +25,15 @@ DATA_DIR = Path(settings.database_path).parent
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     setup_logging()
 
+    # Optionally enable Logfire observability
+    if settings.logfire_enabled:
+        import logfire
+
+        logfire.configure(service_name="llm-sandbox-game")
+        logfire.instrument_fastapi(app)
+        logfire.instrument_pydantic_ai()
+        logger.info("logfire_enabled")
+
     logger.info(
         "server_starting",
         llm_model=settings.llm_model,

@@ -136,15 +136,10 @@ async def create_object(description: str) -> GameObjectBlueprint:
             f"Create a game object for: {description}"
         )
         creator_output = result.output
-        elapsed = time.monotonic() - t0
-        usage = result.usage()
         logger.info(
             "llm_create_success",
             object_name=creator_output.name,
             tag_count=len(creator_output.tags),
-            elapsed=round(elapsed, 2),
-            input_tokens=usage.input_tokens if usage else 0,
-            output_tokens=usage.output_tokens if usage else 0,
         )
     except Exception as e:
         elapsed = time.monotonic() - t0
