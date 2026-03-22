@@ -1,15 +1,21 @@
+from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import structlog
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
+from app.logging_setup import setup_logging
+from app.middleware import session_context_middleware
 from app.routers import objects, rules, sessions
 from app.ws.handler import websocket_handler
+
+logger = structlog.get_logger()
 
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 DATA_DIR = Path(settings.database_path).parent
@@ -17,6 +23,16 @@ DATA_DIR = Path(settings.database_path).parent
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    setup_logging()
+
+    logger.info(
+        "server_starting",
+        llm_model=settings.llm_model,
+        image_model=settings.image_model,
+        bg_removal=settings.bg_removal_backend,
+        budget=settings.session_budget_usd,
+    )
+
     # Ensure directories exist
     STATIC_DIR.mkdir(parents=True, exist_ok=True)
     (STATIC_DIR / "sprites").mkdir(exist_ok=True)
@@ -96,9 +112,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.db = db
 
     from app.creator.agent import _get_agent
+
     _get_agent()  # Warm up LLM agent
+    logger.info("llm_agent_ready")
 
     yield
+
+    logger.info("server_stopping")
 
     from app.images.fal_helpers import close_http_client
 
@@ -115,6 +135,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.middleware("http")(session_context_middleware)
 
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 

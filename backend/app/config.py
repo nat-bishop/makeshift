@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Literal
 
 from pydantic_settings import BaseSettings
@@ -19,6 +21,10 @@ class Settings(BaseSettings):
     image_model: str = "fal-ai/flux-pro/kontext"
     rembg_model: str = "birefnet-general"
     bg_removal_backend: Literal["local", "cloud"] = "local"
+
+    # Logging
+    log_level: str = "INFO"
+    log_format: Literal["console", "json"] = "console"
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
