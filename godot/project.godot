@@ -12,6 +12,7 @@ config/features=PackedStringArray("4.3", "GL Compatibility")
 
 [autoload]
 
+Logger="*res://autoloads/logger.gd"
 EventBus="*res://autoloads/event_bus.gd"
 GameManager="*res://autoloads/game_manager.gd"
 RuleEngine="*res://autoloads/rule_engine.gd"

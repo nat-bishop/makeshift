@@ -21,7 +21,7 @@ func _load_current_level() -> void:
 	var level_path: String = GameManager.LEVEL_SCENES[level_index]
 	var level_scene: PackedScene = load(level_path)
 	if level_scene == null:
-		push_error("Game: Failed to load level: %s" % level_path)
+		Logger.error("Game: Failed to load level: %s" % level_path)
 		return
 
 	_current_level_scene = level_scene.instantiate()

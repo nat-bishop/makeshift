@@ -166,4 +166,4 @@ func _apply_dot(target: Node, damage_per_tick: float, tick_interval: float, dura
 
 func _spawn_placeholder(pos: Vector2, description: String) -> void:
 	# Stub: In full implementation, create a placeholder object at pos
-	push_warning("EffectExecutor: SPAWN effect stub - '%s' at %s" % [description, str(pos)])
+	Logger.warn("EffectExecutor: SPAWN effect stub - '%s' at %s" % [description, str(pos)])

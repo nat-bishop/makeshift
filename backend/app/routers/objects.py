@@ -1,8 +1,10 @@
+from __future__ import annotations
 
 import asyncio
 import base64
 from typing import Any
 
+import structlog
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
@@ -12,6 +14,8 @@ from app.models.blueprint import VisualDescriptor
 from app.models.tags import Tag
 from app.sessions.manager import SessionManager
 from app.ws.handler import send_sprite_ready
+
+logger = structlog.get_logger()
 
 router = APIRouter(prefix="/api/sessions/{session_id}/objects", tags=["objects"])
 
@@ -46,6 +50,8 @@ async def create_object_endpoint(
 
     if session.budget_remaining <= 0:
         raise HTTPException(status_code=402, detail="Session budget exceeded")
+
+    logger.info("object_create_request", description_len=len(body.description))
 
     # Create object via LLM
     blueprint = await create_object(body.description)
@@ -110,4 +116,8 @@ async def _generate_and_deliver_sprite(
         size = SIZE_MAP.get(visual_descriptor.size_category, 64)
         await send_sprite_ready(session_id, object_id, sprite_bytes, size, size)
     except Exception:
-        pass  # Sprite failure is non-fatal; placeholder remains
+        logger.error(
+            "sprite_delivery_failed",
+            object_id=object_id,
+            exc_info=True,
+        )

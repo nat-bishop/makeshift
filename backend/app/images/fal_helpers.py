@@ -1,8 +1,12 @@
+from __future__ import annotations
 
 from typing import Any
 
 import fal_client
 import httpx
+import structlog
+
+logger = structlog.get_logger()
 
 _http_client: httpx.AsyncClient | None = None
 
@@ -37,6 +41,7 @@ async def submit_and_download(
     Returns:
         Raw image bytes.
     """
+    logger.debug("fal_submit", endpoint=endpoint)
     handler = await fal_client.submit_async(endpoint, arguments=arguments)
     result = await handler.get()
 
@@ -54,4 +59,5 @@ async def submit_and_download(
     client = _get_http_client()
     resp = await client.get(image_url)
     resp.raise_for_status()
+    logger.debug("fal_download", size_bytes=len(resp.content))
     return resp.content

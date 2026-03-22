@@ -1,12 +1,13 @@
+from __future__ import annotations
 
 import base64
-import logging
 
+import structlog
 from fastapi import WebSocket, WebSocketDisconnect
 
 from app.sessions.manager import SessionManager
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger()
 
 # Active connections: session_id → set of WebSocket
 _connections: dict[str, set[WebSocket]] = {}
@@ -24,10 +25,12 @@ async def websocket_handler(websocket: WebSocket, session_id: str) -> None:
     # Verify session exists before accepting
     session = await manager.get_session(session_id)
     if session is None:
+        logger.warning("ws_rejected", session_id=session_id, reason="not_found")
         await websocket.close(code=4004, reason="Session not found")
         return
 
     await websocket.accept()
+    logger.info("ws_connected", session_id=session_id)
 
     # Register connection for sprite delivery (multi-client)
     _connections.setdefault(session_id, set()).add(websocket)
@@ -45,7 +48,7 @@ async def websocket_handler(websocket: WebSocket, session_id: str) -> None:
                     "message": f"Unknown message type: {msg_type}",
                 })
     except WebSocketDisconnect:
-        pass
+        logger.info("ws_disconnected", session_id=session_id)
     finally:
         # Clean up connection
         ws_set = _connections.get(session_id, set())
@@ -61,7 +64,7 @@ async def _broadcast(session_id: str, message: dict[str, object]) -> None:
         try:
             await ws.send_json(message)
         except Exception:
-            logger.warning("WebSocket send failed for session %s", session_id)
+            logger.error("ws_send_failed", session_id=session_id)
             ws_set.discard(ws)
 
 

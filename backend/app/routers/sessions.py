@@ -1,4 +1,6 @@
+from __future__ import annotations
 
+import structlog
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
@@ -7,6 +9,8 @@ from app.engine.rules_data import ALL_RULES
 from app.models.session import EquipmentSlots, InventorySlot, WorldObject
 from app.seed.objects import SEED_OBJECTS
 from app.sessions.manager import SessionManager
+
+logger = structlog.get_logger()
 
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
@@ -43,6 +47,7 @@ async def create_session(request: Request) -> CreateSessionResponse:
     db = request.app.state.db
     manager = SessionManager(db)
     session = await manager.create_session()
+    logger.info("session_created", session_id=session.id, budget=session.budget_remaining)
 
     # Seed objects into the session
     seed_blueprints = []
@@ -72,6 +77,8 @@ async def get_session(session_id: str, request: Request) -> GetSessionResponse:
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
 
+    logger.info("session_restored", session_id=session_id)
+
     host = request.headers.get("host", f"{settings.host}:{settings.port}")
     ws_url = f"ws://{host}/ws/{session.id}"
 
@@ -91,6 +98,8 @@ async def sync_session(session_id: str, body: SyncRequest, request: Request) -> 
 
     if not await manager.session_exists(session_id):
         raise HTTPException(status_code=404, detail="Session not found")
+
+    logger.debug("session_sync")
 
     await manager.save_state(
         session_id,

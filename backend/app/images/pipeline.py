@@ -1,14 +1,19 @@
+from __future__ import annotations
 
 import hashlib
 import io
+import time
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import TypeAlias
 
+import structlog
 from PIL import Image, ImageDraw
 
 from app.models.blueprint import VisualDescriptor
 from app.models.tags import Tag
+
+logger = structlog.get_logger()
 
 RemoveBg: TypeAlias = Callable[[bytes], Awaitable[bytes]]
 
@@ -125,8 +130,10 @@ async def generate_sprite(
     # Check cache
     cache_path = get_cached_sprite_path(visual_descriptor)
     if cache_path.exists():
+        logger.debug("sprite_cache_hit", object_id=object_id)
         return cache_path.read_bytes()
 
+    t0 = time.monotonic()
     try:
         # Generate via Flux
         prompt = build_prompt(visual_descriptor)
@@ -149,9 +156,21 @@ async def generate_sprite(
         final_bytes = buf.getvalue()
         cache_path.write_bytes(final_bytes)
 
+        logger.info(
+            "sprite_generated",
+            object_id=object_id,
+            elapsed=round(time.monotonic() - t0, 2),
+            size_bytes=len(final_bytes),
+        )
         return final_bytes
 
     except Exception:
+        logger.error(
+            "sprite_generation_failed",
+            object_id=object_id,
+            elapsed=round(time.monotonic() - t0, 2),
+            exc_info=True,
+        )
         return None
 
 

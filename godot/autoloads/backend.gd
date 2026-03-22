@@ -139,7 +139,7 @@ func _connect_websocket() -> void:
 	var url: String = "%s/ws/%s" % [ws_url, session_id]
 	var err: int = _ws.connect_to_url(url)
 	if err != OK:
-		push_warning("Backend: WebSocket connection failed: %d" % err)
+		Logger.warn("Backend: WebSocket connection failed: %d" % err)
 		_ws_connected = false
 		_reconnect_timer = _reconnect_delay
 	else:
@@ -158,6 +158,7 @@ func _process_websocket(_delta: float) -> void:
 			if not _ws_connected:
 				_ws_connected = true
 				_reconnect_delay = 1.0
+				Logger.info("Backend: WebSocket connected to session %s" % session_id)
 				# Re-request pending sprites
 				for obj_id in _pending_sprites:
 					_ws.send_text(JSON.stringify({
@@ -182,7 +183,7 @@ func _handle_ws_message(text: String) -> void:
 	var json := JSON.new()
 	var err: int = json.parse(text)
 	if err != OK:
-		push_warning("Backend: Failed to parse WS message")
+		Logger.warn("Backend: Failed to parse WS message")
 		return
 
 	var data: Dictionary = json.data
@@ -192,7 +193,7 @@ func _handle_ws_message(text: String) -> void:
 		"sprite_ready":
 			_handle_sprite_ready(data)
 		"error":
-			push_warning("Backend WS error: %s" % data.get("message", "unknown"))
+			Logger.warn("Backend WS error: %s" % data.get("message", "unknown"))
 
 
 func _handle_sprite_ready(data: Dictionary) -> void:
@@ -205,7 +206,7 @@ func _handle_sprite_ready(data: Dictionary) -> void:
 	var image := Image.new()
 	var err: int = image.load_png_from_buffer(png_data)
 	if err != OK:
-		push_warning("Backend: Failed to decode sprite PNG for %s" % object_id)
+		Logger.warn("Backend: Failed to decode sprite PNG for %s" % object_id)
 		return
 
 	var texture := ImageTexture.create_from_image(image)

@@ -1,13 +1,15 @@
+from __future__ import annotations
 
-import logging
+import time
 import uuid
 
+import structlog
 from pydantic_ai import Agent
 
 from app.models.blueprint import CreatorOutput, GameObjectBlueprint, VisualDescriptor
 from app.models.tags import Tag
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger()
 
 SYSTEM_PROMPT = """You are a game object designer for a 2D sandbox game. Given a player's text description, \
 you create a game object by choosing a name, assigning tags, and describing its visual appearance.
@@ -127,14 +129,26 @@ async def create_object(description: str) -> GameObjectBlueprint:
     into a full GameObjectBlueprint with computed fields. Falls back
     to a generic object on failure.
     """
+    t0 = time.monotonic()
     try:
         agent = _get_agent()
         result = await agent.run(
             f"Create a game object for: {description}"
         )
         creator_output = result.output
+        elapsed = time.monotonic() - t0
+        usage = result.usage()
+        logger.info(
+            "llm_create_success",
+            object_name=creator_output.name,
+            tag_count=len(creator_output.tags),
+            elapsed=round(elapsed, 2),
+            input_tokens=usage.input_tokens if usage else 0,
+            output_tokens=usage.output_tokens if usage else 0,
+        )
     except Exception as e:
-        logger.warning("LLM creation failed for '%s': %s", description, e)
+        elapsed = time.monotonic() - t0
+        logger.error("llm_create_failed", elapsed=round(elapsed, 2), error=str(e))
         # Fallback: generic object with player's typed description as name
         words = description.strip().split()
         fallback_name = " ".join(w.capitalize() for w in words[:3]) if words else "Mysterious Object"
