@@ -1,4 +1,3 @@
-from __future__ import annotations
 
 from app.models.effects import Effect, EffectTarget, EffectType
 from app.models.rules import InteractionRule

@@ -1,6 +1,5 @@
 """Rule engine: two-tier index (pair O(1) + wildcard O(n)) with priority sorting."""
 
-from __future__ import annotations
 
 from app.models.rules import InteractionRule
 from app.models.tags import Tag
