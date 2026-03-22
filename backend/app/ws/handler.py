@@ -89,3 +89,12 @@ async def send_sprite_ready(
 async def send_error(session_id: str, error_message: str) -> None:
     """Send an error message to all connected clients."""
     await _broadcast(session_id, {"type": "error", "message": error_message})
+
+
+async def send_sprite_failed(session_id: str, object_id: str, reason: str = "") -> None:
+    """Notify clients that sprite generation failed for an object."""
+    await _broadcast(session_id, {
+        "type": "sprite_failed",
+        "object_id": object_id,
+        "reason": reason,
+    })

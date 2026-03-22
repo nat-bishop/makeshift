@@ -192,6 +192,8 @@ func _handle_ws_message(text: String) -> void:
 	match msg_type:
 		"sprite_ready":
 			_handle_sprite_ready(data)
+		"sprite_failed":
+			_handle_sprite_failed(data)
 		"error":
 			Logger.warn("Backend WS error: %s" % data.get("message", "unknown"))
 
@@ -214,6 +216,16 @@ func _handle_sprite_ready(data: Dictionary) -> void:
 	_pending_sprites.erase(object_id)
 
 	EventBus.sprite_ready.emit(object_id, texture)
+
+
+func _handle_sprite_failed(data: Dictionary) -> void:
+	var object_id: String = data.get("object_id", "")
+	if object_id.is_empty():
+		return
+	var reason: String = data.get("reason", "unknown")
+	_pending_sprites.erase(object_id)
+	Logger.warn("Backend: Sprite generation failed for %s: %s" % [object_id, reason])
+	EventBus.sprite_failed.emit(object_id, reason)
 
 
 func _process_reconnect(delta: float) -> void:

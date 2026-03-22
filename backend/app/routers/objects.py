@@ -13,11 +13,14 @@ from app.images.pipeline import SIZE_MAP, RemoveBg
 from app.models.blueprint import VisualDescriptor
 from app.models.tags import Tag
 from app.sessions.manager import SessionManager
-from app.ws.handler import send_sprite_ready
+from app.ws.handler import send_sprite_failed, send_sprite_ready
 
 logger = structlog.get_logger()
 
 router = APIRouter(prefix="/api/sessions/{session_id}/objects", tags=["objects"])
+
+# Per-object creation cost charged upfront: LLM (~$0.001) + image (~$0.04)
+OBJECT_CREATION_COST = 0.041
 
 _background_tasks: set[asyncio.Task[Any]] = set()
 
@@ -56,9 +59,8 @@ async def create_object_endpoint(
     # Create object via LLM
     blueprint = await create_object(body.description)
 
-    # Track LLM cost (~$0.001 per call)
-    llm_cost = 0.001
-    new_total = await manager.track_cost(session_id, llm_cost)
+    # Track total object cost upfront (LLM + image generation)
+    new_total = await manager.track_cost(session_id, OBJECT_CREATION_COST)
 
     # Save to session
     await manager.save_object(session_id, blueprint)
@@ -82,13 +84,6 @@ async def create_object_endpoint(
     _background_tasks.add(task)
     task.add_done_callback(_background_tasks.discard)
 
-    # Track image cost async (~$0.04 per call)
-    cost_task = asyncio.create_task(
-        manager.track_cost(session_id, 0.04)
-    )
-    _background_tasks.add(cost_task)
-    cost_task.add_done_callback(_background_tasks.discard)
-
     return CreateObjectResponse(
         blueprint=blueprint.model_dump(mode="json"),
         placeholder_png_base64=placeholder_b64,
@@ -111,6 +106,7 @@ async def _generate_and_deliver_sprite(
             object_id, visual_descriptor, tags, remove_bg
         )
         if sprite_bytes is None:
+            await send_sprite_failed(session_id, object_id, "generation_failed")
             return
 
         size = SIZE_MAP.get(visual_descriptor.size_category, 64)
@@ -121,3 +117,7 @@ async def _generate_and_deliver_sprite(
             object_id=object_id,
             exc_info=True,
         )
+        try:
+            await send_sprite_failed(session_id, object_id, "generation_exception")
+        except Exception:
+            logger.error("sprite_failed_notify_error", object_id=object_id, exc_info=True)

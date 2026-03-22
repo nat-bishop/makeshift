@@ -6,6 +6,7 @@ import uuid
 import structlog
 from pydantic_ai import Agent
 
+from app.config import settings
 from app.models.blueprint import CreatorOutput, GameObjectBlueprint, VisualDescriptor
 from app.models.tags import Tag
 
@@ -111,13 +112,12 @@ _agent: Agent[None, CreatorOutput] | None = None
 def _get_agent() -> Agent[None, CreatorOutput]:
     global _agent
     if _agent is None:
-        from app.config import settings
-
         _agent = Agent(
             settings.llm_model,
             output_type=CreatorOutput,
             retries=3,
             system_prompt=SYSTEM_PROMPT,
+            model_settings={"timeout": settings.llm_timeout_seconds},
         )
     return _agent
 

@@ -4,6 +4,7 @@ signal interaction_triggered(source_name: String, source_tags: Array, target_nam
 signal object_created(blueprint: Dictionary)
 signal object_destroyed(object_id: String)
 signal sprite_ready(object_id: String, texture: Texture2D)
+signal sprite_failed(object_id: String, reason: String)
 signal level_completed(level_id: int)
 signal inventory_changed(slot: int, item: Dictionary)
 signal equipment_changed(slot_name: String, item: Dictionary)

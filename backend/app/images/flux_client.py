@@ -3,18 +3,15 @@ from __future__ import annotations
 import asyncio
 
 from app.config import settings
-
-_semaphore = asyncio.Semaphore(settings.max_concurrent_image_requests)
+from app.images.fal_helpers import fal_semaphore, submit_and_download
 
 
 async def generate_image(prompt: str, width: int = 512, height: int = 512) -> bytes:
     """Generate an image via fal.ai Flux Kontext. Returns raw PNG bytes.
 
-    Limits concurrency with a semaphore and enforces a timeout.
+    Limits concurrency with a shared semaphore and enforces a timeout.
     """
-    from app.images.fal_helpers import submit_and_download
-
-    async with _semaphore:
+    async with fal_semaphore:
         return await asyncio.wait_for(
             submit_and_download(
                 settings.image_model,

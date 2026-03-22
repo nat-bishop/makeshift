@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 import fal_client
 import httpx
+
+from app.config import settings
+
+fal_semaphore = asyncio.Semaphore(settings.max_concurrent_image_requests)
 
 _http_client: httpx.AsyncClient | None = None
 
