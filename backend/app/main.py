@@ -1,4 +1,3 @@
-from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -24,10 +23,23 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     (STATIC_DIR / "placeholders").mkdir(exist_ok=True)
     DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Initialize rembg session (loads model once)
-    from rembg import new_session
+    # Initialize background removal callable
+    if settings.bg_removal_backend == "local":
+        from rembg import new_session
+        from rembg import remove as rembg_remove
 
-    app.state.rembg_session = new_session(model_name="birefnet-general")
+        session = new_session(model_name=settings.rembg_model)
+
+        async def _remove_bg(image_bytes: bytes) -> bytes:
+            from typing import cast
+
+            return cast(bytes, rembg_remove(data=image_bytes, session=session, alpha_matting=True))
+
+        app.state.remove_bg = _remove_bg
+    else:
+        from app.images.cloud_bg import make_cloud_remover
+
+        app.state.remove_bg = make_cloud_remover()
 
     # Initialize SQLite
     import aiosqlite
@@ -88,6 +100,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     yield
 
+    from app.images.fal_helpers import close_http_client
+
+    await close_http_client()
     await db.close()
 
 

@@ -1,13 +1,16 @@
-from __future__ import annotations
 
 import hashlib
 import io
+from collections.abc import Awaitable, Callable
 from pathlib import Path
+from typing import TypeAlias
 
 from PIL import Image, ImageDraw
 
 from app.models.blueprint import VisualDescriptor
 from app.models.tags import Tag
+
+RemoveBg: TypeAlias = Callable[[bytes], Awaitable[bytes]]
 
 STATIC_DIR = Path(__file__).resolve().parent.parent.parent / "static"
 
@@ -111,14 +114,12 @@ async def generate_sprite(
     object_id: str,
     visual_descriptor: VisualDescriptor,
     tags: list[Tag],
-    rembg_session: object,
+    remove_bg: RemoveBg,
 ) -> bytes | None:
-    """Full image pipeline: check cache → generate → rembg → resize → cache.
+    """Full image pipeline: check cache → generate → remove bg → resize → cache.
 
     Returns the final PNG bytes, or None on failure.
     """
-    from rembg import remove as rembg_remove
-
     from app.images.flux_client import generate_image
 
     # Check cache
@@ -131,12 +132,8 @@ async def generate_sprite(
         prompt = build_prompt(visual_descriptor)
         raw_bytes = await generate_image(prompt)
 
-        # Remove background with rembg
-        output_bytes = rembg_remove(
-            data=raw_bytes,
-            session=rembg_session,
-            alpha_matting=True,
-        )
+        # Remove background
+        output_bytes = await remove_bg(raw_bytes)
         output_img = Image.open(io.BytesIO(output_bytes)).convert("RGBA")
 
         # Resize to target size
@@ -162,7 +159,7 @@ async def full_pipeline(
     object_id: str,
     visual_descriptor: VisualDescriptor,
     tags: list[Tag],
-    rembg_session: object,
+    remove_bg: RemoveBg,
 ) -> tuple[bytes, bytes | None]:
     """Run the full image pipeline.
 
@@ -180,7 +177,7 @@ async def full_pipeline(
 
     # Attempt sprite generation
     sprite_bytes = await generate_sprite(
-        object_id, visual_descriptor, tags, rembg_session
+        object_id, visual_descriptor, tags, remove_bg
     )
 
     return placeholder_bytes, sprite_bytes

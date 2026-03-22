@@ -1,4 +1,3 @@
-from __future__ import annotations
 
 import asyncio
 import base64
@@ -8,7 +7,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from app.creator.agent import create_object
-from app.images.pipeline import SIZE_MAP
+from app.images.pipeline import SIZE_MAP, RemoveBg
 from app.models.blueprint import VisualDescriptor
 from app.models.tags import Tag
 from app.sessions.manager import SessionManager
@@ -67,11 +66,11 @@ async def create_object_endpoint(
     placeholder_b64 = base64.b64encode(placeholder_bytes).decode()
 
     # Schedule async sprite generation (will deliver via WebSocket)
-    rembg_session = request.app.state.rembg_session
+    remove_bg = request.app.state.remove_bg
     task = asyncio.create_task(
         _generate_and_deliver_sprite(
             session_id, blueprint.id,
-            blueprint.visual_descriptor, blueprint.tags, rembg_session,
+            blueprint.visual_descriptor, blueprint.tags, remove_bg,
         )
     )
     _background_tasks.add(task)
@@ -96,14 +95,14 @@ async def _generate_and_deliver_sprite(
     object_id: str,
     visual_descriptor: VisualDescriptor,
     tags: list[Tag],
-    rembg_session: object,
+    remove_bg: RemoveBg,
 ) -> None:
     """Background task: generate sprite and push via WebSocket."""
     from app.images.pipeline import generate_sprite
 
     try:
         sprite_bytes = await generate_sprite(
-            object_id, visual_descriptor, tags, rembg_session
+            object_id, visual_descriptor, tags, remove_bg
         )
         if sprite_bytes is None:
             return

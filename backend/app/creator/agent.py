@@ -1,4 +1,3 @@
-from __future__ import annotations
 
 import logging
 import uuid
@@ -110,8 +109,10 @@ _agent: Agent[None, CreatorOutput] | None = None
 def _get_agent() -> Agent[None, CreatorOutput]:
     global _agent
     if _agent is None:
+        from app.config import settings
+
         _agent = Agent(
-            "google-gla:gemini-3.1-flash-lite-preview",
+            settings.llm_model,
             output_type=CreatorOutput,
             retries=3,
             system_prompt=SYSTEM_PROMPT,
