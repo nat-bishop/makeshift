@@ -2,9 +2,9 @@
 
 ## Core Concept
 
-"Scribblenauts meets Terraria" — a 2D physics sandbox where players type text descriptions to create game objects. An LLM (Gemini) interprets descriptions into tagged blueprints with visual descriptors. A generative model (Flux) produces pixel art sprites. Objects interact through a tag-based rule system, enabling emergent puzzle-solving: fire melts ice, water extinguishes fire, electricity propagates through conductors.
+"Scribblenauts meets Terraria" — a 2D physics sandbox where players type text descriptions to create game objects. An LLM (Gemini) interprets descriptions into tagged blueprints with visual descriptors and autonomous behaviors. A generative model (Flux) produces pixel art sprites. Objects interact through a tag-based rule system and behavior system, enabling emergent puzzle-solving: fire melts ice, a dragon patrols and breathes fire, a time bomb explodes after a delay.
 
-Player creativity is constrained by the tag budget system — every object has a power budget of 10, and tags cost 1-5 points. This creates meaningful choices: a fire source (SOLID+RIGID+HEAT_SOURCE+HOT = 7) leaves room for extras, while a simple wooden plank (SOLID+RIGID+FLAMMABLE+BREAKABLE = 4) is cheap and versatile.
+Player creativity is constrained by two budget systems — every object has a tag budget of 10 and a behavior budget of 6. Tags define what an object *is*; behaviors define what it *does*. Together they create meaningful design choices: a fire source (SOLID+RIGID+HEAT_SOURCE+HOT = 7 tag cost) leaves room for a MOVE_TOWARD behavior (cost 2), while adding EXPLODE on low health (cost 3) turns any object into a trap.
 
 ## Tag System
 
@@ -22,9 +22,9 @@ Player creativity is constrained by the tag budget system — every object has a
 | Environmental | FLOATING, WIND_SOURCE, CORROSIVE, TOXIC | 2-4 |
 | Special | LIVING, GLOWING, CONDUCTING, INSULATING | 2-3 |
 
-**Design rationale**: Passive/physical properties are cheap (cost 1) because they describe what an object *is*. Active/energy properties are expensive (cost 3-5) because they describe what an object *does* — and doing things creates interactions, which create gameplay.
+**Design rationale**: Passive/physical properties are cheap (cost 1) because they describe what an object *is*. Active/energy properties are expensive (cost 3-5) because they create interactions, which create gameplay.
 
-EXPLOSIVE (cost 5) is the most expensive because it's the most powerful single-tag effect: area damage on heat or electricity contact.
+EXPLOSIVE (cost 5) is the most expensive because it's the most powerful single-tag effect: area damage on heat or electricity contact. With the behavior system, a cheaper EXPLODE action (behavior budget) can achieve similar results with more control — but requires a trigger condition, while the tag fires automatically via the rule engine.
 
 ### Contradiction Pairs (14)
 
@@ -72,6 +72,78 @@ Enforced by Pydantic validators on `CreatorOutput`. Violations trigger `ModelRet
 
 Rules with empty `tags_required_b` match any second object. Used for unconditional effects: STICKY + anything creates adhesion.
 
+## Behavior System
+
+Behaviors make objects autonomous. Tags define *what an object is*; behaviors define *what it does on its own*. The two systems are additive and independent — any object can have both, either, or neither.
+
+### Design Philosophy
+
+**Flat records, not behavior trees.** Each behavior is a single trigger→action→target record with optional condition and parameters. This is intentional: it keeps LLM output predictable, budget-checkable, and debuggable. Complex behavior (guard that retreats when hurt, then heals and re-engages) requires multiple behavior records, which is transparent and budget-constrained.
+
+**Categorical parameters, not numeric.** Behaviors use named tiers (MINIMAL/LOW/MEDIUM/HIGH/EXTREME) rather than raw numbers. This lets the LLM describe intent ("intense fire") without guessing engine values, and lets the implementation tune those values without touching the data model.
+
+**Separate budget from tags.** Behavior budget (6) is independent of tag budget (10). This prevents the LLM from having to make tag-vs-behavior tradeoffs in a single constrained budget — tags and behaviors serve different design roles and should be independently expressive.
+
+### Vocabulary Summary
+
+10 triggers: ALWAYS, ON_TIMER, ON_PROXIMITY, ON_CONTACT, ON_DAMAGED, ON_HEALTH_LOW, ON_TAG_ADDED, ON_CREATE, ON_DESTROY, ON_USE
+
+12 actions: MOVE_TOWARD, MOVE_AWAY, PATROL, DEAL_DAMAGE, APPLY_FORCE, ATTRACT, SPAWN_PROJECTILE, EXPLODE, HEAL, ADD_TAGS, REMOVE_TAGS, SELF_DESTRUCT
+
+5 targets: SELF, NEAREST_OBJECT, NEAREST_LIVING, NEAREST_PLAYER, CONTACT_BODY
+
+3 condition types (free, no budget cost): HAS_TAG, NOT_HAS_TAG, TARGET_HAS_TAG
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for implementation details (budget formula, numeric mappings, projectile system).
+
+### Behavior Budget
+
+| Action | Base cost |
+|--------|-----------|
+| SELF_DESTRUCT | 1 |
+| MOVE_TOWARD, MOVE_AWAY, PATROL, DEAL_DAMAGE, APPLY_FORCE, ATTRACT, HEAL, ADD_TAGS, REMOVE_TAGS | 2 |
+| SPAWN_PROJECTILE, EXPLODE | 3 (floor: 2) |
+
+Intensity modifiers: MINIMAL -1, LOW/MEDIUM +0, HIGH +1, EXTREME +2. Budget per object: 6. Max behaviors: 3.
+
+Conditions and messages are free — they add expressiveness without cost.
+
+### Composing Tags and Behaviors
+
+The tag and behavior systems interact through `ON_TAG_ADDED` triggers. This bridges the rule engine (which mutates tags on collision) to the behavior system:
+
+- Rule engine adds HOT to a bomb → ON_TAG_ADDED(HOT) triggers EXPLODE
+- Rule engine ignites an object → ON_TAG_ADDED(HEAT_SOURCE) triggers MOVE_AWAY from heat
+- Behavior adds ELECTRIC tag → rule engine propagates it to CONDUCTING neighbors
+
+This makes the two systems composable without tight coupling.
+
+### Design Examples
+
+**Dragon** (aggressor):
+- Tags: LIVING, HEAT_SOURCE, HOT, HEAVY (cost 9)
+- Behavior 1: ALWAYS → MOVE_TOWARD → NEAREST_LIVING, MEDIUM speed (cost 2)
+- Behavior 2: ON_PROXIMITY(CLOSE) → SPAWN_PROJECTILE → NEAREST_LIVING, HIGH intensity, interval MEDIUM (cost 4)
+- Total behavior cost: 6
+
+**Time Bomb** (delayed threat):
+- Tags: EXPLOSIVE, RIGID, BREAKABLE (cost 7)
+- Behavior 1: ON_TIMER(ONCE_LONG) → EXPLODE → SELF, HIGH intensity (cost 4)
+- Total behavior cost: 4
+
+**Guard Dog** (reactive defender):
+- Tags: LIVING, SHARP, RIGID (cost 4)
+- Behavior 1: ALWAYS → PATROL → SELF, MEDIUM speed (cost 2)
+- Behavior 2: ON_PROXIMITY(CLOSE) → MOVE_TOWARD → NEAREST_LIVING, FAST speed (cost 2)
+- Behavior 3: ON_CONTACT → DEAL_DAMAGE → CONTACT_BODY, HIGH intensity (cost 3) — total 7 → too expensive; use MEDIUM (cost 2) instead
+- Total behavior cost: 6
+
+**Reactive Bomb** (tag-triggered via rule engine):
+- Tags: EXPLOSIVE, FLAMMABLE, BREAKABLE (cost 7)
+- Behavior 1: ON_TAG_ADDED(HOT) → EXPLODE → SELF, EXTREME intensity (cost 5)
+- Total behavior cost: 5
+- Note: The EXPLOSIVE tag would also fire via rule engine when HOT is added — for a reactive bomb that can detonate this way, omit EXPLOSIVE and rely purely on the behavior for greater control over timing and message.
+
 ## Object Economy
 
 | Metric | Value |
@@ -81,7 +153,9 @@ Rules with empty `tags_required_b` match any second object. Used for uncondition
 | Max objects per session | ~24 |
 | Seed objects provided free | 15 |
 | Tag budget per object | 10 |
+| Behavior budget per object | 6 |
 | Tags per object | 2-6 (enforced by LLM validator) |
+| Behaviors per object | 0-3 (enforced by LLM validator) |
 | Name length | 1-3 words (enforced by LLM validator) |
 
 ### Seed Objects (15)

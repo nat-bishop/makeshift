@@ -24,9 +24,11 @@ uv run pytest -k "test_name"              # single test by name
 
 **Backend** (`backend/app/`): FastAPI application with these key subsystems:
 
-- **Object creation pipeline** (`creator/agent.py` → `routers/objects.py` → `images/pipeline.py` → `ws/handler.py`): Player text → PydanticAI agent (Gemini) → `CreatorOutput` → placeholder PNG immediate response → background Flux sprite generation → WebSocket `sprite_ready` delivery. See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for full 9-step flow.
+- **Object creation pipeline** (`creator/agent.py` → `routers/objects.py` → `images/pipeline.py` → `ws/handler.py`): Player text → PydanticAI agent (Gemini) → `CreatorOutput` (tags + behaviors) → placeholder PNG immediate response → background Flux sprite generation → WebSocket `sprite_ready` delivery. See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for full 9-step flow.
 
-- **Tag system** (`models/tags.py`): 30 `Tag` StrEnum values, 7 categories, power costs 1-5, budget of 10. 14 contradiction pairs enforced via `ModelRetry`. Tags drive physics, interactions, and durability. See [GAME_DESIGN.md](docs/GAME_DESIGN.md) for design rationale.
+- **Tag system** (`models/tags.py`): 30 `Tag` StrEnum values, 7 categories, power costs 1-5, budget of 10. 14 contradiction pairs enforced via `ModelRetry`. Tags define what objects *are* — physics, interactions, and durability. See [GAME_DESIGN.md](docs/GAME_DESIGN.md) for design rationale.
+
+- **Behavior system** (`models/behaviors.py`, `models/blueprint.py`): 0-3 behaviors per object. Each behavior: trigger (10 types) + action (12 types) + target (5 types) + optional condition + categorical params (intensity, range, speed, interval). Budget of 6, separate from tag budget. See [ARCHITECTURE.md](docs/ARCHITECTURE.md) and [GAME_DESIGN.md](docs/GAME_DESIGN.md) for full detail.
 
 - **Rule engine** (`engine/resolver.py`, `engine/rules_data.py`): `RuleResolver` — two-tier matching (O(1) pair index + O(n) wildcard scan). 43 rules. Mirrored client-side in Godot's `RuleEngine` autoload.
 
@@ -47,7 +49,7 @@ uv run pytest -k "test_name"              # single test by name
 | `CollisionResolver` | Per-frame collision resolution, cooldowns, cascade (depth 3, 96px radius) |
 | `Logger` | Structured logging |
 
-Key systems: `EffectExecutor` (12 effect types including DOT), `PhysicsApplicator` (tag-to-physics mapping).
+Key systems: `EffectExecutor` (12 effect types including DOT), `PhysicsApplicator` (tag-to-physics mapping), `BehaviorExecutor` (per-object autonomous behavior runtime, attached as child node when behaviors present), `BehaviorMaps` (categorical→numeric value mappings for behavior params).
 
 ## API Endpoints
 
@@ -63,7 +65,7 @@ Key systems: `EffectExecutor` (12 effect types including DOT), `PhysicsApplicato
 
 ## Data Model Flow
 
-`CreatorOutput` (LLM output) → `GameObjectBlueprint` (adds id, computed durability/power_cost) → `WorldObject` (adds position, session context) → persisted as `objects` table row.
+`CreatorOutput` (LLM output: tags + behaviors) → `GameObjectBlueprint` (adds id, computed `power_cost`/`behavior_cost`/`starting_durability`) → `WorldObject` (adds position, session context) → persisted as `objects` table row. Behaviors stored in existing `blueprint_json` column — no schema changes.
 
 ## Environment
 
@@ -91,8 +93,13 @@ Requires `.env` file (see `.env.example`):
 - WebSocket connection rejected with close code 4004 if session doesn't exist
 - Sprite cache keyed by visual descriptor hash, not object ID — identical descriptors share sprites
 - `sessions` table schema still creates `current_level` and `levels_completed` columns, but the `Session` model doesn't expose them — dead DB columns pending cleanup
+- `ON_TAG_ADDED` behavior trigger requires `trigger_tag` field; validated via `ModelRetry` in `Behavior.check_trigger_tag()`
+- `CONTACT_BODY` behavior target is only valid with `ON_CONTACT`, `ON_DAMAGED`, or `ON_PROXIMITY` triggers — enforced by model validator
+- `BehaviorExecutor` disables itself after 3 consecutive action errors to prevent runaway behavior on bad LLM output
+- Behavior-added tags (via `ADD_TAGS` action) have a 10s duration; they auto-remove via decay timer in `GameObject.add_tag()`
+- Movement conflicts resolved by fixed trigger priority: `ON_HEALTH_LOW` > `ON_TAG_ADDED` > `ON_DAMAGED` > `ON_CONTACT` > `ON_PROXIMITY` > `ON_TIMER` > `ALWAYS`
 
 ## Documentation
 
-- [Architecture](docs/ARCHITECTURE.md) — object creation pipeline, image generation, rule engine, collision/cascade, physics, persistence, WebSocket protocol
-- [Game Design](docs/GAME_DESIGN.md) — tag system, rule philosophy, object economy, durability, levels
+- [Architecture](docs/ARCHITECTURE.md) — object creation pipeline, image generation, rule engine, behavior system, collision/cascade, physics, persistence, WebSocket protocol
+- [Game Design](docs/GAME_DESIGN.md) — tag system, behavior system design, rule philosophy, object economy, durability, levels

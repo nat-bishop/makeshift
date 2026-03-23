@@ -9,7 +9,7 @@ Godot 4 Client                          FastAPI Backend
 │   └─ Backend.create_object() ──POST──►  /api/sessions/{id}/objects │
 │                                      │    └─ PydanticAI agent ─────► Gemini LLM
 │ Backend (autoload)                   │    └─ placeholder PNG ◄──┘  │
-│   ├─ HTTP client ◄─── JSON ─────────┤                          │
+│   ├─ HTTP client ◄─── JSON ─────────┤      (tags + behaviors)  │
 │   └─ WebSocket  ◄── sprite_ready ───┤  Background task ────────────► Flux (fal.ai)
 │                                      │    └─ rembg / birefnet  │
 │ RuleEngine (autoload)                │                          │
@@ -17,6 +17,10 @@ Godot 4 Client                          FastAPI Backend
 │                                      │    └─ sessions, objects  │
 │ CollisionResolver (autoload)         │                          │
 │   └─ EffectExecutor                  │                          │
+│                                      │                          │
+│ GameObject                           │                          │
+│   └─ BehaviorExecutor (child node)   │                          │
+│        └─ BehaviorMaps               │                          │
 └──────────────────┘                   └──────────────────────────┘
 ```
 
@@ -27,10 +31,10 @@ Full flow from player input to world-placed object with sprite:
 1. **Player types description** → `ObjectCreationPanel` sends text to `Backend.create_object()`
 2. **HTTP POST** → `POST /api/sessions/{id}/objects` with `{"description": "..."}`
 3. **Budget check** → `SessionManager.get_budget_info()` verifies remaining budget (rejects with 402 if exhausted)
-4. **LLM agent** → `creator.agent.create_object()` runs PydanticAI agent (Gemini 3.1 Flash Lite Preview, 3 retries). Validators enforce: 1-3 word name, 2-6 tags, no contradictions, budget ≤ 10. Falls back to generic "Mysterious {description}" on failure
-5. **Blueprint construction** → `GameObjectBlueprint` adds UUID, computed fields: `power_cost`, `starting_durability`
-6. **Atomic persist** → `track_cost_and_save_object()` charges $0.041 + saves blueprint in one commit
-7. **Immediate response** → Client receives blueprint JSON + placeholder PNG (colored rounded rectangle) + budget_remaining
+4. **LLM agent** → `creator.agent.create_object()` runs PydanticAI agent (Gemini 3.1 Flash Lite Preview, 3 retries). Validators enforce: 1-3 word name, 2-6 tags, no contradictions, tag budget ≤ 10, 0-3 behaviors, behavior budget ≤ 6. Falls back to generic "Mysterious {description}" on failure
+5. **Blueprint construction** → `GameObjectBlueprint` adds UUID, computed fields: `power_cost`, `behavior_cost`, `starting_durability`
+6. **Atomic persist** → `track_cost_and_save_object()` charges $0.041 + saves blueprint (including behaviors) in one commit
+7. **Immediate response** → Client receives blueprint JSON (with behaviors) + placeholder PNG (colored rounded rectangle) + budget_remaining
 8. **Background sprite generation** → `asyncio.Task` held in module-level `_background_tasks` set (prevents GC). Runs image pipeline (see below)
 9. **WebSocket delivery** → `send_sprite_ready()` broadcasts base64 PNG to all session clients → Godot decodes to `ImageTexture` → `EventBus.sprite_ready` emitted → `ObjectVisual` updates
 
@@ -75,6 +79,108 @@ Full flow from player input to world-placed object with sprite:
 ### Godot: `autoloads/rule_engine.gd`
 
 Mirrors the backend resolver. Rules are loaded from session response JSON (`Backend.create_session()` or `Backend.restore_session()`). Same two-tier index, same matching logic. Exists so collision resolution doesn't require a server round-trip.
+
+## Behavior System
+
+Objects carry 0-3 autonomous behaviors defined at creation time. Tags = what objects *are*; behaviors = what objects *do*. The two systems are additive and independent.
+
+### Data Model (`backend/app/models/behaviors.py`)
+
+Each `Behavior` is a flat Pydantic record:
+
+| Field | Type | Values |
+|-------|------|--------|
+| `trigger` | `BehaviorTrigger` | ALWAYS, ON_TIMER, ON_PROXIMITY, ON_CONTACT, ON_DAMAGED, ON_HEALTH_LOW, ON_TAG_ADDED, ON_CREATE, ON_DESTROY, ON_USE |
+| `action` | `BehaviorAction` | MOVE_TOWARD, MOVE_AWAY, PATROL, DEAL_DAMAGE, APPLY_FORCE, ATTRACT, SPAWN_PROJECTILE, EXPLODE, HEAL, ADD_TAGS, REMOVE_TAGS, SELF_DESTRUCT |
+| `target` | `BehaviorTarget` | SELF, NEAREST_OBJECT, NEAREST_LIVING, NEAREST_PLAYER, CONTACT_BODY |
+| `condition` | `BehaviorCondition \| None` | Optional gate: HAS_TAG, NOT_HAS_TAG, TARGET_HAS_TAG |
+| `intensity` | `Intensity` | MINIMAL, LOW, MEDIUM, HIGH, EXTREME (default MEDIUM) |
+| `range` | `BehaviorRange` | TOUCH, CLOSE, MEDIUM, FAR (default MEDIUM) |
+| `speed` | `Speed` | SLOW, MEDIUM, FAST, VERY_FAST (default MEDIUM) |
+| `interval` | `Interval` | ONCE_SHORT, ONCE_MEDIUM, ONCE_LONG, SLOW, MEDIUM, FAST (default MEDIUM) |
+| `message` | `str \| None` | Optional player-facing string (max 60 chars), emitted via EventBus |
+| `tags_to_apply` | `list[Tag] \| None` | Required for ADD_TAGS/REMOVE_TAGS |
+| `trigger_tag` | `Tag \| None` | Required for ON_TAG_ADDED — which tag to watch |
+
+### Budget
+
+- Behavior budget: 6 per object (separate from tag budget of 10)
+- `cost = max(floor, action_base_cost + intensity_modifier)`
+- Action costs: SELF_DESTRUCT=1, most actions=2, SPAWN_PROJECTILE/EXPLODE=3
+- Intensity modifiers: MINIMAL=-1, LOW/MEDIUM=0, HIGH=+1, EXTREME=+2
+- SPAWN_PROJECTILE and EXPLODE have a cost floor of 2
+- Enforced by `check_behavior_budget` field validator on `CreatorOutput` (raises `ModelRetry`)
+
+### Godot Runtime (`godot/scripts/systems/behavior_executor.gd`)
+
+`BehaviorExecutor` is a Node attached as a child of `GameObject` when `behaviors` is non-empty. Lifecycle:
+
+```
+init_from_blueprint()
+  └─ behaviors present? → instantiate BehaviorExecutor → add_child → init_behaviors()
+       ├─ ON_TIMER behaviors → setup Timer nodes
+       └─ ON_CREATE behaviors → execute immediately
+
+_physics_process(delta)
+  ├─ Update target cache every 0.3s (NEAREST_* targets)
+  ├─ Collect triggered behaviors: ALWAYS, ON_PROXIMITY (distance check), ON_HEALTH_LOW
+  ├─ Sort by TRIGGER_PRIORITY (movement conflict resolution)
+  └─ Execute behaviors:
+       ├─ Non-movement: always execute (subject to cooldown)
+       └─ Movement (MOVE_TOWARD/MOVE_AWAY/PATROL): only highest-priority trigger wins per frame
+
+fire_trigger(trigger_name, event_body)  # called by GameObject on events
+  └─ ON_CONTACT, ON_DAMAGED, ON_DESTROY → direct dispatch
+
+on_tag_added(tag)  # called by GameObject.add_tag()
+  └─ ON_TAG_ADDED → dispatch if trigger_tag matches
+```
+
+**Error fallback**: `BehaviorExecutor` tracks consecutive action failures. After 3 consecutive errors it sets `_disabled = true` — the executor stops processing permanently.
+
+**Movement uses `apply_central_force()`** with velocity clamping against `BehaviorMaps.SPEED_MAX`. This composes with existing `PhysicsApplicator` mass/friction/gravity settings.
+
+**Cooldown**: All non-ALWAYS, non-ON_CREATE, non-ON_DESTROY triggers respect a per-behavior cooldown keyed by `interval`. ONCE_* intervals use one-shot timers that prevent re-firing.
+
+### Categorical → Numeric Mapping (`godot/scripts/data/behavior_maps.gd`)
+
+`BehaviorMaps` is a static `RefCounted` class (not an autoload) with constants mapping string tier names to engine values:
+
+| Map | Example values |
+|-----|---------------|
+| `INTENSITY_DAMAGE` | MINIMAL=5, MEDIUM=20, EXTREME=80 |
+| `INTENSITY_FORCE` | MINIMAL=50, MEDIUM=200, EXTREME=800 |
+| `INTENSITY_HEAL` | MINIMAL=5, MEDIUM=25, EXTREME=100 |
+| `INTENSITY_EXPLODE` | MINIMAL=10, MEDIUM=40, EXTREME=150 |
+| `RANGE_PX` | TOUCH=32, CLOSE=64, MEDIUM=128, FAR=256 |
+| `SPEED_MAX` | SLOW=60, MEDIUM=120, FAST=200, VERY_FAST=300 |
+| `SPEED_FORCE` | SLOW=200, MEDIUM=400, FAST=600, VERY_FAST=800 |
+| `INTERVAL_SECONDS` | ONCE_SHORT=1.0, ONCE_MEDIUM=3.0, SLOW=3.0, MEDIUM=1.5, FAST=0.75 |
+| `TRIGGER_PRIORITY` | ON_HEALTH_LOW=1 … ALWAYS=7 (lower = higher priority) |
+| `PAYLOAD_TAG_MAP` | HEAT_SOURCE→HOT, ELECTRIC→ELECTRIC, TOXIC→TOXIC, CORROSIVE→CORROSIVE, FROZEN→COLD |
+
+### Projectile System (`godot/scenes/projectile/`)
+
+`SPAWN_PROJECTILE` action spawns a `RigidBody2D` projectile scene. Properties:
+- Base tags: `[SOLID, LIGHT, BREAKABLE]` plus one payload tag inherited from parent (via `PAYLOAD_TAG_MAP`)
+- Gravity scale 0 (straight-line flight), speed 250 px/s, lifetime 2.5s auto-destroy
+- On contact: deals damage directly, then calls `CollisionResolver.resolve_collision()` so payload tag participates in rule engine (e.g., HOT projectile ignites FLAMMABLE target)
+- Ignores its source object to prevent self-hit
+
+### Integration with Tags and Rules
+
+`ON_TAG_ADDED` is the key bridge between the rule engine and the behavior system:
+
+```
+Object A (HEAT_SOURCE) collides with Object B (EXPLOSIVE)
+  └─ RuleEngine matches: HEAT_SOURCE + EXPLOSIVE → ADD_TAG(HOT) on B
+       └─ B.add_tag("HOT") → BehaviorExecutor.on_tag_added("HOT")
+            └─ Behavior: ON_TAG_ADDED(HOT) → EXPLODE
+```
+
+`ADD_TAGS` / `REMOVE_TAGS` behavior actions trigger cascade: after mutating tags, `CollisionResolver.resolve_collision()` is called on the target's neighbors, propagating rule engine interactions.
+
+Direct `DEAL_DAMAGE` from behaviors bypasses the rule engine — no double-dipping with collision rules.
 
 ## Collision & Cascade System
 
@@ -144,6 +250,8 @@ Tag mutations (via `add_tag`/`remove_tag`) trigger `_reapply_physics()` to recal
 |-------|-----|--------|
 | `sessions` | `id TEXT PK` | created_at, budget_used, budget_limit (default $1.00) |
 | `objects` | `(session_id, object_id) PK` | blueprint_json, x, y, durability |
+
+`blueprint_json` stores the full `GameObjectBlueprint` including `behaviors` — no schema migration required when behaviors were added.
 
 ### Session Lifecycle
 

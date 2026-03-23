@@ -3,6 +3,11 @@ from typing import Literal
 import structlog
 from pydantic import BaseModel, Field, computed_field, field_validator
 
+from app.models.behaviors import (
+    BEHAVIOR_BUDGET,
+    Behavior,
+    compute_behavior_cost,
+)
 from app.models.tags import (
     OBJECT_TAG_BUDGET,
     TAG_CONTRADICTIONS,
@@ -33,6 +38,7 @@ class VisualDescriptor(BaseModel):
 class CreatorOutput(BaseModel):
     name: str
     tags: list[Tag] = Field(min_length=2, max_length=6)
+    behaviors: list[Behavior] = Field(default_factory=list, max_length=3)
     visual_descriptor: VisualDescriptor
 
     @field_validator("name")
@@ -77,18 +83,44 @@ class CreatorOutput(BaseModel):
             )
         return tags
 
+    @field_validator("behaviors")
+    @classmethod
+    def check_behavior_budget(cls, behaviors: list[Behavior]) -> list[Behavior]:
+        from pydantic_ai import ModelRetry
+
+        if not behaviors:
+            return behaviors
+        cost = sum(compute_behavior_cost(b) for b in behaviors)
+        if cost > BEHAVIOR_BUDGET:
+            logger.debug("llm_retry_behavior_budget", cost=cost, budget=BEHAVIOR_BUDGET)
+            breakdown = ", ".join(
+                f"{b.action.value}@{b.intensity.value}({compute_behavior_cost(b)})"
+                for b in behaviors
+            )
+            raise ModelRetry(
+                f"Behavior budget {cost}/{BEHAVIOR_BUDGET}. Behaviors: {breakdown}. "
+                f"Remove behaviors or lower intensity."
+            )
+        return behaviors
+
 
 class GameObjectBlueprint(BaseModel):
     id: str
     name: str
     description: str
     tags: list[Tag]
+    behaviors: list[Behavior] = Field(default_factory=list)
     visual_descriptor: VisualDescriptor
 
     @computed_field  # type: ignore[prop-decorator]
     @property
     def power_cost(self) -> int:
         return sum(TAG_POWER_COSTS[t] for t in self.tags)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def behavior_cost(self) -> int:
+        return sum(compute_behavior_cost(b) for b in self.behaviors)
 
     @computed_field  # type: ignore[prop-decorator]
     @property

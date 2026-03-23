@@ -5,6 +5,7 @@ var tags: Array = []
 var blueprint: Dictionary = {}
 var current_durability: int = 150
 var _decay_timers: Dictionary = {}  # tag name -> Timer
+var _behavior_executor: Node = null
 
 @onready var physics_applicator: Node = $PhysicsApplicator
 @onready var object_visual: Node = $ObjectVisual
@@ -30,7 +31,22 @@ func init_from_blueprint(bp: Dictionary) -> void:
 	physics_applicator.apply(tags, visual_descriptor)
 	object_visual.set_object_id(object_id)
 	object_visual.set_placeholder(visual_descriptor)
-	Log.info("GameObject: Initialized '%s' (id=%s) with %d tags, durability=%d" % [bp.get("name", "?"), object_id, tags.size(), current_durability])
+
+	# Add to groups for behavior target resolution
+	add_to_group("game_objects")
+	if "LIVING" in tags:
+		add_to_group("living")
+
+	# Initialize behavior system if behaviors present
+	var behaviors: Array = bp.get("behaviors", [])
+	if not behaviors.is_empty():
+		var executor_script = preload("res://scripts/systems/behavior_executor.gd")
+		_behavior_executor = executor_script.new()
+		_behavior_executor.name = "BehaviorExecutor"
+		add_child(_behavior_executor)
+		_behavior_executor.init_behaviors(behaviors, self)
+
+	Log.info("GameObject: Initialized '%s' (id=%s) with %d tags, %d behaviors, durability=%d" % [bp.get("name", "?"), object_id, tags.size(), behaviors.size(), current_durability])
 
 
 func get_blueprint() -> Dictionary:
@@ -48,16 +64,37 @@ func get_object_id() -> String:
 func take_damage(amount: float) -> void:
 	current_durability -= int(amount)
 	Log.debug("GameObject: '%s' took %.0f damage, durability=%d" % [blueprint.get("name", object_id), amount, current_durability])
+
 	if current_durability <= 0:
+		if _behavior_executor != null:
+			_behavior_executor.fire_trigger("ON_DESTROY")
 		Log.info("GameObject: '%s' (id=%s) destroyed" % [blueprint.get("name", "?"), object_id])
 		queue_free()
+		return
+
+	# Fire damage-related behavior triggers
+	if _behavior_executor != null:
+		_behavior_executor.fire_trigger("ON_DAMAGED")
+		var starting: int = blueprint.get("starting_durability", 150)
+		if current_durability < starting / 2:
+			_behavior_executor.fire_trigger("ON_HEALTH_LOW")
+
+
+func heal(amount: float) -> void:
+	var starting: int = blueprint.get("starting_durability", 150)
+	current_durability = min(current_durability + int(amount), starting)
+	Log.debug("GameObject: '%s' healed %.0f, durability=%d" % [blueprint.get("name", object_id), amount, current_durability])
 
 
 func add_tag(tag: String, duration: float = 0.0) -> void:
-	if tag not in tags:
+	var is_new: bool = tag not in tags
+	if is_new:
 		tags.append(tag)
 		Log.debug("GameObject: '%s' +tag %s%s" % [blueprint.get("name", object_id), tag, " (%.1fs)" % duration if duration > 0.0 else ""])
 		_reapply_physics()
+		# Notify behavior executor of tag addition
+		if _behavior_executor != null:
+			_behavior_executor.on_tag_added(tag)
 	if duration > 0.0:
 		# Cancel existing decay timer for this tag (refresh duration)
 		if tag in _decay_timers and is_instance_valid(_decay_timers[tag]):
@@ -95,3 +132,6 @@ func _on_body_entered(body: Node) -> void:
 	if not body.has_method("get_tags") and not body.has_method("get_effective_tags"):
 		return
 	CollisionResolver.resolve_collision(self, body)
+	# Fire ON_CONTACT behaviors
+	if _behavior_executor != null:
+		_behavior_executor.fire_trigger("ON_CONTACT", body)
