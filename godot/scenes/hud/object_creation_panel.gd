@@ -54,6 +54,7 @@ func _submit() -> void:
 		status_label.add_theme_color_override("font_color", Color(1.0, 0.6, 0.3))
 		return
 
+	Log.info("CreationPanel: Creating object from '%s'" % description)
 	_is_creating = true
 	create_button.disabled = true
 	status_label.text = "Creating..."
@@ -66,12 +67,14 @@ func _submit() -> void:
 
 	if result.get("error", false):
 		var error_msg: String = result.get("message", "Creation failed. Try again.")
+		Log.warn("CreationPanel: Creation failed: %s" % error_msg)
 		status_label.text = error_msg
 		status_label.add_theme_color_override("font_color", Color(1.0, 0.3, 0.3))
 	else:
 		status_label.text = ""
 		description_input.text = ""
 		var blueprint: Dictionary = result.get("blueprint", result)
+		Log.info("CreationPanel: Created '%s'" % blueprint.get("name", "?"))
 		_show_reveal(blueprint)
 
 

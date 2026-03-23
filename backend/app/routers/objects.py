@@ -49,10 +49,12 @@ async def create_object_endpoint(
 
     budget_info = await manager.get_budget_info(session_id)
     if budget_info is None:
+        logger.warning("object_create_session_not_found")
         raise HTTPException(status_code=404, detail="Session not found")
 
     budget_remaining, budget_limit = budget_info
     if budget_remaining <= 0:
+        logger.warning("object_create_budget_exceeded", budget_remaining=budget_remaining)
         raise HTTPException(status_code=402, detail="Session budget exceeded")
 
     logger.info("object_create_request", description_len=len(body.description))
@@ -105,6 +107,7 @@ async def _generate_and_deliver_sprite(
     try:
         sprite_bytes = await generate_sprite(object_id, visual_descriptor, tags, remove_bg)
         if sprite_bytes is None:
+            logger.warning("sprite_generation_returned_none", object_id=object_id)
             await send_sprite_failed(session_id, object_id, "generation_failed")
             return
 

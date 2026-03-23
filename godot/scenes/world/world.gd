@@ -13,6 +13,7 @@ func _ready() -> void:
 
 
 func spawn_object(blueprint: Dictionary, pos: Vector2) -> Node:
+	Log.debug("World: Spawning '%s' at %s" % [blueprint.get("name", "?"), str(pos)])
 	var obj: RigidBody2D = GAME_OBJECT_SCENE.instantiate()
 	objects_container.add_child(obj)
 	obj.global_position = pos
@@ -21,6 +22,7 @@ func spawn_object(blueprint: Dictionary, pos: Vector2) -> Node:
 
 
 func clear_objects() -> void:
+	Log.info("World: Clearing all objects (%d)" % objects_container.get_child_count())
 	for child in objects_container.get_children():
 		child.queue_free()
 

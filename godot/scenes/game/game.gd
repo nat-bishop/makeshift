@@ -26,6 +26,7 @@ func _load_current_level() -> void:
 
 	_current_level_scene = level_scene.instantiate()
 	world.add_child(_current_level_scene)
+	Log.info("Game: Loaded level %d (%s)" % [level_index, level_path])
 
 	# Position player at spawn point
 	var spawn_point: Marker2D = _current_level_scene.find_child("SpawnPoint", true, false)
@@ -47,4 +48,5 @@ func _on_level_completed(_level_id: int) -> void:
 func _on_object_created(blueprint: Dictionary) -> void:
 	# Spawn object near player
 	var spawn_pos: Vector2 = player.global_position + Vector2(80, -32)
+	Log.debug("Game: Spawning created object '%s' at %s" % [blueprint.get("name", "?"), str(spawn_pos)])
 	world.spawn_object(blueprint, spawn_pos)

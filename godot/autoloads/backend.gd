@@ -34,6 +34,7 @@ func _process(delta: float) -> void:
 func create_session() -> Dictionary:
 	var result: Dictionary = await _http_post("/api/sessions", {})
 	if result.get("error", false):
+		Log.warn("Backend: Session creation failed: %s" % result.get("message", "unknown"))
 		offline_mode = true
 		return result
 
@@ -47,14 +48,17 @@ func create_session() -> Dictionary:
 	if not rules.is_empty():
 		RuleEngine.load_rules(rules)
 
+	Log.info("Backend: Session created id=%s" % session_id)
 	return result
 
 
 func restore_session(id: String) -> Dictionary:
 	var result: Dictionary = await _http_get("/api/sessions/%s" % id)
 	if result.get("error", false):
+		Log.warn("Backend: Session restore failed for %s: %s" % [id, result.get("message", "unknown")])
 		return result
 
+	Log.info("Backend: Session restored id=%s" % id)
 	session_id = id
 	_save_session_id()
 	_connect_websocket()
@@ -70,13 +74,18 @@ func create_object(description: String) -> Dictionary:
 	if session_id.is_empty():
 		return {"error": true, "message": "No active session"}
 
+	Log.info("Backend: Creating object from '%s'" % description)
+
 	var result: Dictionary = await _http_post(
 		"/api/sessions/%s/objects" % session_id,
 		{"description": description}
 	)
 
-	if not result.get("error", false):
+	if result.get("error", false):
+		Log.warn("Backend: Object creation failed: %s" % result.get("message", "unknown"))
+	else:
 		var blueprint: Dictionary = result.get("blueprint", result)
+		Log.info("Backend: Object created '%s' (id=%s)" % [blueprint.get("name", "?"), blueprint.get("id", "?")])
 		EventBus.object_created.emit(blueprint)
 		# Track pending sprite
 		var object_id: String = blueprint.get("id", "")
@@ -109,6 +118,7 @@ func fetch_rules() -> Array:
 func sync_state(state: Dictionary) -> void:
 	if session_id.is_empty() or offline_mode:
 		return
+	Log.debug("Backend: Syncing state to server")
 	await _http_put("/api/sessions/%s/sync" % session_id, state)
 
 
@@ -202,6 +212,7 @@ func _handle_sprite_ready(data: Dictionary) -> void:
 	_sprite_cache[object_id] = texture
 	_pending_sprites.erase(object_id)
 
+	Log.info("Backend: Sprite ready for %s" % object_id)
 	EventBus.sprite_ready.emit(object_id, texture)
 
 
@@ -222,6 +233,7 @@ func _process_reconnect(delta: float) -> void:
 
 	_reconnect_timer -= delta
 	if _reconnect_timer <= 0.0:
+		Log.debug("Backend: Reconnecting WebSocket (delay=%.1fs)" % _reconnect_delay)
 		# Exponential backoff
 		_reconnect_delay = minf(_reconnect_delay * 2.0, MAX_RECONNECT_DELAY)
 		_connect_websocket()
@@ -298,6 +310,7 @@ func _request(method: int, path: String, body: Dictionary = {}, extra_headers: P
 		err = http.request(url, headers, method, body_str)
 
 	if err != OK:
+		Log.warn("Backend: HTTP request failed %s err=%d" % [path, err])
 		http.queue_free()
 		return {"error": true, "message": "HTTP request failed: %d" % err}
 
@@ -310,12 +323,14 @@ func _request(method: int, path: String, body: Dictionary = {}, extra_headers: P
 	var response_body: PackedByteArray = response[3]
 
 	if result_code != HTTPRequest.RESULT_SUCCESS:
+		Log.warn("Backend: HTTP error %s result=%d" % [path, result_code])
 		return {"error": true, "message": "HTTP error: %d" % result_code}
 
 	if status_code == 304:
 		return {"status_code": 304}
 
 	if status_code < 200 or status_code >= 300:
+		Log.warn("Backend: HTTP %d from %s" % [status_code, path])
 		return {"error": true, "message": "HTTP %d" % status_code, "status_code": status_code}
 
 	var text: String = response_body.get_string_from_utf8()
@@ -325,6 +340,7 @@ func _request(method: int, path: String, body: Dictionary = {}, extra_headers: P
 	var json := JSON.new()
 	var parse_err: int = json.parse(text)
 	if parse_err != OK:
+		Log.warn("Backend: JSON parse error from %s" % path)
 		return {"error": true, "message": "JSON parse error"}
 
 	var result: Dictionary = json.data if json.data is Dictionary else {"data": json.data}
@@ -348,6 +364,7 @@ func _save_session_id() -> void:
 	if file:
 		file.store_string(JSON.stringify({"session_id": session_id}))
 		file.close()
+		Log.debug("Backend: Saved session_id to disk")
 
 
 func _load_session_id() -> void:
@@ -360,3 +377,5 @@ func _load_session_id() -> void:
 		var json := JSON.new()
 		if json.parse(text) == OK and json.data is Dictionary:
 			session_id = json.data.get("session_id", "")
+			if not session_id.is_empty():
+				Log.debug("Backend: Loaded session_id=%s from disk" % session_id)

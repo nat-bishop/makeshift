@@ -15,6 +15,7 @@ func _ready() -> void:
 
 
 func _on_new_game_pressed() -> void:
+	Log.info("MainMenu: New game requested")
 	new_game_button.disabled = true
 	continue_button.disabled = true
 
@@ -29,6 +30,7 @@ func _on_continue_pressed() -> void:
 	if Backend.session_id.is_empty():
 		return
 
+	Log.info("MainMenu: Continue requested for session %s" % Backend.session_id)
 	new_game_button.disabled = true
 	continue_button.disabled = true
 

@@ -1,7 +1,11 @@
 """Rule engine: two-tier index (pair O(1) + wildcard O(n)) with priority sorting."""
 
+import structlog
+
 from app.models.rules import InteractionRule
 from app.models.tags import Tag
+
+logger = structlog.get_logger()
 
 
 class RuleResolver:
@@ -11,6 +15,15 @@ class RuleResolver:
         self._pair_index: dict[Tag, dict[Tag, list[InteractionRule]]] = {}
         self._wildcard_rules: list[InteractionRule] = []
         self._build_index(rules)
+        pair_count = sum(
+            len(inner) for outer in self._pair_index.values() for inner in outer.values()
+        )
+        logger.info(
+            "rule_resolver_built",
+            total_rules=len(rules),
+            pair_entries=pair_count,
+            wildcard_rules=len(self._wildcard_rules),
+        )
 
     def _build_index(self, rules: list[InteractionRule]) -> None:
         for rule in rules:
@@ -55,4 +68,12 @@ class RuleResolver:
                 if not (rule.tags_blocked_by and rule.tags_blocked_by & tags_a):
                     matched[rule.rule_id] = rule
 
-        return sorted(matched.values(), key=lambda r: r.priority, reverse=True)
+        result = sorted(matched.values(), key=lambda r: r.priority, reverse=True)
+        if result:
+            logger.debug(
+                "rules_matched",
+                match_count=len(result),
+                tags_a=sorted(t.value for t in tags_a),
+                tags_b=sorted(t.value for t in tags_b),
+            )
+        return result

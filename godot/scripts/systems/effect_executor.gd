@@ -11,6 +11,7 @@ func execute(rule: Dictionary, body_a: Node, body_b: Node, cascade_depth: int = 
 	var effects: Array = rule.get("effects", [])
 	var last_message: String = ""
 	var tag_duration: float = CASCADE_TAG_DURATION if cascade_depth > 0 else 0.0
+	Log.debug("EffectExecutor: Executing rule '%s' (%d effects, cascade_depth=%d)" % [rule.get("rule_id", "?"), effects.size(), cascade_depth])
 	for effect in effects:
 		if effect is not Dictionary:
 			continue
@@ -38,30 +39,36 @@ func _apply_effect(effect_type: String, effect: Dictionary, target: Node, body_a
 		"DAMAGE":
 			var amount: float = effect.get("damage_amount", 0.0)
 			if target.has_method("take_damage"):
+				Log.debug("EffectExecutor: DAMAGE %.0f on %s" % [amount, target.name])
 				target.take_damage(amount)
 
 		"DESTROY":
 			if target.has_method("take_damage"):
+				Log.debug("EffectExecutor: DESTROY on %s" % target.name)
 				target.take_damage(99999.0)
 
 		"IGNITE":
+			Log.debug("EffectExecutor: IGNITE on %s" % target.name)
 			if target.has_method("add_tag"):
 				target.add_tag("HEAT_SOURCE", tag_duration)
 				target.add_tag("HOT", tag_duration)
 			_apply_dot(target, effect.get("damage_amount", 10.0), 1.0, 5.0)
 
 		"EXTINGUISH":
+			Log.debug("EffectExecutor: EXTINGUISH on %s" % target.name)
 			if target.has_method("remove_tag"):
 				target.remove_tag("HEAT_SOURCE")
 				target.remove_tag("HOT")
 
 		"FREEZE":
+			Log.debug("EffectExecutor: FREEZE on %s" % target.name)
 			if target.has_method("add_tag") and target.has_method("remove_tag"):
 				target.add_tag("FROZEN", tag_duration)
 				target.add_tag("RIGID", tag_duration)
 				target.remove_tag("LIQUID")
 
 		"MELT":
+			Log.debug("EffectExecutor: MELT on %s" % target.name)
 			if target.has_method("remove_tag") and target.has_method("add_tag"):
 				target.remove_tag("FROZEN")
 				target.remove_tag("RIGID")
@@ -84,11 +91,13 @@ func _apply_effect(effect_type: String, effect: Dictionary, target: Node, body_a
 					target.remove_tag(tag)
 
 		"CORRODE":
+			Log.debug("EffectExecutor: CORRODE on %s (%.0f dmg)" % [target.name, effect.get("damage_amount", 15.0)])
 			var amount: float = effect.get("damage_amount", 15.0)
 			_apply_dot(target, amount, 1.0, 3.0)
 
 		"ELECTRIFY":
 			var amount: float = effect.get("damage_amount", 30.0)
+			Log.debug("EffectExecutor: ELECTRIFY %.0f on %s" % [amount, target.name])
 			if target.has_method("take_damage"):
 				target.take_damage(amount)
 
@@ -145,6 +154,7 @@ func _apply_impulse(target: Node, body_a: Node, body_b: Node, magnitude: float) 
 func _apply_dot(target: Node, damage_per_tick: float, tick_interval: float, duration: float) -> void:
 	if not target.has_method("take_damage"):
 		return
+	Log.debug("EffectExecutor: DOT on %s (%.1f dmg every %.1fs for %.1fs)" % [target.name, damage_per_tick, tick_interval, duration])
 	var timer := Timer.new()
 	timer.wait_time = tick_interval
 	timer.one_shot = false

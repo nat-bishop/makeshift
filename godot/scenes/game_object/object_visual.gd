@@ -14,7 +14,10 @@ func set_object_id(id: String) -> void:
 	# Check if sprite is already cached
 	var cached: Texture2D = Backend.get_cached_sprite(id)
 	if cached != null:
+		Log.debug("ObjectVisual: Cache hit for %s" % id)
 		set_sprite(cached)
+	else:
+		Log.debug("ObjectVisual: No cached sprite for %s, using placeholder" % id)
 
 
 func set_placeholder(visual_descriptor: Dictionary) -> void:

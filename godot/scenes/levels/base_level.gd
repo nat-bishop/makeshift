@@ -21,6 +21,7 @@ func get_objective_text() -> String:
 
 func _on_goal_body_entered(body: Node2D) -> void:
 	if _is_player(body):
+		Log.info("BaseLevel: Player reached goal! Completing level %d" % level_id)
 		EventBus.level_completed.emit(level_id)
 
 
@@ -31,6 +32,7 @@ func _is_player(body: Node) -> bool:
 
 
 func _respawn_player(body: Node2D) -> void:
+	Log.info("BaseLevel: Respawning player to %s" % str(spawn_point.global_position))
 	body.global_position = spawn_point.global_position
 	body.velocity = Vector2.ZERO
 

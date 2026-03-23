@@ -1,5 +1,6 @@
 from typing import Literal
 
+import structlog
 from pydantic import BaseModel, Field, computed_field, field_validator
 
 from app.models.tags import (
@@ -13,6 +14,8 @@ DURABILITY_BREAKABLE = 50
 DURABILITY_RIGID = 200
 DURABILITY_FLEXIBLE = 100
 DURABILITY_DEFAULT = 150
+
+logger = structlog.get_logger()
 
 
 class VisualDescriptor(BaseModel):
@@ -39,9 +42,11 @@ class CreatorOutput(BaseModel):
 
         name = name.strip()
         if not name:
+            logger.debug("llm_retry_name", reason="empty")
             raise ModelRetry("Name cannot be empty.")
         words = name.split()
         if len(words) > 3:
+            logger.debug("llm_retry_name", name=name, word_count=len(words))
             raise ModelRetry(f'Name "{name}" has {len(words)} words. Use 1-3 words maximum.')
         return name
 
@@ -54,6 +59,7 @@ class CreatorOutput(BaseModel):
         for pair in TAG_CONTRADICTIONS:
             if pair <= tag_set:
                 a, b = sorted(pair, key=lambda t: t.value)
+                logger.debug("llm_retry_contradiction", tag_a=a.value, tag_b=b.value)
                 raise ModelRetry(f"{a.value} and {b.value} cannot coexist. Remove one.")
         return tags
 
@@ -64,6 +70,7 @@ class CreatorOutput(BaseModel):
 
         cost = sum(TAG_POWER_COSTS[t] for t in tags)
         if cost > OBJECT_TAG_BUDGET:
+            logger.debug("llm_retry_budget", cost=cost, budget=OBJECT_TAG_BUDGET)
             breakdown = ", ".join(f"{t.value}({TAG_POWER_COSTS[t]})" for t in tags)
             raise ModelRetry(
                 f"Budget {cost}/{OBJECT_TAG_BUDGET}. Tags: {breakdown}. Remove expensive tags."

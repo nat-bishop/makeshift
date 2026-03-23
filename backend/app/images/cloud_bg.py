@@ -4,19 +4,24 @@ import asyncio
 import base64
 from collections.abc import Awaitable, Callable
 
+import structlog
+
 from app.config import settings
 from app.images.fal_helpers import fal_semaphore, submit_and_download
+
+logger = structlog.get_logger()
 
 
 def make_cloud_remover() -> Callable[[bytes], Awaitable[bytes]]:
     """Return an async callable that removes backgrounds via fal.ai birefnet."""
 
     async def remove_bg(image_bytes: bytes) -> bytes:
+        logger.info("cloud_bg_removal_start", image_size=len(image_bytes))
         image_b64 = base64.b64encode(image_bytes).decode()
         data_uri = f"data:image/png;base64,{image_b64}"
 
         async with fal_semaphore:
-            return await asyncio.wait_for(
+            result = await asyncio.wait_for(
                 submit_and_download(
                     "fal-ai/birefnet",
                     arguments={
@@ -28,5 +33,7 @@ def make_cloud_remover() -> Callable[[bytes], Awaitable[bytes]]:
                 ),
                 timeout=settings.image_timeout_seconds,
             )
+            logger.info("cloud_bg_removal_complete", output_size=len(result))
+            return result
 
     return remove_bg

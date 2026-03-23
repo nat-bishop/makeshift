@@ -12,6 +12,7 @@ func load_rules(rules_json: Array) -> void:
 	for rule_data in rules_json:
 		var rule: Dictionary = rule_data if rule_data is Dictionary else {}
 		if rule.is_empty():
+			Log.warn("RuleEngine: Skipping empty/invalid rule entry")
 			continue
 
 		var tags_b: Array = rule.get("tags_required_b", [])
@@ -29,6 +30,7 @@ func load_rules(rules_json: Array) -> void:
 						_index_rule(tag_a, tag_b, rule)
 
 	_rules_loaded = true
+	Log.info("RuleEngine: Loaded %d rules (%d indexed pairs, %d wildcard)" % [rules_json.size(), _pair_index.size(), _wildcard_rules.size()])
 
 
 func _index_rule(tag_a: String, tag_b: String, rule: Dictionary) -> void:

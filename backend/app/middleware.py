@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import time
 from collections.abc import Awaitable, Callable
 
 import structlog
@@ -8,6 +9,9 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 _SESSION_RE = re.compile(r"(?:/api/sessions/|/ws/)([^/]+)")
+
+
+logger = structlog.get_logger()
 
 
 async def session_context_middleware(
@@ -19,6 +23,17 @@ async def session_context_middleware(
     if match:
         structlog.contextvars.bind_contextvars(session_id=match.group(1))
     try:
-        return await call_next(request)
+        start = time.monotonic()
+        response = await call_next(request)
+        elapsed = time.monotonic() - start
+        if elapsed > 1.0:
+            logger.warning(
+                "slow_request",
+                path=request.url.path,
+                method=request.method,
+                elapsed=round(elapsed, 2),
+                status=response.status_code,
+            )
+        return response
     finally:
         structlog.contextvars.clear_contextvars()

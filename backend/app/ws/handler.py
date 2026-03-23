@@ -42,6 +42,7 @@ async def websocket_handler(websocket: WebSocket, session_id: str) -> None:
             if msg_type == "ping":
                 await websocket.send_json({"type": "pong"})
             else:
+                logger.warning("ws_unknown_message_type", msg_type=msg_type)
                 await websocket.send_json(
                     {
                         "type": "error",
@@ -65,7 +66,7 @@ async def _broadcast(session_id: str, message: dict[str, object]) -> None:
         try:
             await ws.send_json(message)
         except Exception:
-            logger.error("ws_send_failed", session_id=session_id)
+            logger.error("ws_send_failed", session_id=session_id, exc_info=True)
             ws_set.discard(ws)
 
 

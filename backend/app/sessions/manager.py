@@ -3,6 +3,7 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 
 import aiosqlite
+import structlog
 
 from app.config import settings
 from app.models.blueprint import GameObjectBlueprint
@@ -10,6 +11,8 @@ from app.models.session import (
     Session,
     WorldObject,
 )
+
+logger = structlog.get_logger()
 
 
 class SessionManager:
@@ -47,6 +50,7 @@ class SessionManager:
             (session_id, created_at, budget_limit),
         )
         await self._db.commit()
+        logger.info("session_db_created", session_id=session_id, budget_limit=budget_limit)
 
         return Session(
             id=session_id,
@@ -64,6 +68,7 @@ class SessionManager:
         )
         row = await cursor.fetchone()
         if row is None:
+            logger.debug("session_not_found", session_id=session_id)
             return None
 
         sid, created_at, budget_used, budget_limit = row
@@ -87,13 +92,19 @@ class SessionManager:
                 )
             )
 
-        return Session(
+        session = Session(
             id=sid,
             created_at=created_at,
             budget_used=budget_used,
             budget_limit=budget_limit,
             objects=objects,
         )
+        logger.debug(
+            "session_loaded",
+            session_id=sid,
+            objects=len(objects),
+        )
+        return session
 
     async def save_object(
         self,
@@ -124,6 +135,7 @@ class SessionManager:
         blueprints: Sequence[GameObjectBlueprint],
     ) -> None:
         """Save multiple objects in a single transaction."""
+        logger.debug("objects_batch_saving", count=len(blueprints))
         await self._db.executemany(
             """
             INSERT OR REPLACE INTO objects
@@ -187,6 +199,7 @@ class SessionManager:
         if objects is not None:
             await self._sync_objects(session_id, objects)
             await self._db.commit()
+            logger.debug("state_saved", object_count=len(objects))
 
     async def track_cost(self, session_id: str, amount: float, *, commit: bool = True) -> float:
         """Add cost to session budget and return new total."""
@@ -201,7 +214,9 @@ class SessionManager:
             "SELECT budget_used FROM sessions WHERE id = ?", (session_id,)
         )
         row = await cursor.fetchone()
-        return row[0] if row else 0.0
+        new_total = row[0] if row else 0.0
+        logger.debug("cost_tracked", amount=amount, new_total=new_total)
+        return new_total
 
     async def track_cost_and_save_object(
         self,
@@ -213,4 +228,7 @@ class SessionManager:
         new_total = await self.track_cost(session_id, amount, commit=False)
         await self.save_object(session_id, blueprint, commit=False)
         await self._db.commit()
+        logger.info(
+            "cost_and_object_saved", object_id=blueprint.id, amount=amount, new_total=new_total
+        )
         return new_total

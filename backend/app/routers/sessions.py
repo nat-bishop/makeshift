@@ -69,6 +69,7 @@ async def get_session(session_id: str, request: Request) -> GetSessionResponse:
     manager = SessionManager(db)
     session = await manager.get_session(session_id)
     if session is None:
+        logger.warning("session_not_found", session_id=session_id)
         raise HTTPException(status_code=404, detail="Session not found")
 
     logger.info("session_restored", session_id=session_id)
@@ -91,9 +92,10 @@ async def sync_session(session_id: str, body: SyncRequest, request: Request) -> 
     manager = SessionManager(db)
 
     if not await manager.session_exists(session_id):
+        logger.warning("sync_session_not_found")
         raise HTTPException(status_code=404, detail="Session not found")
 
-    logger.debug("session_sync")
+    logger.debug("session_sync", has_objects=body.objects is not None)
 
     await manager.save_state(
         session_id,

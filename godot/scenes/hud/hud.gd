@@ -12,6 +12,7 @@ func _ready() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("create_object"):
 		object_creation_panel.visible = !object_creation_panel.visible
+		Log.debug("HUD: Creation panel %s" % ("opened" if object_creation_panel.visible else "closed"))
 		if object_creation_panel.visible:
 			object_creation_panel.focus_input()
 		get_viewport().set_input_as_handled()

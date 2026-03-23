@@ -26,6 +26,7 @@ func _process(delta: float) -> void:
 
 func resolve_collision(body_a: Node, body_b: Node, cascade_depth: int = 0) -> void:
 	if cascade_depth > MAX_CASCADE_DEPTH:
+		Log.debug("CollisionResolver: Cascade depth exceeded for %s vs %s" % [body_a.name, body_b.name])
 		return
 
 	# Build cooldown key from sorted IDs
@@ -55,6 +56,8 @@ func resolve_collision(body_a: Node, body_b: Node, cascade_depth: int = 0) -> vo
 	if rules.is_empty():
 		return
 
+	Log.debug("CollisionResolver: %d rules matched for %s vs %s" % [rules.size(), body_a.name, body_b.name])
+
 	# Record tags before effects for cascade detection
 	var tags_a_before: Array = tags_a.duplicate()
 	var tags_b_before: Array = tags_b.duplicate()
@@ -77,8 +80,10 @@ func resolve_collision(body_a: Node, body_b: Node, cascade_depth: int = 0) -> vo
 		var b_changed: bool = not _arrays_equal(tags_b_before, tags_b_after)
 
 		if a_changed:
+			Log.debug("CollisionResolver: Tags changed on %s, cascading at depth %d" % [body_a.name, cascade_depth + 1])
 			_cascade_to_neighbors(body_a, cascade_depth + 1)
 		if b_changed:
+			Log.debug("CollisionResolver: Tags changed on %s, cascading at depth %d" % [body_b.name, cascade_depth + 1])
 			_cascade_to_neighbors(body_b, cascade_depth + 1)
 
 
@@ -151,7 +156,10 @@ func _cleanup_cooldowns() -> void:
 			to_remove.append(key)
 	for key in to_remove:
 		_cooldowns.erase(key)
+	if not to_remove.is_empty():
+		Log.debug("CollisionResolver: Cleaned %d expired cooldowns" % to_remove.size())
 
 
 func clear_cooldowns() -> void:
+	Log.debug("CollisionResolver: All cooldowns cleared")
 	_cooldowns.clear()

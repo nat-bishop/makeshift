@@ -30,6 +30,7 @@ func init_from_blueprint(bp: Dictionary) -> void:
 	physics_applicator.apply(tags, visual_descriptor)
 	object_visual.set_object_id(object_id)
 	object_visual.set_placeholder(visual_descriptor)
+	Log.info("GameObject: Initialized '%s' (id=%s) with %d tags, durability=%d" % [bp.get("name", "?"), object_id, tags.size(), current_durability])
 
 
 func get_blueprint() -> Dictionary:
@@ -46,13 +47,16 @@ func get_object_id() -> String:
 
 func take_damage(amount: float) -> void:
 	current_durability -= int(amount)
+	Log.debug("GameObject: '%s' took %.0f damage, durability=%d" % [blueprint.get("name", object_id), amount, current_durability])
 	if current_durability <= 0:
+		Log.info("GameObject: '%s' (id=%s) destroyed" % [blueprint.get("name", "?"), object_id])
 		queue_free()
 
 
 func add_tag(tag: String, duration: float = 0.0) -> void:
 	if tag not in tags:
 		tags.append(tag)
+		Log.debug("GameObject: '%s' +tag %s%s" % [blueprint.get("name", object_id), tag, " (%.1fs)" % duration if duration > 0.0 else ""])
 		_reapply_physics()
 	if duration > 0.0:
 		# Cancel existing decay timer for this tag (refresh duration)
@@ -68,6 +72,8 @@ func add_tag(tag: String, duration: float = 0.0) -> void:
 
 
 func remove_tag(tag: String) -> void:
+	if tag in tags:
+		Log.debug("GameObject: '%s' -tag %s" % [blueprint.get("name", object_id), tag])
 	tags.erase(tag)
 	_reapply_physics()
 
