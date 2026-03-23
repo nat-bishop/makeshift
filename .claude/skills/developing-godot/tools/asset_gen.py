@@ -88,20 +88,36 @@ def cmd_image(args):
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
 
+    thinking = getattr(args, "thinking", None)
+    thinking_config = None
+    if thinking:
+        thinking_config = types.ThinkingConfig(
+            thinking_level=thinking.capitalize(),
+            include_thoughts=True,
+        )
+
     config = types.GenerateContentConfig(
-        response_modalities=["IMAGE"],
+        response_modalities=["TEXT", "IMAGE"],
         image_config=types.ImageConfig(
             image_size=size,
             aspect_ratio=args.aspect_ratio,
         ),
+        thinking_config=thinking_config,
     )
     label = f"{args.model} {size} {args.aspect_ratio}"
+    if thinking:
+        label += f" thinking={thinking}"
     print(f"Generating image ({label})...", file=sys.stderr)
 
     client = genai.Client()
+    contents = []
+    for ref_path in (args.ref or []):
+        ref_bytes = Path(ref_path).read_bytes()
+        contents.append(types.Part.from_bytes(data=ref_bytes, mime_type="image/png"))
+    contents.append(args.prompt)
     response = client.models.generate_content(
         model=model,
-        contents=[args.prompt],
+        contents=contents,
         config=config,
     )
 
@@ -112,15 +128,23 @@ def cmd_image(args):
         result_json(False, error=f"Generation blocked (reason: {reason})")
         sys.exit(1)
 
+    saved = False
     for part in response.parts:
-        if part.inline_data is not None:
+        if getattr(part, "thought", False):
+            if part.text:
+                print(f"[thought] {part.text}", file=sys.stderr)
+            continue
+        if part.text:
+            print(f"[model] {part.text}", file=sys.stderr)
+        if part.inline_data is not None and not saved:
             output.write_bytes(part.inline_data.data)
             print(f"Saved: {output}", file=sys.stderr)
             result_json(True, path=str(output), cost_cents=cost)
-            return
+            saved = True
 
-    result_json(False, error="No image returned")
-    sys.exit(1)
+    if not saved:
+        result_json(False, error="No image returned")
+        sys.exit(1)
 
 
 def generate_template(bg_color: str) -> bytes:
@@ -187,6 +211,77 @@ def cmd_spritesheet(args):
     sys.exit(1)
 
 
+def cmd_chat(args):
+    """Multi-turn image editing chat. Each prompt generates an image, and the model
+    sees the full conversation history (including its own previous outputs) for
+    style consistency across turns."""
+    genai, types = _genai()
+    model = IMAGE_MODELS[args.model]
+    size = args.size
+    cost_per_turn = IMAGE_COSTS[size]
+    out_dir = Path(args.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    config = types.GenerateContentConfig(
+        response_modalities=["TEXT", "IMAGE"],
+        image_config=types.ImageConfig(
+            image_size=size,
+            aspect_ratio=args.aspect_ratio,
+        ),
+    )
+
+    client = genai.Client()
+    chat = client.chats.create(model=model, config=config)
+
+    # First message: reference images (if any) + first prompt
+    prompts = args.prompts  # list of "output_name:prompt text"
+    total_cost = 0
+
+    for i, entry in enumerate(prompts):
+        name, _, prompt = entry.partition(":")
+        if not prompt:
+            prompt = name
+            name = f"{i+1:02d}"
+
+        parts = []
+        # Attach reference images only on the first turn
+        if i == 0:
+            for ref_path in (args.ref or []):
+                ref_bytes = Path(ref_path).read_bytes()
+                parts.append(types.Part.from_bytes(data=ref_bytes, mime_type="image/png"))
+        parts.append(prompt)
+
+        label = f"Turn {i+1}/{len(prompts)}: {name}"
+        print(f"[{label}] Generating ({args.model} {size} {args.aspect_ratio})...", file=sys.stderr)
+
+        response = chat.send_message(parts)
+        total_cost += cost_per_turn
+
+        if response.parts is None:
+            reason = "unknown"
+            if response.candidates and response.candidates[0].finish_reason:
+                reason = response.candidates[0].finish_reason
+            print(f"[{label}] FAILED: {reason}", file=sys.stderr)
+            result_json(False, error=f"Turn {i+1} blocked: {reason}", cost_cents=total_cost)
+            sys.exit(1)
+
+        # Save image and print any text
+        saved = False
+        for part in response.parts:
+            if part.text:
+                print(f"[{label}] Model: {part.text}", file=sys.stderr)
+            if part.inline_data is not None and not saved:
+                out_path = out_dir / f"{name}.png"
+                out_path.write_bytes(part.inline_data.data)
+                print(f"[{label}] Saved: {out_path}", file=sys.stderr)
+                saved = True
+
+        if not saved:
+            print(f"[{label}] WARNING: No image in response", file=sys.stderr)
+
+    result_json(True, path=str(out_dir), cost_cents=total_cost)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Asset Generator — images and sprite sheets via Gemini"
@@ -206,6 +301,8 @@ def main():
     p_img.add_argument(
         "--aspect-ratio", choices=IMAGE_ASPECT_RATIOS, default="1:1",
     )
+    p_img.add_argument("--ref", action="append", help="Reference image(s) to pass alongside the prompt (repeatable)")
+    p_img.add_argument("--thinking", choices=["minimal", "high"], default=None, help="Thinking level (Flash 3.1 only)")
     p_img.add_argument("-o", "--output", required=True, help="Output PNG path")
     p_img.set_defaults(func=cmd_image)
 
@@ -224,6 +321,30 @@ def main():
     )
     p_ss.add_argument("-o", "--output", required=True, help="Output PNG path")
     p_ss.set_defaults(func=cmd_spritesheet)
+
+    p_chat = sub.add_parser("chat", help="Multi-turn image editing chat (7-15¢ per turn)")
+    p_chat.add_argument(
+        "--model", choices=list(IMAGE_MODELS), default="flash",
+        help="flash (faster/cheaper) or pro (higher quality)",
+    )
+    p_chat.add_argument(
+        "--size", choices=IMAGE_SIZES, default="1K",
+        help="Resolution per turn: 1K (7¢), 2K (10¢), 4K (15¢)",
+    )
+    p_chat.add_argument(
+        "--aspect-ratio", choices=IMAGE_ASPECT_RATIOS, default="1:1",
+    )
+    p_chat.add_argument(
+        "--ref", action="append",
+        help="Reference image(s) sent with the first prompt (repeatable)",
+    )
+    p_chat.add_argument(
+        "-p", "--prompts", nargs="+", required=True,
+        help="Prompts as 'name:prompt text' (name becomes output filename). "
+             "Each prompt is a new turn in the conversation.",
+    )
+    p_chat.add_argument("-o", "--out-dir", required=True, help="Output directory for generated PNGs")
+    p_chat.set_defaults(func=cmd_chat)
 
     args = parser.parse_args()
     args.func(args)
