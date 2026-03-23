@@ -41,8 +41,6 @@ func _initialize() -> void:
 	_test_game_manager()
 	_test_rule_engine()
 	_test_event_bus_signals()
-	_test_equipment()
-	_test_inventory()
 	_test_physics_composer()
 	_test_tag_colors()
 	_test_tag_physics_map()
@@ -277,165 +275,15 @@ func _test_rule_engine() -> void:
 func _test_event_bus_signals() -> void:
 	_section("EventBus Signals")
 	var expected: Array = [
-		"interaction_triggered", "object_created", "object_destroyed",
-		"sprite_ready", "sprite_failed", "level_completed",
-		"inventory_changed", "equipment_changed", "session_started",
-		"creation_started", "creation_finished", "creation_failed",
-		"slot_selected",
+		"interaction_triggered", "object_created",
+		"sprite_ready", "level_completed",
 	]
 	for sig_name in expected:
 		_assert("has signal: %s" % sig_name, _event_bus.has_signal(sig_name))
 
 
 # ---------------------------------------------------------------------------
-# Section 6: PlayerEquipment
-# ---------------------------------------------------------------------------
-
-func _test_equipment() -> void:
-	_section("PlayerEquipment")
-	var equip_script = load("res://scenes/player/player_equipment.gd")
-	var equip = Node.new()
-	equip.set_script(equip_script)
-	get_root().add_child(equip)
-
-	# TOOL item to hand
-	var sword: Dictionary = {
-		"name": "Flame Sword",
-		"tags": ["SOLID", "TOOL", "HEAT_SOURCE", "SHARP"],
-		"visual_descriptor": {"base_form": "sword"},
-	}
-	_assert("hand starts empty", equip.equipped["hand"].is_empty())
-	_assert("equip(sword) succeeds", equip.equip(sword))
-	_assert("sword in hand slot", not equip.equipped["hand"].is_empty())
-
-	# Effective tags
-	var eff: Array = equip.get_effective_tags()
-	_assert("LIVING always present", "LIVING" in eff)
-	_assert("HEAT_SOURCE transferred", "HEAT_SOURCE" in eff)
-	_assert("SHARP transferred", "SHARP" in eff)
-	_assert("SOLID not transferred", "SOLID" not in eff)
-	_assert("has_tag(HEAT_SOURCE)", equip.has_tag("HEAT_SOURCE"))
-	_assert("not has_tag(HEAVY)", not equip.has_tag("HEAVY"))
-
-	# Non-equippable
-	var rock: Dictionary = {"name": "Rock", "tags": ["SOLID"], "visual_descriptor": {"base_form": "boulder"}}
-	_assert("cannot equip non-TOOL/WEARABLE", not equip.equip(rock))
-
-	# WEARABLE to head
-	var helmet: Dictionary = {"name": "Helm", "tags": ["WEARABLE", "INSULATING"], "visual_descriptor": {"base_form": "helmet"}}
-	_assert("equip(helmet) succeeds", equip.equip(helmet))
-	_assert("helmet in head slot", not equip.equipped["head"].is_empty())
-	_assert("INSULATING transferred", equip.has_tag("INSULATING"))
-
-	# Unequip
-	var removed: Dictionary = equip.unequip("hand")
-	_assert("unequip returns item", removed.get("name", "") == "Flame Sword")
-	_assert("hand empty after unequip", equip.equipped["hand"].is_empty())
-	_assert("HEAT_SOURCE gone after unequip", not equip.has_tag("HEAT_SOURCE"))
-
-	# Back slot
-	var jetpack: Dictionary = {"name": "Jetpack", "tags": ["WEARABLE", "FLOATING"], "visual_descriptor": {"base_form": "jetpack"}}
-	equip.equip(jetpack)
-	_assert("jetpack goes to back slot", not equip.equipped["back"].is_empty())
-
-	# get_data
-	_assert("get_data() returns array", equip.get_data() is Array)
-
-	# Slot replacement: equip a second item to hand
-	var wand: Dictionary = {"name": "Wand", "tags": ["TOOL", "ELECTRIC"], "visual_descriptor": {"base_form": "wand"}}
-	var axe: Dictionary = {"name": "Axe", "tags": ["TOOL", "SHARP"], "visual_descriptor": {"base_form": "axe"}}
-	equip.equip(wand)
-	equip.equip(axe)
-	_assert("replacement: axe in hand", equip.equipped["hand"].get("name", "") == "Axe")
-	_assert("replacement: SHARP from axe", equip.has_tag("SHARP"))
-
-	# Slot mapping checks
-	var shield: Dictionary = {"name": "Shield", "tags": ["WEARABLE"], "visual_descriptor": {"base_form": "shield"}}
-	equip.equip(shield)
-	_assert("shield -> back slot", equip.equipped["back"].get("name", "") == "Shield")
-
-	# Unequip non-existent slot
-	var nothing: Dictionary = equip.unequip("nonexistent")
-	_assert("unequip bad slot returns empty", nothing.is_empty())
-
-	equip.free()
-
-
-# ---------------------------------------------------------------------------
-# Section 7: PlayerInventory
-# ---------------------------------------------------------------------------
-
-func _test_inventory() -> void:
-	_section("PlayerInventory")
-	var inv_script = load("res://scenes/player/player_inventory.gd")
-	var inv = Node.new()
-	inv.set_script(inv_script)
-	get_root().add_child(inv)
-	# _ready() doesn't fire, manually init slots
-	inv.slots.resize(8)
-	for i in range(8):
-		inv.slots[i] = {}
-
-	# Track signals
-	var signal_log: Array = []
-	_event_bus.slot_selected.connect(func(s): signal_log.append(s))
-
-	# Add items
-	_assert("add_item returns slot 0", inv.add_item({"id": "a"}) == 0)
-	_assert("add_item returns slot 1", inv.add_item({"id": "b"}) == 1)
-	_assert("has_item(0)", inv.has_item(0))
-	_assert("not has_item(2)", not inv.has_item(2))
-	_assert("get_item(0).id == 'a'", inv.get_item(0).get("id", "") == "a")
-
-	# Select slot
-	inv.select_slot(3)
-	_assert("selected_slot == 3", inv.selected_slot == 3)
-	_assert("slot_selected signal fired", signal_log.size() >= 1)
-	_assert("get_selected_item empty (slot 3)", inv.get_selected_item().is_empty())
-
-	inv.select_slot(0)
-	_assert("get_selected_item returns item A", inv.get_selected_item().get("id", "") == "a")
-
-	# Remove
-	var removed: Dictionary = inv.remove_item(0)
-	_assert("remove_item returns item", removed.get("id", "") == "a")
-	_assert("slot 0 now empty", not inv.has_item(0))
-
-	# Bounds
-	_assert("get_item(-1) returns empty", inv.get_item(-1).is_empty())
-	_assert("get_item(99) returns empty", inv.get_item(99).is_empty())
-	_assert("has_item(-1) false", not inv.has_item(-1))
-
-	# get_data
-	_assert("get_data() returns 8 slots", inv.get_data().size() == 8)
-
-	# Remove from empty slot
-	var empty_remove: Dictionary = inv.remove_item(0)
-	_assert("remove from empty slot returns empty", empty_remove.is_empty())
-
-	# Remove from negative slot
-	var neg_remove: Dictionary = inv.remove_item(-1)
-	_assert("remove from negative slot returns empty", neg_remove.is_empty())
-
-	# OOB select_slot
-	var old_slot: int = inv.selected_slot
-	inv.select_slot(99)
-	_assert("OOB select_slot unchanged", inv.selected_slot == old_slot)
-
-	# Refill vacated slot
-	var refill_slot: int = inv.add_item({"id": "c"})
-	_assert("refill uses vacated slot 0", refill_slot == 0)
-
-	# Full inventory
-	for i in range(8):
-		inv.slots[i] = {"id": str(i)}
-	_assert("add_item returns -1 when full", inv.add_item({"id": "x"}) == -1)
-
-	inv.free()
-
-
-# ---------------------------------------------------------------------------
-# Section 8: PhysicsComposer
+# Section 6: PhysicsComposer
 # ---------------------------------------------------------------------------
 
 func _test_physics_composer() -> void:
@@ -755,10 +603,8 @@ func _test_scene_compilation() -> void:
 	var scenes: Array[String] = [
 		"res://scenes/game/game.tscn",
 		"res://scenes/game_object/game_object.tscn",
-		"res://scenes/hud/hotbar.tscn",
 		"res://scenes/hud/hud.tscn",
 		"res://scenes/hud/interaction_feedback.tscn",
-		"res://scenes/hud/item_tooltip.tscn",
 		"res://scenes/hud/object_creation_panel.tscn",
 		"res://scenes/levels/base_level.tscn",
 		"res://scenes/levels/level_01.tscn",

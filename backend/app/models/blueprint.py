@@ -3,11 +3,9 @@ from typing import Literal
 from pydantic import BaseModel, Field, computed_field, field_validator
 
 from app.models.tags import (
-    EQUIP_SLOT_MAP,
     OBJECT_TAG_BUDGET,
     TAG_CONTRADICTIONS,
     TAG_POWER_COSTS,
-    TRANSFERABLE_TAGS,
     Tag,
 )
 
@@ -84,23 +82,6 @@ class GameObjectBlueprint(BaseModel):
     @property
     def power_cost(self) -> int:
         return sum(TAG_POWER_COSTS[t] for t in self.tags)
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def is_equippable(self) -> bool:
-        return bool({Tag.WEARABLE, Tag.TOOL} & set(self.tags))
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def equip_slot(self) -> str | None:
-        if not self.is_equippable:
-            return None
-        return EQUIP_SLOT_MAP.get(self.visual_descriptor.base_form, "hand")
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def equip_tags(self) -> list[Tag]:
-        return [t for t in self.tags if t in TRANSFERABLE_TAGS]
 
     @computed_field  # type: ignore[prop-decorator]
     @property

@@ -1,18 +1,16 @@
 """Tests for the tag system: enum completeness, costs, contradictions, constants."""
 
 from app.models.tags import (
-    EQUIP_SLOT_MAP,
     OBJECT_TAG_BUDGET,
     TAG_CONTRADICTIONS,
     TAG_POWER_COSTS,
-    TRANSFERABLE_TAGS,
     Tag,
 )
 
 
 def test_tag_count():
-    """There should be exactly 33 tags."""
-    assert len(Tag) == 33
+    """There should be exactly 30 tags."""
+    assert len(Tag) == 30
 
 
 def test_every_tag_has_a_cost():
@@ -51,17 +49,6 @@ def test_object_tag_budget():
     assert OBJECT_TAG_BUDGET == 10
 
 
-def test_equip_slot_map_values():
-    valid_slots = set(EQUIP_SLOT_MAP.values())
-    for form, slot in EQUIP_SLOT_MAP.items():
-        assert slot in valid_slots, f"{form} maps to invalid slot {slot}"
-
-
-def test_transferable_tags_are_valid():
-    for tag in TRANSFERABLE_TAGS:
-        assert isinstance(tag, Tag)
-
-
 def test_cost_1_tags():
     cost_1 = [t for t, c in TAG_POWER_COSTS.items() if c == 1]
     assert len(cost_1) == 10
@@ -69,7 +56,7 @@ def test_cost_1_tags():
 
 def test_cost_2_tags():
     cost_2 = [t for t, c in TAG_POWER_COSTS.items() if c == 2]
-    assert len(cost_2) == 14
+    assert len(cost_2) == 11
 
 
 def test_cost_3_tags():

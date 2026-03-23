@@ -1,6 +1,0 @@
-[gd_scene load_steps=2 format=3 uid="uid://hotbar_scene"]
-
-[ext_resource type="Script" path="res://scenes/hud/hotbar.gd" id="1_hotbar"]
-
-[node name="Hotbar" type="HBoxContainer"]
-script = ExtResource("1_hotbar")

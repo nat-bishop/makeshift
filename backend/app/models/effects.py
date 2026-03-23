@@ -13,9 +13,7 @@ class EffectType(StrEnum):
     FREEZE = "FREEZE"
     MELT = "MELT"
     TRANSFORM = "TRANSFORM"
-    SPAWN = "SPAWN"
     APPLY_FORCE = "APPLY_FORCE"
-    CHANGE_PROPERTY = "CHANGE_PROPERTY"
     CORRODE = "CORRODE"
     ELECTRIFY = "ELECTRIFY"
     ADD_TAG = "ADD_TAG"
@@ -35,5 +33,4 @@ class Effect(BaseModel):
     tags_to_add: list[Tag] | None = None
     tags_to_remove: list[Tag] | None = None
     force_magnitude: float | None = None
-    spawn_description: str | None = None
     message: str

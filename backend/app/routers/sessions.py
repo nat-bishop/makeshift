@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 from app.config import settings
 from app.engine.rules_data import ALL_RULES
-from app.models.session import EquipmentSlots, InventorySlot, WorldObject
+from app.models.session import WorldObject
 from app.seed.objects import SEED_OBJECTS
 from app.sessions.manager import SessionManager
 
@@ -35,10 +35,6 @@ class GetSessionResponse(BaseModel):
 
 class SyncRequest(BaseModel):
     objects: list[WorldObject] | None = None
-    inventory: list[InventorySlot] | None = None
-    equipment: EquipmentSlots | None = None
-    current_level: int | None = None
-    levels_completed: list[int] | None = None
 
 
 @router.post("", response_model=CreateSessionResponse)
@@ -102,9 +98,5 @@ async def sync_session(session_id: str, body: SyncRequest, request: Request) -> 
     await manager.save_state(
         session_id,
         objects=body.objects,
-        inventory=body.inventory,
-        equipment=body.equipment,
-        current_level=body.current_level,
-        levels_completed=body.levels_completed,
     )
     return {"status": "ok"}

@@ -98,13 +98,6 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 14
 
-[node name="RevealEquip" type="Label" parent="RevealCard"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_font_sizes/font_size = 12
-theme_override_colors/font_color = Color(0.5, 0.8, 1.0, 1)
-horizontal_alignment = 1
-
 [node name="DismissHint" type="Label" parent="RevealCard"]
 layout_mode = 2
 text = "Press any key to continue"

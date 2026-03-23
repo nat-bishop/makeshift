@@ -26,13 +26,9 @@ class Tag(StrEnum):
     STICKY = "STICKY"
     SLIPPERY = "SLIPPERY"
     REFLECTIVE = "REFLECTIVE"
-    # Mechanical (3)
+    # Mechanical (2)
     BOUNCY = "BOUNCY"
-    CLIMBABLE = "CLIMBABLE"
     BREAKABLE = "BREAKABLE"
-    # Interaction (2)
-    WEARABLE = "WEARABLE"
-    TOOL = "TOOL"
     # Environmental (4)
     FLOATING = "FLOATING"
     WIND_SOURCE = "WIND_SOURCE"
@@ -65,9 +61,6 @@ TAG_POWER_COSTS: dict[Tag, int] = {
     Tag.STICKY: 2,
     Tag.REFLECTIVE: 2,
     Tag.BOUNCY: 2,
-    Tag.CLIMBABLE: 2,
-    Tag.WEARABLE: 2,
-    Tag.TOOL: 2,
     Tag.FLOATING: 2,
     Tag.GLOWING: 2,
     Tag.CONDUCTING: 2,
@@ -105,45 +98,10 @@ TAG_CONTRADICTIONS: list[frozenset[Tag]] = [
 
 OBJECT_TAG_BUDGET: int = 10
 
-EQUIP_SLOT_MAP: dict[str, str] = {
-    "sword": "hand",
-    "axe": "hand",
-    "hammer": "hand",
-    "wand": "hand",
-    "tool": "hand",
-    "wrench": "hand",
-    "torch": "hand",
-    "fan": "hand",
-    "shield": "back",
-    "jetpack": "back",
-    "cape": "back",
-    "wings": "back",
-    "helmet": "head",
-    "crown": "head",
-    "goggles": "head",
-}
-
 SIZE_PIXEL_MAP: dict[str, int] = {
     "tiny": 32,
     "small": 48,
     "medium": 64,
     "large": 96,
     "huge": 128,
-}
-
-TRANSFERABLE_TAGS: set[Tag] = {
-    Tag.HEAT_SOURCE,
-    Tag.COLD,
-    Tag.SHARP,
-    Tag.ELECTRIC,
-    Tag.MAGNETIC,
-    Tag.WIND_SOURCE,
-    Tag.CORROSIVE,
-    Tag.TOXIC,
-    Tag.FLOATING,
-    Tag.GLOWING,
-    Tag.REFLECTIVE,
-    Tag.INSULATING,
-    Tag.CONDUCTING,
-    Tag.STICKY,
 }

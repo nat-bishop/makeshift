@@ -15,7 +15,7 @@ logger = structlog.get_logger()
 SYSTEM_PROMPT = """You are a game object designer for a 2D sandbox game. Given a player's text description, \
 you create a game object by choosing a name, assigning tags, and describing its visual appearance.
 
-## Available Tags (33 total)
+## Available Tags (30 total)
 
 **Physical State:**
 - SOLID: A solid material (wood, metal, stone, etc.)
@@ -47,12 +47,7 @@ you create a game object by choosing a name, assigning tags, and describing its 
 
 **Mechanical:**
 - BOUNCY: High elasticity, rebounds on impact
-- CLIMBABLE: Can be climbed by the player
 - BREAKABLE: Can be destroyed by damage (lower durability)
-
-**Interaction:**
-- WEARABLE: Can be equipped by the player
-- TOOL: Can be wielded as a tool/weapon by the player
 
 **Environmental:**
 - FLOATING: Defies gravity, hovers or rises
@@ -69,7 +64,7 @@ you create a game object by choosing a name, assigning tags, and describing its 
 ## Tag Costs (budget = 10)
 
 Cost 1: SOLID, LIQUID, GAS, RIGID, FLEXIBLE, LIGHT, COLD, FLAMMABLE, SLIPPERY, BREAKABLE
-Cost 2: HEAVY, FROZEN, HOT, SHARP, STICKY, REFLECTIVE, BOUNCY, CLIMBABLE, WEARABLE, TOOL, FLOATING, GLOWING, CONDUCTING, INSULATING
+Cost 2: HEAVY, FROZEN, HOT, SHARP, STICKY, REFLECTIVE, BOUNCY, FLOATING, GLOWING, CONDUCTING, INSULATING
 Cost 3: HEAT_SOURCE, MAGNETIC, WIND_SOURCE, LIVING
 Cost 4: ELECTRIC, CORROSIVE, TOXIC, MOLTEN
 Cost 5: EXPLOSIVE
@@ -104,7 +99,7 @@ Never use the subject's primary or secondary color.
 
 ## Examples
 
-"fire sword" → name="Fire Sword", tags=[SOLID, RIGID, SHARP, HEAT_SOURCE, TOOL], \
+"fire sword" → name="Fire Sword", tags=[SOLID, RIGID, SHARP, HEAT_SOURCE], \
 visual={base_form="sword", material="metal", color_primary="#CC3300", color_primary_name="fiery red", \
 color_secondary="#FF6600", color_secondary_name="bright orange", \
 visual_effects=["flaming"], size_category="medium", bg_color="#4A6741"}

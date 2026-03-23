@@ -11,27 +11,12 @@ class WorldObject(BaseModel):
     durability: float = 0.0
 
 
-class InventorySlot(BaseModel):
-    slot: int
-    object_id: str | None = None
-
-
-class EquipmentSlots(BaseModel):
-    hand: str | None = None
-    back: str | None = None
-    head: str | None = None
-
-
 class Session(BaseModel):
     id: str
     created_at: str
     budget_used: float = 0.0
     budget_limit: float = 1.0
-    current_level: int = 1
-    levels_completed: list[int] = Field(default_factory=list)
     objects: list[WorldObject] = Field(default_factory=list)
-    inventory: list[InventorySlot] = Field(default_factory=list)
-    equipment: EquipmentSlots = Field(default_factory=EquipmentSlots)
 
     @property
     def budget_remaining(self) -> float:

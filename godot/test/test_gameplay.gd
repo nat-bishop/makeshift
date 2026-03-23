@@ -1,11 +1,11 @@
 extends SceneTree
 ## Gameplay integration test: tests game logic that works within --script mode
 ## limitations (class_name scripts are NOT registered in --script mode).
-## Tests autoload interactions, signal wiring, inventory/equipment workflows,
-## rule engine integration with collision resolver, and effect chains.
+## Tests autoload interactions, signal wiring, rule engine integration with
+## collision resolver, and effect chains.
 ##
 ## For full scene testing, run: godot --headless --quit-after 50 --fixed-fps 10
-## (validates all scripts compile and main_menu loads without errors)
+## (validates all scripts compile and main_menu loads without errors).
 ##
 ## Run: cd godot && godot --headless --quit-after 60 --fixed-fps 10 \
 ##      --script res://test/test_gameplay.gd 2>&1
@@ -48,8 +48,6 @@ func _initialize() -> void:
 
 	_test_full_interaction_chain()
 	_test_cascade_chain()
-	_test_equipment_affects_player_collisions()
-	_test_inventory_signal_integration()
 	_test_game_state_flow()
 	_test_backend_offline_mode()
 
@@ -285,112 +283,6 @@ func _test_cascade_chain() -> void:
 
 	torch.free()
 	plank.free()
-
-
-# ---------------------------------------------------------------------------
-# Test: Equipment affects player collision behavior
-# ---------------------------------------------------------------------------
-
-func _test_equipment_affects_player_collisions() -> void:
-	_section("Equipment Affects Collisions")
-	var root = get_root()
-
-	# Create equipment and player mock
-	var equip_script = load("res://scenes/player/player_equipment.gd")
-	var equip = Node.new()
-	equip.set_script(equip_script)
-	root.add_child(equip)
-
-	# Player's effective tags come from equipment
-	var initial_tags: Array = equip.get_effective_tags()
-	_assert("Player starts with just LIVING", initial_tags == ["LIVING"])
-
-	# Equip a flame sword
-	var sword: Dictionary = {
-		"name": "Flame Sword",
-		"tags": ["SOLID", "TOOL", "HEAT_SOURCE", "SHARP"],
-		"visual_descriptor": {"base_form": "sword"},
-	}
-	equip.equip(sword)
-	var equipped_tags: Array = equip.get_effective_tags()
-	_assert("Equipped: has HEAT_SOURCE", "HEAT_SOURCE" in equipped_tags)
-	_assert("Equipped: has SHARP", "SHARP" in equipped_tags)
-
-	# Now simulate: player (with HEAT_SOURCE from sword) collides with flammable object
-	# Use a mock body whose tags are the player's effective_tags
-	var player_mock = _make_mock_body("player_eq", equipped_tags.duplicate())
-	var target = _make_mock_body("wood_target", ["FLAMMABLE", "BREAKABLE"], 100.0)
-	root.add_child(player_mock)
-	root.add_child(target)
-
-	_collision_resolver.clear_cooldowns()
-	_collision_resolver.resolve_collision(player_mock, target)
-
-	# HEAT_SOURCE + FLAMMABLE -> IGNITE (priority 5)
-	# SHARP + BREAKABLE -> DAMAGE (priority 3)
-	# Both should fire
-	_assert("Player sword ignites wood", "HEAT_SOURCE" in target.get("tags"))
-	_assert("Player sword damages wood", target.get("damage_log").size() > 0)
-
-	# Unequip and verify no more fire effect
-	equip.unequip("hand")
-	var unarmed_tags: Array = equip.get_effective_tags()
-	_assert("Unarmed: only LIVING", unarmed_tags == ["LIVING"])
-
-	player_mock.free()
-	target.free()
-	equip.free()
-
-
-# ---------------------------------------------------------------------------
-# Test: Inventory signal integration
-# ---------------------------------------------------------------------------
-
-func _test_inventory_signal_integration() -> void:
-	_section("Inventory Signal Integration")
-	var root = get_root()
-
-	var inv_script = load("res://scenes/player/player_inventory.gd")
-	var inv = Node.new()
-	inv.set_script(inv_script)
-	root.add_child(inv)
-	inv.slots.resize(8)
-	for i in range(8):
-		inv.slots[i] = {}
-
-	# Track all signals
-	var inv_signals: Array = []
-	var slot_signals: Array = []
-	_event_bus.inventory_changed.connect(func(slot, item): inv_signals.append({"slot": slot, "item": item}))
-	_event_bus.slot_selected.connect(func(slot): slot_signals.append(slot))
-
-	# Full workflow: add, select, get, remove
-	var item_a: Dictionary = {"id": "rock", "name": "Rock", "tags": ["SOLID", "HEAVY"]}
-	var item_b: Dictionary = {"id": "stick", "name": "Stick", "tags": ["SOLID", "FLAMMABLE"]}
-	var item_c: Dictionary = {"id": "gem", "name": "Gem", "tags": ["SOLID", "GLOWING"]}
-
-	inv.add_item(item_a)
-	inv.add_item(item_b)
-	inv.add_item(item_c)
-	_assert("3 inventory_changed signals", inv_signals.size() == 3)
-	_assert("Signal slot 0 has Rock", inv_signals[0]["item"].get("name", "") == "Rock")
-
-	inv.select_slot(1)
-	_assert("Slot selected signal", slot_signals.size() >= 1)
-	_assert("Selected slot is 1", inv.selected_slot == 1)
-	_assert("Selected item is Stick", inv.get_selected_item().get("name", "") == "Stick")
-
-	# Remove middle item and verify signals
-	var prev_signal_count: int = inv_signals.size()
-	inv.remove_item(1)
-	_assert("Remove fires inventory_changed", inv_signals.size() == prev_signal_count + 1)
-	_assert("Remove signal has empty item", inv_signals[inv_signals.size() - 1]["item"].is_empty())
-
-	# Add new item fills vacated slot
-	inv.add_item({"id": "sword", "name": "Sword"})
-	_assert("New item fills slot 1", inv.get_item(1).get("name", "") == "Sword")
-
-	inv.free()
 
 
 # ---------------------------------------------------------------------------

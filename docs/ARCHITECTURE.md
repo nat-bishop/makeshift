@@ -14,8 +14,8 @@ Godot 4 Client                          FastAPI Backend
 │                                      │    └─ rembg / birefnet  │
 │ RuleEngine (autoload)                │                          │
 │   └─ mirrors backend rules           │  aiosqlite               │
-│                                      │    └─ sessions, objects, │
-│ CollisionResolver (autoload)         │       inventory, equipment│
+│                                      │    └─ sessions, objects  │
+│ CollisionResolver (autoload)         │                          │
 │   └─ EffectExecutor                  │                          │
 └──────────────────┘                   └──────────────────────────┘
 ```
@@ -28,7 +28,7 @@ Full flow from player input to world-placed object with sprite:
 2. **HTTP POST** → `POST /api/sessions/{id}/objects` with `{"description": "..."}`
 3. **Budget check** → `SessionManager.get_budget_info()` verifies remaining budget (rejects with 402 if exhausted)
 4. **LLM agent** → `creator.agent.create_object()` runs PydanticAI agent (Gemini 3.1 Flash Lite Preview, 3 retries). Validators enforce: 1-3 word name, 2-6 tags, no contradictions, budget ≤ 10. Falls back to generic "Mysterious {description}" on failure
-5. **Blueprint construction** → `GameObjectBlueprint` adds UUID, computed fields: `power_cost`, `is_equippable`, `equip_slot`, `equip_tags`, `starting_durability`
+5. **Blueprint construction** → `GameObjectBlueprint` adds UUID, computed fields: `power_cost`, `starting_durability`
 6. **Atomic persist** → `track_cost_and_save_object()` charges $0.041 + saves blueprint in one commit
 7. **Immediate response** → Client receives blueprint JSON + placeholder PNG (colored rounded rectangle) + budget_remaining
 8. **Background sprite generation** → `asyncio.Task` held in module-level `_background_tasks` set (prevents GC). Runs image pipeline (see below)
@@ -61,7 +61,7 @@ Full flow from player input to world-placed object with sprite:
 
 ### Backend: `engine/resolver.py`
 
-`RuleResolver` builds a two-tier index at init from ~55 `InteractionRule` definitions:
+`RuleResolver` builds a two-tier index at init from 43 `InteractionRule` definitions:
 
 **Pair index** (O(1) lookup): Nested dict `tag_a → tag_b → [rules]`. For bidirectional rules, both `(a,b)` and `(b,a)` entries are created.
 
@@ -100,7 +100,7 @@ body_entered signal (from GameObject.body_entered)
 
 ### Effect Executor
 
-`scripts/systems/effect_executor.gd` handles 14 effect types:
+`scripts/systems/effect_executor.gd` handles 12 effect types:
 
 | Effect | Behavior |
 |--------|----------|
@@ -114,8 +114,7 @@ body_entered signal (from GameObject.body_entered)
 | ELECTRIFY | Instant damage (30) |
 | APPLY_FORCE | Impulse away from source body |
 | ADD_TAG / REMOVE_TAG | Direct tag mutation |
-| TRANSFORM / CHANGE_PROPERTY | Tag add + remove combo |
-| SPAWN | Stub — logs warning |
+| TRANSFORM | Tag add + remove combo |
 
 **DOT implementation**: Timer node added as child of target. Ticks `damage_per_tick` every `tick_interval` for `duration`. Auto-cleans when target is freed or ticks exhausted.
 
@@ -139,19 +138,17 @@ Tag mutations (via `add_tag`/`remove_tag`) trigger `_reapply_physics()` to recal
 
 ## Session & Persistence
 
-### SQLite Schema (4 tables, initialized in `main.py` lifespan)
+### SQLite Schema (2 tables, initialized in `main.py` lifespan)
 
 | Table | Key | Fields |
 |-------|-----|--------|
-| `sessions` | `id TEXT PK` | created_at, budget_used, budget_limit (default $1.00), current_level, levels_completed (JSON) |
+| `sessions` | `id TEXT PK` | created_at, budget_used, budget_limit (default $1.00) |
 | `objects` | `(session_id, object_id) PK` | blueprint_json, x, y, durability |
-| `inventory` | `(session_id, slot) PK` | object_id (nullable) |
-| `equipment` | `session_id PK` | equipment_json |
 
 ### Session Lifecycle
 
-1. **Create** (`POST /api/sessions`): New UUID, 8 empty inventory slots, empty equipment, 15 seed objects saved via batch insert. Response includes seed blueprints, all rules, and WebSocket URL
-2. **Restore** (`GET /api/sessions/{id}`): Full load — session row + objects + inventory + equipment
+1. **Create** (`POST /api/sessions`): New UUID, 15 seed objects saved via batch insert. Response includes seed blueprints, all rules, and WebSocket URL
+2. **Restore** (`GET /api/sessions/{id}`): Full load — session row + objects
 3. **Sync** (`PUT /api/sessions/{id}/sync`): Partial update — only provided fields are written. Client syncs every 10s via `Backend._on_sync_timer()` when `_state_dirty` flag is set
 
 ### Budget Tracking

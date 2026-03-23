@@ -62,12 +62,6 @@ ALL_RULES: list[InteractionRule] = [
                 tags_to_remove=[Tag.HEAT_SOURCE, Tag.HOT],
                 message="The flames are doused!",
             ),
-            Effect(
-                effect_type=EffectType.SPAWN,
-                target=EffectTarget.B,
-                spawn_description="steam cloud",
-                message="Steam billows out.",
-            ),
         ],
     ),
     # 4. SHARP + BREAKABLE → DAMAGE
@@ -173,7 +167,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 10. CORROSIVE + BREAKABLE → CORRODE
+    # 9. CORROSIVE + BREAKABLE → CORRODE
     InteractionRule(
         rule_id="corrosive_breakable_corrode",
         name="Corrosion",
@@ -191,7 +185,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 11. WIND_SOURCE + LIGHT → APPLY_FORCE (push)
+    # 10. WIND_SOURCE + LIGHT → APPLY_FORCE (push)
     InteractionRule(
         rule_id="wind_light_push",
         name="Wind Push",
@@ -209,24 +203,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 12. WIND_SOURCE + HEAT_SOURCE → fan flames (cascade)
-    InteractionRule(
-        rule_id="wind_heat_fan",
-        name="Fan Flames",
-        tags_required_a={Tag.WIND_SOURCE},
-        tags_required_b={Tag.HEAT_SOURCE},
-        priority=8,
-        bidirectional=False,
-        cascade_eligible=True,
-        effects=[
-            Effect(
-                effect_type=EffectType.CHANGE_PROPERTY,
-                target=EffectTarget.B,
-                message="The wind fans the flames, spreading fire further!",
-            ),
-        ],
-    ),
-    # 13. WIND_SOURCE + GAS → disperse
+    # 11. WIND_SOURCE + GAS → disperse
     InteractionRule(
         rule_id="wind_gas_disperse",
         name="Gas Dispersal",
@@ -244,7 +221,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 14. MAGNETIC + CONDUCTING → attract
+    # 12. MAGNETIC + CONDUCTING → attract
     InteractionRule(
         rule_id="magnetic_conducting_attract",
         name="Magnetic Attraction",
@@ -262,7 +239,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 15. TOXIC + LIVING → DAMAGE
+    # 13. TOXIC + LIVING → DAMAGE
     InteractionRule(
         rule_id="toxic_living_damage",
         name="Poison",
@@ -280,41 +257,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 16. BOUNCY + HEAVY → reduced bounce
-    InteractionRule(
-        rule_id="bouncy_heavy_reduce",
-        name="Heavy Bounce",
-        tags_required_a={Tag.BOUNCY},
-        tags_required_b={Tag.HEAVY},
-        priority=4,
-        bidirectional=True,
-        cascade_eligible=False,
-        effects=[
-            Effect(
-                effect_type=EffectType.CHANGE_PROPERTY,
-                target=EffectTarget.A,
-                message="Too heavy to bounce much. Bounce reduced.",
-            ),
-        ],
-    ),
-    # 17. STICKY + * → STICK (wildcard)
-    InteractionRule(
-        rule_id="sticky_wildcard_stick",
-        name="Stick",
-        tags_required_a={Tag.STICKY},
-        tags_required_b=set(),  # wildcard
-        priority=3,
-        bidirectional=False,
-        cascade_eligible=False,
-        effects=[
-            Effect(
-                effect_type=EffectType.CHANGE_PROPERTY,
-                target=EffectTarget.BOTH,
-                message="Stuck together!",
-            ),
-        ],
-    ),
-    # 18. REFLECTIVE + HEAT_SOURCE → REFLECT
+    # 14. REFLECTIVE + HEAT_SOURCE → REFLECT
     InteractionRule(
         rule_id="reflective_heat_reflect",
         name="Heat Reflection",
@@ -332,7 +275,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 19. COLD + MOLTEN → FREEZE (frozen lava = walkable)
+    # 15. COLD + MOLTEN → FREEZE (frozen lava = walkable)
     InteractionRule(
         rule_id="cold_molten_freeze",
         name="Solidify Lava",
@@ -352,7 +295,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 20. REFLECTIVE + ELECTRIC → reflect electricity
+    # 16. REFLECTIVE + ELECTRIC → reflect electricity
     InteractionRule(
         rule_id="reflective_electric_reflect",
         name="Electrical Reflection",
@@ -370,10 +313,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # =========================================================================
-    # Additional rules (~30 more)
-    # =========================================================================
-    # 21. HEAVY + BREAKABLE → DAMAGE (crush)
+    # 17. HEAVY + BREAKABLE → DAMAGE (crush)
     InteractionRule(
         rule_id="heavy_breakable_crush",
         name="Crush",
@@ -391,7 +331,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 22. EXPLOSIVE + SHARP → shrapnel (area damage)
+    # 18. EXPLOSIVE + SHARP → shrapnel (area damage)
     InteractionRule(
         rule_id="explosive_sharp_shrapnel",
         name="Shrapnel",
@@ -410,24 +350,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 23. HEAT_SOURCE + HEAT_SOURCE → intensify
-    InteractionRule(
-        rule_id="heat_heat_intensify",
-        name="Heat Intensification",
-        tags_required_a={Tag.HEAT_SOURCE},
-        tags_required_b={Tag.HEAT_SOURCE},
-        priority=5,
-        bidirectional=False,
-        cascade_eligible=True,
-        effects=[
-            Effect(
-                effect_type=EffectType.CHANGE_PROPERTY,
-                target=EffectTarget.BOTH,
-                message="The heat intensifies!",
-            ),
-        ],
-    ),
-    # 24. CORROSIVE + RIGID → weaken
+    # 19. CORROSIVE + RIGID → weaken
     InteractionRule(
         rule_id="corrosive_rigid_weaken",
         name="Structural Corrosion",
@@ -445,7 +368,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 25. MOLTEN + FLAMMABLE → IGNITE
+    # 20. MOLTEN + FLAMMABLE → IGNITE
     InteractionRule(
         rule_id="molten_flammable_ignite",
         name="Molten Ignition",
@@ -464,7 +387,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 26. MOLTEN + LIVING → DAMAGE (severe burn)
+    # 21. MOLTEN + LIVING → DAMAGE (severe burn)
     InteractionRule(
         rule_id="molten_living_burn",
         name="Molten Burn",
@@ -482,7 +405,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 27. HOT + LIVING → DAMAGE (minor burn)
+    # 22. HOT + LIVING → DAMAGE (minor burn)
     InteractionRule(
         rule_id="hot_living_burn",
         name="Heat Burn",
@@ -500,7 +423,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 28. FROZEN + BREAKABLE → shatter (extra damage)
+    # 23. FROZEN + BREAKABLE → shatter (extra damage)
     InteractionRule(
         rule_id="frozen_breakable_shatter",
         name="Shatter",
@@ -518,7 +441,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 29. ELECTRIC + LIVING → DAMAGE (shock)
+    # 24. ELECTRIC + LIVING → DAMAGE (shock)
     InteractionRule(
         rule_id="electric_living_shock",
         name="Electric Shock",
@@ -537,7 +460,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 30. WIND_SOURCE + FLOATING → launch
+    # 25. WIND_SOURCE + FLOATING → launch
     InteractionRule(
         rule_id="wind_floating_launch",
         name="Wind Launch",
@@ -555,7 +478,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 31. CORROSIVE + LIVING → poison damage
+    # 26. CORROSIVE + LIVING → poison damage
     InteractionRule(
         rule_id="corrosive_living_damage",
         name="Acid Burn",
@@ -573,7 +496,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 32. MAGNETIC + MAGNETIC → attract each other
+    # 27. MAGNETIC + MAGNETIC → attract each other
     InteractionRule(
         rule_id="magnetic_magnetic_attract",
         name="Magnetic Pair",
@@ -591,7 +514,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 33. GLOWING + LIVING → attract attention (no damage, flavor)
+    # 28. GLOWING + LIVING → attract attention (no damage, flavor)
     InteractionRule(
         rule_id="glowing_living_attract",
         name="Bioluminescent Lure",
@@ -609,7 +532,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 34. BOUNCY + RIGID → extra bounce
+    # 29. BOUNCY + RIGID → extra bounce
     InteractionRule(
         rule_id="bouncy_rigid_extrabounce",
         name="Hard Bounce",
@@ -627,7 +550,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 35. HEAT_SOURCE + LIQUID → evaporate (if not extinguish scenario)
+    # 30. HEAT_SOURCE + LIQUID → evaporate (if not extinguish scenario)
     InteractionRule(
         rule_id="heat_liquid_evaporate",
         name="Evaporation",
@@ -647,7 +570,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 36. EXPLOSIVE + BREAKABLE → DESTROY
+    # 31. EXPLOSIVE + BREAKABLE → DESTROY
     InteractionRule(
         rule_id="explosive_breakable_destroy",
         name="Blast Destruction",
@@ -666,7 +589,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 37. FROZEN + LIVING → cold damage
+    # 32. FROZEN + LIVING → cold damage
     InteractionRule(
         rule_id="frozen_living_cold",
         name="Frostbite",
@@ -684,7 +607,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 38. SLIPPERY + HEAVY → slide
+    # 33. SLIPPERY + HEAVY → slide
     InteractionRule(
         rule_id="slippery_heavy_slide",
         name="Heavy Slide",
@@ -702,24 +625,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 39. WIND_SOURCE + FLAMMABLE → fan (spread fire faster)
-    InteractionRule(
-        rule_id="wind_flammable_fan",
-        name="Wind-Fed Fire",
-        tags_required_a={Tag.WIND_SOURCE},
-        tags_required_b={Tag.FLAMMABLE},
-        priority=6,
-        bidirectional=False,
-        cascade_eligible=True,
-        effects=[
-            Effect(
-                effect_type=EffectType.CHANGE_PROPERTY,
-                target=EffectTarget.B,
-                message="Wind makes the material more combustible!",
-            ),
-        ],
-    ),
-    # 40. CORROSIVE + CONDUCTING → dissolve metal
+    # 34. CORROSIVE + CONDUCTING → dissolve metal
     InteractionRule(
         rule_id="corrosive_conducting_dissolve",
         name="Metal Dissolution",
@@ -737,7 +643,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 41. SHARP + LIVING → cut damage
+    # 35. SHARP + LIVING → cut damage
     InteractionRule(
         rule_id="sharp_living_cut",
         name="Laceration",
@@ -755,7 +661,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 42. FLOATING + HEAVY → cancel float (wildcard-like, specific)
+    # 36. FLOATING + HEAVY → cancel float
     InteractionRule(
         rule_id="floating_heavy_cancel",
         name="Weight Anchor",
@@ -773,25 +679,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 43. COLD + LIVING → slow
-    InteractionRule(
-        rule_id="cold_living_slow",
-        name="Chill",
-        tags_required_a={Tag.COLD},
-        tags_required_b={Tag.LIVING},
-        priority=6,
-        bidirectional=True,
-        cascade_eligible=False,
-        tags_blocked_by={Tag.INSULATING},
-        effects=[
-            Effect(
-                effect_type=EffectType.CHANGE_PROPERTY,
-                target=EffectTarget.B,
-                message="Chilled to the bone. Movement slowed.",
-            ),
-        ],
-    ),
-    # 44. EXPLOSIVE + ELECTRIC → chain detonation
+    # 37. EXPLOSIVE + ELECTRIC → chain detonation
     InteractionRule(
         rule_id="explosive_electric_detonate",
         name="Electrical Detonation",
@@ -810,7 +698,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 45. FLEXIBLE + SHARP → resist cutting
+    # 38. FLEXIBLE + SHARP → resist cutting
     InteractionRule(
         rule_id="flexible_sharp_resist",
         name="Flex Resist",
@@ -828,24 +716,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 46. LIVING + LIVING → no combat (neutral)
-    InteractionRule(
-        rule_id="living_living_neutral",
-        name="Life Meets Life",
-        tags_required_a={Tag.LIVING},
-        tags_required_b={Tag.LIVING},
-        priority=1,
-        bidirectional=False,
-        cascade_eligible=False,
-        effects=[
-            Effect(
-                effect_type=EffectType.CHANGE_PROPERTY,
-                target=EffectTarget.BOTH,
-                message="Two living things regard each other.",
-            ),
-        ],
-    ),
-    # 47. HEAT_SOURCE + CONDUCTING → heat transfer
+    # 39. HEAT_SOURCE + CONDUCTING → heat transfer
     InteractionRule(
         rule_id="heat_conducting_transfer",
         name="Heat Conduction",
@@ -864,7 +735,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 48. COLD + CONDUCTING → cold transfer
+    # 40. COLD + CONDUCTING → cold transfer
     InteractionRule(
         rule_id="cold_conducting_transfer",
         name="Cold Conduction",
@@ -883,7 +754,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 51. MOLTEN + BREAKABLE → DESTROY
+    # 41. MOLTEN + BREAKABLE → DESTROY
     InteractionRule(
         rule_id="molten_breakable_destroy",
         name="Molten Destruction",
@@ -901,7 +772,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 52. TOXIC + GAS → toxic cloud (spreads)
+    # 42. TOXIC + GAS → toxic cloud (spreads)
     InteractionRule(
         rule_id="toxic_gas_cloud",
         name="Toxic Cloud",
@@ -919,24 +790,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 53. CLIMBABLE + * → enable climb (wildcard)
-    InteractionRule(
-        rule_id="climbable_wildcard",
-        name="Climbable Surface",
-        tags_required_a={Tag.CLIMBABLE},
-        tags_required_b=set(),
-        priority=2,
-        bidirectional=False,
-        cascade_eligible=False,
-        effects=[
-            Effect(
-                effect_type=EffectType.CHANGE_PROPERTY,
-                target=EffectTarget.B,
-                message="A climbable surface!",
-            ),
-        ],
-    ),
-    # 55. ELECTRIC + BREAKABLE → damage
+    # 43. ELECTRIC + BREAKABLE → damage
     InteractionRule(
         rule_id="electric_breakable_damage",
         name="Electric Damage",

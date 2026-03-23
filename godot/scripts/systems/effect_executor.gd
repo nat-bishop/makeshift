@@ -92,11 +92,7 @@ func _apply_effect(effect_type: String, effect: Dictionary, target: Node, body_a
 			if target.has_method("take_damage"):
 				target.take_damage(amount)
 
-		"SPAWN":
-			var desc: String = effect.get("spawn_description", "unknown object")
-			_spawn_placeholder(target.global_position, desc)
-
-		"TRANSFORM", "CHANGE_PROPERTY":
+		"TRANSFORM":
 			var tags_to_add: Array = effect.get("tags_to_add", [])
 			var tags_to_remove: Array = effect.get("tags_to_remove", [])
 			if target.has_method("add_tag"):
@@ -170,5 +166,3 @@ func _apply_dot(target: Node, damage_per_tick: float, tick_interval: float, dura
 	timer.start()
 
 
-func _spawn_placeholder(pos: Vector2, description: String) -> void:
-	Log.warn("EffectExecutor: SPAWN effect stub - '%s' at %s" % [description, str(pos)])

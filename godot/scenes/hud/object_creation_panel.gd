@@ -9,7 +9,6 @@ extends PanelContainer
 @onready var _reveal_tags: HFlowContainer = %RevealTags
 @onready var _reveal_size: Label = %RevealSize
 @onready var _reveal_cost: Label = %RevealCost
-@onready var _reveal_equip: Label = %RevealEquip
 
 var _is_creating := false
 var _is_showing_reveal := false
@@ -95,14 +94,6 @@ func _show_reveal(blueprint: Dictionary) -> void:
 
 	var power_cost: int = blueprint.get("power_cost", 0)
 	_reveal_cost.text = "%d / 10" % power_cost
-
-	var is_equippable: bool = blueprint.get("is_equippable", false)
-	if is_equippable:
-		var slot: String = blueprint.get("equip_slot", "")
-		_reveal_equip.text = "Equip: %s" % slot
-		_reveal_equip.visible = true
-	else:
-		_reveal_equip.visible = false
 
 	_reveal_card.modulate.a = 0.0
 	var tween := create_tween()

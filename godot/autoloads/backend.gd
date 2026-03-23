@@ -47,7 +47,6 @@ func create_session() -> Dictionary:
 	if not rules.is_empty():
 		RuleEngine.load_rules(rules)
 
-	EventBus.session_started.emit(session_id)
 	return result
 
 
@@ -64,29 +63,21 @@ func restore_session(id: String) -> Dictionary:
 	if not rules.is_empty():
 		RuleEngine.load_rules(rules)
 
-	EventBus.session_started.emit(session_id)
 	return result
 
 
 func create_object(description: String) -> Dictionary:
 	if session_id.is_empty():
-		EventBus.creation_failed.emit("No active session")
 		return {"error": true, "message": "No active session"}
-
-	EventBus.creation_started.emit(description)
 
 	var result: Dictionary = await _http_post(
 		"/api/sessions/%s/objects" % session_id,
 		{"description": description}
 	)
 
-	if result.get("error", false):
-		var error_msg: String = result.get("message", "Object creation failed")
-		EventBus.creation_failed.emit(error_msg)
-	else:
+	if not result.get("error", false):
 		var blueprint: Dictionary = result.get("blueprint", result)
 		EventBus.object_created.emit(blueprint)
-		EventBus.creation_finished.emit(blueprint)
 		# Track pending sprite
 		var object_id: String = blueprint.get("id", "")
 		if object_id != "":
@@ -221,7 +212,6 @@ func _handle_sprite_failed(data: Dictionary) -> void:
 	var reason: String = data.get("reason", "unknown")
 	_pending_sprites.erase(object_id)
 	Log.warn("Backend: Sprite generation failed for %s: %s" % [object_id, reason])
-	EventBus.sprite_failed.emit(object_id, reason)
 
 
 func _process_reconnect(delta: float) -> void:
@@ -267,24 +257,8 @@ func _gather_game_state() -> Dictionary:
 	if world and world.has_method("get_objects_data"):
 		objects = world.get_objects_data()
 
-	var inventory: Array = []
-	var player = get_tree().get_first_node_in_group("player")
-	if player and player.has_node("PlayerInventory"):
-		var inv = player.get_node("PlayerInventory")
-		if inv.has_method("get_data"):
-			inventory = inv.get_data()
-
-	var equipment: Array = []
-	if player and player.has_node("PlayerEquipment"):
-		var equip = player.get_node("PlayerEquipment")
-		if equip.has_method("get_data"):
-			equipment = equip.get_data()
-
 	return {
 		"objects": objects,
-		"inventory": inventory,
-		"equipment": equipment,
-		"level_progress": GameManager.current_level,
 	}
 
 

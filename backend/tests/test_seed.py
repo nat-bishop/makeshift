@@ -48,21 +48,21 @@ def test_seed_power_costs_match_plan():
     by_name = {obj.name: obj for obj in SEED_OBJECTS}
 
     # Costs computed from TAG_POWER_COSTS
-    assert by_name["Wooden Plank"].power_cost == 6
-    assert by_name["Rope"].power_cost == 6
+    assert by_name["Wooden Plank"].power_cost == 4
+    assert by_name["Rope"].power_cost == 4
     assert by_name["Boulder"].power_cost == 5
     assert by_name["Torch"].power_cost == 10
     assert by_name["Bucket of Water"].power_cost == 3
     assert by_name["Trampoline"].power_cost == 5
-    assert by_name["Ladder"].power_cost == 6
-    assert by_name["Shield"].power_cost == 8
-    assert by_name["Sword"].power_cost == 6
+    assert by_name["Ladder"].power_cost == 4
+    assert by_name["Shield"].power_cost == 6
+    assert by_name["Sword"].power_cost == 4
     assert by_name["Ice Block"].power_cost == 7
-    assert by_name["Fan"].power_cost == 8
+    assert by_name["Fan"].power_cost == 6
     assert by_name["Balloon"].power_cost == 6
     assert by_name["Metal Plate"].power_cost == 9
     assert by_name["TNT"].power_cost == 9
-    assert by_name["Umbrella"].power_cost == 8
+    assert by_name["Umbrella"].power_cost == 6
 
 
 def test_seed_durability_values():
@@ -90,29 +90,6 @@ def test_seed_durability_values():
 
     # LIQUID → default
     assert by_name["Bucket of Water"].starting_durability == DURABILITY_DEFAULT
-
-
-def test_seed_equippable_objects():
-    by_name = {obj.name: obj for obj in SEED_OBJECTS}
-
-    # WEARABLE or TOOL
-    assert by_name["Shield"].is_equippable is True
-    assert by_name["Sword"].is_equippable is True
-    assert by_name["Fan"].is_equippable is True
-    assert by_name["Umbrella"].is_equippable is True
-
-    # Not equippable
-    assert by_name["Wooden Plank"].is_equippable is False
-    assert by_name["Boulder"].is_equippable is False
-    assert by_name["Torch"].is_equippable is False
-
-
-def test_seed_equip_slots():
-    by_name = {obj.name: obj for obj in SEED_OBJECTS}
-
-    assert by_name["Shield"].equip_slot == "back"
-    assert by_name["Sword"].equip_slot == "hand"
-    assert by_name["Fan"].equip_slot == "hand"
 
 
 def test_seed_all_have_descriptions():

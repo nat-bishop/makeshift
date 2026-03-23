@@ -4,22 +4,21 @@
 
 "Scribblenauts meets Terraria" — a 2D physics sandbox where players type text descriptions to create game objects. An LLM (Gemini) interprets descriptions into tagged blueprints with visual descriptors. A generative model (Flux) produces pixel art sprites. Objects interact through a tag-based rule system, enabling emergent puzzle-solving: fire melts ice, water extinguishes fire, electricity propagates through conductors.
 
-Player creativity is constrained by the tag budget system — every object has a power budget of 10, and tags cost 1-5 points. This creates meaningful choices: a fire sword (SOLID+RIGID+SHARP+HEAT_SOURCE+TOOL = 9) leaves little room for extras, while a simple wooden plank (SOLID+RIGID+FLAMMABLE+BREAKABLE+CLIMBABLE = 6) is cheap and versatile.
+Player creativity is constrained by the tag budget system — every object has a power budget of 10, and tags cost 1-5 points. This creates meaningful choices: a fire source (SOLID+RIGID+HEAT_SOURCE+HOT = 7) leaves room for extras, while a simple wooden plank (SOLID+RIGID+FLAMMABLE+BREAKABLE = 4) is cheap and versatile.
 
 ## Tag System
 
-33 tags across 8 categories. Tags are the atomic unit of the entire game — they drive physics, interactions, equipment effects, durability, and visual placeholders.
+30 tags across 7 categories. Tags are the atomic unit of the entire game — they drive physics, interactions, durability, and visual placeholders.
 
 ### Categories and Cost Curve
 
 | Category | Tags | Cost range |
 |----------|------|------------|
 | Physical State | SOLID, LIQUID, GAS, RIGID, FLEXIBLE, HEAVY, LIGHT | 1-2 |
-| Temperature | FROZEN, COLD, HOT, MOLTEN | 2-4 |
+| Temperature | FROZEN, COLD, HOT, MOLTEN | 1-4 |
 | Energy | FLAMMABLE, HEAT_SOURCE, ELECTRIC, MAGNETIC, EXPLOSIVE | 1-5 |
-| Surface | SHARP, STICKY, SLIPPERY, REFLECTIVE | 2 |
-| Mechanical | BOUNCY, CLIMBABLE, BREAKABLE | 1-2 |
-| Interaction | WEARABLE, TOOL | 2 |
+| Surface | SHARP, STICKY, SLIPPERY, REFLECTIVE | 1-2 |
+| Mechanical | BOUNCY, BREAKABLE | 1-2 |
 | Environmental | FLOATING, WIND_SOURCE, CORROSIVE, TOXIC | 2-4 |
 | Special | LIVING, GLOWING, CONDUCTING, INSULATING | 2-3 |
 
@@ -27,7 +26,7 @@ Player creativity is constrained by the tag budget system — every object has a
 
 EXPLOSIVE (cost 5) is the most expensive because it's the most powerful single-tag effect: area damage on heat or electricity contact.
 
-### Contradiction Pairs (12)
+### Contradiction Pairs (14)
 
 Tags that can't coexist on the same object:
 
@@ -35,21 +34,14 @@ Tags that can't coexist on the same object:
 FROZEN↔MOLTEN    FROZEN↔HOT     COLD↔HOT      COLD↔MOLTEN
 HEAVY↔LIGHT      LIQUID↔RIGID   GAS↔RIGID     GAS↔HEAVY
 SOLID↔LIQUID     SOLID↔GAS      LIQUID↔GAS    STICKY↔SLIPPERY
+CONDUCTING↔INSULATING           REFLECTIVE↔STICKY
 ```
 
 Enforced by Pydantic validators on `CreatorOutput`. Violations trigger `ModelRetry` with feedback to the LLM, not hard failures.
 
-### Transferable Tags (14)
-
-Tags that transfer from equipped items to the player's effective tag set:
-
-HEAT_SOURCE, COLD, SHARP, ELECTRIC, MAGNETIC, WIND_SOURCE, CORROSIVE, TOXIC, FLOATING, GLOWING, REFLECTIVE, INSULATING, CONDUCTING, STICKY
-
-This is what makes equipment meaningful — equipping a fire sword gives the player HEAT_SOURCE and SHARP, so touching a flammable object ignites it.
-
 ## Rule System
 
-~55 `InteractionRule` definitions in `engine/rules_data.py`. Each rule specifies:
+43 `InteractionRule` definitions in `engine/rules_data.py`. Each rule specifies:
 - Required tags on object A and/or B
 - Priority (higher fires first)
 - Whether bidirectional (A↔B or only A→B)
@@ -78,7 +70,7 @@ This is what makes equipment meaningful — equipping a fire sword gives the pla
 
 ### Wildcard Rules
 
-Rules with empty `tags_required_b` match any second object. Used for unconditional effects: STICKY + anything creates adhesion, CLIMBABLE + player enables climbing.
+Rules with empty `tags_required_b` match any second object. Used for unconditional effects: STICKY + anything creates adhesion.
 
 ## Object Economy
 
@@ -98,41 +90,21 @@ Each session starts with a curated set covering diverse tag combinations:
 
 | Object | Key Tags | Gameplay Role |
 |--------|----------|---------------|
-| Wooden Plank | SOLID, RIGID, FLAMMABLE, CLIMBABLE | Bridges, ladders, fuel |
-| Rope | FLEXIBLE, FLAMMABLE, CLIMBABLE, LIGHT | Climbing, wind-affected |
+| Wooden Plank | SOLID, RIGID, FLAMMABLE | Bridges, fuel |
+| Rope | FLEXIBLE, FLAMMABLE, LIGHT | Wind-affected fuel |
 | Boulder | HEAVY, BREAKABLE | Crushing, blocking |
 | Torch | HEAT_SOURCE, HOT, GLOWING | Ignition source, light |
 | Bucket of Water | LIQUID, HEAVY | Extinguishing, freezing |
 | Trampoline | FLEXIBLE, BOUNCY, BREAKABLE | Vertical traversal |
-| Ladder | RIGID, CLIMBABLE, FLAMMABLE | Climbing |
-| Shield | HEAVY, REFLECTIVE, WEARABLE | Defense, heat reflection |
-| Sword | RIGID, SHARP, TOOL | Damage, equippable |
+| Ladder | RIGID, FLAMMABLE | Flammable structure |
+| Shield | HEAVY, REFLECTIVE | Defense, heat reflection |
+| Sword | RIGID, SHARP | Damage |
 | Ice Block | FROZEN, COLD, SLIPPERY, BREAKABLE | Freezing, melting |
-| Fan | WIND_SOURCE, LIGHT, TOOL | Wind, push light objects |
+| Fan | WIND_SOURCE, LIGHT | Wind, push light objects |
 | Balloon | GAS, LIGHT, FLOATING, BREAKABLE | Floating platforms |
 | Metal Plate | HEAVY, CONDUCTING, MAGNETIC | Electricity, magnetism |
 | TNT | EXPLOSIVE, FLAMMABLE, BREAKABLE | Area destruction |
-| Umbrella | FLEXIBLE, WEARABLE, WIND_SOURCE | Equipment + wind |
-
-## Equipment System
-
-3 slots: **hand**, **back**, **head**. Only objects with WEARABLE or TOOL tags are equippable.
-
-### Slot Assignment
-
-`EQUIP_SLOT_MAP` in `models/tags.py` maps `base_form → slot`:
-- **Hand**: sword, axe, hammer, wand, tool, wrench, torch, fan
-- **Back**: shield, jetpack, cape, wings
-- **Head**: helmet, crown, goggles
-- **Default**: hand (if base_form not in map)
-
-### Equipment Effects
-
-Equipped items transfer their transferable tags to the player. The player always has the LIVING tag. `get_effective_tags()` merges LIVING + all equipped items' transferable tags.
-
-**Physics modifiers** (checked in `player.gd._physics_process`):
-- FLOATING → gravity ×0.3
-- HEAVY → speed ×0.7
+| Umbrella | FLEXIBLE, WIND_SOURCE | Wind interaction |
 
 ## Durability & Damage
 
@@ -155,6 +127,4 @@ Objects reaching 0 durability are destroyed (`queue_free()`).
 
 ## Levels
 
-3 puzzle levels using the `BaseLevel` pattern (extends Node2D). Each level has a spawn point, goal area, and objective text. Levels are designed to be solvable multiple ways — a gap can be bridged with a plank, crossed with a floating balloon, or bypassed by climbing.
-
-Player progression tracked via `current_level` and `levels_completed` in session state, synced to backend.
+3 puzzle levels using the `BaseLevel` pattern (extends Node2D). Each level has a spawn point, goal area, and objective text. Levels are designed to be solvable multiple ways — a gap can be bridged with a plank, crossed with a floating balloon, or bypassed with a bouncy trampoline.

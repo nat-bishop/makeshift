@@ -1,8 +1,8 @@
 """Tests for blueprint models: CreatorOutput validation, GameObjectBlueprint computed fields."""
 
-import pytest
 from typing import Literal
 
+import pytest
 from app.models.blueprint import (
     DURABILITY_BREAKABLE,
     DURABILITY_DEFAULT,
@@ -208,59 +208,6 @@ class TestGameObjectBlueprint:
         bp = self._make_blueprint(tags=[Tag.SOLID, Tag.RIGID, Tag.SHARP])
         assert bp.power_cost == 4  # 1+1+2
 
-    def test_is_equippable_with_tool(self) -> None:
-        bp = self._make_blueprint(tags=[Tag.SOLID, Tag.RIGID, Tag.TOOL])
-        assert bp.is_equippable is True
-
-    def test_is_equippable_with_wearable(self) -> None:
-        bp = self._make_blueprint(tags=[Tag.SOLID, Tag.WEARABLE])
-        assert bp.is_equippable is True
-
-    def test_not_equippable(self) -> None:
-        bp = self._make_blueprint(tags=[Tag.SOLID, Tag.RIGID])
-        assert bp.is_equippable is False
-
-    def test_equip_slot_sword(self) -> None:
-        bp = self._make_blueprint(
-            tags=[Tag.SOLID, Tag.TOOL],
-            visual_descriptor=_make_visual(base_form="sword"),
-        )
-        assert bp.equip_slot == "hand"
-
-    def test_equip_slot_shield(self) -> None:
-        bp = self._make_blueprint(
-            tags=[Tag.SOLID, Tag.WEARABLE],
-            visual_descriptor=_make_visual(base_form="shield"),
-        )
-        assert bp.equip_slot == "back"
-
-    def test_equip_slot_helmet(self) -> None:
-        bp = self._make_blueprint(
-            tags=[Tag.SOLID, Tag.WEARABLE],
-            visual_descriptor=_make_visual(base_form="helmet"),
-        )
-        assert bp.equip_slot == "head"
-
-    def test_equip_slot_default_hand(self) -> None:
-        bp = self._make_blueprint(
-            tags=[Tag.SOLID, Tag.TOOL],
-            visual_descriptor=_make_visual(base_form="unknown_form"),
-        )
-        assert bp.equip_slot == "hand"
-
-    def test_equip_slot_none_when_not_equippable(self) -> None:
-        bp = self._make_blueprint(tags=[Tag.SOLID, Tag.RIGID])
-        assert bp.equip_slot is None
-
-    def test_equip_tags(self) -> None:
-        bp = self._make_blueprint(
-            tags=[Tag.SOLID, Tag.RIGID, Tag.HEAT_SOURCE, Tag.SHARP, Tag.TOOL],
-        )
-        assert Tag.HEAT_SOURCE in bp.equip_tags
-        assert Tag.SHARP in bp.equip_tags
-        assert Tag.SOLID not in bp.equip_tags
-        assert Tag.RIGID not in bp.equip_tags
-
     def test_durability_breakable(self) -> None:
         bp = self._make_blueprint(tags=[Tag.SOLID, Tag.BREAKABLE])
         assert bp.starting_durability == DURABILITY_BREAKABLE
@@ -283,10 +230,7 @@ class TestGameObjectBlueprint:
         assert bp.starting_durability == DURABILITY_BREAKABLE
 
     def test_serialization_includes_computed_fields(self) -> None:
-        bp = self._make_blueprint(tags=[Tag.SOLID, Tag.RIGID, Tag.TOOL])
+        bp = self._make_blueprint(tags=[Tag.SOLID, Tag.RIGID])
         data = bp.model_dump(mode="json")
         assert "power_cost" in data
-        assert "is_equippable" in data
-        assert "equip_slot" in data
-        assert "equip_tags" in data
         assert "starting_durability" in data

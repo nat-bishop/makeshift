@@ -54,5 +54,4 @@ def test_fallback_object_structure():
         visual_descriptor=fallback.visual_descriptor,
     )
     assert bp.power_cost == 2  # SOLID(1) + RIGID(1)
-    assert bp.is_equippable is False
     assert bp.starting_durability == DURABILITY_RIGID

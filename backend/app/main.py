@@ -95,27 +95,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         )
         """
     )
-    await db.execute(
-        """
-        CREATE TABLE IF NOT EXISTS inventory (
-            session_id TEXT NOT NULL,
-            slot INTEGER NOT NULL,
-            object_id TEXT,
-            PRIMARY KEY (session_id, slot),
-            FOREIGN KEY (session_id) REFERENCES sessions(id)
-        )
-        """
-    )
-    await db.execute(
-        """
-        CREATE TABLE IF NOT EXISTS equipment (
-            session_id TEXT NOT NULL,
-            equipment_json TEXT NOT NULL DEFAULT '{}',
-            PRIMARY KEY (session_id),
-            FOREIGN KEY (session_id) REFERENCES sessions(id)
-        )
-        """
-    )
     await db.commit()
     app.state.db = db
 
