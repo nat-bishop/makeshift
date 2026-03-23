@@ -6,7 +6,7 @@ config_version=5
 
 [application]
 
-config/name="LLM Sandbox Game"
+config/name="Makeshift"
 run/main_scene="res://scenes/main_menu/main_menu.tscn"
 config/features=PackedStringArray("4.3", "GL Compatibility")
 

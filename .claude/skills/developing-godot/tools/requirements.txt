@@ -1,0 +1,7 @@
+google-genai
+numpy
+pillow
+scipy
+rembg
+pymatting
+onnxruntime
