@@ -1,4 +1,4 @@
-# Architecture Comparison: Scribblenauts' Objectnaut vs. Our LLM Sandbox
+# Architecture Comparison: Scribblenauts' Objectnaut vs. Makeshift
 
 Design memo comparing the Objectnaut engine (5th Cell, 2009–2013) with our current architecture. Each section references actual files and functions in our repo and specific Scribblenauts patterns documented in the [compass research](compass_artifact_wf-daccc8ce-6234-4074-ac83-eaf097fd2a40_text_markdown.md).
 

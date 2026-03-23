@@ -29,7 +29,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     if settings.logfire_enabled:
         import logfire
 
-        logfire.configure(service_name="llm-sandbox-game")
+        logfire.configure(service_name="makeshift")
         logfire.instrument_fastapi(app)
         logfire.instrument_pydantic_ai()
         logger.info("logfire_enabled")
@@ -134,7 +134,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await db.close()
 
 
-app = FastAPI(title="LLM Sandbox Game", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Makeshift", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

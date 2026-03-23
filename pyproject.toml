@@ -1,7 +1,7 @@
 [project]
-name = "llmgame"
+name = "makeshift"
 version = "0.1.0"
-description = "LLM Sandbox Game - Scribblenauts meets Terraria"
+description = "Makeshift - Scribblenauts meets Terraria"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115.0",

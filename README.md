@@ -1,4 +1,4 @@
-# LLM Sandbox Game
+# Makeshift
 
 "Scribblenauts meets Terraria" — a 2D physics sandbox where you type text descriptions to create game objects. An LLM generates tagged blueprints, a generative model produces pixel art sprites, and objects interact through a tag-based rule system with chain reactions.
 
