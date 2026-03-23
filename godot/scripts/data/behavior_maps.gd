@@ -96,6 +96,10 @@ const INTERVAL_IS_ONCE := {
 }
 
 # --- Parent tag → projectile payload tag ---
+# --- Duration (seconds) for tags added by behavior actions ---
+const BEHAVIOR_TAG_DURATION: float = 10.0
+
+# --- Parent tag → projectile payload tag ---
 const PAYLOAD_TAG_MAP := {
 	"HEAT_SOURCE": "HOT",
 	"ELECTRIC": "ELECTRIC",
@@ -103,9 +107,6 @@ const PAYLOAD_TAG_MAP := {
 	"CORROSIVE": "CORROSIVE",
 	"FROZEN": "COLD",
 }
-
-# --- Duration (seconds) for tags added by behavior actions ---
-const BEHAVIOR_TAG_DURATION: float = 10.0
 
 # --- Movement actions (used for conflict resolution) ---
 const MOVEMENT_ACTIONS := ["MOVE_TOWARD", "MOVE_AWAY", "PATROL"]

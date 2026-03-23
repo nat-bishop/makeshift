@@ -59,8 +59,9 @@ async def test_reserve_budget_insufficient():
     await db.commit()
     manager = SessionManager(db)
 
-    success, _ = await manager.reserve_budget("s1", 0.041)
+    success, remaining = await manager.reserve_budget("s1", 0.041)
     assert success is False
+    assert remaining >= 0  # Session exists but budget insufficient
     await db.close()
 
 
@@ -70,7 +71,7 @@ async def test_reserve_budget_nonexistent_session():
 
     success, remaining = await manager.reserve_budget("nonexistent", 0.041)
     assert success is False
-    assert remaining == 0.0
+    assert remaining == -1.0  # Sentinel for session-not-found
     await db.close()
 
 

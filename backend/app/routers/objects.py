@@ -50,7 +50,7 @@ async def create_object_endpoint(
     # Atomically reserve budget before calling the LLM
     success, budget_remaining = await manager.reserve_budget(session_id, OBJECT_CREATION_COST)
     if not success:
-        if budget_remaining == 0.0 and not await manager.session_exists(session_id):
+        if budget_remaining < 0:
             logger.warning("object_create_session_not_found")
             raise HTTPException(status_code=404, detail="Session not found")
         logger.warning("object_create_budget_exceeded", budget_remaining=budget_remaining)

@@ -209,7 +209,8 @@ class SessionManager:
         """Atomically reserve budget if sufficient funds remain.
 
         Returns (success, budget_remaining). Uses a conditional UPDATE to avoid
-        the read-check-write race window.
+        the read-check-write race window. Returns -1.0 for remaining if session
+        doesn't exist (sentinel value).
         """
         cursor = await self._db.execute(
             "UPDATE sessions SET budget_used = budget_used + ?"
@@ -217,44 +218,16 @@ class SessionManager:
             (amount, session_id, amount),
         )
         await self._db.commit()
+
+        row_cursor = await self._db.execute(
+            "SELECT budget_limit - budget_used FROM sessions WHERE id = ?",
+            (session_id,),
+        )
+        row = await row_cursor.fetchone()
+        if row is None:
+            return False, -1.0
+        remaining: float = row[0]
         if cursor.rowcount == 0:
-            info = await self.get_budget_info(session_id)
-            if info is None:
-                return False, 0.0
-            return False, info[0]
-        info = await self.get_budget_info(session_id)
-        remaining = info[0] if info else 0.0
+            return False, remaining
         logger.debug("budget_reserved", amount=amount, remaining=remaining)
         return True, remaining
-
-    async def track_cost(self, session_id: str, amount: float, *, commit: bool = True) -> float:
-        """Add cost to session budget and return new total."""
-        await self._db.execute(
-            "UPDATE sessions SET budget_used = budget_used + ? WHERE id = ?",
-            (amount, session_id),
-        )
-        if commit:
-            await self._db.commit()
-
-        cursor = await self._db.execute(
-            "SELECT budget_used FROM sessions WHERE id = ?", (session_id,)
-        )
-        row = await cursor.fetchone()
-        new_total = row[0] if row else 0.0
-        logger.debug("cost_tracked", amount=amount, new_total=new_total)
-        return new_total
-
-    async def track_cost_and_save_object(
-        self,
-        session_id: str,
-        amount: float,
-        blueprint: GameObjectBlueprint,
-    ) -> float:
-        """Track cost and save object in a single transaction."""
-        new_total = await self.track_cost(session_id, amount, commit=False)
-        await self.save_object(session_id, blueprint, commit=False)
-        await self._db.commit()
-        logger.info(
-            "cost_and_object_saved", object_id=blueprint.id, amount=amount, new_total=new_total
-        )
-        return new_total
