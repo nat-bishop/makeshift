@@ -110,6 +110,8 @@ func _apply_effect(effect_type: String, effect: Dictionary, target: Node, body_a
 			if target.has_method("remove_tag"):
 				for tag in tags_to_remove:
 					target.remove_tag(tag)
+		_:
+			Log.warn("EffectExecutor: Unknown effect type '%s'" % effect_type)
 
 
 func _get_targets(effect: Dictionary, body_a: Node, body_b: Node) -> Array[Node]:

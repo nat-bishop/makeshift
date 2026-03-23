@@ -1,7 +1,7 @@
 extends RigidBody2D
 
 var object_id: String = ""
-var tags: Array = []
+var tags: Array[String] = []
 var blueprint: Dictionary = {}
 var current_durability: int = 150
 var _decay_timers: Dictionary = {}  # tag name -> Timer
@@ -53,7 +53,7 @@ func get_blueprint() -> Dictionary:
 	return blueprint
 
 
-func get_tags() -> Array:
+func get_tags() -> Array[String]:
 	return tags
 
 

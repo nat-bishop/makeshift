@@ -8,7 +8,7 @@ class WorldObject(BaseModel):
     blueprint: GameObjectBlueprint
     x: float = 0.0
     y: float = 0.0
-    durability: float = 0.0
+    durability: float = 0.0  # DB default; actual value set from blueprint.starting_durability
 
 
 class Session(BaseModel):

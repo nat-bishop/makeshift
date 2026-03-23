@@ -20,6 +20,7 @@ func _ready() -> void:
 	)
 	add_theme_stylebox_override("panel", style)
 
+	description_input.max_length = 500
 	create_button.pressed.connect(_on_create_pressed)
 	description_input.text_submitted.connect(_on_text_submitted)
 	status_label.text = ""

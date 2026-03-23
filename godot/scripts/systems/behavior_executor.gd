@@ -10,7 +10,7 @@ const CL = preload("res://scripts/data/collision_layers.gd")
 const _TICK_TRIGGERS: Array = ["ON_HEALTH_LOW", "ON_PROXIMITY", "ALWAYS"]
 
 var _owner_body: RigidBody2D
-var _behaviors: Array = []
+var _behaviors: Array[Dictionary] = []
 var _behaviors_by_trigger: Dictionary = {}  # trigger_name -> [behavior_indices]
 var _cooldowns: Dictionary = {}  # behavior_index -> last_fire_time
 var _target_cache: Dictionary = {}  # behavior_index -> cached target Node
@@ -21,6 +21,7 @@ var _patrol_distance: float = 0.0
 const PATROL_MAX_DISTANCE: float = 200.0
 const TARGET_UPDATE_INTERVAL: float = 0.3
 const MAX_CONSECUTIVE_ERRORS: int = 3
+const MAX_EXPLOSION_RESULTS: int = 32
 
 var _target_update_timer: float = 0.0
 var _consecutive_errors: int = 0
@@ -375,7 +376,7 @@ func _apply_explode(range_tier: String, intensity: String) -> void:
 	query.collision_mask = CL.OBJECTS | CL.PLAYER
 	query.exclude = [_owner_body.get_rid()]
 
-	var results: Array = space_state.intersect_shape(query, 32)
+	var results: Array = space_state.intersect_shape(query, MAX_EXPLOSION_RESULTS)
 	for result in results:
 		var body: Node = result.get("collider", null)
 		if body == null or body == _owner_body or not is_instance_valid(body):
@@ -400,7 +401,7 @@ func _apply_tags(target: Node, tags_list, add: bool) -> bool:
 		if not target.has_method("add_tag"):
 			return false
 		for tag in tags_list:
-			target.add_tag(tag, 10.0)
+			target.add_tag(tag, BehaviorMaps.BEHAVIOR_TAG_DURATION)
 	else:
 		if not target.has_method("remove_tag"):
 			return false

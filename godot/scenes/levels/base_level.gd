@@ -36,7 +36,7 @@ func _respawn_player(body: Node2D) -> void:
 	body.global_position = spawn_point.global_position
 	body.velocity = Vector2.ZERO
 
-func _create_platform(pos: Vector2, size: Vector2, color: Color = Color(0.35, 0.28, 0.2)) -> void:
+func _create_platform(pos: Vector2, size: Vector2, _color: Color = Color(0.35, 0.28, 0.2)) -> void:
 	var body := StaticBody2D.new()
 	body.position = pos
 	body.collision_layer = CollisionLayers.TERRAIN
@@ -49,9 +49,10 @@ func _create_platform(pos: Vector2, size: Vector2, color: Color = Color(0.35, 0.
 	shape.position = size / 2
 	body.add_child(shape)
 
-	var visual := ColorRect.new()
+	var visual := TextureRect.new()
+	visual.texture = load("res://assets/backgrounds/ground.png")
 	visual.size = size
-	visual.color = color
+	visual.stretch_mode = TextureRect.STRETCH_TILE
 	body.add_child(visual)
 
 	add_child(body)

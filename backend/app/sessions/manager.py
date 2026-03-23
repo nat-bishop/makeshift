@@ -81,7 +81,11 @@ class SessionManager:
         objects = []
         async for obj_row in obj_cursor:
             object_id, blueprint_json, x, y, durability = obj_row
-            blueprint = GameObjectBlueprint.model_validate_json(blueprint_json)
+            try:
+                blueprint = GameObjectBlueprint.model_validate_json(blueprint_json)
+            except Exception:
+                logger.warning("object_json_corrupt", object_id=object_id, session_id=session_id)
+                continue
             objects.append(
                 WorldObject(
                     object_id=object_id,
@@ -200,6 +204,28 @@ class SessionManager:
             await self._sync_objects(session_id, objects)
             await self._db.commit()
             logger.debug("state_saved", object_count=len(objects))
+
+    async def reserve_budget(self, session_id: str, amount: float) -> tuple[bool, float]:
+        """Atomically reserve budget if sufficient funds remain.
+
+        Returns (success, budget_remaining). Uses a conditional UPDATE to avoid
+        the read-check-write race window.
+        """
+        cursor = await self._db.execute(
+            "UPDATE sessions SET budget_used = budget_used + ?"
+            " WHERE id = ? AND budget_used + ? <= budget_limit",
+            (amount, session_id, amount),
+        )
+        await self._db.commit()
+        if cursor.rowcount == 0:
+            info = await self.get_budget_info(session_id)
+            if info is None:
+                return False, 0.0
+            return False, info[0]
+        info = await self.get_budget_info(session_id)
+        remaining = info[0] if info else 0.0
+        logger.debug("budget_reserved", amount=amount, remaining=remaining)
+        return True, remaining
 
     async def track_cost(self, session_id: str, amount: float, *, commit: bool = True) -> float:
         """Add cost to session budget and return new total."""

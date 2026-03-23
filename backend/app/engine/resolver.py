@@ -46,27 +46,32 @@ class RuleResolver:
                 for tb in tags_b:
                     if tb in self._pair_index[ta]:
                         for rule in self._pair_index[ta][tb]:
-                            if (
-                                rule.tags_required_a <= tags_a and rule.tags_required_b <= tags_b
-                            ):
-                                if not (rule.tags_blocked_by and rule.tags_blocked_by & tags_b):
-                                    matched[rule.rule_id] = rule
-                            elif (
+                            forward = (
+                                rule.tags_required_a <= tags_a
+                                and rule.tags_required_b <= tags_b
+                                and not (rule.tags_blocked_by and rule.tags_blocked_by & tags_b)
+                            )
+                            reverse = (
                                 rule.bidirectional
                                 and rule.tags_required_a <= tags_b
                                 and rule.tags_required_b <= tags_a
-                            ):
-                                if not (rule.tags_blocked_by and rule.tags_blocked_by & tags_a):
-                                    matched[rule.rule_id] = rule
+                                and not (rule.tags_blocked_by and rule.tags_blocked_by & tags_a)
+                            )
+                            if forward or reverse:
+                                matched[rule.rule_id] = rule
 
         # Wildcard rules - O(n) where n is small (~3-5)
         for rule in self._wildcard_rules:
-            if rule.tags_required_a.issubset(tags_a):
-                if not (rule.tags_blocked_by and rule.tags_blocked_by & tags_b):
-                    matched[rule.rule_id] = rule
-            elif rule.bidirectional and rule.tags_required_a.issubset(tags_b):
-                if not (rule.tags_blocked_by and rule.tags_blocked_by & tags_a):
-                    matched[rule.rule_id] = rule
+            forward = rule.tags_required_a.issubset(tags_a) and not (
+                rule.tags_blocked_by and rule.tags_blocked_by & tags_b
+            )
+            reverse = (
+                rule.bidirectional
+                and rule.tags_required_a.issubset(tags_b)
+                and not (rule.tags_blocked_by and rule.tags_blocked_by & tags_a)
+            )
+            if forward or reverse:
+                matched[rule.rule_id] = rule
 
         result = sorted(matched.values(), key=lambda r: r.priority, reverse=True)
         if result:

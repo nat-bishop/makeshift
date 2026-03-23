@@ -75,9 +75,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             id TEXT PRIMARY KEY,
             created_at TEXT NOT NULL,
             budget_used REAL NOT NULL DEFAULT 0.0,
-            budget_limit REAL NOT NULL DEFAULT 1.0,
-            current_level INTEGER NOT NULL DEFAULT 1,
-            levels_completed TEXT NOT NULL DEFAULT '[]'
+            budget_limit REAL NOT NULL DEFAULT 1.0
         )
         """
     )

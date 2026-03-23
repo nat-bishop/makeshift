@@ -104,6 +104,9 @@ const PAYLOAD_TAG_MAP := {
 	"FROZEN": "COLD",
 }
 
+# --- Duration (seconds) for tags added by behavior actions ---
+const BEHAVIOR_TAG_DURATION: float = 10.0
+
 # --- Movement actions (used for conflict resolution) ---
 const MOVEMENT_ACTIONS := ["MOVE_TOWARD", "MOVE_AWAY", "PATROL"]
 

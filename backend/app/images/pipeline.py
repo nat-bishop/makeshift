@@ -7,6 +7,7 @@ from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import TypeAlias
 
+import httpx
 import structlog
 from PIL import Image, ImageDraw
 
@@ -142,7 +143,7 @@ async def generate_sprite(
         )
         return final_bytes
 
-    except Exception:
+    except (httpx.HTTPError, TimeoutError, OSError, ValueError):
         logger.error(
             "sprite_generation_failed",
             object_id=object_id,

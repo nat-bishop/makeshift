@@ -6,7 +6,7 @@ from typing import Any
 
 import structlog
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.creator.agent import create_object
 from app.images.pipeline import RemoveBg
@@ -26,7 +26,7 @@ _background_tasks: set[asyncio.Task[Any]] = set()
 
 
 class CreateObjectRequest(BaseModel):
-    description: str
+    description: str = Field(max_length=500)
 
 
 class CreateObjectResponse(BaseModel):
@@ -47,25 +47,22 @@ async def create_object_endpoint(
     db = request.app.state.db
     manager = SessionManager(db)
 
-    budget_info = await manager.get_budget_info(session_id)
-    if budget_info is None:
-        logger.warning("object_create_session_not_found")
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    budget_remaining, budget_limit = budget_info
-    if budget_remaining <= 0:
+    # Atomically reserve budget before calling the LLM
+    success, budget_remaining = await manager.reserve_budget(session_id, OBJECT_CREATION_COST)
+    if not success:
+        if budget_remaining == 0.0 and not await manager.session_exists(session_id):
+            logger.warning("object_create_session_not_found")
+            raise HTTPException(status_code=404, detail="Session not found")
         logger.warning("object_create_budget_exceeded", budget_remaining=budget_remaining)
         raise HTTPException(status_code=402, detail="Session budget exceeded")
 
     logger.info("object_create_request", description_len=len(body.description))
 
-    # Create object via LLM
+    # Create object via LLM (budget already reserved)
     blueprint = await create_object(body.description)
 
-    # Track cost and save object in one transaction
-    new_total = await manager.track_cost_and_save_object(
-        session_id, OBJECT_CREATION_COST, blueprint
-    )
+    # Save object
+    await manager.save_object(session_id, blueprint)
 
     # Generate placeholder and kick off async sprite generation
     from app.images.pipeline import generate_placeholder
@@ -90,7 +87,7 @@ async def create_object_endpoint(
     return CreateObjectResponse(
         blueprint=blueprint.model_dump(mode="json"),
         placeholder_png_base64=placeholder_b64,
-        budget_remaining=budget_limit - new_total,
+        budget_remaining=budget_remaining,
     )
 
 

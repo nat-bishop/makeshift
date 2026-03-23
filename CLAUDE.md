@@ -92,7 +92,6 @@ Requires `.env` file (see `.env.example`):
 - `@computed_field` properties require `# type: ignore[prop-decorator]` — mypy still doesn't support decorators above `@property`
 - WebSocket connection rejected with close code 4004 if session doesn't exist
 - Sprite cache keyed by visual descriptor hash, not object ID — identical descriptors share sprites
-- `sessions` table schema still creates `current_level` and `levels_completed` columns, but the `Session` model doesn't expose them — dead DB columns pending cleanup
 - `ON_TAG_ADDED` behavior trigger requires `trigger_tag` field; validated via `ModelRetry` in `Behavior.check_trigger_tag()`
 - `CONTACT_BODY` behavior target is only valid with `ON_CONTACT`, `ON_DAMAGED`, or `ON_PROXIMITY` triggers — enforced by model validator
 - `BehaviorExecutor` disables itself after 3 consecutive action errors to prevent runaway behavior on bad LLM output
