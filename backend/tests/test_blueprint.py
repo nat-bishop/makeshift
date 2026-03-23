@@ -14,6 +14,7 @@ from app.models.tags import TAG_POWER_COSTS, Tag
 from pydantic import ValidationError
 from pydantic_ai import ModelRetry
 
+
 def _make_visual(**kwargs: object) -> VisualDescriptor:
     defaults: dict[str, object] = {
         "base_form": "cube",

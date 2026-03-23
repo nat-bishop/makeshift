@@ -9,15 +9,15 @@ from unittest.mock import AsyncMock
 
 import aiosqlite
 import pytest
-from fastapi import FastAPI, WebSocket
-from starlette.testclient import TestClient
-
 from app.ws.handler import (
     _connections,
     send_sprite_failed,
     send_sprite_ready,
     websocket_handler,
 )
+from fastapi import FastAPI, WebSocket
+from starlette.testclient import TestClient
+from starlette.websockets import WebSocketDisconnect
 
 
 @asynccontextmanager
@@ -37,7 +37,8 @@ async def _test_lifespan(app: FastAPI) -> AsyncIterator[None]:
     )""")
     await db.commit()
     await db.execute(
-        "INSERT INTO sessions (id, created_at, budget_limit) VALUES ('test-session', '2024-01-01', 1.0)"
+        "INSERT INTO sessions (id, created_at, budget_limit)"
+        " VALUES ('test-session', '2024-01-01', 1.0)"
     )
     await db.commit()
     app.state.db = db
@@ -64,29 +65,26 @@ def _clear_connections() -> None:
 
 def test_ws_connect_invalid_session() -> None:
     app = _make_test_app()
-    with TestClient(app) as client:
-        with pytest.raises(Exception):
-            with client.websocket_connect("/ws/nonexistent") as ws:
-                ws.receive_json()
+    with TestClient(app) as client, pytest.raises(WebSocketDisconnect):  # noqa: SIM117
+        with client.websocket_connect("/ws/nonexistent") as ws:
+            ws.receive_json()
 
 
 def test_ws_ping_pong() -> None:
     app = _make_test_app()
-    with TestClient(app) as client:
-        with client.websocket_connect("/ws/test-session") as ws:
-            ws.send_json({"type": "ping"})
-            data = ws.receive_json()
-            assert data == {"type": "pong"}
+    with TestClient(app) as client, client.websocket_connect("/ws/test-session") as ws:
+        ws.send_json({"type": "ping"})
+        data = ws.receive_json()
+        assert data == {"type": "pong"}
 
 
 def test_ws_unknown_message() -> None:
     app = _make_test_app()
-    with TestClient(app) as client:
-        with client.websocket_connect("/ws/test-session") as ws:
-            ws.send_json({"type": "foo"})
-            data = ws.receive_json()
-            assert data["type"] == "error"
-            assert "foo" in data["message"]
+    with TestClient(app) as client, client.websocket_connect("/ws/test-session") as ws:
+        ws.send_json({"type": "foo"})
+        data = ws.receive_json()
+        assert data["type"] == "error"
+        assert "foo" in data["message"]
 
 
 def test_ws_connection_cleanup() -> None:

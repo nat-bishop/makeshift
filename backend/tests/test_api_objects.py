@@ -7,13 +7,12 @@ from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, patch
 
 import aiosqlite
-from fastapi import FastAPI
-from httpx import ASGITransport, AsyncClient
-
 from app.middleware import session_context_middleware
 from app.models.blueprint import GameObjectBlueprint, VisualDescriptor
 from app.models.tags import Tag
 from app.routers import objects, sessions
+from fastapi import FastAPI
+from httpx import ASGITransport, AsyncClient
 
 
 def _make_app() -> FastAPI:

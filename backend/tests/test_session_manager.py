@@ -234,31 +234,32 @@ async def test_save_state_empty_clears_all(manager: SessionManager) -> None:
     assert len(loaded.objects) == 0
 
 
-# --- track_cost ---
+# --- reserve_budget ---
 
 
-async def test_track_cost(manager: SessionManager) -> None:
+async def test_reserve_budget_success(manager: SessionManager) -> None:
     session = await manager.create_session()
 
-    new_total = await manager.track_cost(session.id, 0.1)
-    assert new_total == 0.1
-
-    new_total = await manager.track_cost(session.id, 0.2)
-    assert abs(new_total - 0.3) < 1e-9
+    success, remaining = await manager.reserve_budget(session.id, 0.041)
+    assert success is True
+    assert remaining > 0
 
 
-# --- track_cost_and_save_object ---
+async def test_reserve_budget_insufficient(manager: SessionManager) -> None:
+    db = await _setup_db()
+    mgr = SessionManager(db)
+    await db.execute(
+        "INSERT INTO sessions (id, created_at, budget_limit, budget_used)"
+        " VALUES ('s1', '2024-01-01', 0.05, 0.04)"
+    )
+    await db.commit()
+
+    success, _ = await mgr.reserve_budget("s1", 0.041)
+    assert success is False
+    await db.close()
 
 
-async def test_track_cost_and_save_object(manager: SessionManager) -> None:
-    session = await manager.create_session()
-
-    bp = _make_blueprint("Expensive Thing")
-    new_total = await manager.track_cost_and_save_object(session.id, 0.041, bp)
-    assert abs(new_total - 0.041) < 1e-9
-
-    loaded = await manager.get_session(session.id)
-    assert loaded is not None
-    assert len(loaded.objects) == 1
-    assert loaded.objects[0].blueprint.name == "Expensive Thing"
-    assert loaded.budget_used == new_total
+async def test_reserve_budget_nonexistent(manager: SessionManager) -> None:
+    success, remaining = await manager.reserve_budget("nonexistent", 0.041)
+    assert success is False
+    assert remaining == -1.0

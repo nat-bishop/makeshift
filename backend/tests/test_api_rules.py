@@ -3,10 +3,9 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+from app.routers import rules
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-
-from app.routers import rules
 
 
 @asynccontextmanager

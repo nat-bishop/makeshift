@@ -6,14 +6,13 @@ from collections.abc import AsyncIterator
 
 import aiosqlite
 import pytest
-from fastapi import FastAPI
-from httpx import ASGITransport, AsyncClient
-
 from app.middleware import session_context_middleware
 from app.models.blueprint import GameObjectBlueprint, VisualDescriptor
 from app.models.session import WorldObject
 from app.models.tags import Tag
 from app.routers import sessions
+from fastapi import FastAPI
+from httpx import ASGITransport, AsyncClient
 
 
 async def _init_db() -> aiosqlite.Connection:

@@ -10,9 +10,9 @@ from app.models.blueprint import CreatorOutput, VisualDescriptor
 from app.models.tags import Tag
 
 
-def _mock_agent_error(error: Exception = Exception("LLM timeout")) -> MagicMock:
+def _mock_agent_error(error: Exception | None = None) -> MagicMock:
     agent = MagicMock()
-    agent.run = AsyncMock(side_effect=error)
+    agent.run = AsyncMock(side_effect=error or Exception("LLM timeout"))
     return agent
 
 

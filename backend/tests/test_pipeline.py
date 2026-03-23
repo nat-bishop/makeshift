@@ -5,8 +5,6 @@ from __future__ import annotations
 import io
 import re
 
-from PIL import Image
-
 from app.images.pipeline import (
     STATIC_DIR,
     TAG_COLOR_MAP,
@@ -17,6 +15,7 @@ from app.images.pipeline import (
 )
 from app.models.blueprint import VisualDescriptor
 from app.models.tags import SIZE_PIXEL_MAP, Tag
+from PIL import Image
 
 
 def _make_visual(**kwargs: object) -> VisualDescriptor:
