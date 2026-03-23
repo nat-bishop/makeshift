@@ -13,3 +13,4 @@ class InteractionRule(BaseModel):
     bidirectional: bool
     cascade_eligible: bool
     effects: list[Effect]
+    tags_blocked_by: set[Tag] = set()  # rule skipped if B-side object has any of these

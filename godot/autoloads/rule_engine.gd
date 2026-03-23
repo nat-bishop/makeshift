@@ -48,11 +48,23 @@ func find_matching_rules(tags_a: Array, tags_b: Array) -> Array:
 			for tb in tags_b:
 				if tb in _pair_index[ta]:
 					for rule in _pair_index[ta][tb]:
+						var blocked_by: Array = rule.get("tags_blocked_by", [])
+						if not blocked_by.is_empty():
+							var req_a: Array = rule.get("tags_required_a", [])
+							var b_tags: Array = tags_b if ta in req_a else tags_a
+							if _has_any_tag(b_tags, blocked_by):
+								continue
 						matched[rule.get("rule_id", "")] = rule
 
 	# Wildcard rules (always checked)
 	for rule in _wildcard_rules:
 		if _wildcard_matches(rule, tags_a, tags_b):
+			var blocked_by: Array = rule.get("tags_blocked_by", [])
+			if not blocked_by.is_empty():
+				var req_a: Array = rule.get("tags_required_a", [])
+				var b_tags: Array = tags_b if _has_any_tag(tags_a, req_a) else tags_a
+				if _has_any_tag(b_tags, blocked_by):
+					continue
 			matched[rule.get("rule_id", "")] = rule
 
 	var result: Array = matched.values()
@@ -69,6 +81,13 @@ func _wildcard_matches(rule: Dictionary, tags_a: Array, tags_b: Array) -> bool:
 			continue
 		return false
 	return true
+
+
+func _has_any_tag(tags: Array, check: Array) -> bool:
+	for tag in check:
+		if tag in tags:
+			return true
+	return false
 
 
 func is_loaded() -> bool:

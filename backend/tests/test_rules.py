@@ -160,10 +160,46 @@ class TestAllRules:
         rule_ids = [m.rule_id for m in matches]
         assert "explosive_heat_detonate" in rule_ids
 
-    def test_electric_insulating_block(self):
+    def test_insulating_blocks_electric(self):
         resolver = RuleResolver(ALL_RULES)
-        matches = resolver.find_matching_rules({Tag.ELECTRIC}, {Tag.INSULATING})
+        # INSULATING on B-side should block electric rules
+        matches = resolver.find_matching_rules(
+            {Tag.ELECTRIC}, {Tag.CONDUCTING, Tag.INSULATING}
+        )
         rule_ids = [m.rule_id for m in matches]
-        assert "electric_insulating_block" in rule_ids
-        # Should be highest priority among matches
-        assert matches[0].rule_id == "electric_insulating_block"
+        assert "electric_conducting_electrify" not in rule_ids
+
+    def test_insulating_blocks_heat(self):
+        resolver = RuleResolver(ALL_RULES)
+        matches = resolver.find_matching_rules(
+            {Tag.HEAT_SOURCE}, {Tag.FLAMMABLE, Tag.INSULATING}
+        )
+        rule_ids = [m.rule_id for m in matches]
+        assert "heat_flammable_ignite" not in rule_ids
+
+    def test_insulating_blocks_cold(self):
+        resolver = RuleResolver(ALL_RULES)
+        matches = resolver.find_matching_rules(
+            {Tag.COLD}, {Tag.LIQUID, Tag.INSULATING}
+        )
+        rule_ids = [m.rule_id for m in matches]
+        assert "cold_liquid_freeze" not in rule_ids
+
+    def test_insulating_blocks_bidirectional_reversed(self):
+        resolver = RuleResolver(ALL_RULES)
+        # Bidirectional: A has FLAMMABLE+INSULATING, B has HEAT_SOURCE
+        # Rule flips to match, blocking should still apply
+        matches = resolver.find_matching_rules(
+            {Tag.FLAMMABLE, Tag.INSULATING}, {Tag.HEAT_SOURCE}
+        )
+        rule_ids = [m.rule_id for m in matches]
+        assert "heat_flammable_ignite" not in rule_ids
+
+    def test_insulating_does_not_block_unrelated(self):
+        resolver = RuleResolver(ALL_RULES)
+        # INSULATING should not block non-electric/heat/cold rules
+        matches = resolver.find_matching_rules(
+            {Tag.CORROSIVE}, {Tag.BREAKABLE, Tag.INSULATING}
+        )
+        rule_ids = [m.rule_id for m in matches]
+        assert "corrosive_breakable_corrode" in rule_ids

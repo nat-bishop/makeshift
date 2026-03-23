@@ -15,6 +15,7 @@ ALL_RULES: list[InteractionRule] = [
         priority=10,
         bidirectional=True,
         cascade_eligible=True,
+        tags_blocked_by={Tag.INSULATING},
         effects=[
             Effect(
                 effect_type=EffectType.IGNITE,
@@ -34,6 +35,7 @@ ALL_RULES: list[InteractionRule] = [
         priority=10,
         bidirectional=True,
         cascade_eligible=False,
+        tags_blocked_by={Tag.INSULATING},
         effects=[
             Effect(
                 effect_type=EffectType.MELT,
@@ -95,6 +97,7 @@ ALL_RULES: list[InteractionRule] = [
         priority=10,
         bidirectional=True,
         cascade_eligible=False,
+        tags_blocked_by={Tag.INSULATING},
         effects=[
             Effect(
                 effect_type=EffectType.FREEZE,
@@ -139,6 +142,7 @@ ALL_RULES: list[InteractionRule] = [
         priority=12,
         bidirectional=True,
         cascade_eligible=True,
+        tags_blocked_by={Tag.INSULATING},
         effects=[
             Effect(
                 effect_type=EffectType.ELECTRIFY,
@@ -158,6 +162,7 @@ ALL_RULES: list[InteractionRule] = [
         priority=15,
         bidirectional=True,
         cascade_eligible=False,
+        tags_blocked_by={Tag.INSULATING},
         effects=[
             Effect(
                 effect_type=EffectType.ELECTRIFY,
@@ -165,23 +170,6 @@ ALL_RULES: list[InteractionRule] = [
                 damage_amount=30.0,
                 tags_to_add=[Tag.ELECTRIC],
                 message="The liquid becomes electrified! 30 damage.",
-            ),
-        ],
-    ),
-    # 9. ELECTRIC + INSULATING → NO EFFECT (blocks propagation)
-    InteractionRule(
-        rule_id="electric_insulating_block",
-        name="Insulation Block",
-        tags_required_a={Tag.ELECTRIC},
-        tags_required_b={Tag.INSULATING},
-        priority=20,
-        bidirectional=True,
-        cascade_eligible=False,
-        effects=[
-            Effect(
-                effect_type=EffectType.CHANGE_PROPERTY,
-                target=EffectTarget.B,
-                message="The insulation blocks the electricity.",
             ),
         ],
     ),
@@ -353,6 +341,7 @@ ALL_RULES: list[InteractionRule] = [
         priority=12,
         bidirectional=True,
         cascade_eligible=False,
+        tags_blocked_by={Tag.INSULATING},
         effects=[
             Effect(
                 effect_type=EffectType.FREEZE,
@@ -538,6 +527,7 @@ ALL_RULES: list[InteractionRule] = [
         priority=12,
         bidirectional=True,
         cascade_eligible=False,
+        tags_blocked_by={Tag.INSULATING},
         effects=[
             Effect(
                 effect_type=EffectType.DAMAGE,
@@ -646,6 +636,7 @@ ALL_RULES: list[InteractionRule] = [
         priority=8,
         bidirectional=False,
         cascade_eligible=False,
+        tags_blocked_by={Tag.INSULATING},
         effects=[
             Effect(
                 effect_type=EffectType.TRANSFORM,
@@ -791,6 +782,7 @@ ALL_RULES: list[InteractionRule] = [
         priority=6,
         bidirectional=True,
         cascade_eligible=False,
+        tags_blocked_by={Tag.INSULATING},
         effects=[
             Effect(
                 effect_type=EffectType.CHANGE_PROPERTY,
@@ -862,6 +854,7 @@ ALL_RULES: list[InteractionRule] = [
         priority=8,
         bidirectional=True,
         cascade_eligible=True,
+        tags_blocked_by={Tag.INSULATING},
         effects=[
             Effect(
                 effect_type=EffectType.ADD_TAG,
@@ -880,46 +873,13 @@ ALL_RULES: list[InteractionRule] = [
         priority=8,
         bidirectional=True,
         cascade_eligible=True,
+        tags_blocked_by={Tag.INSULATING},
         effects=[
             Effect(
                 effect_type=EffectType.ADD_TAG,
                 target=EffectTarget.B,
                 tags_to_add=[Tag.COLD],
                 message="Cold spreads through the conductor!",
-            ),
-        ],
-    ),
-    # 49. INSULATING + HEAT_SOURCE → block heat
-    InteractionRule(
-        rule_id="insulating_heat_block",
-        name="Heat Insulation",
-        tags_required_a={Tag.INSULATING},
-        tags_required_b={Tag.HEAT_SOURCE},
-        priority=14,
-        bidirectional=False,
-        cascade_eligible=False,
-        effects=[
-            Effect(
-                effect_type=EffectType.CHANGE_PROPERTY,
-                target=EffectTarget.B,
-                message="Insulation blocks the heat transfer.",
-            ),
-        ],
-    ),
-    # 50. INSULATING + COLD → block cold
-    InteractionRule(
-        rule_id="insulating_cold_block",
-        name="Cold Insulation",
-        tags_required_a={Tag.INSULATING},
-        tags_required_b={Tag.COLD},
-        priority=14,
-        bidirectional=False,
-        cascade_eligible=False,
-        effects=[
-            Effect(
-                effect_type=EffectType.CHANGE_PROPERTY,
-                target=EffectTarget.B,
-                message="Insulation blocks the cold transfer.",
             ),
         ],
     ),
@@ -976,8 +936,6 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 54. HEAT_SOURCE + INSULATING → blocked (higher priority version)
-    # Already covered by rule 49, this ensures reverse direction
     # 55. ELECTRIC + BREAKABLE → damage
     InteractionRule(
         rule_id="electric_breakable_damage",
@@ -987,6 +945,7 @@ ALL_RULES: list[InteractionRule] = [
         priority=10,
         bidirectional=False,
         cascade_eligible=False,
+        tags_blocked_by={Tag.INSULATING},
         effects=[
             Effect(
                 effect_type=EffectType.DAMAGE,
