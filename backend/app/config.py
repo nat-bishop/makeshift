@@ -18,6 +18,7 @@ class Settings(BaseSettings):
 
     # Model configuration
     llm_model: str = "google-gla:gemini-3.1-flash-lite-preview"
+    llm_temperature: float = 0.0
     image_model: str = "fal-ai/flux-pro/kontext"
     rembg_model: str = "birefnet-general"
     bg_removal_backend: Literal["local", "cloud"] = "local"

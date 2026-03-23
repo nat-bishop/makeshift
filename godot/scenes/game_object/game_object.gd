@@ -49,10 +49,17 @@ func take_damage(amount: float) -> void:
 		queue_free()
 
 
-func add_tag(tag: String) -> void:
+func add_tag(tag: String, duration: float = 0.0) -> void:
 	if tag not in tags:
 		tags.append(tag)
 		_reapply_physics()
+	if duration > 0.0:
+		var timer := Timer.new()
+		timer.wait_time = duration
+		timer.one_shot = true
+		timer.timeout.connect(remove_tag.bind(tag))
+		add_child(timer)
+		timer.start()
 
 
 func remove_tag(tag: String) -> void:

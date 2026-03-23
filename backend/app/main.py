@@ -146,6 +146,8 @@ app.add_middleware(
 
 app.middleware("http")(session_context_middleware)
 
+STATIC_DIR.mkdir(parents=True, exist_ok=True)
+(STATIC_DIR / "sprites").mkdir(exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 # Include routers

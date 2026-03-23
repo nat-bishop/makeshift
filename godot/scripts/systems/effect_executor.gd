@@ -4,9 +4,13 @@ extends Node
 # Called by CollisionResolver for each matched rule.
 
 
-func execute(rule: Dictionary, body_a: Node, body_b: Node) -> void:
+## Duration (seconds) for tags added during cascade propagation (depth > 0).
+const CASCADE_TAG_DURATION: float = 10.0
+
+func execute(rule: Dictionary, body_a: Node, body_b: Node, cascade_depth: int = 0) -> void:
 	var effects: Array = rule.get("effects", [])
 	var last_message: String = ""
+	var tag_duration: float = CASCADE_TAG_DURATION if cascade_depth > 0 else 0.0
 	for effect in effects:
 		if effect is not Dictionary:
 			continue
@@ -14,7 +18,7 @@ func execute(rule: Dictionary, body_a: Node, body_b: Node) -> void:
 		var effect_type: String = effect.get("effect_type", "")
 
 		for target in targets:
-			_apply_effect(effect_type, effect, target, body_a, body_b)
+			_apply_effect(effect_type, effect, target, body_a, body_b, tag_duration)
 
 		var msg: String = effect.get("message", "")
 		if msg != "":
@@ -29,7 +33,7 @@ func execute(rule: Dictionary, body_a: Node, body_b: Node) -> void:
 		)
 
 
-func _apply_effect(effect_type: String, effect: Dictionary, target: Node, body_a: Node, body_b: Node) -> void:
+func _apply_effect(effect_type: String, effect: Dictionary, target: Node, body_a: Node, body_b: Node, tag_duration: float = 0.0) -> void:
 	match effect_type:
 		"DAMAGE":
 			var amount: float = effect.get("damage_amount", 0.0)
@@ -42,8 +46,8 @@ func _apply_effect(effect_type: String, effect: Dictionary, target: Node, body_a
 
 		"IGNITE":
 			if target.has_method("add_tag"):
-				target.add_tag("HEAT_SOURCE")
-				target.add_tag("HOT")
+				target.add_tag("HEAT_SOURCE", tag_duration)
+				target.add_tag("HOT", tag_duration)
 			_apply_dot(target, effect.get("damage_amount", 10.0), 1.0, 5.0)
 
 		"EXTINGUISH":
@@ -53,15 +57,15 @@ func _apply_effect(effect_type: String, effect: Dictionary, target: Node, body_a
 
 		"FREEZE":
 			if target.has_method("add_tag") and target.has_method("remove_tag"):
-				target.add_tag("FROZEN")
-				target.add_tag("RIGID")
+				target.add_tag("FROZEN", tag_duration)
+				target.add_tag("RIGID", tag_duration)
 				target.remove_tag("LIQUID")
 
 		"MELT":
 			if target.has_method("remove_tag") and target.has_method("add_tag"):
 				target.remove_tag("FROZEN")
 				target.remove_tag("RIGID")
-				target.add_tag("LIQUID")
+				target.add_tag("LIQUID", tag_duration)
 
 		"APPLY_FORCE":
 			var magnitude: float = effect.get("force_magnitude", 100.0)
@@ -71,7 +75,7 @@ func _apply_effect(effect_type: String, effect: Dictionary, target: Node, body_a
 			var tags_to_add: Array = effect.get("tags_to_add", [])
 			if target.has_method("add_tag"):
 				for tag in tags_to_add:
-					target.add_tag(tag)
+					target.add_tag(tag, tag_duration)
 
 		"REMOVE_TAG":
 			var tags_to_remove: Array = effect.get("tags_to_remove", [])
@@ -97,7 +101,7 @@ func _apply_effect(effect_type: String, effect: Dictionary, target: Node, body_a
 			var tags_to_remove: Array = effect.get("tags_to_remove", [])
 			if target.has_method("add_tag"):
 				for tag in tags_to_add:
-					target.add_tag(tag)
+					target.add_tag(tag, tag_duration)
 			if target.has_method("remove_tag"):
 				for tag in tags_to_remove:
 					target.remove_tag(tag)

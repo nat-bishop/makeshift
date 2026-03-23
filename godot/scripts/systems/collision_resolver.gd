@@ -62,7 +62,7 @@ func resolve_collision(body_a: Node, body_b: Node, cascade_depth: int = 0) -> vo
 	# Execute effects for each rule
 	var any_cascade_eligible: bool = false
 	for rule in rules:
-		_effect_executor.execute(rule, body_a, body_b)
+		_effect_executor.execute(rule, body_a, body_b, cascade_depth)
 		if rule.get("cascade_eligible", false):
 			any_cascade_eligible = true
 

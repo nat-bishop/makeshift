@@ -19,11 +19,16 @@ cp .env.example .env
 # Install dependencies
 uv sync
 
-# Run backend server
-cd backend && uvicorn app.main:app --host 0.0.0.0 --port 8000
+# Run backend server (from repo root)
+uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
 ```
 
-Then open the Godot project in `godot/` and run the game.
+Then open the Godot client:
+
+```bash
+godot --path godot/
+# Press F5 in the editor to play
+```
 
 ## Commands
 

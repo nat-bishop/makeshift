@@ -36,8 +36,8 @@ def test_contradiction_pairs_are_frozensets_of_two():
 
 
 def test_contradiction_count():
-    """There should be exactly 12 contradiction pairs."""
-    assert len(TAG_CONTRADICTIONS) == 12
+    """There should be exactly 14 contradiction pairs."""
+    assert len(TAG_CONTRADICTIONS) == 14
 
 
 def test_no_self_contradictions():

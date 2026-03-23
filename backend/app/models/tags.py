@@ -99,6 +99,8 @@ TAG_CONTRADICTIONS: list[frozenset[Tag]] = [
     frozenset({Tag.SOLID, Tag.GAS}),
     frozenset({Tag.LIQUID, Tag.GAS}),
     frozenset({Tag.STICKY, Tag.SLIPPERY}),
+    frozenset({Tag.CONDUCTING, Tag.INSULATING}),
+    frozenset({Tag.REFLECTIVE, Tag.STICKY}),
 ]
 
 OBJECT_TAG_BUDGET: int = 10

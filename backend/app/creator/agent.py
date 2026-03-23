@@ -77,7 +77,8 @@ Cost 5: EXPLOSIVE
 ## Contradictions (cannot coexist)
 
 FROZEN↔MOLTEN, FROZEN↔HOT, COLD↔HOT, COLD↔MOLTEN, HEAVY↔LIGHT, LIQUID↔RIGID, \
-GAS↔RIGID, GAS↔HEAVY, SOLID↔LIQUID, SOLID↔GAS, LIQUID↔GAS, STICKY↔SLIPPERY
+GAS↔RIGID, GAS↔HEAVY, SOLID↔LIQUID, SOLID↔GAS, LIQUID↔GAS, STICKY↔SLIPPERY, \
+CONDUCTING↔INSULATING, REFLECTIVE↔STICKY
 
 ## Rules
 
@@ -125,7 +126,10 @@ def _get_agent() -> Agent[None, CreatorOutput]:
             output_type=CreatorOutput,
             retries=3,
             system_prompt=SYSTEM_PROMPT,
-            model_settings={"timeout": settings.llm_timeout_seconds},
+            model_settings={
+                "timeout": settings.llm_timeout_seconds,
+                "temperature": settings.llm_temperature,
+            },
         )
     return _agent
 

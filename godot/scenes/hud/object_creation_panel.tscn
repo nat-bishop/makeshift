@@ -6,31 +6,108 @@
 custom_minimum_size = Vector2(400, 0)
 script = ExtResource("1_panel")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
+[node name="CreationForm" type="VBoxContainer" parent="."]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="TitleLabel" type="Label" parent="VBoxContainer"]
+[node name="TitleLabel" type="Label" parent="CreationForm"]
 layout_mode = 2
 text = "Create Object"
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 18
 
-[node name="DescriptionInput" type="LineEdit" parent="VBoxContainer"]
+[node name="DescriptionInput" type="LineEdit" parent="CreationForm"]
 unique_name_in_owner = true
 layout_mode = 2
 placeholder_text = "Describe your object..."
 custom_minimum_size = Vector2(0, 36)
 
-[node name="CreateButton" type="Button" parent="VBoxContainer"]
+[node name="CreateButton" type="Button" parent="CreationForm"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Create"
 custom_minimum_size = Vector2(0, 32)
 
-[node name="StatusLabel" type="Label" parent="VBoxContainer"]
+[node name="StatusLabel" type="Label" parent="CreationForm"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 12
 text = ""
 horizontal_alignment = 1
+
+[node name="RevealCard" type="VBoxContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="RevealName" type="Label" parent="RevealCard"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+horizontal_alignment = 1
+
+[node name="Separator1" type="HSeparator" parent="RevealCard"]
+layout_mode = 2
+theme_override_styles/separator = null
+
+[node name="TagsLabel" type="Label" parent="RevealCard"]
+layout_mode = 2
+text = "Tags"
+theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
+
+[node name="RevealTags" type="HFlowContainer" parent="RevealCard"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/h_separation = 4
+theme_override_constants/v_separation = 4
+
+[node name="StatsRow" type="HBoxContainer" parent="RevealCard"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="SizeBox" type="VBoxContainer" parent="RevealCard/StatsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SizeHeader" type="Label" parent="RevealCard/StatsRow/SizeBox"]
+layout_mode = 2
+text = "Size"
+theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
+
+[node name="RevealSize" type="Label" parent="RevealCard/StatsRow/SizeBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+
+[node name="CostBox" type="VBoxContainer" parent="RevealCard/StatsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="CostHeader" type="Label" parent="RevealCard/StatsRow/CostBox"]
+layout_mode = 2
+text = "Power Cost"
+theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
+
+[node name="RevealCost" type="Label" parent="RevealCard/StatsRow/CostBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+
+[node name="RevealEquip" type="Label" parent="RevealCard"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.5, 0.8, 1.0, 1)
+horizontal_alignment = 1
+
+[node name="DismissHint" type="Label" parent="RevealCard"]
+layout_mode = 2
+text = "Press any key to continue"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 10
+theme_override_colors/font_color = Color(0.5, 0.5, 0.5, 1)

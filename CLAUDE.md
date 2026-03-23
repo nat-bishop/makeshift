@@ -9,23 +9,15 @@ LLM Sandbox Game — "Scribblenauts meets Terraria." A 2D sandbox where players 
 ## Commands
 
 ```bash
-# Install dependencies (uses uv package manager)
-uv sync                        # all deps including dev
-uv sync --no-dev               # production only
+make serve                     # run backend server
+make test                      # run all tests
+make check                     # lint + typecheck + test
+make fix                       # autofix lint issues
+make format                    # format code
 
-# Run backend server (from backend/ directory)
-cd backend && uvicorn app.main:app --host 0.0.0.0 --port 8000
-
-# Tests (use `uv run` prefix or activate venv first)
-uv run pytest                         # all tests
-uv run pytest backend/tests/test_tags.py  # single file
-uv run pytest -k "test_name"          # single test by name
-
-# Lint & format
-uv run ruff check backend/            # lint
-uv run ruff check backend/ --fix      # autofix
-uv run ruff format backend/           # format
-uv run mypy backend/                  # type checking
+# For more granular control:
+uv run pytest backend/tests/test_tags.py  # single test file
+uv run pytest -k "test_name"              # single test by name
 ```
 
 ## Architecture
