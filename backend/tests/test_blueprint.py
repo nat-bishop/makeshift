@@ -1,7 +1,5 @@
 """Tests for blueprint models: CreatorOutput validation, GameObjectBlueprint computed fields."""
 
-from typing import Literal
-
 import pytest
 from app.models.blueprint import (
     DURABILITY_BREAKABLE,
@@ -12,35 +10,24 @@ from app.models.blueprint import (
     GameObjectBlueprint,
     VisualDescriptor,
 )
-from app.models.tags import Tag
+from app.models.tags import TAG_POWER_COSTS, Tag
 from pydantic import ValidationError
 from pydantic_ai import ModelRetry
 
-SizeCategory = Literal["tiny", "small", "medium", "large", "huge"]
-
-
-def _make_visual(
-    base_form: str = "cube",
-    material: str = "stone",
-    color_primary: str = "#888888",
-    color_primary_name: str = "gray",
-    color_secondary: str = "#666666",
-    color_secondary_name: str = "dark gray",
-    visual_effects: list[str] | None = None,
-    size_category: SizeCategory = "medium",
-    bg_color: str = "#808080",
-) -> VisualDescriptor:
-    return VisualDescriptor(
-        base_form=base_form,
-        material=material,
-        color_primary=color_primary,
-        color_primary_name=color_primary_name,
-        color_secondary=color_secondary,
-        color_secondary_name=color_secondary_name,
-        visual_effects=visual_effects if visual_effects is not None else [],
-        size_category=size_category,
-        bg_color=bg_color,
-    )
+def _make_visual(**kwargs: object) -> VisualDescriptor:
+    defaults: dict[str, object] = {
+        "base_form": "cube",
+        "material": "stone",
+        "color_primary": "#888888",
+        "color_primary_name": "gray",
+        "color_secondary": "#666666",
+        "color_secondary_name": "dark gray",
+        "visual_effects": [],
+        "size_category": "medium",
+        "bg_color": "#4A6741",
+    }
+    defaults.update(kwargs)
+    return VisualDescriptor(**defaults)
 
 
 class TestVisualDescriptor:
@@ -48,21 +35,26 @@ class TestVisualDescriptor:
         vd = _make_visual(color_primary="#FF4444", color_secondary="#222222")
         assert vd.color_primary == "#FF4444"
 
-    def test_invalid_color_primary_raises(self) -> None:
+    @pytest.mark.parametrize(
+        "bad_color",
+        ["red", "#FFF", "FF4444", "#ZZZZZZ", ""],
+    )
+    def test_invalid_color_primary_raises(self, bad_color: str) -> None:
         with pytest.raises(ValidationError):
-            _make_visual(color_primary="red")
+            _make_visual(color_primary=bad_color)
 
-    def test_invalid_color_secondary_raises(self) -> None:
+    @pytest.mark.parametrize(
+        "bad_color",
+        ["blue", "#000", "666666"],
+    )
+    def test_invalid_color_secondary_raises(self, bad_color: str) -> None:
         with pytest.raises(ValidationError):
-            _make_visual(color_secondary="blue")
+            _make_visual(color_secondary=bad_color)
 
-    def test_short_hex_raises(self) -> None:
-        with pytest.raises(ValidationError):
-            _make_visual(color_primary="#FFF")
-
-    def test_missing_hash_raises(self) -> None:
-        with pytest.raises(ValidationError):
-            _make_visual(color_primary="FF4444")
+    def test_empty_visual_effects(self) -> None:
+        """Empty visual_effects list is valid."""
+        vd = _make_visual(visual_effects=[])
+        assert vd.visual_effects == []
 
     def test_valid_size_categories(self) -> None:
         for size in ("tiny", "small", "medium", "large", "huge"):
@@ -71,7 +63,7 @@ class TestVisualDescriptor:
 
     def test_invalid_size_category_raises(self) -> None:
         with pytest.raises(ValidationError):
-            _make_visual(size_category="gigantic")  # type: ignore[arg-type]
+            _make_visual(size_category="gigantic")
 
 
 class TestCreatorOutput:
@@ -183,6 +175,16 @@ class TestCreatorOutput:
             visual_descriptor=_make_visual(),
         )
         assert out.name == "Fire Sword"
+
+    def test_exact_budget_high_cost_tags(self) -> None:
+        """Tags totaling exactly OBJECT_TAG_BUDGET (10) should pass."""
+        # EXPLOSIVE(5) + MOLTEN(4) + BREAKABLE(1) = 10
+        co = CreatorOutput(
+            name="Lava Bomb",
+            tags=[Tag.EXPLOSIVE, Tag.MOLTEN, Tag.BREAKABLE],
+            visual_descriptor=_make_visual(),
+        )
+        assert sum(TAG_POWER_COSTS[t] for t in co.tags) == 10
 
 
 class TestGameObjectBlueprint:

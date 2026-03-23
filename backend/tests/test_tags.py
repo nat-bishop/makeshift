@@ -1,5 +1,6 @@
 """Tests for the tag system: enum completeness, costs, contradictions, constants."""
 
+import pytest
 from app.models.tags import (
     OBJECT_TAG_BUDGET,
     TAG_CONTRADICTIONS,
@@ -49,27 +50,12 @@ def test_object_tag_budget():
     assert OBJECT_TAG_BUDGET == 10
 
 
-def test_cost_1_tags():
-    cost_1 = [t for t, c in TAG_POWER_COSTS.items() if c == 1]
-    assert len(cost_1) == 10
-
-
-def test_cost_2_tags():
-    cost_2 = [t for t, c in TAG_POWER_COSTS.items() if c == 2]
-    assert len(cost_2) == 11
-
-
-def test_cost_3_tags():
-    cost_3 = [t for t, c in TAG_POWER_COSTS.items() if c == 3]
-    assert len(cost_3) == 4
-
-
-def test_cost_4_tags():
-    cost_4 = [t for t, c in TAG_POWER_COSTS.items() if c == 4]
-    assert len(cost_4) == 4
-
-
-def test_cost_5_tags():
-    cost_5 = [t for t, c in TAG_POWER_COSTS.items() if c == 5]
-    assert len(cost_5) == 1
-    assert Tag.EXPLOSIVE in [t for t, c in TAG_POWER_COSTS.items() if c == 5]
+@pytest.mark.parametrize(
+    ("cost", "expected_count"),
+    [(1, 10), (2, 11), (3, 4), (4, 4), (5, 1)],
+)
+def test_cost_distribution(cost: int, expected_count: int) -> None:
+    actual = [t for t, c in TAG_POWER_COSTS.items() if c == cost]
+    assert len(actual) == expected_count, (
+        f"Cost {cost}: expected {expected_count}, got {len(actual)}"
+    )

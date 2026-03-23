@@ -3,6 +3,7 @@
 import uuid
 
 from app.creator.agent import SYSTEM_PROMPT
+from app.models.behaviors import BehaviorAction, BehaviorTrigger
 from app.models.blueprint import (
     DURABILITY_RIGID,
     CreatorOutput,
@@ -10,6 +11,22 @@ from app.models.blueprint import (
     VisualDescriptor,
 )
 from app.models.tags import Tag
+
+
+def make_visual(**kwargs: object) -> VisualDescriptor:
+    defaults: dict[str, object] = {
+        "base_form": "cube",
+        "material": "stone",
+        "color_primary": "#888888",
+        "color_primary_name": "gray",
+        "color_secondary": "#666666",
+        "color_secondary_name": "dark gray",
+        "visual_effects": [],
+        "size_category": "medium",
+        "bg_color": "#4A6741",
+    }
+    defaults.update(kwargs)
+    return VisualDescriptor(**defaults)
 
 
 def test_system_prompt_contains_all_tags():
@@ -31,20 +48,11 @@ def test_system_prompt_mentions_contradictions():
 
 def test_fallback_object_structure():
     """Verify the fallback object matches expected shape."""
+    vd = make_visual(visual_effects=["sparkling"])
     fallback = CreatorOutput(
         name="Mysterious Fire Sword",
         tags=[Tag.SOLID, Tag.RIGID],
-        visual_descriptor=VisualDescriptor(
-            base_form="cube",
-            material="stone",
-            color_primary="#888888",
-            color_primary_name="gray",
-            color_secondary="#666666",
-            color_secondary_name="dark gray",
-            visual_effects=["sparkling"],
-            size_category="medium",
-            bg_color="#4A6741",
-        ),
+        visual_descriptor=vd,
     )
     bp = GameObjectBlueprint(
         id=str(uuid.uuid4()),
@@ -55,3 +63,30 @@ def test_fallback_object_structure():
     )
     assert bp.power_cost == 2  # SOLID(1) + RIGID(1)
     assert bp.starting_durability == DURABILITY_RIGID
+
+
+def test_system_prompt_mentions_all_triggers() -> None:
+    """System prompt should document all behavior triggers."""
+    # ON_USE is defined in the enum but not yet surfaced in the system prompt
+    known_undocumented = {"ON_USE"}
+    for trigger in BehaviorTrigger:
+        if trigger.value in known_undocumented:
+            continue
+        assert trigger.value in SYSTEM_PROMPT, f"Missing trigger: {trigger.value}"
+
+
+def test_system_prompt_mentions_all_actions() -> None:
+    """System prompt should document all behavior actions."""
+    for action in BehaviorAction:
+        assert action.value in SYSTEM_PROMPT, f"Missing action: {action.value}"
+
+
+def test_fallback_object_is_valid_creator_output() -> None:
+    """The fallback object used when LLM fails should validate as CreatorOutput."""
+    co = CreatorOutput(
+        name="Mysterious Object",
+        tags=[Tag.SOLID, Tag.RIGID],
+        visual_descriptor=make_visual(visual_effects=["sparkling"]),
+    )
+    assert co.name == "Mysterious Object"
+    assert len(co.tags) == 2
