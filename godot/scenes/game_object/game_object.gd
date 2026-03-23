@@ -4,6 +4,7 @@ var object_id: String = ""
 var tags: Array = []
 var blueprint: Dictionary = {}
 var current_durability: int = 150
+var _decay_timers: Dictionary = {}  # tag name -> Timer
 
 @onready var physics_applicator: Node = $PhysicsApplicator
 @onready var object_visual: Node = $ObjectVisual
@@ -54,12 +55,16 @@ func add_tag(tag: String, duration: float = 0.0) -> void:
 		tags.append(tag)
 		_reapply_physics()
 	if duration > 0.0:
+		# Cancel existing decay timer for this tag (refresh duration)
+		if tag in _decay_timers and is_instance_valid(_decay_timers[tag]):
+			_decay_timers[tag].queue_free()
 		var timer := Timer.new()
 		timer.wait_time = duration
 		timer.one_shot = true
 		timer.timeout.connect(remove_tag.bind(tag))
 		add_child(timer)
 		timer.start()
+		_decay_timers[tag] = timer
 
 
 func remove_tag(tag: String) -> void:

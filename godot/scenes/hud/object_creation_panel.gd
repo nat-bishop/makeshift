@@ -16,21 +16,9 @@ var _is_showing_reveal := false
 
 
 func _ready() -> void:
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.12, 0.12, 0.15, 0.95)
-	style.corner_radius_top_left = 8
-	style.corner_radius_top_right = 8
-	style.corner_radius_bottom_left = 8
-	style.corner_radius_bottom_right = 8
-	style.border_width_left = 1
-	style.border_width_right = 1
-	style.border_width_top = 1
-	style.border_width_bottom = 1
-	style.border_color = Color(0.4, 0.4, 0.5, 0.8)
-	style.content_margin_left = 16
-	style.content_margin_right = 16
-	style.content_margin_top = 12
-	style.content_margin_bottom = 12
+	var style := _make_stylebox(
+		Color(0.12, 0.12, 0.15, 0.95), 8, 16, 12, 1, Color(0.4, 0.4, 0.5, 0.8)
+	)
 	add_theme_stylebox_override("panel", style)
 
 	create_button.pressed.connect(_on_create_pressed)
@@ -44,7 +32,7 @@ func focus_input() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _is_showing_reveal and event is InputEventKey and event.pressed:
+	if _is_showing_reveal and event.is_pressed():
 		_dismiss_reveal()
 		get_viewport().set_input_as_handled()
 
@@ -93,26 +81,21 @@ func _show_reveal(blueprint: Dictionary) -> void:
 	_creation_form.visible = false
 	_reveal_card.visible = true
 
-	# Name
 	_reveal_name.text = blueprint.get("name", "Unknown")
 
-	# Tags
-	_clear_children(_reveal_tags)
+	for child in _reveal_tags.get_children():
+		child.queue_free()
 	var tags: Array = blueprint.get("tags", [])
 	for tag in tags:
 		var badge := _create_tag_badge(str(tag))
 		_reveal_tags.add_child(badge)
 
-	# Size
 	var vd: Dictionary = blueprint.get("visual_descriptor", {})
-	var size_cat: String = vd.get("size_category", "medium")
-	_reveal_size.text = size_cat.to_upper()
+	_reveal_size.text = vd.get("size_category", "medium").to_upper()
 
-	# Cost
 	var power_cost: int = blueprint.get("power_cost", 0)
 	_reveal_cost.text = "%d / 10" % power_cost
 
-	# Equip info
 	var is_equippable: bool = blueprint.get("is_equippable", false)
 	if is_equippable:
 		var slot: String = blueprint.get("equip_slot", "")
@@ -121,7 +104,6 @@ func _show_reveal(blueprint: Dictionary) -> void:
 	else:
 		_reveal_equip.visible = false
 
-	# Animate in
 	_reveal_card.modulate.a = 0.0
 	var tween := create_tween()
 	tween.tween_property(_reveal_card, "modulate:a", 1.0, 0.25)
@@ -138,25 +120,27 @@ func _create_tag_badge(tag: String) -> Label:
 	var badge := Label.new()
 	badge.text = " %s " % tag
 	badge.add_theme_font_size_override("font_size", 12)
-
 	var color: Color = TagColors.get_color(tag)
 	badge.add_theme_color_override("font_color", color)
-
-	var bg := StyleBoxFlat.new()
-	bg.bg_color = Color(color, 0.15)
-	bg.corner_radius_top_left = 3
-	bg.corner_radius_top_right = 3
-	bg.corner_radius_bottom_left = 3
-	bg.corner_radius_bottom_right = 3
-	bg.content_margin_left = 4
-	bg.content_margin_right = 4
-	bg.content_margin_top = 1
-	bg.content_margin_bottom = 1
-	badge.add_theme_stylebox_override("normal", bg)
-
+	badge.add_theme_stylebox_override("normal", _make_stylebox(Color(color, 0.15), 3, 4, 1))
 	return badge
 
 
-func _clear_children(node: Node) -> void:
-	for child in node.get_children():
-		child.queue_free()
+static func _make_stylebox(bg_color: Color, corner_radius: int, content_margin_h: float, content_margin_v: float, border_width: int = 0, border_color: Color = Color.TRANSPARENT) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = bg_color
+	style.corner_radius_top_left = corner_radius
+	style.corner_radius_top_right = corner_radius
+	style.corner_radius_bottom_left = corner_radius
+	style.corner_radius_bottom_right = corner_radius
+	style.content_margin_left = content_margin_h
+	style.content_margin_right = content_margin_h
+	style.content_margin_top = content_margin_v
+	style.content_margin_bottom = content_margin_v
+	if border_width > 0:
+		style.border_width_left = border_width
+		style.border_width_right = border_width
+		style.border_width_top = border_width
+		style.border_width_bottom = border_width
+		style.border_color = border_color
+	return style
