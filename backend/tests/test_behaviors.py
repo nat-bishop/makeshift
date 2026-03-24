@@ -37,14 +37,14 @@ def _make_visual() -> VisualDescriptor:
     )
 
 
-def _make_behavior(**kwargs) -> Behavior:  # type: ignore[no-untyped-def]
-    defaults = {
+def _make_behavior(**kwargs: object) -> Behavior:
+    defaults: dict[str, object] = {
         "trigger": BehaviorTrigger.ALWAYS,
         "action": BehaviorAction.PATROL,
         "target": BehaviorTarget.SELF,
     }
     defaults.update(kwargs)
-    return Behavior(**defaults)
+    return Behavior(**defaults)  # type: ignore[arg-type]
 
 
 class TestComputeBehaviorCost:

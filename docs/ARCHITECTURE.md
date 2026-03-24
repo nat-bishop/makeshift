@@ -187,15 +187,16 @@ Direct `DEAL_DAMAGE` from behaviors bypasses the rule engine — no double-dippi
 `scripts/systems/collision_resolver.gd` — per-frame collision resolution:
 
 ```
-body_entered signal (from GameObject.body_entered)
-  └─ resolve_collision(body_a, body_b, cascade_depth=0)
-       ├─ Cooldown check: pair key "id_a:id_b" (sorted), skip if < 0.5s
-       ├─ Extract tags: get_effective_tags() (player) or get_tags() (object)
-       ├─ RuleEngine.find_matching_rules(tags_a, tags_b)
-       ├─ Record tags_before snapshot
-       ├─ For each matched rule: EffectExecutor.execute(rule, body_a, body_b)
-       ├─ Set cooldown timestamp
-       └─ Cascade check (if any rule was cascade_eligible):
+body_entered signal (from GameObject)
+  └─ call_deferred("_resolve_deferred", body)   # deferred to avoid physics flush crash
+       └─ resolve_collision(body_a, body_b, cascade_depth=0)
+            ├─ Cooldown check: pair key "id_a:id_b" (sorted), skip if < 0.5s
+            ├─ Extract tags: get_effective_tags() (player) or get_tags() (object)
+            ├─ RuleEngine.find_matching_rules(tags_a, tags_b)
+            ├─ Record tags_before snapshot
+            ├─ For each matched rule: EffectExecutor.execute(rule, body_a, body_b)
+            ├─ Set cooldown timestamp
+            └─ Cascade check (if any rule was cascade_eligible):
             ├─ Compare tags_before vs tags_after
             └─ If changed: _cascade_to_neighbors(body, depth + 1)
                  ├─ Prefer get_cascade_neighbors() (CascadeArea overlaps)

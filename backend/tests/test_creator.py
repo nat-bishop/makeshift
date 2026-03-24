@@ -26,7 +26,7 @@ def make_visual(**kwargs: object) -> VisualDescriptor:
         "bg_color": "#4A6741",
     }
     defaults.update(kwargs)
-    return VisualDescriptor(**defaults)
+    return VisualDescriptor(**defaults)  # type: ignore[arg-type]
 
 
 def test_system_prompt_contains_all_tags():

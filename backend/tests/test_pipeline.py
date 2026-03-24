@@ -31,7 +31,7 @@ def _make_visual(**kwargs: object) -> VisualDescriptor:
         "bg_color": "#4A6741",
     }
     defaults.update(kwargs)
-    return VisualDescriptor(**defaults)
+    return VisualDescriptor(**defaults)  # type: ignore[arg-type]
 
 
 def test_descriptor_hash_deterministic() -> None:
@@ -61,7 +61,7 @@ def test_generate_placeholder_tag_color() -> None:
     data = generate_placeholder(vd, [Tag.HEAT_SOURCE])
     img = Image.open(io.BytesIO(data)).convert("RGBA")
     cx, cy = img.size[0] // 2, img.size[1] // 2
-    r, g, b, _a = img.getpixel((cx, cy))
+    r, g, b, _a = img.getpixel((cx, cy))  # type: ignore[misc]
     expected = TAG_COLOR_MAP[Tag.HEAT_SOURCE]
     er, eg, eb = int(expected[1:3], 16), int(expected[3:5], 16), int(expected[5:7], 16)
     assert (r, g, b) == (er, eg, eb)
@@ -72,7 +72,7 @@ def test_generate_placeholder_no_matching_tag() -> None:
     data = generate_placeholder(vd, [Tag.SOLID])
     img = Image.open(io.BytesIO(data)).convert("RGBA")
     cx, cy = img.size[0] // 2, img.size[1] // 2
-    r, g, b, _a = img.getpixel((cx, cy))
+    r, g, b, _a = img.getpixel((cx, cy))  # type: ignore[misc]
     assert (r, g, b) == (0x12, 0x34, 0x56)
 
 

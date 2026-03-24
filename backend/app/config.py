@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from typing import Literal
 
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
+
+load_dotenv()
 
 
 class Settings(BaseSettings):
@@ -30,7 +33,7 @@ class Settings(BaseSettings):
     # Observability (run `logfire auth` first, then set to true)
     logfire_enabled: bool = False
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+    model_config = {"env_file_encoding": "utf-8"}
 
 
 settings = Settings()

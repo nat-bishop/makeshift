@@ -97,6 +97,8 @@ Requires `.env` file (see `.env.example`):
 - `BehaviorExecutor` disables itself after 3 consecutive action errors to prevent runaway behavior on bad LLM output
 - Behavior-added tags (via `ADD_TAGS` action) have a 10s duration; they auto-remove via decay timer in `GameObject.add_tag()`
 - Movement conflicts resolved by fixed trigger priority: `ON_HEALTH_LOW` > `ON_TAG_ADDED` > `ON_DAMAGED` > `ON_CONTACT` > `ON_PROXIMITY` > `ON_TIMER` > `ALWAYS`
+- `body_entered` collision handling is deferred via `call_deferred("_resolve_deferred", body)` — resolving collisions directly in the signal callback crashes Godot with "Can't change state while flushing queries" because resolution can chain into `add_tag` → `_reapply_physics` → new shapes
+- Backend autoload uses `127.0.0.1` not `localhost` — avoids DNS resolution delays and IPv6 fallback issues on some systems
 
 ## Documentation
 

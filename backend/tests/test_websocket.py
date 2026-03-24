@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import base64
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock
 
@@ -57,9 +57,9 @@ def _make_test_app() -> FastAPI:
 
 
 @pytest.fixture(autouse=True)
-def _clear_connections() -> None:
+def _clear_connections() -> Iterator[None]:
     _connections.clear()
-    yield  # type: ignore[misc]
+    yield
     _connections.clear()
 
 
