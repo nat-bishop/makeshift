@@ -6,12 +6,12 @@ Generate PNG images and sprite sheets via Gemini.
 
 Tools live at `${CLAUDE_SKILL_DIR}/tools/`. Run from the project root.
 
-Install dependencies: `pip install -r ${CLAUDE_SKILL_DIR}/tools/requirements.txt`
+Install dependencies: `uv pip install -r ${CLAUDE_SKILL_DIR}/tools/requirements.txt`
 
 ### Generate image (5-15 cents)
 
 ```bash
-python3 ${CLAUDE_SKILL_DIR}/tools/asset_gen.py image \
+python ${CLAUDE_SKILL_DIR}/tools/asset_gen.py image \
   --prompt "the full prompt" -o assets/img/car.png
 ```
 
@@ -29,12 +29,12 @@ Uses rembg mask + alpha matting. Handles semi-transparent objects, fine edges, h
 
 If rembg is not installed:
 ```bash
-pip install rembg[gpu,cli]   # use rembg[cpu,cli] if no GPU
-rembg d isnet-anime          # download model
+uv pip install "rembg[gpu,cli]"   # use "rembg[cpu,cli]" if no GPU
+rembg d isnet-anime               # download model
 ```
 
 ```bash
-python3 ${CLAUDE_SKILL_DIR}/tools/rembg_matting.py \
+python ${CLAUDE_SKILL_DIR}/tools/rembg_matting.py \
   assets/img/car.png -o assets/img/car_nobg.png
 ```
 
@@ -43,7 +43,7 @@ python3 ${CLAUDE_SKILL_DIR}/tools/rembg_matting.py \
 Always 4x4 = exactly 16 cells. All 16 must be used — no more, no less. Template and grid instructions are injected automatically; you provide only the subject and BG color.
 
 ```bash
-python3 ${CLAUDE_SKILL_DIR}/tools/asset_gen.py spritesheet \
+python ${CLAUDE_SKILL_DIR}/tools/asset_gen.py spritesheet \
   --prompt "Animation: a knight swinging a sword" \
   --bg "#4A6741" -o assets/img/knight_swing_raw.png
 ```
@@ -59,22 +59,22 @@ Crops red grid lines. Choose mode based on use case:
 **Animation frames** → output single sheet for `Sprite2D` (`hframes=4, vframes=4`):
 ```bash
 # Keep background (textures, solid-color game BG)
-python3 ${CLAUDE_SKILL_DIR}/tools/spritesheet_slice.py keep-bg \
+python ${CLAUDE_SKILL_DIR}/tools/spritesheet_slice.py keep-bg \
   assets/img/knight_raw.png -o assets/img/knight.png
 
 # Remove background (sprites, characters — preferred)
-python3 ${CLAUDE_SKILL_DIR}/tools/spritesheet_slice.py clean-bg \
+python ${CLAUDE_SKILL_DIR}/tools/spritesheet_slice.py clean-bg \
   assets/img/knight_raw.png -o assets/img/knight.png
 ```
 
 **Collection of distinct objects** (items, icons, props) → split into 16 individual PNGs:
 ```bash
 # Split with background kept
-python3 ${CLAUDE_SKILL_DIR}/tools/spritesheet_slice.py split-bg \
+python ${CLAUDE_SKILL_DIR}/tools/spritesheet_slice.py split-bg \
   assets/img/items_raw.png -o assets/img/items/
 
 # Split with background removed (preferred for in-game objects)
-python3 ${CLAUDE_SKILL_DIR}/tools/spritesheet_slice.py split-clean \
+python ${CLAUDE_SKILL_DIR}/tools/spritesheet_slice.py split-clean \
   assets/img/items_raw.png -o assets/img/items/ \
   --names "apple,banana,orange,grape,cherry,lemon,pear,plum,peach,melon,kiwi,mango,berry,fig,lime,coconut"
 ```

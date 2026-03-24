@@ -1,58 +1,48 @@
 # Visual Quality Assurance
 
-Analyze game screenshots against the visual reference. Two modes based on scene type.
+Verify game screenshots by reading them directly with Claude Code's multimodal vision.
 
-## Static Mode
+## Workflow
 
-For scenes without meaningful motion (decoration, terrain, UI). Two images: reference + one game screenshot.
+1. Capture screenshots using the capture system (see `capture.md`)
+2. Read the screenshot PNGs — Claude Code sees images natively
+3. If a reference image exists, read it too and compare
+4. Check against the checklist below
 
-```bash
-mkdir -p visual-qa
-N=$(ls visual-qa/*.md 2>/dev/null | wc -l); N=$((N + 1))
-python3 ${CLAUDE_SKILL_DIR}/scripts/visual_qa.py \
-  --context "Changed: ...\nExpected: ..." \
-  reference.png screenshots/{folder}/frame0003.png > visual-qa/${N}.md
-```
+## What to Look For
 
-Pick a representative frame (not the first — often has init artifacts).
+### Implementation Quality
+- **Grid/uniform placement** where organic arrangement was intended
+- **Scale and proportion** issues — everything at uniform/default scale
+- **Scene composition** — flat where depth and layering were expected
+- **Texture/material application** — stretched, tiled, or carelessly applied materials
+- **Camera framing** — doesn't match intended perspective
 
-## Dynamic Mode
+### Visual Bugs
+- Z-fighting: flickering or overlapping surfaces at same depth
+- Texture stretching, tiling seams, missing textures (magenta/checkerboard)
+- Geometry clipping: objects visibly intersecting
+- Floating objects that should be grounded
+- Shadow artifacts: detached shadows, shadows through walls, missing shadows
+- UI overlapping, truncated text, elements offscreen
 
-For scenes with motion, animation, or physics. Reference + all frames at **2 FPS cadence** — every Nth frame where N = capture_fps / 2.
+### Logical Inconsistencies
+- Objects in impossible orientations (sideways, upside-down, embedded in terrain)
+- Scale mismatches (tree smaller than character, door too small)
+- Misplaced objects (furniture on ceiling, rocks in sky)
+- Broken spatial relationships (bridge not connecting, stairs into wall)
 
-```bash
-# Example: captured at --fixed-fps 10 → step=5, select every 5th frame
-# 30s at 10fps = 300 frames → 60 selected frames + 1 reference = 61 images
-mkdir -p visual-qa
-N=$(ls visual-qa/*.md 2>/dev/null | wc -l); N=$((N + 1))
-STEP=5  # capture_fps / 2
-FRAMES=$(ls screenshots/{folder}/frame*.png | awk "NR % $STEP == 0")
-python3 ${CLAUDE_SKILL_DIR}/scripts/visual_qa.py \
-  --context "Changed: ...\nExpected: ..." \
-  reference.png $FRAMES > visual-qa/${N}.md
-```
+### Placeholder Remnants
+- Primitive geometry (untextured cubes, spheres) contrasting with surrounding detail
+- Default Godot materials (grey StandardMaterial3D, magenta missing shader)
+- Debug artifacts (collision shapes, nav mesh, axis gizmos, path lines)
+- Orphaned UI elements at default positions
 
-Gemini handles 60+ images well in a single request.
-
-## --context
-
-Describe what was changed and what to verify. The QA has two objectives:
-1. **Quality verification (primary):** visual defects, bugs, implementation shortcuts — problems regardless of what the task asked for.
-2. **Goal verification (secondary):** does the output match what was requested?
-
-## Common
-
-- Output: markdown report with verdict (`pass`/`fail`/`warning`), reference match, goal assessment, per-issue details
-- Severity: `major`/`minor` = must fix; `note` = cosmetic, can ship
-- Caller saves stdout to `visual-qa/{N}.md` (sequential) — committed as test evidence
-- Requires `GEMINI_API_KEY` or `GOOGLE_API_KEY` in environment
-- Depends on `google-genai` Python package (same as asset-gen)
-
-## Handling Failures
-
-When verdict is **fail**, treat the issues as user feedback — VQA is usually accurate. Read each issue and act:
-
-- **Fixable** (placement, scale, materials, spatial bugs, clipping, z-fighting, animation logic) — fix it, re-capture, re-run VQA.
-- **Unfixable from here** (wrong assets, wrong approach, architectural mismatch) — stop and report the issues to the user.
-
-Max 3 fix-and-rerun cycles. If still failing after 3, report all remaining issues to the user.
+### Motion & Animation (compare consecutive frames)
+When frames are captured at known intervals, compare them in sequence:
+- **Stuck entities** — same position/pose across multiple frames when movement expected
+- **Jitter/teleportation** — large position jumps between consecutive frames
+- **Sliding** — position changes but animation pose stays frozen (ice-skating)
+- **Physics breaks** — objects passing through walls/floors, endless bouncing
+- **Animation mismatches** — walk animation at running speed, idle while moving
+- **Collision failures** — objects overlapping that should collide

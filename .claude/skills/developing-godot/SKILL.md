@@ -44,7 +44,7 @@ Bootstrap: `bash ${CLAUDE_SKILL_DIR}/tools/ensure_doc_api.sh`
 Read `asset-gen.md` for prompt templates, CLI reference, and model selection (flash vs pro).
 Read `asset-planner.md` for sizing, prioritization, and common mistakes.
 
-Requires `GOOGLE_API_KEY` in environment. Install deps: `pip install -r ${CLAUDE_SKILL_DIR}/tools/requirements.txt`
+Requires `GOOGLE_API_KEY` in environment. Install deps: `uv pip install -r ${CLAUDE_SKILL_DIR}/tools/requirements.txt`
 
 ## Visual verification (optional)
 
