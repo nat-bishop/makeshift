@@ -11,7 +11,7 @@ logger = structlog.get_logger()
 
 
 async def generate_image(prompt: str, width: int = 512, height: int = 512) -> bytes:
-    """Generate an image via fal.ai Flux Kontext. Returns raw PNG bytes.
+    """Generate an image via fal.ai Flux Pro. Returns raw PNG bytes.
 
     Limits concurrency with a shared semaphore and enforces a timeout.
     """

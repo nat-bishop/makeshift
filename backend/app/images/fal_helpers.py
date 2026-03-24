@@ -38,7 +38,7 @@ async def submit_and_download(
     """Submit a job to fal.ai and download the resulting image.
 
     Args:
-        endpoint: The fal.ai model endpoint (e.g. "fal-ai/flux-pro/kontext").
+        endpoint: The fal.ai model endpoint (e.g. "fal-ai/flux-pro/v1.1").
         arguments: Arguments to pass to the model.
         result_key: Top-level key in the response containing image data.
             "images" for endpoints returning a list, "image" for single-image endpoints.
