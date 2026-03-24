@@ -26,6 +26,7 @@ func _load_current_level() -> void:
 
 	_current_level_scene = level_scene.instantiate()
 	world.add_child(_current_level_scene)
+	world.move_child(_current_level_scene, 0)  # Behind objects
 	Log.info("Game: Loaded level %d (%s)" % [level_index, level_path])
 
 	# Position player at spawn point

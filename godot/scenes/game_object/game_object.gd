@@ -23,7 +23,10 @@ func _ready() -> void:
 func init_from_blueprint(bp: Dictionary) -> void:
 	blueprint = bp
 	object_id = bp.get("id", "")
-	tags = bp.get("tags", [])
+	var raw_tags: Array = bp.get("tags", [])
+	tags.clear()
+	for tag in raw_tags:
+		tags.append(str(tag))
 
 	current_durability = bp.get("starting_durability", 150)
 
