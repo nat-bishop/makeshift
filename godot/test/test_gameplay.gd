@@ -103,7 +103,7 @@ func get_tags() -> Array:
 func get_effective_tags() -> Array:
 	return tags
 
-func add_tag(tag: String) -> void:
+func add_tag(tag: String, _duration: float = 0.0) -> void:
 	if tag not in tags:
 		tags.append(tag)
 

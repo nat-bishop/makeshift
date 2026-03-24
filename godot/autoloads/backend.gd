@@ -1,7 +1,7 @@
 extends Node
 
-var base_url: String = "http://localhost:8000"
-var ws_url: String = "ws://localhost:8000"
+var base_url: String = "http://127.0.0.1:8000"
+var ws_url: String = "ws://127.0.0.1:8000"
 var session_id: String = ""
 var _ws: WebSocketPeer
 var _ws_connected: bool = false
@@ -288,8 +288,12 @@ func _http_put(path: String, body: Dictionary) -> Dictionary:
 	return await _request(HTTPClient.METHOD_PUT, path, body)
 
 
+const _METHOD_NAMES: Array[String] = ["GET", "HEAD", "POST", "PUT", "DELETE", "CONNECT", "OPTIONS", "TRACE", "PATCH"]
+
 func _request(method: int, path: String, body: Dictionary = {}, extra_headers: PackedStringArray = PackedStringArray()) -> Dictionary:
 	var url: String = base_url + path
+	var method_name: String = _METHOD_NAMES[method] if method < _METHOD_NAMES.size() else str(method)
+	Log.debug("Backend: %s %s" % [method_name, url])
 	var headers: PackedStringArray = PackedStringArray(["Content-Type: application/json"])
 	for h in extra_headers:
 		headers.append(h)

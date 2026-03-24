@@ -162,17 +162,17 @@ func _apply_dot(target: Node, damage_per_tick: float, tick_interval: float, dura
 	timer.one_shot = false
 	target.add_child(timer)
 
-	var ticks_remaining: int = int(duration / tick_interval)
+	var state := [int(duration / tick_interval)]  # Array wrapper: GDScript lambdas capture primitives by value, so an int can't be mutated across calls
 	timer.timeout.connect(func():
 		if not is_instance_valid(timer):
 			return
 		if not is_instance_valid(target):
 			timer.queue_free()
 			return
-		if ticks_remaining <= 0:
+		if state[0] <= 0:
 			timer.queue_free()
 			return
-		ticks_remaining -= 1
+		state[0] -= 1
 		target.take_damage(damage_per_tick)
 	)
 	timer.start()

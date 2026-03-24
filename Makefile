@@ -8,7 +8,7 @@ GODOT ?= godot
 godot: ## Open Godot editor
 	$(GODOT) --editor --path godot/
 
-VERBOSE ?= 1
+VERBOSE ?= 0
 
 play: godot-import ## Run the game (VERBOSE=0 to suppress engine output)
 	$(GODOT) $(if $(filter 1,$(VERBOSE)),--verbose) --path godot/ 2>&1

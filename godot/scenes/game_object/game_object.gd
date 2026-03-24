@@ -92,13 +92,10 @@ func add_tag(tag: String, duration: float = 0.0) -> void:
 		tags.append(tag)
 		Log.debug("GameObject: '%s' +tag %s%s" % [blueprint.get("name", object_id), tag, " (%.1fs)" % duration if duration > 0.0 else ""])
 		_reapply_physics()
-		# Notify behavior executor of tag addition
 		if _behavior_executor != null:
 			_behavior_executor.on_tag_added(tag)
 	if duration > 0.0:
-		# Cancel existing decay timer for this tag (refresh duration)
-		if tag in _decay_timers and is_instance_valid(_decay_timers[tag]):
-			_decay_timers[tag].queue_free()
+		_cancel_decay_timer(tag)
 		var timer := Timer.new()
 		timer.wait_time = duration
 		timer.one_shot = true
@@ -109,10 +106,18 @@ func add_tag(tag: String, duration: float = 0.0) -> void:
 
 
 func remove_tag(tag: String) -> void:
-	if tag in tags:
-		Log.debug("GameObject: '%s' -tag %s" % [blueprint.get("name", object_id), tag])
+	_cancel_decay_timer(tag)
+	if tag not in tags:
+		return
+	Log.debug("GameObject: '%s' -tag %s" % [blueprint.get("name", object_id), tag])
 	tags.erase(tag)
 	_reapply_physics()
+
+
+func _cancel_decay_timer(tag: String) -> void:
+	if tag in _decay_timers and is_instance_valid(_decay_timers[tag]):
+		_decay_timers[tag].queue_free()
+		_decay_timers.erase(tag)
 
 
 func get_cascade_neighbors() -> Array:
@@ -131,7 +136,14 @@ func _reapply_physics() -> void:
 func _on_body_entered(body: Node) -> void:
 	if not body.has_method("get_tags") and not body.has_method("get_effective_tags"):
 		return
+	# Defer to avoid "Can't change state while flushing queries" —
+	# collision resolution can chain to add_tag → _reapply_physics → new shapes.
+	call_deferred("_resolve_deferred", body)
+
+
+func _resolve_deferred(body: Node) -> void:
+	if not is_instance_valid(body):
+		return
 	CollisionResolver.resolve_collision(self, body)
-	# Fire ON_CONTACT behaviors
 	if _behavior_executor != null:
 		_behavior_executor.fire_trigger("ON_CONTACT", body)
