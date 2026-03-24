@@ -49,10 +49,9 @@ func _create_platform(pos: Vector2, size: Vector2, _color: Color = Color(0.35, 0
 	shape.position = size / 2
 	body.add_child(shape)
 
-	var visual := TextureRect.new()
-	visual.texture = load("res://assets/backgrounds/ground.png")
+	var visual := ColorRect.new()
+	visual.color = _color
 	visual.size = size
-	visual.stretch_mode = TextureRect.STRETCH_TILE
 	body.add_child(visual)
 
 	add_child(body)

@@ -1,10 +1,20 @@
-.PHONY: serve godot install test lint fix format typecheck check down help
+.PHONY: serve godot play godot-import install test lint fix format typecheck check down help
 
 serve: ## Run backend server
 	uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
 
+GODOT ?= godot
+
 godot: ## Open Godot editor
-	godot --path godot/
+	$(GODOT) --editor --path godot/
+
+VERBOSE ?= 1
+
+play: godot-import ## Run the game (VERBOSE=0 to suppress engine output)
+	$(GODOT) $(if $(filter 1,$(VERBOSE)),--verbose) --path godot/ 2>&1
+
+godot-import: ## Import Godot resources (runs automatically before play)
+	$(GODOT) --headless --import --path godot/
 
 install: ## Install all dependencies
 	uv sync
