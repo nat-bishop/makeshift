@@ -2,6 +2,7 @@ extends Node
 
 var _body: RigidBody2D
 var _collision_shape: CollisionShape2D
+var _has_sprite_shape: bool = false
 
 
 func _ready() -> void:
@@ -23,9 +24,32 @@ func apply(tags: Array, visual_descriptor: Dictionary) -> void:
 	_body.physics_material_override = mat
 
 	# Configure collision shape from size_category and base_form
-	var size_category: String = visual_descriptor.get("size_category", "medium")
-	var base_form: String = visual_descriptor.get("base_form", "box")
-	_configure_shape(size_category, base_form)
+	# Skip if already using a sprite-derived shape
+	if not _has_sprite_shape:
+		var size_category: String = visual_descriptor.get("size_category", "medium")
+		var base_form: String = visual_descriptor.get("base_form", "box")
+		_configure_shape(size_category, base_form)
+
+
+func update_shape_from_sprite(texture: Texture2D) -> void:
+	var image: Image = texture.get_image()
+	var used_rect: Rect2i = image.get_used_rect()
+	if used_rect.size.x == 0 or used_rect.size.y == 0:
+		return
+
+	# Offset: shift collision center to match opaque region center
+	var sprite_center := Vector2(image.get_width() / 2.0, image.get_height() / 2.0)
+	var rect_center := Vector2(
+		used_rect.position.x + used_rect.size.x / 2.0,
+		used_rect.position.y + used_rect.size.y / 2.0
+	)
+
+	var rect := RectangleShape2D.new()
+	rect.size = Vector2(used_rect.size.x, used_rect.size.y)
+	_collision_shape.shape = rect
+	_collision_shape.position = rect_center - sprite_center
+	_has_sprite_shape = true
+	Log.debug("PhysicsApplicator: Sprite shape %s offset %s" % [rect.size, _collision_shape.position])
 
 
 func _configure_shape(size_category: String, base_form: String) -> void:

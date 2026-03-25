@@ -1,15 +1,24 @@
 extends Node2D
 
+const MaterializeEffect: GDScript = preload("res://scenes/effects/materialize_effect.gd")
+const SPAWN_OFFSET: Vector2 = Vector2(80, -32)
+
 @onready var world: Node2D = $World
 @onready var hud: CanvasLayer = $HUD
 @onready var player: CharacterBody2D = $Player
 
 var _current_level_scene: Node2D = null
+var _materialize_effect: Node2D = null
+var _pending_blueprint: Dictionary = {}
 
 
 func _ready() -> void:
 	EventBus.level_completed.connect(_on_level_completed)
 	EventBus.object_created.connect(_on_object_created)
+	EventBus.creation_requested.connect(_on_creation_requested)
+	EventBus.creation_failed.connect(_on_creation_failed)
+	EventBus.sprite_ready.connect(_on_sprite_ready)
+	EventBus.sprite_failed.connect(_on_sprite_failed)
 	_load_current_level()
 
 
@@ -46,8 +55,64 @@ func _on_level_completed(_level_id: int) -> void:
 	pass
 
 
+func _on_creation_requested() -> void:
+	_clear_pending()
+	var spawn_pos: Vector2 = player.global_position + SPAWN_OFFSET
+	var effect := Node2D.new()
+	effect.set_script(MaterializeEffect)
+	effect.global_position = spawn_pos
+	world.add_child(effect)
+	_materialize_effect = effect
+	Log.debug("Game: Materialization effect started at %s" % str(spawn_pos))
+
+
 func _on_object_created(blueprint: Dictionary) -> void:
-	# Spawn object near player
-	var spawn_pos: Vector2 = player.global_position + Vector2(80, -32)
+	_pending_blueprint = blueprint
+	var object_id: String = blueprint.get("id", "")
+
+	# Sprite may already be cached (arrived via WebSocket before HTTP response)
+	if object_id != "" and Backend.get_cached_sprite(object_id) != null:
+		_spawn_pending_object()
+	else:
+		Log.debug("Game: Waiting for sprite for '%s'" % blueprint.get("name", "?"))
+
+
+func _on_sprite_ready(id: String, _texture: Texture2D) -> void:
+	if id == _pending_blueprint.get("id", ""):
+		_spawn_pending_object()
+
+
+func _on_sprite_failed(id: String) -> void:
+	if id == _pending_blueprint.get("id", ""):
+		Log.warn("Game: Sprite failed for '%s', spawning with placeholder" % _pending_blueprint.get("name", "?"))
+		_spawn_pending_object()
+
+
+func _on_creation_failed() -> void:
+	if _materialize_effect and is_instance_valid(_materialize_effect):
+		_materialize_effect.resolve(true)
+		_materialize_effect = null
+		Log.debug("Game: Materialization effect cancelled (creation failed)")
+	_pending_blueprint = {}
+
+
+func _spawn_pending_object() -> void:
+	var spawn_pos: Vector2 = player.global_position + SPAWN_OFFSET
+
+	if _materialize_effect and is_instance_valid(_materialize_effect):
+		spawn_pos = _materialize_effect.global_position
+		_materialize_effect.resolve()
+		_materialize_effect = null
+
+	var blueprint: Dictionary = _pending_blueprint
+	_pending_blueprint = {}
+
 	Log.debug("Game: Spawning created object '%s' at %s" % [blueprint.get("name", "?"), str(spawn_pos)])
 	world.spawn_object(blueprint, spawn_pos)
+
+
+func _clear_pending() -> void:
+	if _materialize_effect and is_instance_valid(_materialize_effect):
+		_materialize_effect.queue_free()
+		_materialize_effect = null
+	_pending_blueprint = {}

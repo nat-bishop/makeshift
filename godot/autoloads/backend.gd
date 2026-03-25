@@ -223,6 +223,7 @@ func _handle_sprite_failed(data: Dictionary) -> void:
 	var reason: String = data.get("reason", "unknown")
 	_pending_sprites.erase(object_id)
 	Log.warn("Backend: Sprite generation failed for %s: %s" % [object_id, reason])
+	EventBus.sprite_failed.emit(object_id)
 
 
 func _process_reconnect(delta: float) -> void:

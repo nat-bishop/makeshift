@@ -60,6 +60,7 @@ func _submit() -> void:
 	create_button.disabled = true
 	status_label.text = "Creating..."
 	status_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
+	EventBus.creation_requested.emit()
 
 	var result: Dictionary = await Backend.create_object(description)
 
@@ -71,6 +72,7 @@ func _submit() -> void:
 		Log.warn("CreationPanel: Creation failed: %s" % error_msg)
 		status_label.text = error_msg
 		status_label.add_theme_color_override("font_color", Color(1.0, 0.3, 0.3))
+		EventBus.creation_failed.emit()
 	else:
 		status_label.text = ""
 		description_input.text = ""

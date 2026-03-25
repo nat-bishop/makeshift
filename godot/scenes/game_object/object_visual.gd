@@ -42,6 +42,11 @@ func set_sprite(texture: Texture2D) -> void:
 	var tween := _sprite.create_tween()
 	tween.tween_property(_sprite, "modulate:a", old_alpha, 0.3)
 
+	# Update collision shape to match sprite's opaque region
+	var parent := get_parent()
+	if parent.has_node("PhysicsApplicator"):
+		parent.get_node("PhysicsApplicator").call_deferred("update_shape_from_sprite", texture)
+
 
 func _get_placeholder_color(tags: Array) -> Color:
 	for tag in tags:
