@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     image_model: str = "fal-ai/flux-pro/v1.1"
     rembg_model: str = "birefnet-general"
     bg_removal_backend: Literal["local", "cloud"] = "local"
+    sprite_cache_enabled: bool = True
 
     # Logging
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"

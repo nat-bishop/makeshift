@@ -1,4 +1,4 @@
-.PHONY: serve godot play godot-import install test lint fix format typecheck check down help
+.PHONY: serve godot play godot-import install test lint fix format typecheck check down clear-sprites help
 
 serve: ## Run backend server
 	uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
@@ -35,6 +35,9 @@ typecheck: ## Type check backend
 	uv run mypy backend/
 
 check: lint typecheck test ## Run all checks
+
+clear-sprites: ## Delete all cached sprites
+	rm -f backend/static/sprites/*.png
 
 down: ## Stop the backend server
 	@pkill -f "uvicorn backend.app.main:app" 2>/dev/null || true
