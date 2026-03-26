@@ -23,8 +23,8 @@ const PATROL_MAX_DISTANCE: float = 200.0
 const TARGET_UPDATE_INTERVAL: float = 0.3
 const MAX_BEHAVIOR_ERRORS: int = 5
 const MAX_EXPLOSION_RESULTS: int = 32
-# Actions that require a resolved target to function
-const _TARGET_REQUIRED_ACTIONS := ["MOVE_TOWARD", "MOVE_AWAY", "DEAL_DAMAGE", "APPLY_FORCE", "ATTRACT", "SPAWN_PROJECTILE", "HEAL", "ADD_TAGS", "REMOVE_TAGS"]
+# Actions that work without a resolved target
+const _TARGET_FREE_ACTIONS := ["PATROL", "EXPLODE", "SELF_DESTRUCT"]
 
 var _target_update_timer: float = 0.0
 var _behavior_errors: Dictionary = {}  # behavior_index -> consecutive error count
@@ -156,9 +156,8 @@ func _execute_behavior(behavior_index: int, pre_resolved_target: Node = null, ac
 	# Use pre-resolved target if provided, otherwise resolve fresh
 	var target: Node = pre_resolved_target if pre_resolved_target != null else _resolve_target(behavior_index, null)
 
-	# Null target for actions that require one is normal (target died, not spawned yet).
-	# Return false without counting an error.
-	if action in _TARGET_REQUIRED_ACTIONS:
+	# Null target is normal (target died, not spawned yet) — not an error.
+	if action not in _TARGET_FREE_ACTIONS:
 		if target == null or not is_instance_valid(target):
 			return false
 
@@ -207,8 +206,17 @@ func _execute_behavior(behavior_index: int, pre_resolved_target: Node = null, ac
 				behavior_index, count, _owner_body.blueprint.get("name", "?")])
 			_disabled_behaviors[behavior_index] = true
 			_behavior_errors.erase(behavior_index)
+			_check_disable_physics_process()
 
 	return success
+
+
+func _check_disable_physics_process() -> void:
+	for trigger in _TICK_TRIGGERS:
+		for i in _behaviors_by_trigger.get(trigger, []):
+			if i not in _disabled_behaviors:
+				return
+	set_physics_process(false)
 
 
 func _check_condition(behavior: Dictionary, target: Node) -> bool:
