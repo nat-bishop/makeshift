@@ -1,4 +1,4 @@
-.PHONY: serve godot play godot-import install test lint fix format typecheck check down clear-sprites help
+.PHONY: serve godot play godot-import install test lint fix format typecheck check down clear-sprites serve-llm wait-llm stop-llm help
 
 serve: ## Run backend server
 	uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
@@ -38,6 +38,22 @@ check: lint typecheck test ## Run all checks
 
 clear-sprites: ## Delete all cached sprites
 	rm -f backend/static/sprites/*.png
+
+SGLANG_LLM_CONFIG ?= services/sglang/llm-config.yaml
+SGLANG_LLM_PID = .sglang-llm.pid
+
+serve-llm: ## Start SGLang LLM server
+	SGLANG_ENABLE_JIT_DEEPGEMM=0 sglang serve --config $(SGLANG_LLM_CONFIG) & echo $$! > $(SGLANG_LLM_PID)
+	@echo "SGLang LLM starting. Run 'make wait-llm' to wait for ready."
+
+wait-llm: ## Wait for SGLang LLM to be ready
+	@echo "Waiting for SGLang LLM..."
+	@until curl -sf http://127.0.0.1:5200/health > /dev/null 2>&1; do sleep 2; done
+	@echo "SGLang LLM ready"
+
+stop-llm: ## Stop SGLang LLM server
+	@if [ -f $(SGLANG_LLM_PID) ]; then kill $$(cat $(SGLANG_LLM_PID)) 2>/dev/null; rm -f $(SGLANG_LLM_PID); fi
+	@echo "SGLang LLM stopped"
 
 down: ## Stop the backend server
 	@pkill -f "uvicorn backend.app.main:app" 2>/dev/null || true
