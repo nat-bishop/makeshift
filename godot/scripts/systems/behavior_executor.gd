@@ -210,11 +210,13 @@ func _execute_behavior(behavior_index: int, pre_resolved_target: Node = null, ac
 
 	if success:
 		_behavior_errors.erase(behavior_index)
-		var target_name: String = target.name if target != null and is_instance_valid(target) else ""
-		if target_name != "":
-			Log.debug("BehaviorExecutor: '%s' fired %s on '%s'" % [_owner_name(), action, target_name])
-		else:
-			Log.debug("BehaviorExecutor: '%s' fired %s" % [_owner_name(), action])
+		# Skip per-frame movement logs to avoid spam
+		if action not in BehaviorMaps.MOVEMENT_ACTIONS:
+			var target_name: String = target.name if target != null and is_instance_valid(target) else ""
+			if target_name != "":
+				Log.debug("BehaviorExecutor: '%s' fired %s on '%s'" % [_owner_name(), action, target_name])
+			else:
+				Log.debug("BehaviorExecutor: '%s' fired %s" % [_owner_name(), action])
 		_emit_message(b)
 	else:
 		var count: int = _behavior_errors.get(behavior_index, 0) + 1

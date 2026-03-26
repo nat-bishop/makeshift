@@ -5,8 +5,6 @@ import uuid
 
 import structlog
 from pydantic_ai import Agent
-from pydantic_ai.models.google import GoogleModel
-from pydantic_ai.providers.google import GoogleProvider
 
 from app.config import settings
 from app.models.blueprint import CreatorOutput, GameObjectBlueprint, VisualDescriptor
@@ -224,13 +222,8 @@ def _get_agent() -> Agent[None, CreatorOutput]:
     if _agent is not None:
         logger.debug("agent_cached")
         return _agent
-    provider = GoogleProvider(api_key=settings.google_api_key)
-    model = GoogleModel(
-        settings.llm_model.removeprefix("google-gla:"),
-        provider=provider,
-    )
     _agent = Agent(
-        model,
+        settings.llm_model,
         output_type=CreatorOutput,
         retries=3,
         system_prompt=SYSTEM_PROMPT,
