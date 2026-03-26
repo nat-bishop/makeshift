@@ -8,6 +8,7 @@ var _level_select_container: VBoxContainer
 
 
 func _ready() -> void:
+	Log.info("MainMenu: Initialized (has_session=%s)" % str(not Backend.session_id.is_empty()))
 	new_game_button.pressed.connect(_on_new_game_pressed)
 	continue_button.pressed.connect(_on_continue_pressed)
 	quit_button.pressed.connect(_on_quit_pressed)
@@ -71,4 +72,5 @@ func _on_continue_pressed() -> void:
 
 
 func _on_quit_pressed() -> void:
+	Log.info("MainMenu: Quit pressed")
 	get_tree().quit()

@@ -77,7 +77,7 @@ func _submit() -> void:
 		status_label.add_theme_color_override("font_color", Color(1.0, 0.6, 0.3))
 		return
 
-	Log.info("CreationPanel: Creating object from '%s'" % description)
+	Log.info("CreationPanel: Submitting '%s' (len=%d)" % [description, description.length()])
 	_is_creating = true
 	create_button.disabled = true
 	status_label.text = "Creating..."
@@ -106,6 +106,7 @@ func _submit() -> void:
 
 
 func _show_reveal(blueprint: Dictionary) -> void:
+	Log.debug("CreationPanel: Showing reveal card for '%s'" % blueprint.get("name", "?"))
 	_is_showing_reveal = true
 	_creation_form.visible = false
 	_reveal_card.modulate.a = 1.0
@@ -143,6 +144,7 @@ func _show_reveal(blueprint: Dictionary) -> void:
 
 
 func _dismiss_reveal() -> void:
+	Log.debug("CreationPanel: Reveal card dismissed")
 	_is_showing_reveal = false
 	_fade_timer = -1.0
 	_reveal_card.modulate.a = 1.0

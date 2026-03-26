@@ -18,6 +18,7 @@ func spawn_object(blueprint: Dictionary, pos: Vector2) -> Node:
 	objects_container.add_child(obj)
 	obj.global_position = pos
 	obj.init_from_blueprint(blueprint)
+	Log.debug("World: Object count after spawn: %d" % objects_container.get_child_count())
 	return obj
 
 
@@ -25,6 +26,7 @@ func clear_objects() -> void:
 	Log.info("World: Clearing all objects (%d)" % objects_container.get_child_count())
 	for child in objects_container.get_children():
 		child.queue_free()
+	Log.debug("World: Object count after clear: 0")
 
 
 func get_objects_data() -> Array:

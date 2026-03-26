@@ -41,6 +41,7 @@ func _ready() -> void:
 	super._ready()
 	_build_terrain()
 	_spawn_bridge_and_torch()
+	Log.debug("Level: Terrain built for level_02 (The Burning Bridge)")
 
 
 func _build_terrain() -> void:

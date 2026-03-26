@@ -12,6 +12,7 @@ func _ready() -> void:
 	next_level_path = ""  # Last level
 	super._ready()
 	_build_terrain()
+	Log.debug("Level: Terrain built for level_03 (Reach the Top)")
 
 
 func _build_terrain() -> void:
