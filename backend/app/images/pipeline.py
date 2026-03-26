@@ -124,6 +124,7 @@ def _crop_and_fit(
     """
     bbox = img.getbbox()
     if bbox is None:
+        logger.warning("crop_and_fit_empty_image")
         return Image.new("RGBA", (target_size, target_size), (0, 0, 0, 0))
 
     cropped = img.crop(bbox)
@@ -149,7 +150,9 @@ async def _generate_static_sprite(
     from app.images.gemini_client import generate_image
 
     raw_bytes = await generate_image(prompt)
+    logger.debug("bg_removal_start", input_size=len(raw_bytes))
     output_bytes = await remove_bg(raw_bytes)
+    logger.debug("bg_removal_complete", output_size=len(output_bytes))
     output_img = Image.open(io.BytesIO(output_bytes)).convert("RGBA")
     output_img = _crop_and_fit(output_img, TEXTURE_RESOLUTION)
 
@@ -177,12 +180,19 @@ async def generate_sprite(
         logger.debug("sprite_cache_hit", object_id=object_id)
         return SpriteResult(sprite_url=sprite_url)
 
+    logger.debug("sprite_cache_miss", object_id=object_id)
     t0 = time.monotonic()
     try:
         final_bytes = await _generate_static_sprite(prompt, remove_bg)
 
         cache_path.parent.mkdir(parents=True, exist_ok=True)
         cache_path.write_bytes(final_bytes)
+        logger.debug(
+            "sprite_cache_written",
+            object_id=object_id,
+            path=str(cache_path),
+            size_bytes=len(final_bytes),
+        )
 
         logger.info(
             "sprite_generated",
