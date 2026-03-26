@@ -33,6 +33,10 @@ var _disabled_behaviors: Dictionary = {}  # behavior_index -> true
 var _projectile_scene: PackedScene
 
 
+func _owner_name() -> String:
+	return _owner_body.blueprint.get("name", "?")
+
+
 func init_behaviors(behaviors: Array, owner: RigidBody2D) -> void:
 	_owner_body = owner
 	_behaviors = behaviors
@@ -42,6 +46,9 @@ func init_behaviors(behaviors: Array, owner: RigidBody2D) -> void:
 	for i in range(_behaviors.size()):
 		var b: Dictionary = _behaviors[i]
 		var trigger: String = b.get("trigger", "")
+
+		Log.debug("BehaviorExecutor: Behavior %d trigger=%s action=%s for '%s'" % [
+			i, trigger, b.get("action", "?"), _owner_name()])
 
 		if trigger not in _behaviors_by_trigger:
 			_behaviors_by_trigger[trigger] = []
@@ -66,7 +73,7 @@ func init_behaviors(behaviors: Array, owner: RigidBody2D) -> void:
 		_owner_body.can_sleep = false
 
 	Log.info("BehaviorExecutor: Initialized %d behaviors for '%s'" % [
-		_behaviors.size(), _owner_body.blueprint.get("name", "?")])
+		_behaviors.size(), _owner_name()])
 
 
 func fire_trigger(trigger_name: String, event_body: Node = null) -> void:
@@ -81,6 +88,8 @@ func on_tag_added(tag: String) -> void:
 		if i in _disabled_behaviors:
 			continue
 		if _behaviors[i].get("trigger_tag", "") == tag:
+			Log.debug("BehaviorExecutor: ON_TAG_ADDED matched tag=%s behavior %d on '%s'" % [
+				tag, i, _owner_name()])
 			_try_execute(i, null)
 
 
@@ -203,16 +212,16 @@ func _execute_behavior(behavior_index: int, pre_resolved_target: Node = null, ac
 		_behavior_errors.erase(behavior_index)
 		var target_name: String = target.name if target != null and is_instance_valid(target) else ""
 		if target_name != "":
-			Log.debug("BehaviorExecutor: '%s' fired %s on '%s'" % [_owner_body.blueprint.get("name", "?"), action, target_name])
+			Log.debug("BehaviorExecutor: '%s' fired %s on '%s'" % [_owner_name(), action, target_name])
 		else:
-			Log.debug("BehaviorExecutor: '%s' fired %s" % [_owner_body.blueprint.get("name", "?"), action])
+			Log.debug("BehaviorExecutor: '%s' fired %s" % [_owner_name(), action])
 		_emit_message(b)
 	else:
 		var count: int = _behavior_errors.get(behavior_index, 0) + 1
 		_behavior_errors[behavior_index] = count
 		if count >= MAX_BEHAVIOR_ERRORS:
 			Log.info("BehaviorExecutor: Disabling behavior %d after %d errors on '%s'" % [
-				behavior_index, count, _owner_body.blueprint.get("name", "?")])
+				behavior_index, count, _owner_name()])
 			_disabled_behaviors[behavior_index] = true
 			_behavior_errors.erase(behavior_index)
 			_check_disable_physics_process()
@@ -236,19 +245,31 @@ func _check_condition(behavior: Dictionary, target: Node) -> bool:
 	var cond_type: String = cond.get("condition_type", "")
 	var cond_tag: String = cond.get("tag", "")
 
+	var result := true
 	match cond_type:
 		"has_tag":
-			return cond_tag in _owner_body.tags
+			result = cond_tag in _owner_body.tags
+			if not result:
+				Log.debug("BehaviorExecutor: Condition failed %s tag=%s owner missing tag on '%s'" % [
+					cond_type, cond_tag, _owner_name()])
 		"not_has_tag":
-			return cond_tag not in _owner_body.tags
+			result = cond_tag not in _owner_body.tags
+			if not result:
+				Log.debug("BehaviorExecutor: Condition failed %s tag=%s owner has tag on '%s'" % [
+					cond_type, cond_tag, _owner_name()])
 		"target_has_tag":
 			if target == null or not is_instance_valid(target):
-				return false
-			if target.has_method("get_tags"):
-				return cond_tag in target.get_tags()
-			return false
-		_:
-			return true
+				Log.debug("BehaviorExecutor: Condition failed %s tag=%s target invalid on '%s'" % [
+					cond_type, cond_tag, _owner_name()])
+				result = false
+			elif target.has_method("get_tags"):
+				result = cond_tag in target.get_tags()
+				if not result:
+					Log.debug("BehaviorExecutor: Condition failed %s tag=%s target missing tag on '%s'" % [
+						cond_type, cond_tag, _owner_name()])
+			else:
+				result = false
+	return result
 
 
 func _resolve_target(behavior_index: int, event_body: Node) -> Node:
@@ -266,8 +287,14 @@ func _resolve_target(behavior_index: int, event_body: Node) -> Node:
 				var cached = _target_cache[behavior_index]
 				if cached != null and is_instance_valid(cached):
 					return cached
-			return _find_nearest_in_group(_group_for_target(target_type))
+			var found := _find_nearest_in_group(_group_for_target(target_type))
+			if found == null:
+				Log.debug("BehaviorExecutor: Target resolution miss target=%s for '%s'" % [
+					target_type, _owner_name()])
+			return found
 		_:
+			Log.debug("BehaviorExecutor: Unknown target type '%s' for '%s'" % [
+				target_type, _owner_name()])
 			return null
 
 
@@ -439,7 +466,7 @@ func _apply_explode(range_tier: String, intensity: String) -> void:
 			WorldMutations.apply_impulse(body, dir, force)
 
 	Log.info("BehaviorExecutor: EXPLODE radius=%.0f damage=%.0f on '%s'" % [
-		radius, damage, _owner_body.blueprint.get("name", "?")])
+		radius, damage, _owner_name()])
 
 
 func _apply_tags(target: Node, tags_list, add: bool) -> bool:
@@ -476,6 +503,8 @@ func _setup_timer(behavior_index: int, behavior: Dictionary) -> void:
 	add_child(timer)
 	timer.start()
 	_timers[behavior_index] = timer
+	Log.debug("BehaviorExecutor: Timer created for behavior %d interval=%.1fs one_shot=%s on '%s'" % [
+		behavior_index, seconds, is_once, _owner_name()])
 
 
 func _on_timer_fired(behavior_index: int) -> void:
@@ -483,9 +512,13 @@ func _on_timer_fired(behavior_index: int) -> void:
 		return
 	if behavior_index in _one_shot_fired:
 		return
+	Log.debug("BehaviorExecutor: Timer fired behavior %d on '%s'" % [
+		behavior_index, _owner_name()])
 	_try_execute(behavior_index, null)
 
 	var b: Dictionary = _behaviors[behavior_index]
 	var interval_key: String = b.get("interval", "MEDIUM")
 	if BehaviorMaps.INTERVAL_IS_ONCE.get(interval_key, false):
 		_one_shot_fired[behavior_index] = true
+		Log.debug("BehaviorExecutor: One-shot behavior %d completed on '%s'" % [
+			behavior_index, _owner_name()])
