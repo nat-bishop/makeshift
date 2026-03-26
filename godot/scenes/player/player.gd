@@ -10,6 +10,8 @@ const KICK_RANGE: float = 48.0
 const KICK_HEIGHT: float = 32.0
 const KICK_COOLDOWN: float = 0.5
 const VOID_THRESHOLD: float = 1200.0
+const MAX_HEALTH: int = 100
+const DAMAGE_FLASH_DURATION: float = 0.15
 
 enum State { IDLE, WALK, JUMP, FALL }
 
@@ -18,6 +20,9 @@ var _input_direction: float = 0.0
 var _facing: int = 1  # 1 = right, -1 = left
 var _kick_cooldown_timer: float = 0.0
 var _kick_query: PhysicsShapeQueryParameters2D
+var current_health: int = MAX_HEALTH
+var _damage_flash_timer: float = 0.0
+var _dead: bool = false
 
 @onready var _anim_sprite: AnimatedSprite2D = $AnimatedSprite2D
 
@@ -36,12 +41,16 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	_process_normal_movement(GRAVITY, SPEED, delta)
 	move_and_slide()
-	if global_position.y > VOID_THRESHOLD:
+	if global_position.y > VOID_THRESHOLD and not _dead:
+		_dead = true
+		current_health = 0
+		EventBus.player_damaged.emit(float(MAX_HEALTH), current_health, MAX_HEALTH)
 		EventBus.player_died.emit()
 		set_physics_process(false)
 		return
 	_push_rigid_bodies()
 	_process_kick(delta)
+	_process_damage_flash(delta)
 	_update_animation()
 
 
@@ -127,6 +136,32 @@ func _update_animation() -> void:
 				_anim_sprite.play("jump")
 			State.FALL:
 				_anim_sprite.play("fall")
+
+
+func take_damage(amount: float, _element_color: Color = Color.WHITE) -> void:
+	if _dead:
+		return
+	current_health = max(0, current_health - int(amount))
+	_damage_flash_timer = DAMAGE_FLASH_DURATION
+	EventBus.player_damaged.emit(amount, current_health, MAX_HEALTH)
+	if current_health <= 0:
+		_dead = true
+		EventBus.player_died.emit()
+		set_physics_process(false)
+
+
+func heal(amount: float) -> void:
+	current_health = min(current_health + int(amount), MAX_HEALTH)
+	EventBus.player_healed.emit(amount, current_health, MAX_HEALTH)
+
+
+func _process_damage_flash(delta: float) -> void:
+	if _damage_flash_timer > 0.0:
+		_damage_flash_timer -= delta
+		var t: float = _damage_flash_timer / DAMAGE_FLASH_DURATION
+		_anim_sprite.modulate = Color(1.0, 1.0 - 0.6 * t, 1.0 - 0.6 * t)
+		if _damage_flash_timer <= 0.0:
+			_anim_sprite.modulate = Color.WHITE
 
 
 func get_effective_tags() -> Array:

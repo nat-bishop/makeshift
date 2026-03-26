@@ -197,6 +197,11 @@ func _execute_behavior(behavior_index: int, pre_resolved_target: Node = null, ac
 
 	if success:
 		_behavior_errors.erase(behavior_index)
+		var target_name: String = target.name if target != null and is_instance_valid(target) else ""
+		if target_name != "":
+			Log.debug("BehaviorExecutor: '%s' fired %s on '%s'" % [_owner_body.blueprint.get("name", "?"), action, target_name])
+		else:
+			Log.debug("BehaviorExecutor: '%s' fired %s" % [_owner_body.blueprint.get("name", "?"), action])
 		_emit_message(b)
 	else:
 		var count: int = _behavior_errors.get(behavior_index, 0) + 1
@@ -309,17 +314,31 @@ func _emit_message(behavior: Dictionary) -> void:
 
 # --- Action implementations ---
 
+func _get_owner_element_color() -> Color:
+	for tag in _owner_body.tags:
+		if tag in TagColors.COLORS:
+			return TagColors.COLORS[tag]
+	return Color.WHITE
+
+
 func _apply_damage(target: Node, intensity: String) -> bool:
 	if target == null or not is_instance_valid(target):
 		return false
-	WorldMutations.apply_damage(target, BehaviorMaps.INTENSITY_DAMAGE.get(intensity, 20.0))
+	var amount: float = BehaviorMaps.INTENSITY_DAMAGE.get(intensity, 20.0)
+	var element_color: Color = _get_owner_element_color()
+	WorldMutations.apply_damage(target, amount, element_color)
+	if target is Node2D:
+		EventBus.effect_applied.emit("DAMAGE", amount, element_color, target.global_position)
 	return true
 
 
 func _apply_heal(target: Node, intensity: String) -> bool:
 	if target == null or not is_instance_valid(target):
 		return false
-	WorldMutations.apply_heal(target, BehaviorMaps.INTENSITY_HEAL.get(intensity, 25.0))
+	var amount: float = BehaviorMaps.INTENSITY_HEAL.get(intensity, 25.0)
+	WorldMutations.apply_heal(target, amount)
+	if target is Node2D:
+		EventBus.effect_applied.emit("HEAL", amount, TagColors.HEAL, target.global_position)
 	return true
 
 

@@ -41,17 +41,23 @@ func _apply_effect(effect_type: String, effect: Dictionary, target: Node, body_a
 			var amount: float = effect.get("damage_amount", 0.0)
 			var tick_interval: float = effect.get("tick_interval", 0.0)
 			var tick_dur: float = effect.get("tick_duration", 0.0)
+			var source: Node = body_a if target == body_b else body_b
+			var element_color: Color = _derive_element_color(source, Color.WHITE)
 			if tick_interval > 0.0 and tick_dur > 0.0:
-				Log.debug("EffectExecutor: DOT %.0f on %s (every %.1fs for %.1fs)" % [amount, target.name, tick_interval, tick_dur])
-				WorldMutations.apply_dot(target, amount, tick_interval, tick_dur)
+				Log.info("EffectExecutor: DOT %.0f on %s (every %.1fs for %.1fs)" % [amount, target.name, tick_interval, tick_dur])
+				WorldMutations.apply_dot(target, amount, tick_interval, tick_dur, element_color)
 			else:
-				Log.debug("EffectExecutor: DAMAGE %.0f on %s" % [amount, target.name])
-				WorldMutations.apply_damage(target, amount)
+				Log.info("EffectExecutor: DAMAGE %.0f on %s" % [amount, target.name])
+				WorldMutations.apply_damage(target, amount, element_color)
+			if target is Node2D:
+				EventBus.effect_applied.emit("DAMAGE", amount, element_color, target.global_position)
 
 		"HEAL":
 			var amount: float = effect.get("damage_amount", 0.0)
-			Log.debug("EffectExecutor: HEAL %.0f on %s" % [amount, target.name])
+			Log.info("EffectExecutor: HEAL %.0f on %s" % [amount, target.name])
 			WorldMutations.apply_heal(target, amount)
+			if target is Node2D:
+				EventBus.effect_applied.emit("HEAL", amount, TagColors.HEAL, target.global_position)
 
 		"ADD_TAG":
 			var tag: String = effect.get("tag", "")
@@ -110,3 +116,11 @@ func _get_collision_position(body_a: Node, body_b: Node) -> Vector2:
 	if body_a is Node2D and body_b is Node2D:
 		return (body_a.global_position + body_b.global_position) / 2.0
 	return Vector2.ZERO
+
+
+func _derive_element_color(source: Node, fallback: Color) -> Color:
+	var source_tags: Array = _get_tags(source)
+	for tag in source_tags:
+		if tag in TagColors.COLORS:
+			return TagColors.COLORS[tag]
+	return fallback

@@ -7,6 +7,10 @@ extends CanvasLayer
 var _placement_active: bool = false
 var _pause_menu: Control
 var _game_over_panel: Control
+var _game_over_title: Label
+var _health_bar: ProgressBar
+var _health_label: Label
+var _damage_flash: ColorRect
 
 
 func _ready() -> void:
@@ -19,15 +23,21 @@ func _ready() -> void:
 	EventBus.placement_ended.connect(_on_placement_ended)
 	EventBus.debug_toggled.connect(_on_debug_toggled)
 	EventBus.player_died.connect(_on_player_died)
+	EventBus.player_damaged.connect(_on_player_damaged)
+	EventBus.player_healed.connect(_on_player_healed)
 
 	_pause_menu = _build_overlay("Paused", Color(0, 0, 0, 0.5), [
 		{"text": "Resume", "callback": _hide_pause_menu},
 		{"text": "Main Menu", "callback": _on_main_menu_pressed},
 	])
-	_game_over_panel = _build_overlay("You fell!", Color(0.1, 0, 0, 0.6), [
+	_game_over_panel = _build_overlay("Game Over", Color(0.1, 0, 0, 0.6), [
 		{"text": "Retry", "callback": _on_retry_pressed},
 		{"text": "Main Menu", "callback": _on_main_menu_pressed},
 	])
+	_game_over_title = _game_over_panel.get_meta("title")
+
+	_build_health_bar()
+	_build_damage_flash()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -94,6 +104,7 @@ func _build_overlay(title_text: String, dim_color: Color, buttons: Array) -> Con
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 32)
 	vbox.add_child(title)
+	root.set_meta("title", title)
 
 	for btn_data in buttons:
 		var btn := Button.new()
@@ -104,6 +115,79 @@ func _build_overlay(title_text: String, dim_color: Color, buttons: Array) -> Con
 
 	add_child(root)
 	return root
+
+
+func _build_health_bar() -> void:
+	var container := HBoxContainer.new()
+	container.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	container.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	container.position = Vector2(-170, 16)
+	container.add_theme_constant_override("separation", 6)
+
+	_health_bar = ProgressBar.new()
+	_health_bar.custom_minimum_size = Vector2(150, 24)
+	_health_bar.max_value = 100
+	_health_bar.value = 100
+	_health_bar.show_percentage = false
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.2, 0.2, 0.2, 0.8)
+	style.corner_radius_top_left = 4
+	style.corner_radius_top_right = 4
+	style.corner_radius_bottom_left = 4
+	style.corner_radius_bottom_right = 4
+	_health_bar.add_theme_stylebox_override("background", style)
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = Color(0.3, 0.9, 0.3)
+	fill.corner_radius_top_left = 4
+	fill.corner_radius_top_right = 4
+	fill.corner_radius_bottom_left = 4
+	fill.corner_radius_bottom_right = 4
+	_health_bar.add_theme_stylebox_override("fill", fill)
+	container.add_child(_health_bar)
+
+	_health_label = Label.new()
+	_health_label.text = "100/100"
+	_health_label.add_theme_font_size_override("font_size", 14)
+	container.add_child(_health_label)
+
+	add_child(container)
+
+
+func _build_damage_flash() -> void:
+	_damage_flash = ColorRect.new()
+	_damage_flash.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_damage_flash.color = Color(1.0, 0.0, 0.0, 0.0)
+	_damage_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_damage_flash)
+
+
+func _update_health_bar(current: int, maximum: int) -> void:
+	_health_bar.max_value = maximum
+	_health_bar.value = current
+	_health_label.text = "%d/%d" % [current, maximum]
+	var ratio: float = float(current) / float(maximum) if maximum > 0 else 0.0
+	var fill: StyleBoxFlat = _health_bar.get_theme_stylebox("fill")
+	if ratio > 0.5:
+		fill.bg_color = Color(0.3, 0.9, 0.3)
+	elif ratio > 0.25:
+		fill.bg_color = Color(0.9, 0.9, 0.2)
+	else:
+		fill.bg_color = Color(0.9, 0.2, 0.2)
+
+
+func _flash_damage_overlay() -> void:
+	_damage_flash.color = Color(1.0, 0.0, 0.0, 0.25)
+	var tween := create_tween()
+	tween.tween_property(_damage_flash, "color:a", 0.0, 0.4)
+
+
+func _on_player_damaged(amount: float, current: int, maximum: int) -> void:
+	_update_health_bar(current, maximum)
+	_flash_damage_overlay()
+
+
+func _on_player_healed(amount: float, current: int, maximum: int) -> void:
+	_update_health_bar(current, maximum)
 
 
 func _show_pause_menu() -> void:
@@ -144,6 +228,10 @@ func _on_debug_toggled(enabled: bool) -> void:
 
 
 func _on_player_died() -> void:
+	if _health_bar.value > 0:
+		_game_over_title.text = "You fell!"
+	else:
+		_game_over_title.text = "You died!"
 	_game_over_panel.visible = true
 	GameManager.pause_game()
 

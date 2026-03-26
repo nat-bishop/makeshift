@@ -17,6 +17,7 @@ const COLORS: Dictionary = {
 	"GLOWING": Color("#FFD700"),
 }
 const DEFAULT: Color = Color("#AAAAAA")
+const HEAL: Color = Color("#44FF88")
 
 static func get_color(tag: String) -> Color:
 	return COLORS.get(tag, DEFAULT)

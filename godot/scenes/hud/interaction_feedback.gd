@@ -1,46 +1,42 @@
 extends Node2D
-## Spawns floating labels at world positions when interactions trigger.
-## Added to the world (not HUD layer) so labels follow world position.
+## Spawns floating damage/heal numbers at world positions.
+## Listens to effect_applied signal for element-colored feedback.
 
-const MAX_ACTIVE := 5
-const FLOAT_DISTANCE := 40.0
-const FLOAT_DURATION := 2.0
-const FONT_SIZE := 14
-const OUTLINE_SIZE := 3
+const MAX_ACTIVE := 8
+const FLOAT_DISTANCE := 50.0
+const FLOAT_DURATION := 1.5
+const SOLID_DURATION := 0.75
+const FONT_SIZE := 18
+const OUTLINE_SIZE := 4
 const OUTLINE_COLOR := Color.BLACK
+const HEAL_COLOR := TagColors.HEAL
+const X_SCATTER := 20.0
 
 var _active_labels: Array[Label] = []
 
 
 func _ready() -> void:
-	EventBus.interaction_triggered.connect(_on_interaction_triggered)
+	EventBus.effect_applied.connect(_on_effect_applied)
 
 
-func _on_interaction_triggered(
-	source_name: String,
-	source_tags: Array,
-	target_name: String,
-	target_tags: Array,
-	effect_message: String,
+func _on_effect_applied(
+	effect_type: String,
+	amount: float,
+	element_color: Color,
 	world_pos: Vector2
 ) -> void:
-	var source_tag_str := _format_tag(source_tags)
-	var target_tag_str := _format_tag(target_tags)
-	var text := "%s %s + %s %s -> %s" % [
-		source_name, source_tag_str, target_name, target_tag_str, effect_message
-	]
-	_spawn_label(text, world_pos)
+	var text: String
+	var color: Color
+	if effect_type == "HEAL":
+		text = "+%d" % int(amount)
+		color = HEAL_COLOR
+	else:
+		text = "-%d" % int(amount)
+		color = element_color
+	_spawn_label(text, color, world_pos)
 
 
-func _format_tag(tags: Array) -> String:
-	if tags.is_empty():
-		return ""
-	# Show the first relevant tag
-	return "[%s]" % str(tags[0])
-
-
-func _spawn_label(text: String, world_pos: Vector2) -> void:
-	# Remove oldest if at capacity
+func _spawn_label(text: String, color: Color, world_pos: Vector2) -> void:
 	while _active_labels.size() >= MAX_ACTIVE:
 		var oldest = _active_labels.pop_front()
 		if is_instance_valid(oldest):
@@ -50,24 +46,23 @@ func _spawn_label(text: String, world_pos: Vector2) -> void:
 	label.text = text
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.add_theme_font_size_override("font_size", FONT_SIZE)
-	label.add_theme_color_override("font_color", Color.WHITE)
+	label.add_theme_color_override("font_color", color)
 	label.add_theme_color_override("font_outline_color", OUTLINE_COLOR)
 	label.add_theme_constant_override("outline_size", OUTLINE_SIZE)
 
-	# Position centered on world_pos
-	label.position = world_pos
-	label.position.x -= 150  # rough centering
-	label.custom_minimum_size.x = 300
+	# Random x offset to prevent stacking
+	var x_offset: float = randf_range(-X_SCATTER, X_SCATTER)
+	label.position = Vector2(world_pos.x - 30 + x_offset, world_pos.y)
+	label.custom_minimum_size.x = 60
 
 	add_child(label)
 	_active_labels.append(label)
 
-	# Tween: float up and fade out
+	# Float up, stay solid then fade
 	var tween := create_tween()
-	tween.set_parallel(true)
 	tween.tween_property(label, "position:y", world_pos.y - FLOAT_DISTANCE, FLOAT_DURATION)
-	tween.tween_property(label, "modulate:a", 0.0, FLOAT_DURATION)
-	tween.set_parallel(false)
+	tween.tween_interval(SOLID_DURATION)
+	tween.tween_property(label, "modulate:a", 0.0, FLOAT_DURATION - SOLID_DURATION)
 	tween.tween_callback(_remove_label.bind(label))
 
 
