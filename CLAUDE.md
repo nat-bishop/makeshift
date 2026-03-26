@@ -14,6 +14,7 @@ make test                      # run all tests
 make check                     # lint + typecheck + test
 make fix                       # autofix lint issues
 make format                    # format code
+make clear-sprites             # delete all cached sprites (backend/static/sprites/*.png)
 
 # For more granular control:
 uv run pytest backend/tests/test_tags.py  # single test file
@@ -32,7 +33,7 @@ uv run pytest -k "test_name"              # single test by name
 
 - **Rule engine** (`engine/resolver.py`, `engine/rules_data.py`): `RuleResolver` — two-tier matching (O(1) pair index + O(n) wildcard scan). 43 rules. Mirrored client-side in Godot's `RuleEngine` autoload.
 
-- **Image pipeline** (`images/pipeline.py`, `images/flux_client.py`): Cache-first. Flux Pro Kontext → bg removal (local rembg or cloud birefnet) → resize by size_category → cache by visual descriptor hash.
+- **Image pipeline** (`images/pipeline.py`, `images/flux_client.py`): Cache-first. Flux Pro v1.1 (`fal-ai/flux-pro/v1.1`) → bg removal (local rembg or cloud birefnet) → resize by size_category → cache by SHA-256 hash of the Flux prompt.
 
 - **Session persistence** (`sessions/manager.py`): aiosqlite, 2 tables (sessions, objects). 15 seed objects per session. Budget: $1.00 at $0.041/object.
 
@@ -42,14 +43,14 @@ uv run pytest -k "test_name"              # single test by name
 
 | Autoload | Purpose |
 |----------|---------|
-| `EventBus` | Central signal bus (4 signals: interaction_triggered, object_created, sprite_ready, level_completed) |
+| `EventBus` | Central signal bus (10 signals: interaction_triggered, object_created, sprite_ready, sprite_failed, level_completed, creation_requested, creation_failed, placement_started, placement_ended, debug_toggled) |
 | `Backend` | HTTP + WebSocket client, session persistence, sprite cache, 10s sync timer |
-| `GameManager` | Game state (MENU/PLAYING/PAUSED), level management, scene transitions |
+| `GameManager` | Game state (MENU/PLAYING/PAUSED), level management, scene transitions, `debug_mode` flag (toggled by `toggle_debug` input, emits `debug_toggled`) |
 | `RuleEngine` | Client-side rule matching (mirrors backend resolver) |
 | `CollisionResolver` | Per-frame collision resolution, cooldowns, cascade (depth 3, 96px radius) |
 | `Logger` | Structured logging |
 
-Key systems: `EffectExecutor` (12 effect types including DOT), `PhysicsApplicator` (tag-to-physics mapping), `BehaviorExecutor` (per-object autonomous behavior runtime, attached as child node when behaviors present), `BehaviorMaps` (categorical→numeric value mappings for behavior params).
+Key systems: `EffectExecutor` (12 effect types including DOT), `PhysicsApplicator` (tag-to-physics mapping), `BehaviorExecutor` (per-object autonomous behavior runtime, attached as child node when behaviors present), `BehaviorMaps` (categorical→numeric value mappings for behavior params), `DebugLabel` (floating per-object overlay showing name, durability, tags, and behaviors — visibility driven by `GameManager.debug_mode`). Player has two interaction modes: passive push (continuous impulse on slide collision, force 80) and kick (action input, 48px range, force 400, 0.5s cooldown).
 
 ## API Endpoints
 
@@ -73,6 +74,7 @@ Requires `.env` file (see `.env.example`):
 - `GOOGLE_API_KEY` — Gemini LLM
 - `FAL_KEY` — fal.ai Flux image generation
 - `BG_REMOVAL_BACKEND` — `local` (rembg) or `cloud` (fal.ai birefnet). Default: local
+- `SPRITE_CACHE_ENABLED` — toggles sprite cache read/write. Default: true
 - Other settings have sensible defaults (budget $1.00, timeouts 15s/30s, max 3 concurrent images)
 
 ## Code Conventions
@@ -91,7 +93,7 @@ Requires `.env` file (see `.env.example`):
 - Pydantic-AI validators raise `ModelRetry` (not `ValidationError`) to trigger agent retries with feedback
 - `@computed_field` properties require `# type: ignore[prop-decorator]` — mypy still doesn't support decorators above `@property`
 - WebSocket connection rejected with close code 4004 if session doesn't exist
-- Sprite cache keyed by visual descriptor hash, not object ID — identical descriptors share sprites
+- Sprite cache keyed by SHA-256 hash of the Flux prompt (first 16 hex chars), not object ID — identical prompts share sprites. Controlled by `SPRITE_CACHE_ENABLED` setting.
 - `ON_TAG_ADDED` behavior trigger requires `trigger_tag` field; validated via `ModelRetry` in `Behavior.check_trigger_tag()`
 - `CONTACT_BODY` behavior target is only valid with `ON_CONTACT`, `ON_DAMAGED`, or `ON_PROXIMITY` triggers — enforced by model validator
 - `BehaviorExecutor` disables itself after 3 consecutive action errors to prevent runaway behavior on bad LLM output

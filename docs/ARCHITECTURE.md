@@ -24,6 +24,23 @@ Godot 4 Client                          FastAPI Backend
 └──────────────────┘                   └──────────────────────────┘
 ```
 
+## EventBus Signals
+
+`autoloads/event_bus.gd` — all signals:
+
+| Signal | Arguments | Purpose |
+|--------|-----------|---------|
+| `interaction_triggered` | source_name, source_tags, target_name, target_tags, effect_message, world_pos | Rule engine collision result (HUD feedback) |
+| `object_created` | blueprint: Dictionary | Backend returned blueprint; triggers placement flow |
+| `sprite_ready` | object_id: String, texture: Texture2D | Decoded sprite available |
+| `sprite_failed` | object_id: String | Sprite generation failed; use placeholder |
+| `level_completed` | level_id: int | Level win condition met |
+| `creation_requested` | — | Player submitted description; start materialize effect |
+| `creation_failed` | — | Backend rejected creation; cancel effect |
+| `placement_started` | — | Ghost preview active, awaiting click |
+| `placement_ended` | — | Placement confirmed or cancelled |
+| `debug_toggled` | enabled: bool | Debug overlay visibility changed |
+
 ## Object Creation Pipeline
 
 Full flow from player input to world-placed object with sprite:
@@ -34,9 +51,12 @@ Full flow from player input to world-placed object with sprite:
 4. **LLM agent** → `creator.agent.create_object()` runs PydanticAI agent (Gemini 3.1 Flash Lite Preview, 3 retries). Validators enforce: 1-3 word name, 2-6 tags, no contradictions, tag budget ≤ 10, 0-3 behaviors, behavior budget ≤ 6. Falls back to generic "Mysterious {description}" on failure
 5. **Blueprint construction** → `GameObjectBlueprint` adds UUID, computed fields: `power_cost`, `behavior_cost`, `starting_durability`
 6. **Atomic persist** → `track_cost_and_save_object()` charges $0.041 + saves blueprint (including behaviors) in one commit
-7. **Immediate response** → Client receives blueprint JSON (with behaviors) + placeholder PNG (colored rounded rectangle) + budget_remaining
+7. **Immediate response** → Client receives blueprint JSON (with behaviors) + placeholder PNG (colored rounded rectangle) + budget_remaining. `EventBus.creation_requested` was emitted on submit — `Game` starts a `MaterializeEffect` at the spawn point (paper scraps coalesce over 1.2s, then idle-bob)
 8. **Background sprite generation** → `asyncio.Task` held in module-level `_background_tasks` set (prevents GC). Runs image pipeline (see below)
-9. **WebSocket delivery** → `send_sprite_ready()` broadcasts base64 PNG to all session clients → Godot decodes to `ImageTexture` → `EventBus.sprite_ready` emitted → `ObjectVisual` updates
+9. **WebSocket delivery** → `send_sprite_ready()` broadcasts base64 PNG to all session clients → Godot decodes to `ImageTexture` → `EventBus.sprite_ready` emitted
+10. **Placement mode** → On `sprite_ready` (or `sprite_failed` fallback to placeholder), `MaterializeEffect.resolve()` scatters scraps and frees itself; a semi-transparent ghost preview spawns at that position and follows the mouse. Left-click calls `world.spawn_object()` at the cursor; Escape cancels. `EventBus.placement_started` / `placement_ended` bracket the mode. Object is NOT added to the world until placement is confirmed.
+
+`EventBus.creation_failed` cancels the effect and discards the pending blueprint at any point in the flow.
 
 ## Image Generation Pipeline
 
@@ -44,18 +64,23 @@ Full flow from player input to world-placed object with sprite:
 
 ```
 1. Cache check    → static/sprites/{hash}.png exists? Return cached bytes
-2. Prompt build   → "pixel art game sprite, side view, {size} {base_form} made of {material},
+                     (skipped entirely if SPRITE_CACHE_ENABLED=false)
+2. Prompt build   → "pixel art game sprite, side view, flat lighting, clean edges,
+                     {size} {base_form} made of {material},
                      {color_primary_name} with {color_secondary_name} accents, {effects},
-                     solid {bg_color} background, no text"
-3. Flux generate  → fal.ai Flux Pro Kontext, 512×512 default
+                     single centered object, solid {bg_color} background, no text"
+3. Flux generate  → fal-ai/flux-pro/v1.1, 512×512 default
 4. Remove bg      → local rembg (birefnet-general model, alpha matting)
                      or cloud fal.ai/birefnet (configured via BG_REMOVAL_BACKEND)
 5. Resize         → LANCZOS to target size from SIZE_PIXEL_MAP:
                      tiny=32, small=48, medium=64, large=96, huge=128
 6. Cache write    → PNG saved to static/sprites/{hash}.png
+                     (skipped if SPRITE_CACHE_ENABLED=false)
 ```
 
-**Cache key**: SHA-256 of `base_form|material|color_primary_name|color_secondary_name|sorted_effects|size_category|bg_color`, truncated to 16 hex chars.
+**Cache key**: SHA-256 of the full Flux prompt string, truncated to 16 hex chars. Identical prompts share a cached sprite regardless of which object requested them.
+
+**`SPRITE_CACHE_ENABLED`**: Boolean env var (default `true`). When `false`, cache reads and writes are both skipped — every request hits Flux.
 
 **Concurrency**: Semaphore-limited to `MAX_CONCURRENT_IMAGE_REQUESTS` (default 3).
 
@@ -242,6 +267,8 @@ body_entered signal (from GameObject)
 | Default | 1.0 | 1.0 | 0.5 | 0.0 |
 
 Tag mutations (via `add_tag`/`remove_tag`) trigger `_reapply_physics()` to recalculate.
+
+**Sprite-driven collision shape**: Initial shape is derived from `size_category` + `base_form` (rect/circle/capsule). When a real sprite loads, `ObjectVisual.set_sprite()` calls `PhysicsApplicator.update_shape_from_sprite()` via `call_deferred`. That method reads the texture's opaque bounding rect (`Image.get_used_rect()`), replaces the `CollisionShape2D` with a `RectangleShape2D` sized to the opaque region, and offsets it to match the sprite's visual center. Once set, `_has_sprite_shape = true` prevents `apply()` from overwriting it on subsequent tag mutations.
 
 ## Session & Persistence
 

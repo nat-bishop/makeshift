@@ -15,6 +15,7 @@
 # Configure environment
 cp .env.example .env
 # Edit .env with your GOOGLE_API_KEY and FAL_KEY
+# Optional: set SPRITE_CACHE_ENABLED=false to force sprite regeneration
 
 # Install dependencies
 uv sync

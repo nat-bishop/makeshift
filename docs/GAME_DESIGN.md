@@ -144,6 +144,46 @@ This makes the two systems composable without tight coupling.
 - Total behavior cost: 5
 - Note: The EXPLOSIVE tag would also fire via rule engine when HOT is added — for a reactive bomb that can detonate this way, omit EXPLOSIVE and rely purely on the behavior for greater control over timing and message.
 
+## Player Controls
+
+| Action | Input | Details |
+|--------|-------|---------|
+| Move | A/D or arrow keys | — |
+| Jump | Space | — |
+| Create object | Tab | Opens creation panel; pauses game while open |
+| Kick | E | 0.5s cooldown |
+| Debug overlay | F3 | Toggle |
+
+**States**: IDLE, WALK, JUMP, FALL — driven by `is_on_floor()` and `velocity.y`.
+
+### Push
+
+Walking into any `RigidBody2D` applies a continuous impulse of **80 units** in the collision direction (`apply_central_impulse(push_dir * 80.0)`). No input required — contact is sufficient.
+
+### Kick
+
+Pressing E performs a rectangular shape query **48px wide × 32px tall** centered in front of the player. All `RigidBody2D` objects in range receive an impulse of **400 units** in the direction `(facing, -0.3).normalized()` — forward and slightly upward. 0.5s cooldown between kicks.
+
+## Object Placement Workflow
+
+After submitting a creation request:
+
+1. `MaterializeEffect` plays at `player.position + (80, -32)` while the object is created and the sprite generates in the background.
+2. When the HTTP response arrives, the game waits for the sprite. If the sprite is already cached (WebSocket beat HTTP), placement begins immediately.
+3. Player enters placement mode — a semi-transparent ghost follows the mouse. If the sprite arrives while in placement mode, the ghost updates live.
+4. Left-click to confirm placement; Escape to cancel. Placement spawns the object at the clicked world position.
+5. If sprite generation fails entirely, placement proceeds with the placeholder colored square.
+
+During placement, the HUD hint changes to "Click: Place | Esc: Cancel".
+
+## Debug Overlay
+
+**F3** toggles debug mode. When active:
+
+- Each object displays a floating label showing: `name [current_durability/max_durability]`, active tags (space-separated), and one line per behavior in `trigger > action` format.
+- Labels update on durability change or tag count change (not every frame).
+- HUD shows control hint bar: "Tab: Create | E: Kick | F3: Debug".
+
 ## Object Economy
 
 | Metric | Value |

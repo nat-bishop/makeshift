@@ -16,6 +16,9 @@ type: project
 - CLAUDE.md Gotchas: needs entries for any new model validator rules that have non-obvious constraints (e.g., ON_TAG_ADDED requires trigger_tag).
 - ARCHITECTURE.md System Overview diagram: the ASCII diagram drifts when new client-side systems are added. Update both the diagram and the pipeline steps together.
 - docs/ARCHITECTURE.md Session & Persistence: blueprint_json schema is implicit — note when new fields are added that don't require migration.
+- ARCHITECTURE.md Object Creation Pipeline: deferred spawn / placement mode steps are easy to miss when adding new signals or UX states. Pipeline step count has grown to 10; check game.gd and event_bus.gd together when updating.
+- ARCHITECTURE.md Image Generation Pipeline: cache key description and Flux model name drift independently from each other. Cache key is now a hash of the full prompt string (not individual VisualDescriptor fields) — easy to misremember. Model is `fal-ai/flux-pro/v1.1`, configured via `settings.image_model` in config.py.
+- EventBus signal count: was documented as 4 in early versions; grew to 10 as placement and creation flow signals were added. ARCHITECTURE.md now has an explicit signal table; CLAUDE.md autoload table lists all 10 by name.
 
 ## Key structural decisions made during behavior system sync
 

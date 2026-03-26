@@ -26,7 +26,7 @@ def make_cloud_remover() -> Callable[[bytes], Awaitable[bytes]]:
                     "fal-ai/birefnet",
                     arguments={
                         "image_url": data_uri,
-                        "model": "General",
+                        "model": "General Use (Light)",
                         "operating_resolution": "1024x1024",
                     },
                     result_key="image",
