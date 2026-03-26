@@ -37,6 +37,8 @@ func _ready() -> void:
 	_kick_query.collision_mask = CollisionLayers.OBJECTS
 	_kick_query.collide_with_bodies = true
 
+	Log.info("Player: Spawned with %d HP" % MAX_HEALTH)
+
 
 func _physics_process(delta: float) -> void:
 	_process_normal_movement(GRAVITY, SPEED, delta)
@@ -44,6 +46,7 @@ func _physics_process(delta: float) -> void:
 	if global_position.y > VOID_THRESHOLD and not _dead:
 		_dead = true
 		current_health = 0
+		Log.info("Player: Fell into void at y=%.0f" % global_position.y)
 		EventBus.player_damaged.emit(float(MAX_HEALTH), current_health, MAX_HEALTH)
 		EventBus.player_died.emit()
 		set_physics_process(false)
@@ -143,15 +146,18 @@ func take_damage(amount: float, _element_color: Color = Color.WHITE) -> void:
 		return
 	current_health = max(0, current_health - int(amount))
 	_damage_flash_timer = DAMAGE_FLASH_DURATION
+	Log.debug("Player: Took %.0f damage, %d/%d HP remaining" % [amount, current_health, MAX_HEALTH])
 	EventBus.player_damaged.emit(amount, current_health, MAX_HEALTH)
 	if current_health <= 0:
 		_dead = true
+		Log.info("Player: Died from damage")
 		EventBus.player_died.emit()
 		set_physics_process(false)
 
 
 func heal(amount: float) -> void:
 	current_health = min(current_health + int(amount), MAX_HEALTH)
+	Log.debug("Player: Healed %.0f, %d/%d HP" % [amount, current_health, MAX_HEALTH])
 	EventBus.player_healed.emit(amount, current_health, MAX_HEALTH)
 
 
