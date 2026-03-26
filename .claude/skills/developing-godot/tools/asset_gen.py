@@ -46,6 +46,18 @@ no scenery, no patterns, just the plain color
 them entirely with the actual drawing content"""
 
 
+def _ensure_png(data: bytes, path: Path) -> None:
+    """Save image data as a valid PNG. Gemini sometimes returns JPEG bytes even
+    when a .png output path is used, which causes Godot import failures."""
+    if data[:4] == b'\x89PNG':
+        path.write_bytes(data)
+    else:
+        from PIL import Image
+        import io
+        img = Image.open(io.BytesIO(data)).convert("RGBA")
+        img.save(path, "PNG")
+
+
 def result_json(
     ok: bool,
     path: str | None = None,
@@ -137,7 +149,7 @@ def cmd_image(args):
         if part.text:
             print(f"[model] {part.text}", file=sys.stderr)
         if part.inline_data is not None and not saved:
-            output.write_bytes(part.inline_data.data)
+            _ensure_png(part.inline_data.data, output)
             print(f"Saved: {output}", file=sys.stderr)
             result_json(True, path=str(output), cost_cents=cost)
             saved = True
@@ -202,7 +214,7 @@ def cmd_spritesheet(args):
 
     for part in response.parts:
         if part.inline_data is not None:
-            output.write_bytes(part.inline_data.data)
+            _ensure_png(part.inline_data.data, output)
             print(f"Saved: {output}", file=sys.stderr)
             result_json(True, path=str(output), cost_cents=cost)
             return
@@ -271,7 +283,7 @@ def cmd_chat(args):
                 print(f"[{label}] Model: {part.text}", file=sys.stderr)
             if part.inline_data is not None and not saved:
                 out_path = out_dir / f"{name}.png"
-                out_path.write_bytes(part.inline_data.data)
+                _ensure_png(part.inline_data.data, out_path)
                 print(f"[{label}] Saved: {out_path}", file=sys.stderr)
                 saved = True
 

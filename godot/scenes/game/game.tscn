@@ -37,7 +37,7 @@ motion_mirroring = Vector2(4128, 0)
 motion_scale = Vector2(0.3, 0)
 
 [node name="Sprite2D" type="Sprite2D" parent="ParallaxBackground/HillsLayer"]
-position = Vector2(640, 300)
+position = Vector2(640, 350)
 texture = ExtResource("8_hills")
 
 [node name="GroundLayer" type="ParallaxLayer" parent="ParallaxBackground"]
