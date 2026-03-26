@@ -232,25 +232,25 @@ body_entered signal (from GameObject)
 
 ### Effect Executor
 
-`scripts/systems/effect_executor.gd` handles 12 effect types:
+`scripts/systems/effect_executor.gd` — 5 primitive effect types. Composite interactions (ignite, freeze, electrify, etc.) are expressed as arrays of these primitives in rule data.
 
-| Effect | Behavior |
-|--------|----------|
-| DAMAGE | `take_damage(amount)` |
-| DESTROY | `take_damage(99999)` |
-| IGNITE | Adds HEAT_SOURCE + HOT tags, starts DOT (10 dmg/1s for 5s) |
-| EXTINGUISH | Removes HEAT_SOURCE + HOT tags |
-| FREEZE | Adds FROZEN + RIGID, removes LIQUID |
-| MELT | Removes FROZEN + RIGID, adds LIQUID |
-| CORRODE | DOT (15 dmg/1s for 3s) |
-| ELECTRIFY | Instant damage (30) |
-| APPLY_FORCE | Impulse away from source body |
-| ADD_TAG / REMOVE_TAG | Direct tag mutation |
-| TRANSFORM | Tag add + remove combo |
+| Effect | Key fields | Behavior |
+|--------|-----------|----------|
+| DAMAGE | `damage_amount`, `tick_interval`, `tick_duration` | Instant damage, or DOT if `tick_interval` > 0 |
+| HEAL | `damage_amount` | Restore durability |
+| ADD_TAG | `tag`, `tag_duration` | Add tag (permanent if `tag_duration` absent/0) |
+| REMOVE_TAG | `tag` | Remove tag |
+| APPLY_FORCE | `force_magnitude` | Impulse away from source body |
 
-**DOT implementation**: Timer node added as child of target. Ticks `damage_per_tick` every `tick_interval` for `duration`. Auto-cleans when target is freed or ticks exhausted.
+**DOT**: DAMAGE with `tick_interval`/`tick_duration` fields routes to `WorldMutations.apply_dot()`. Replaces any existing DOT on the target (named node `_dot_timer`) — no stacking.
 
 **Target resolution**: Effects specify `target: "a" | "b" | "both"`. Default is `"b"`.
+
+**Rules serialization**: `model_dump(exclude_none=True)` keeps effect payloads lean — only fields relevant to the effect type are sent.
+
+### WorldMutations
+
+`scripts/systems/world_mutations.gd` — static `RefCounted` class. All game-state mutations (damage, heal, tag add/remove, impulse, DOT) route through it. Single codepath shared by `EffectExecutor`, `BehaviorExecutor`, `projectile.gd`, and level scripts. Guards against invalid targets with `has_method`/`is RigidBody2D` checks before acting.
 
 ## Physics Composition
 

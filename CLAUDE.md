@@ -50,7 +50,7 @@ uv run pytest -k "test_name"              # single test by name
 | `CollisionResolver` | Per-frame collision resolution, cooldowns, cascade (depth 3, 96px radius) |
 | `Logger` | Structured logging |
 
-Key systems: `EffectExecutor` (12 effect types including DOT), `PhysicsApplicator` (tag-to-physics mapping), `BehaviorExecutor` (per-object autonomous behavior runtime, attached as child node when behaviors present), `BehaviorMaps` (categorical→numeric value mappings for behavior params), `DebugLabel` (floating per-object overlay showing name, durability, tags, and behaviors — visibility driven by `GameManager.debug_mode`). Player has two interaction modes: passive push (continuous impulse on slide collision, force 80) and kick (action input, 48px range, force 400, 0.5s cooldown).
+Key systems: `WorldMutations` (static class — all game-state mutations route through it; used by EffectExecutor, BehaviorExecutor, projectile.gd, and level scripts), `EffectExecutor` (5 primitive effect types: DAMAGE, HEAL, ADD_TAG, REMOVE_TAG, APPLY_FORCE; DAMAGE with `tick_interval`/`tick_duration` fields becomes DOT), `PhysicsApplicator` (tag-to-physics mapping), `BehaviorExecutor` (per-object autonomous behavior runtime, attached as child node when behaviors present), `BehaviorMaps` (categorical→numeric value mappings for behavior params), `DebugLabel` (floating per-object overlay showing name, durability, tags, and behaviors — visibility driven by `GameManager.debug_mode`). Player has two interaction modes: passive push (continuous impulse on slide collision, force 80) and kick (action input, 48px range, force 400, 0.5s cooldown).
 
 ## API Endpoints
 

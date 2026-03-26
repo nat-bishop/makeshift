@@ -28,7 +28,8 @@ motion_mirroring = Vector2(4128, 0)
 motion_scale = Vector2(0.1, 0)
 
 [node name="Sprite2D" type="Sprite2D" parent="ParallaxBackground/CloudLayer"]
-position = Vector2(640, 200)
+position = Vector2(640, 150)
+scale = Vector2(0.45, 0.45)
 texture = ExtResource("7_clouds")
 
 [node name="HillsLayer" type="ParallaxLayer" parent="ParallaxBackground"]
@@ -36,7 +37,7 @@ motion_mirroring = Vector2(4128, 0)
 motion_scale = Vector2(0.3, 0)
 
 [node name="Sprite2D" type="Sprite2D" parent="ParallaxBackground/HillsLayer"]
-position = Vector2(640, 500)
+position = Vector2(640, 300)
 texture = ExtResource("8_hills")
 
 [node name="GroundLayer" type="ParallaxLayer" parent="ParallaxBackground"]
@@ -44,7 +45,7 @@ motion_mirroring = Vector2(4128, 0)
 motion_scale = Vector2(0.5, 0)
 
 [node name="Sprite2D" type="Sprite2D" parent="ParallaxBackground/GroundLayer"]
-position = Vector2(640, 600)
+position = Vector2(640, 550)
 texture = ExtResource("9_ground")
 
 [node name="World" parent="." instance=ExtResource("2_world")]

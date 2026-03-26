@@ -6,11 +6,11 @@ const DEFAULT_FRICTION: float = 0.5
 const DEFAULT_BOUNCE: float = 0.0
 
 const SIZE_TO_PHYSICS: Dictionary = {
-	"tiny": {"sprite": 32, "collision": 16},
-	"small": {"sprite": 48, "collision": 32},
-	"medium": {"sprite": 64, "collision": 48},
-	"large": {"sprite": 96, "collision": 80},
-	"huge": {"sprite": 128, "collision": 112},
+	"tiny": {"sprite": 64, "collision": 32},
+	"small": {"sprite": 96, "collision": 64},
+	"medium": {"sprite": 128, "collision": 96},
+	"large": {"sprite": 192, "collision": 160},
+	"huge": {"sprite": 256, "collision": 224},
 }
 
 const ELONGATED_FORMS: Array[String] = [

@@ -233,9 +233,11 @@ Starting durability depends on tags:
 
 Priority: BREAKABLE checked first, then RIGID, then FLEXIBLE, then default.
 
-**Damage-over-time (DOT)**:
-- IGNITE: 10 damage per second for 5 seconds (50 total)
-- CORRODE: 15 damage per second for 3 seconds (45 total)
+**Damage-over-time (DOT)** — rule-defined; applied via DAMAGE effect with `tick_interval`/`tick_duration` fields:
+- Ignition (HEAT_SOURCE + FLAMMABLE): 10 dmg/s for 5s (50 total)
+- Corrosion (CORROSIVE + BREAKABLE): 15 dmg/s for 3s (45 total)
+
+DOT does not stack — a new DOT on an already-burning object replaces the existing one.
 
 Objects reaching 0 durability are destroyed (`queue_free()`).
 

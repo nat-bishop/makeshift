@@ -108,6 +108,9 @@ func _on_sprite_ready(id: String, _texture: Texture2D) -> void:
 	if _placement_active and is_instance_valid(_placement_ghost):
 		var sprite: Sprite2D = _placement_ghost.get_node("Sprite2D")
 		sprite.texture = _texture
+		var vd: Dictionary = _pending_blueprint.get("visual_descriptor", {})
+		var world_size: float = PhysicsComposer.get_size_data(vd.get("size_category", "medium"))["sprite"]
+		sprite.scale = Vector2.ONE * (world_size / _texture.get_width())
 	else:
 		_begin_placement()
 
@@ -152,6 +155,9 @@ func _create_placement_ghost() -> Node2D:
 	var cached: Texture2D = Backend.get_cached_sprite(pending_id) if pending_id != "" else null
 	if cached:
 		sprite.texture = cached
+		var vd: Dictionary = _pending_blueprint.get("visual_descriptor", {})
+		var world_size: float = PhysicsComposer.get_size_data(vd.get("size_category", "medium"))["sprite"]
+		sprite.scale = Vector2.ONE * (world_size / cached.get_width())
 	else:
 		var vd: Dictionary = _pending_blueprint.get("visual_descriptor", {})
 		var size_category: String = vd.get("size_category", "medium")
