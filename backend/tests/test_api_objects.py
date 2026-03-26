@@ -53,6 +53,7 @@ async def _test_client() -> AsyncIterator[tuple[AsyncClient, FastAPI]]:
     )""")
     await db.commit()
     app.state.db = db
+    app.state.generate_image = AsyncMock(return_value=b"fake_image")
     app.state.remove_bg = AsyncMock(return_value=b"fake_image")
     try:
         async with AsyncClient(

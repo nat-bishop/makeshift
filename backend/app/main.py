@@ -38,6 +38,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         "server_starting",
         llm_model=settings.llm_model,
         image_model=settings.image_model,
+        image_backend=settings.image_backend,
         bg_removal=settings.bg_removal_backend,
         budget=settings.session_budget_usd,
     )
@@ -56,6 +57,23 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         from app.images.cloud_bg import make_cloud_remover
 
         app.state.remove_bg = make_cloud_remover()
+
+    # Initialize image generation callable
+    if settings.image_backend == "local":
+        from app.images.local_image import generate_image
+
+        app.state.generate_image = generate_image
+        logger.info("image_backend_local", url=settings.local_image_url)
+    elif settings.image_backend == "fal":
+        from app.images.fal_image import generate_image
+
+        app.state.generate_image = generate_image
+        logger.info("image_backend_fal")
+    else:
+        from app.images.gemini_client import generate_image
+
+        app.state.generate_image = generate_image
+        logger.info("image_backend_gemini")
 
     # Initialize SQLite
     import aiosqlite
@@ -97,9 +115,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     logger.info("server_stopping")
 
-    from app.images.fal_helpers import close_http_client
+    from app.images.fal_helpers import close_http_client as close_fal_client
+    from app.images.local_image import close_http_client as close_local_client
 
-    await close_http_client()
+    await close_fal_client()
+    await close_local_client()
     await db.close()
 
 

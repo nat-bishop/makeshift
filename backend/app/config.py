@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     llm_model: str = "google-gla:gemini-3.1-flash-lite-preview"
     llm_temperature: float = 0.0
     image_model: str = "gemini-3.1-flash-image-preview"
+    image_backend: Literal["gemini", "local", "fal"] = "gemini"
+    local_image_url: str = "http://127.0.0.1:5100"
+    local_image_model: str = "black-forest-labs/FLUX.2-klein-4b-fp8"
+    fal_image_model: str = "fal-ai/flux/schnell"
     bg_removal_backend: Literal["local", "cloud"] = "local"
     sprite_cache_enabled: bool = True
 

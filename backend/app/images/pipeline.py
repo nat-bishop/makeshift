@@ -16,6 +16,7 @@ from app.models.blueprint import GameObjectBlueprint, VisualDescriptor
 logger = structlog.get_logger()
 
 RemoveBg: TypeAlias = Callable[[bytes], Awaitable[bytes]]
+GenerateImage: TypeAlias = Callable[[str], Awaitable[bytes]]
 
 STATIC_DIR = Path(__file__).resolve().parent.parent.parent / "static"
 
@@ -89,11 +90,10 @@ def _crop_and_fit(
 
 async def _generate_static_sprite(
     prompt: str,
+    generate_image: GenerateImage,
     remove_bg: RemoveBg,
 ) -> bytes:
-    """Generate a single static sprite via Gemini at 512x512."""
-    from app.images.gemini_client import generate_image
-
+    """Generate a single static sprite at 512x512."""
     raw_bytes = await generate_image(prompt)
     logger.debug("bg_removal_start", input_size=len(raw_bytes))
     output_bytes = await remove_bg(raw_bytes)
@@ -108,6 +108,7 @@ async def _generate_static_sprite(
 
 async def generate_sprite(
     blueprint: GameObjectBlueprint,
+    generate_image: GenerateImage,
     remove_bg: RemoveBg,
 ) -> SpriteResult | None:
     """Full image pipeline: check cache → generate → remove bg → crop & fit → cache.
@@ -128,7 +129,7 @@ async def generate_sprite(
     logger.debug("sprite_cache_miss", object_id=object_id)
     t0 = time.monotonic()
     try:
-        final_bytes = await _generate_static_sprite(prompt, remove_bg)
+        final_bytes = await _generate_static_sprite(prompt, generate_image, remove_bg)
 
         cache_path.parent.mkdir(parents=True, exist_ok=True)
         cache_path.write_bytes(final_bytes)
