@@ -31,6 +31,9 @@ Thumbs.db
 # Asset staging
 assets/staging/
 
+# Generated sprites
+backend/static/sprites/
+
 # Claude Code
 .claude/settings.local.json
 .claude/worktrees/

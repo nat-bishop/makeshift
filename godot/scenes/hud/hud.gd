@@ -6,6 +6,7 @@ extends CanvasLayer
 
 func _ready() -> void:
 	layer = 10
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	object_creation_panel.visible = false
 
 
@@ -15,6 +16,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		Log.debug("HUD: Creation panel %s" % ("opened" if object_creation_panel.visible else "closed"))
 		if object_creation_panel.visible:
 			object_creation_panel.focus_input()
+			GameManager.pause_game()
+		else:
+			GameManager.resume_game()
 		get_viewport().set_input_as_handled()
 
 
