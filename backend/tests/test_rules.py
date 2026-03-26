@@ -8,8 +8,9 @@ from app.models.tags import Tag
 
 _DEFAULT_EFFECTS = [
     Effect(
-        effect_type=EffectType.IGNITE,
+        effect_type=EffectType.DAMAGE,
         target=EffectTarget.B,
+        damage_amount=10.0,
         message="Test effect",
     )
 ]

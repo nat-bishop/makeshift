@@ -11,7 +11,7 @@ logger = structlog.get_logger()
 router = APIRouter(prefix="/api/rules", tags=["rules"])
 
 # Pre-compute ETag for rules (they don't change at runtime)
-_rules_json = [r.model_dump(mode="json") for r in ALL_RULES]
+_rules_json = [r.model_dump(mode="json", exclude_none=True) for r in ALL_RULES]
 _rules_bytes = json.dumps(_rules_json, separators=(",", ":")).encode()
 _rules_etag = f'"{hashlib.md5(_rules_bytes).hexdigest()}"'
 

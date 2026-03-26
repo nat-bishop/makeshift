@@ -18,10 +18,21 @@ ALL_RULES: list[InteractionRule] = [
         tags_blocked_by={Tag.INSULATING},
         effects=[
             Effect(
-                effect_type=EffectType.IGNITE,
+                effect_type=EffectType.ADD_TAG,
+                target=EffectTarget.B,
+                tag=Tag.HEAT_SOURCE,
+            ),
+            Effect(
+                effect_type=EffectType.ADD_TAG,
+                target=EffectTarget.B,
+                tag=Tag.HOT,
+            ),
+            Effect(
+                effect_type=EffectType.DAMAGE,
                 target=EffectTarget.B,
                 damage_amount=10.0,
-                tags_to_add=[Tag.HEAT_SOURCE, Tag.HOT],
+                tick_interval=1.0,
+                tick_duration=5.0,
                 message="Ignited! Fire spreads.",
             ),
         ],
@@ -38,10 +49,19 @@ ALL_RULES: list[InteractionRule] = [
         tags_blocked_by={Tag.INSULATING},
         effects=[
             Effect(
-                effect_type=EffectType.MELT,
+                effect_type=EffectType.REMOVE_TAG,
                 target=EffectTarget.B,
-                tags_to_remove=[Tag.FROZEN, Tag.RIGID],
-                tags_to_add=[Tag.LIQUID],
+                tag=Tag.FROZEN,
+            ),
+            Effect(
+                effect_type=EffectType.REMOVE_TAG,
+                target=EffectTarget.B,
+                tag=Tag.RIGID,
+            ),
+            Effect(
+                effect_type=EffectType.ADD_TAG,
+                target=EffectTarget.B,
+                tag=Tag.LIQUID,
                 message="The ice melts into water.",
             ),
         ],
@@ -57,9 +77,14 @@ ALL_RULES: list[InteractionRule] = [
         cascade_eligible=False,
         effects=[
             Effect(
-                effect_type=EffectType.EXTINGUISH,
+                effect_type=EffectType.REMOVE_TAG,
                 target=EffectTarget.B,
-                tags_to_remove=[Tag.HEAT_SOURCE, Tag.HOT],
+                tag=Tag.HEAT_SOURCE,
+            ),
+            Effect(
+                effect_type=EffectType.REMOVE_TAG,
+                target=EffectTarget.B,
+                tag=Tag.HOT,
                 message="The flames are doused!",
             ),
         ],
@@ -94,10 +119,24 @@ ALL_RULES: list[InteractionRule] = [
         tags_blocked_by={Tag.INSULATING},
         effects=[
             Effect(
-                effect_type=EffectType.FREEZE,
+                effect_type=EffectType.ADD_TAG,
                 target=EffectTarget.B,
-                tags_to_add=[Tag.FROZEN, Tag.RIGID, Tag.SOLID],
-                tags_to_remove=[Tag.LIQUID],
+                tag=Tag.FROZEN,
+            ),
+            Effect(
+                effect_type=EffectType.ADD_TAG,
+                target=EffectTarget.B,
+                tag=Tag.RIGID,
+            ),
+            Effect(
+                effect_type=EffectType.ADD_TAG,
+                target=EffectTarget.B,
+                tag=Tag.SOLID,
+            ),
+            Effect(
+                effect_type=EffectType.REMOVE_TAG,
+                target=EffectTarget.B,
+                tag=Tag.LIQUID,
                 message="The liquid freezes solid!",
             ),
         ],
@@ -113,15 +152,19 @@ ALL_RULES: list[InteractionRule] = [
         cascade_eligible=True,
         effects=[
             Effect(
-                effect_type=EffectType.DESTROY,
+                effect_type=EffectType.DAMAGE,
                 target=EffectTarget.A,
-                damage_amount=80.0,
+                damage_amount=99999.0,
                 message="BOOM! Massive explosion!",
             ),
             Effect(
                 effect_type=EffectType.DAMAGE,
                 target=EffectTarget.B,
                 damage_amount=80.0,
+            ),
+            Effect(
+                effect_type=EffectType.APPLY_FORCE,
+                target=EffectTarget.B,
                 force_magnitude=500.0,
                 message="Caught in the blast! 80 damage.",
             ),
@@ -139,10 +182,14 @@ ALL_RULES: list[InteractionRule] = [
         tags_blocked_by={Tag.INSULATING},
         effects=[
             Effect(
-                effect_type=EffectType.ELECTRIFY,
+                effect_type=EffectType.DAMAGE,
                 target=EffectTarget.B,
                 damage_amount=30.0,
-                tags_to_add=[Tag.ELECTRIC],
+            ),
+            Effect(
+                effect_type=EffectType.ADD_TAG,
+                target=EffectTarget.B,
+                tag=Tag.ELECTRIC,
                 message="Electricity arcs through! 30 damage.",
             ),
         ],
@@ -159,10 +206,14 @@ ALL_RULES: list[InteractionRule] = [
         tags_blocked_by={Tag.INSULATING},
         effects=[
             Effect(
-                effect_type=EffectType.ELECTRIFY,
+                effect_type=EffectType.DAMAGE,
                 target=EffectTarget.B,
                 damage_amount=30.0,
-                tags_to_add=[Tag.ELECTRIC],
+            ),
+            Effect(
+                effect_type=EffectType.ADD_TAG,
+                target=EffectTarget.B,
+                tag=Tag.ELECTRIC,
                 message="The liquid becomes electrified! 30 damage.",
             ),
         ],
@@ -178,9 +229,11 @@ ALL_RULES: list[InteractionRule] = [
         cascade_eligible=False,
         effects=[
             Effect(
-                effect_type=EffectType.CORRODE,
+                effect_type=EffectType.DAMAGE,
                 target=EffectTarget.B,
                 damage_amount=15.0,
+                tick_interval=1.0,
+                tick_duration=3.0,
                 message="Dissolving! 15 damage per second.",
             ),
         ],
@@ -287,10 +340,24 @@ ALL_RULES: list[InteractionRule] = [
         tags_blocked_by={Tag.INSULATING},
         effects=[
             Effect(
-                effect_type=EffectType.FREEZE,
+                effect_type=EffectType.ADD_TAG,
                 target=EffectTarget.B,
-                tags_to_remove=[Tag.MOLTEN, Tag.LIQUID],
-                tags_to_add=[Tag.SOLID, Tag.RIGID],
+                tag=Tag.SOLID,
+            ),
+            Effect(
+                effect_type=EffectType.ADD_TAG,
+                target=EffectTarget.B,
+                tag=Tag.RIGID,
+            ),
+            Effect(
+                effect_type=EffectType.REMOVE_TAG,
+                target=EffectTarget.B,
+                tag=Tag.MOLTEN,
+            ),
+            Effect(
+                effect_type=EffectType.REMOVE_TAG,
+                target=EffectTarget.B,
+                tag=Tag.LIQUID,
                 message="The molten material solidifies into rock!",
             ),
         ],
@@ -345,6 +412,10 @@ ALL_RULES: list[InteractionRule] = [
                 effect_type=EffectType.DAMAGE,
                 target=EffectTarget.BOTH,
                 damage_amount=40.0,
+            ),
+            Effect(
+                effect_type=EffectType.APPLY_FORCE,
+                target=EffectTarget.BOTH,
                 force_magnitude=300.0,
                 message="Shrapnel flies everywhere! 40 damage.",
             ),
@@ -361,9 +432,11 @@ ALL_RULES: list[InteractionRule] = [
         cascade_eligible=False,
         effects=[
             Effect(
-                effect_type=EffectType.CORRODE,
+                effect_type=EffectType.DAMAGE,
                 target=EffectTarget.B,
                 damage_amount=10.0,
+                tick_interval=1.0,
+                tick_duration=3.0,
                 message="The rigid structure corrodes. 10 damage.",
             ),
         ],
@@ -379,10 +452,21 @@ ALL_RULES: list[InteractionRule] = [
         cascade_eligible=True,
         effects=[
             Effect(
-                effect_type=EffectType.IGNITE,
+                effect_type=EffectType.ADD_TAG,
+                target=EffectTarget.B,
+                tag=Tag.HEAT_SOURCE,
+            ),
+            Effect(
+                effect_type=EffectType.ADD_TAG,
+                target=EffectTarget.B,
+                tag=Tag.HOT,
+            ),
+            Effect(
+                effect_type=EffectType.DAMAGE,
                 target=EffectTarget.B,
                 damage_amount=15.0,
-                tags_to_add=[Tag.HEAT_SOURCE, Tag.HOT],
+                tick_interval=1.0,
+                tick_duration=5.0,
                 message="Molten contact ignites the material!",
             ),
         ],
@@ -562,10 +646,14 @@ ALL_RULES: list[InteractionRule] = [
         tags_blocked_by={Tag.INSULATING},
         effects=[
             Effect(
-                effect_type=EffectType.TRANSFORM,
+                effect_type=EffectType.REMOVE_TAG,
                 target=EffectTarget.B,
-                tags_to_remove=[Tag.LIQUID],
-                tags_to_add=[Tag.GAS],
+                tag=Tag.LIQUID,
+            ),
+            Effect(
+                effect_type=EffectType.ADD_TAG,
+                target=EffectTarget.B,
+                tag=Tag.GAS,
                 message="The liquid evaporates into steam!",
             ),
         ],
@@ -581,11 +669,15 @@ ALL_RULES: list[InteractionRule] = [
         cascade_eligible=True,
         effects=[
             Effect(
-                effect_type=EffectType.DESTROY,
+                effect_type=EffectType.DAMAGE,
                 target=EffectTarget.B,
-                damage_amount=80.0,
+                damage_amount=99999.0,
+            ),
+            Effect(
+                effect_type=EffectType.APPLY_FORCE,
+                target=EffectTarget.B,
                 force_magnitude=400.0,
-                message="Obliterated by the explosion! 80 damage.",
+                message="Obliterated by the explosion!",
             ),
         ],
     ),
@@ -636,9 +728,11 @@ ALL_RULES: list[InteractionRule] = [
         cascade_eligible=False,
         effects=[
             Effect(
-                effect_type=EffectType.CORRODE,
+                effect_type=EffectType.DAMAGE,
                 target=EffectTarget.B,
                 damage_amount=20.0,
+                tick_interval=1.0,
+                tick_duration=3.0,
                 message="The acid dissolves the metal! 20 damage.",
             ),
         ],
@@ -674,7 +768,7 @@ ALL_RULES: list[InteractionRule] = [
             Effect(
                 effect_type=EffectType.REMOVE_TAG,
                 target=EffectTarget.A,
-                tags_to_remove=[Tag.FLOATING],
+                tag=Tag.FLOATING,
                 message="Too heavy to float! Sinks down.",
             ),
         ],
@@ -690,9 +784,13 @@ ALL_RULES: list[InteractionRule] = [
         cascade_eligible=True,
         effects=[
             Effect(
-                effect_type=EffectType.DESTROY,
+                effect_type=EffectType.DAMAGE,
                 target=EffectTarget.A,
-                damage_amount=80.0,
+                damage_amount=99999.0,
+            ),
+            Effect(
+                effect_type=EffectType.APPLY_FORCE,
+                target=EffectTarget.A,
                 force_magnitude=500.0,
                 message="Electrical detonation! Massive blast!",
             ),
@@ -730,7 +828,7 @@ ALL_RULES: list[InteractionRule] = [
             Effect(
                 effect_type=EffectType.ADD_TAG,
                 target=EffectTarget.B,
-                tags_to_add=[Tag.HOT],
+                tag=Tag.HOT,
                 message="Heat conducts through the material!",
             ),
         ],
@@ -749,7 +847,7 @@ ALL_RULES: list[InteractionRule] = [
             Effect(
                 effect_type=EffectType.ADD_TAG,
                 target=EffectTarget.B,
-                tags_to_add=[Tag.COLD],
+                tag=Tag.COLD,
                 message="Cold spreads through the conductor!",
             ),
         ],
@@ -765,10 +863,10 @@ ALL_RULES: list[InteractionRule] = [
         cascade_eligible=False,
         effects=[
             Effect(
-                effect_type=EffectType.DESTROY,
+                effect_type=EffectType.DAMAGE,
                 target=EffectTarget.B,
-                damage_amount=50.0,
-                message="Melted by molten material! 50 damage.",
+                damage_amount=99999.0,
+                message="Melted by molten material!",
             ),
         ],
     ),
@@ -785,7 +883,7 @@ ALL_RULES: list[InteractionRule] = [
             Effect(
                 effect_type=EffectType.ADD_TAG,
                 target=EffectTarget.B,
-                tags_to_add=[Tag.TOXIC],
+                tag=Tag.TOXIC,
                 message="A toxic cloud forms and spreads!",
             ),
         ],

@@ -230,7 +230,7 @@ body_entered signal (from GameObject)
 
 **Constants**: `COOLDOWN_TIME = 0.5s`, `MAX_CASCADE_DEPTH = 3`, `CASCADE_RADIUS = 96px`. Cooldowns cleaned up every 5s.
 
-### Effect Executor
+### Effect Executor & World Mutations
 
 `scripts/systems/effect_executor.gd` — 5 primitive effect types. Composite interactions (ignite, freeze, electrify, etc.) are expressed as arrays of these primitives in rule data.
 

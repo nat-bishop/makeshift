@@ -193,7 +193,11 @@ func _test_rule_engine() -> void:
 			"rule_id": "fire",
 			"tags_required_a": ["HEAT_SOURCE"],
 			"tags_required_b": ["FLAMMABLE"],
-			"effects": [{"effect_type": "IGNITE", "target": "b", "message": "catches fire"}],
+			"effects": [
+				{"effect_type": "ADD_TAG", "target": "b", "tag": "HEAT_SOURCE"},
+				{"effect_type": "ADD_TAG", "target": "b", "tag": "HOT"},
+				{"effect_type": "DAMAGE", "target": "b", "damage_amount": 10.0, "tick_interval": 1.0, "tick_duration": 5.0, "message": "catches fire"},
+			],
 			"priority": 5,
 			"bidirectional": false,
 			"cascade_eligible": true,
@@ -202,7 +206,11 @@ func _test_rule_engine() -> void:
 			"rule_id": "freeze",
 			"tags_required_a": ["COLD"],
 			"tags_required_b": ["LIQUID"],
-			"effects": [{"effect_type": "FREEZE", "target": "b", "message": "freezes"}],
+			"effects": [
+				{"effect_type": "ADD_TAG", "target": "b", "tag": "FROZEN"},
+				{"effect_type": "ADD_TAG", "target": "b", "tag": "RIGID"},
+				{"effect_type": "REMOVE_TAG", "target": "b", "tag": "LIQUID", "message": "freezes"},
+			],
 			"priority": 3,
 			"bidirectional": false,
 		},
@@ -210,7 +218,10 @@ func _test_rule_engine() -> void:
 			"rule_id": "electric",
 			"tags_required_a": ["ELECTRIC"],
 			"tags_required_b": ["CONDUCTING"],
-			"effects": [{"effect_type": "ELECTRIFY", "target": "b", "message": "zaps"}],
+			"effects": [
+				{"effect_type": "DAMAGE", "target": "b", "damage_amount": 30.0},
+				{"effect_type": "ADD_TAG", "target": "b", "tag": "ELECTRIC", "message": "zaps"},
+			],
 			"priority": 4,
 			"bidirectional": true,
 		},
@@ -458,102 +469,130 @@ func _test_effect_executor() -> void:
 	a1.free()
 	b1.free()
 
-	# --- DESTROY ---
+	# --- DESTROY (DAMAGE 99999) ---
 	var a2 = _make_mock_body("src2", [])
 	var b2 = _make_mock_body("tgt2", ["BREAKABLE"], 100.0)
 	root.add_child(a2)
 	root.add_child(b2)
-	ee.execute({"effects": [{"effect_type": "DESTROY", "target": "b", "message": ""}]}, a2, b2)
+	ee.execute({"effects": [{"effect_type": "DAMAGE", "target": "b", "damage_amount": 99999.0, "message": ""}]}, a2, b2)
 	_assert("DESTROY: 99999 damage", b2.get("damage_log")[0] == 99999.0)
 	a2.free()
 	b2.free()
 
-	# --- IGNITE ---
+	# --- IGNITE (decomposed: ADD_TAG + ADD_TAG + DOT) ---
 	var a3 = _make_mock_body("src3", ["HEAT_SOURCE"])
 	var b3 = _make_mock_body("tgt3", ["FLAMMABLE"])
 	root.add_child(a3)
 	root.add_child(b3)
-	ee.execute({"effects": [{"effect_type": "IGNITE", "target": "b", "message": "burns"}]}, a3, b3)
+	ee.execute({"effects": [
+		{"effect_type": "ADD_TAG", "target": "b", "tag": "HEAT_SOURCE"},
+		{"effect_type": "ADD_TAG", "target": "b", "tag": "HOT"},
+		{"effect_type": "DAMAGE", "target": "b", "damage_amount": 10.0, "tick_interval": 1.0, "tick_duration": 5.0, "message": "burns"},
+	]}, a3, b3)
 	_assert("IGNITE: adds HEAT_SOURCE", "HEAT_SOURCE" in b3.get("tags"))
 	_assert("IGNITE: adds HOT", "HOT" in b3.get("tags"))
 	a3.free()
 	b3.free()
 
-	# --- EXTINGUISH ---
+	# --- EXTINGUISH (decomposed: REMOVE_TAG + REMOVE_TAG) ---
 	var a4 = _make_mock_body("src4", ["LIQUID"])
 	var b4 = _make_mock_body("tgt4", ["HEAT_SOURCE", "HOT"])
 	root.add_child(a4)
 	root.add_child(b4)
-	ee.execute({"effects": [{"effect_type": "EXTINGUISH", "target": "b", "message": ""}]}, a4, b4)
+	ee.execute({"effects": [
+		{"effect_type": "REMOVE_TAG", "target": "b", "tag": "HEAT_SOURCE"},
+		{"effect_type": "REMOVE_TAG", "target": "b", "tag": "HOT", "message": ""},
+	]}, a4, b4)
 	_assert("EXTINGUISH: removes HEAT_SOURCE", "HEAT_SOURCE" not in b4.get("tags"))
 	_assert("EXTINGUISH: removes HOT", "HOT" not in b4.get("tags"))
 	a4.free()
 	b4.free()
 
-	# --- FREEZE ---
+	# --- FREEZE (decomposed: ADD_TAG + ADD_TAG + REMOVE_TAG) ---
 	var a5 = _make_mock_body("src5", ["COLD"])
 	var b5 = _make_mock_body("tgt5", ["LIQUID"])
 	root.add_child(a5)
 	root.add_child(b5)
-	ee.execute({"effects": [{"effect_type": "FREEZE", "target": "b", "message": ""}]}, a5, b5)
+	ee.execute({"effects": [
+		{"effect_type": "ADD_TAG", "target": "b", "tag": "FROZEN"},
+		{"effect_type": "ADD_TAG", "target": "b", "tag": "RIGID"},
+		{"effect_type": "REMOVE_TAG", "target": "b", "tag": "LIQUID", "message": ""},
+	]}, a5, b5)
 	_assert("FREEZE: adds FROZEN", "FROZEN" in b5.get("tags"))
 	_assert("FREEZE: adds RIGID", "RIGID" in b5.get("tags"))
 	_assert("FREEZE: removes LIQUID", "LIQUID" not in b5.get("tags"))
 	a5.free()
 	b5.free()
 
-	# --- MELT ---
+	# --- MELT (decomposed: REMOVE_TAG + REMOVE_TAG + ADD_TAG) ---
 	var a6 = _make_mock_body("src6", ["HEAT_SOURCE"])
 	var b6 = _make_mock_body("tgt6", ["FROZEN", "RIGID"])
 	root.add_child(a6)
 	root.add_child(b6)
-	ee.execute({"effects": [{"effect_type": "MELT", "target": "b", "message": ""}]}, a6, b6)
+	ee.execute({"effects": [
+		{"effect_type": "REMOVE_TAG", "target": "b", "tag": "FROZEN"},
+		{"effect_type": "REMOVE_TAG", "target": "b", "tag": "RIGID"},
+		{"effect_type": "ADD_TAG", "target": "b", "tag": "LIQUID", "message": ""},
+	]}, a6, b6)
 	_assert("MELT: removes FROZEN", "FROZEN" not in b6.get("tags"))
 	_assert("MELT: removes RIGID", "RIGID" not in b6.get("tags"))
 	_assert("MELT: adds LIQUID", "LIQUID" in b6.get("tags"))
 	a6.free()
 	b6.free()
 
-	# --- ADD_TAG ---
+	# --- ADD_TAG (now one effect per tag) ---
 	var a7 = _make_mock_body("src7", [])
 	var b7 = _make_mock_body("tgt7", ["SOLID"])
 	root.add_child(a7)
 	root.add_child(b7)
-	ee.execute({"effects": [{"effect_type": "ADD_TAG", "target": "b", "tags_to_add": ["MAGNETIC", "GLOWING"], "message": ""}]}, a7, b7)
+	ee.execute({"effects": [
+		{"effect_type": "ADD_TAG", "target": "b", "tag": "MAGNETIC"},
+		{"effect_type": "ADD_TAG", "target": "b", "tag": "GLOWING", "message": ""},
+	]}, a7, b7)
 	_assert("ADD_TAG: MAGNETIC added", "MAGNETIC" in b7.get("tags"))
 	_assert("ADD_TAG: GLOWING added", "GLOWING" in b7.get("tags"))
 	a7.free()
 	b7.free()
 
-	# --- REMOVE_TAG ---
+	# --- REMOVE_TAG (now one effect per tag) ---
 	var a8 = _make_mock_body("src8", [])
 	var b8 = _make_mock_body("tgt8", ["MAGNETIC", "GLOWING"])
 	root.add_child(a8)
 	root.add_child(b8)
-	ee.execute({"effects": [{"effect_type": "REMOVE_TAG", "target": "b", "tags_to_remove": ["MAGNETIC", "GLOWING"], "message": ""}]}, a8, b8)
+	ee.execute({"effects": [
+		{"effect_type": "REMOVE_TAG", "target": "b", "tag": "MAGNETIC"},
+		{"effect_type": "REMOVE_TAG", "target": "b", "tag": "GLOWING", "message": ""},
+	]}, a8, b8)
 	_assert("REMOVE_TAG: MAGNETIC gone", "MAGNETIC" not in b8.get("tags"))
 	_assert("REMOVE_TAG: GLOWING gone", "GLOWING" not in b8.get("tags"))
 	a8.free()
 	b8.free()
 
-	# --- TRANSFORM ---
+	# --- TRANSFORM (decomposed: REMOVE_TAG + ADD_TAG) ---
 	var a9 = _make_mock_body("src9", [])
 	var b9 = _make_mock_body("tgt9", ["LIQUID"])
 	root.add_child(a9)
 	root.add_child(b9)
-	ee.execute({"effects": [{"effect_type": "TRANSFORM", "target": "b", "tags_to_add": ["FROZEN"], "tags_to_remove": ["LIQUID"], "message": ""}]}, a9, b9)
+	ee.execute({"effects": [
+		{"effect_type": "REMOVE_TAG", "target": "b", "tag": "LIQUID"},
+		{"effect_type": "ADD_TAG", "target": "b", "tag": "FROZEN", "message": ""},
+	]}, a9, b9)
 	_assert("TRANSFORM: FROZEN added", "FROZEN" in b9.get("tags"))
 	_assert("TRANSFORM: LIQUID removed", "LIQUID" not in b9.get("tags"))
 	a9.free()
 	b9.free()
 
-	# --- ELECTRIFY ---
+	# --- ELECTRIFY (decomposed: DAMAGE + ADD_TAG) ---
 	var a10 = _make_mock_body("src10", ["ELECTRIC"])
 	var b10 = _make_mock_body("tgt10", ["CONDUCTING"])
 	root.add_child(a10)
 	root.add_child(b10)
-	ee.execute({"effects": [{"effect_type": "ELECTRIFY", "target": "b", "damage_amount": 30.0, "message": ""}]}, a10, b10)
+	ee.execute({"effects": [
+		{"effect_type": "DAMAGE", "target": "b", "damage_amount": 30.0},
+		{"effect_type": "ADD_TAG", "target": "b", "tag": "ELECTRIC", "message": ""},
+	]}, a10, b10)
 	_assert("ELECTRIFY: damage applied", b10.get("damage_log").size() == 1)
+	_assert("ELECTRIFY: ELECTRIC tag added", "ELECTRIC" in b10.get("tags"))
 	a10.free()
 	b10.free()
 
@@ -674,12 +713,16 @@ func _test_collision_resolver() -> void:
 	_collision_resolver.add_child(ee)
 	_collision_resolver.set("_effect_executor", ee)
 
-	# Load rules for collision tests
+	# Load rules for collision tests (primitive effects)
 	_rule_engine.load_rules([{
 		"rule_id": "test_fire",
 		"tags_required_a": ["HEAT_SOURCE"],
 		"tags_required_b": ["FLAMMABLE"],
-		"effects": [{"effect_type": "IGNITE", "target": "b", "message": "burns"}],
+		"effects": [
+			{"effect_type": "ADD_TAG", "target": "b", "tag": "HEAT_SOURCE"},
+			{"effect_type": "ADD_TAG", "target": "b", "tag": "HOT"},
+			{"effect_type": "DAMAGE", "target": "b", "damage_amount": 10.0, "tick_interval": 1.0, "tick_duration": 5.0, "message": "burns"},
+		],
 		"priority": 5,
 		"bidirectional": false,
 		"cascade_eligible": false,
@@ -692,8 +735,8 @@ func _test_collision_resolver() -> void:
 	root.add_child(body_a)
 	root.add_child(body_b)
 	_collision_resolver.resolve_collision(body_a, body_b)
-	_assert("collision: IGNITE adds HEAT_SOURCE", "HEAT_SOURCE" in body_b.get("tags"))
-	_assert("collision: IGNITE adds HOT", "HOT" in body_b.get("tags"))
+	_assert("collision: adds HEAT_SOURCE", "HEAT_SOURCE" in body_b.get("tags"))
+	_assert("collision: adds HOT", "HOT" in body_b.get("tags"))
 
 	# Cooldown blocks re-execution
 	body_b.remove_tag("HEAT_SOURCE")

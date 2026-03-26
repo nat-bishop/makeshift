@@ -13,7 +13,7 @@ logger = structlog.get_logger()
 
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
-_RULES_JSON = [r.model_dump(mode="json") for r in ALL_RULES]
+_RULES_JSON = [r.model_dump(mode="json", exclude_none=True) for r in ALL_RULES]
 
 
 class CreateSessionResponse(BaseModel):

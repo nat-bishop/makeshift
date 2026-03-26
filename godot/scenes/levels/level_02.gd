@@ -110,5 +110,5 @@ func _create_lava_zone(pos: Vector2, size: Vector2) -> void:
 func _on_lava_entered(body: Node2D) -> void:
 	if _is_player(body):
 		_respawn_player(body)
-	elif body.has_method("take_damage"):
-		body.take_damage(999.0)
+	else:
+		WorldMutations.apply_damage(body, 999.0)

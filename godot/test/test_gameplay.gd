@@ -134,7 +134,9 @@ func _load_production_rules() -> void:
 			"tags_required_a": ["HEAT_SOURCE"],
 			"tags_required_b": ["FLAMMABLE"],
 			"effects": [
-				{"effect_type": "IGNITE", "target": "b", "damage_amount": 10.0, "message": "catches fire!"},
+				{"effect_type": "ADD_TAG", "target": "b", "tag": "HEAT_SOURCE"},
+				{"effect_type": "ADD_TAG", "target": "b", "tag": "HOT"},
+				{"effect_type": "DAMAGE", "target": "b", "damage_amount": 10.0, "tick_interval": 1.0, "tick_duration": 5.0, "message": "catches fire!"},
 			],
 			"priority": 5,
 			"bidirectional": true,
@@ -145,7 +147,9 @@ func _load_production_rules() -> void:
 			"tags_required_a": ["COLD"],
 			"tags_required_b": ["LIQUID"],
 			"effects": [
-				{"effect_type": "FREEZE", "target": "b", "message": "freezes solid"},
+				{"effect_type": "ADD_TAG", "target": "b", "tag": "FROZEN"},
+				{"effect_type": "ADD_TAG", "target": "b", "tag": "RIGID"},
+				{"effect_type": "REMOVE_TAG", "target": "b", "tag": "LIQUID", "message": "freezes solid"},
 			],
 			"priority": 4,
 			"bidirectional": true,
@@ -167,7 +171,8 @@ func _load_production_rules() -> void:
 			"tags_required_a": ["LIQUID"],
 			"tags_required_b": ["HEAT_SOURCE"],
 			"effects": [
-				{"effect_type": "EXTINGUISH", "target": "b", "message": "extinguished!"},
+				{"effect_type": "REMOVE_TAG", "target": "b", "tag": "HEAT_SOURCE"},
+				{"effect_type": "REMOVE_TAG", "target": "b", "tag": "HOT", "message": "extinguished!"},
 			],
 			"priority": 6,
 			"bidirectional": true,

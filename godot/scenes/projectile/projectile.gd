@@ -75,9 +75,8 @@ func _on_body_entered(body: Node) -> void:
 	_has_hit = true
 
 	# Deal damage
-	if body.has_method("take_damage"):
-		body.take_damage(_damage)
-		Log.debug("Projectile: Hit '%s' for %.0f damage" % [body.name, _damage])
+	WorldMutations.apply_damage(body, _damage)
+	Log.debug("Projectile: Hit '%s' for %.0f damage" % [body.name, _damage])
 
 	# Let rule engine handle tag interactions (e.g., HOT projectile ignites FLAMMABLE)
 	if body.has_method("get_tags"):

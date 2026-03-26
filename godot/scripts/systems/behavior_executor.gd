@@ -161,7 +161,7 @@ func _execute_behavior(behavior_index: int, pre_resolved_target: Node = null) ->
 		"PATROL":
 			_apply_patrol(b.get("speed", "MEDIUM"))
 		"DEAL_DAMAGE":
-			success = _call_target_method(target, "take_damage", b.get("intensity", "MEDIUM"), BehaviorMaps.INTENSITY_DAMAGE)
+			success = _apply_damage(target, b.get("intensity", "MEDIUM"))
 		"APPLY_FORCE":
 			success = _apply_force(target, b.get("intensity", "MEDIUM"), false)
 		"ATTRACT":
@@ -171,13 +171,13 @@ func _execute_behavior(behavior_index: int, pre_resolved_target: Node = null) ->
 		"EXPLODE":
 			_apply_explode(b.get("range", "MEDIUM"), b.get("intensity", "MEDIUM"))
 		"HEAL":
-			success = _call_target_method(target, "heal", b.get("intensity", "MEDIUM"), BehaviorMaps.INTENSITY_HEAL)
+			success = _apply_heal(target, b.get("intensity", "MEDIUM"))
 		"ADD_TAGS":
 			success = _apply_tags(target, b.get("tags_to_apply", []), true)
 		"REMOVE_TAGS":
 			success = _apply_tags(target, b.get("tags_to_apply", []), false)
 		"SELF_DESTRUCT":
-			_owner_body.take_damage(99999.0)
+			WorldMutations.apply_damage(_owner_body, 99999.0)
 		_:
 			Log.debug("BehaviorExecutor: Unknown action '%s'" % action)
 			success = false
@@ -285,12 +285,17 @@ func _emit_message(behavior: Dictionary) -> void:
 
 # --- Action implementations ---
 
-func _call_target_method(target: Node, method: String, intensity: String, table: Dictionary) -> bool:
+func _apply_damage(target: Node, intensity: String) -> bool:
 	if target == null or not is_instance_valid(target):
 		return false
-	if not target.has_method(method):
+	WorldMutations.apply_damage(target, BehaviorMaps.INTENSITY_DAMAGE.get(intensity, 20.0))
+	return true
+
+
+func _apply_heal(target: Node, intensity: String) -> bool:
+	if target == null or not is_instance_valid(target):
 		return false
-	target.call(method, table.get(intensity, 20.0))
+	WorldMutations.apply_heal(target, BehaviorMaps.INTENSITY_HEAL.get(intensity, 25.0))
 	return true
 
 
@@ -334,7 +339,7 @@ func _apply_force(target: Node, intensity: String, attract: bool) -> bool:
 	if attract:
 		direction = -direction
 	var magnitude: float = BehaviorMaps.INTENSITY_FORCE.get(intensity, 200.0)
-	target.apply_central_impulse(direction * magnitude)
+	WorldMutations.apply_impulse(target, direction, magnitude)
 	return true
 
 
@@ -381,11 +386,10 @@ func _apply_explode(range_tier: String, intensity: String) -> void:
 		var body: Node = result.get("collider", null)
 		if body == null or body == _owner_body or not is_instance_valid(body):
 			continue
-		if body.has_method("take_damage"):
-			body.take_damage(damage)
-		if body is RigidBody2D and body is Node2D:
+		WorldMutations.apply_damage(body, damage)
+		if body is Node2D:
 			var dir: Vector2 = (body.global_position - _owner_body.global_position).normalized()
-			body.apply_central_impulse(dir * force)
+			WorldMutations.apply_impulse(body, dir, force)
 
 	Log.info("BehaviorExecutor: EXPLODE radius=%.0f damage=%.0f on '%s'" % [
 		radius, damage, _owner_body.blueprint.get("name", "?")])
@@ -398,15 +402,11 @@ func _apply_tags(target: Node, tags_list, add: bool) -> bool:
 		return false
 
 	if add:
-		if not target.has_method("add_tag"):
-			return false
 		for tag in tags_list:
-			target.add_tag(tag, BehaviorMaps.BEHAVIOR_TAG_DURATION)
+			WorldMutations.apply_add_tag(target, tag, BehaviorMaps.BEHAVIOR_TAG_DURATION)
 	else:
-		if not target.has_method("remove_tag"):
-			return false
 		for tag in tags_list:
-			target.remove_tag(tag)
+			WorldMutations.apply_remove_tag(target, tag)
 
 	# Trigger cascade after tag mutation
 	if target.has_method("get_cascade_neighbors"):

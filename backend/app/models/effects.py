@@ -7,17 +7,10 @@ from app.models.tags import Tag
 
 class EffectType(StrEnum):
     DAMAGE = "DAMAGE"
-    DESTROY = "DESTROY"
-    IGNITE = "IGNITE"
-    EXTINGUISH = "EXTINGUISH"
-    FREEZE = "FREEZE"
-    MELT = "MELT"
-    TRANSFORM = "TRANSFORM"
-    APPLY_FORCE = "APPLY_FORCE"
-    CORRODE = "CORRODE"
-    ELECTRIFY = "ELECTRIFY"
+    HEAL = "HEAL"
     ADD_TAG = "ADD_TAG"
     REMOVE_TAG = "REMOVE_TAG"
+    APPLY_FORCE = "APPLY_FORCE"
 
 
 class EffectTarget(StrEnum):
@@ -29,8 +22,13 @@ class EffectTarget(StrEnum):
 class Effect(BaseModel):
     effect_type: EffectType
     target: EffectTarget
+    message: str = ""
+    # DAMAGE / HEAL parameters (effect_type distinguishes intent)
     damage_amount: float | None = None
-    tags_to_add: list[Tag] | None = None
-    tags_to_remove: list[Tag] | None = None
+    tick_interval: float | None = None  # If > 0, DAMAGE becomes DOT
+    tick_duration: float | None = None
+    # ADD_TAG / REMOVE_TAG parameters
+    tag: Tag | None = None
+    tag_duration: float | None = None  # only with ADD_TAG; 0.0 = permanent
+    # APPLY_FORCE parameters
     force_magnitude: float | None = None
-    message: str

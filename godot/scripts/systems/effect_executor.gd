@@ -2,6 +2,7 @@ extends Node
 
 # Applies rule effects to game objects.
 # Called by CollisionResolver for each matched rule.
+# All effects are expressed as 5 primitives: DAMAGE, HEAL, ADD_TAG, REMOVE_TAG, APPLY_FORCE.
 
 
 ## Duration (seconds) for tags added during cascade propagation (depth > 0).
@@ -38,78 +39,45 @@ func _apply_effect(effect_type: String, effect: Dictionary, target: Node, body_a
 	match effect_type:
 		"DAMAGE":
 			var amount: float = effect.get("damage_amount", 0.0)
-			if target.has_method("take_damage"):
+			var tick_interval: float = effect.get("tick_interval", 0.0)
+			var tick_dur: float = effect.get("tick_duration", 0.0)
+			if tick_interval > 0.0 and tick_dur > 0.0:
+				Log.debug("EffectExecutor: DOT %.0f on %s (every %.1fs for %.1fs)" % [amount, target.name, tick_interval, tick_dur])
+				WorldMutations.apply_dot(target, amount, tick_interval, tick_dur)
+			else:
 				Log.debug("EffectExecutor: DAMAGE %.0f on %s" % [amount, target.name])
-				target.take_damage(amount)
+				WorldMutations.apply_damage(target, amount)
 
-		"DESTROY":
-			if target.has_method("take_damage"):
-				Log.debug("EffectExecutor: DESTROY on %s" % target.name)
-				target.take_damage(99999.0)
+		"HEAL":
+			var amount: float = effect.get("damage_amount", 0.0)
+			Log.debug("EffectExecutor: HEAL %.0f on %s" % [amount, target.name])
+			WorldMutations.apply_heal(target, amount)
 
-		"IGNITE":
-			Log.debug("EffectExecutor: IGNITE on %s" % target.name)
-			if target.has_method("add_tag"):
-				target.add_tag("HEAT_SOURCE", tag_duration)
-				target.add_tag("HOT", tag_duration)
-			_apply_dot(target, effect.get("damage_amount", 10.0), 1.0, 5.0)
+		"ADD_TAG":
+			var tag: String = effect.get("tag", "")
+			if tag != "":
+				var dur: float = tag_duration
+				var effect_dur: float = effect.get("tag_duration", 0.0)
+				if effect_dur > 0.0:
+					dur = maxf(effect_dur, tag_duration)
+				Log.debug("EffectExecutor: ADD_TAG %s on %s%s" % [tag, target.name, " (%.1fs)" % dur if dur > 0.0 else ""])
+				WorldMutations.apply_add_tag(target, tag, dur)
 
-		"EXTINGUISH":
-			Log.debug("EffectExecutor: EXTINGUISH on %s" % target.name)
-			if target.has_method("remove_tag"):
-				target.remove_tag("HEAT_SOURCE")
-				target.remove_tag("HOT")
-
-		"FREEZE":
-			Log.debug("EffectExecutor: FREEZE on %s" % target.name)
-			if target.has_method("add_tag") and target.has_method("remove_tag"):
-				target.add_tag("FROZEN", tag_duration)
-				target.add_tag("RIGID", tag_duration)
-				target.remove_tag("LIQUID")
-
-		"MELT":
-			Log.debug("EffectExecutor: MELT on %s" % target.name)
-			if target.has_method("remove_tag") and target.has_method("add_tag"):
-				target.remove_tag("FROZEN")
-				target.remove_tag("RIGID")
-				target.add_tag("LIQUID", tag_duration)
+		"REMOVE_TAG":
+			var tag: String = effect.get("tag", "")
+			if tag != "":
+				Log.debug("EffectExecutor: REMOVE_TAG %s on %s" % [tag, target.name])
+				WorldMutations.apply_remove_tag(target, tag)
 
 		"APPLY_FORCE":
 			var magnitude: float = effect.get("force_magnitude", 100.0)
-			_apply_impulse(target, body_a, body_b, magnitude)
+			var source: Node = body_b if target == body_a else body_a
+			var direction: Vector2 = Vector2.ZERO
+			if source is Node2D and target is Node2D:
+				direction = (target.global_position - source.global_position).normalized()
+			Log.debug("EffectExecutor: APPLY_FORCE %.0f on %s" % [magnitude, target.name])
+			WorldMutations.apply_impulse(target, direction, magnitude)
 
-		"ADD_TAG":
-			var tags_to_add: Array = effect.get("tags_to_add", [])
-			if target.has_method("add_tag"):
-				for tag in tags_to_add:
-					target.add_tag(tag, tag_duration)
-
-		"REMOVE_TAG":
-			var tags_to_remove: Array = effect.get("tags_to_remove", [])
-			if target.has_method("remove_tag"):
-				for tag in tags_to_remove:
-					target.remove_tag(tag)
-
-		"CORRODE":
-			Log.debug("EffectExecutor: CORRODE on %s (%.0f dmg)" % [target.name, effect.get("damage_amount", 15.0)])
-			var amount: float = effect.get("damage_amount", 15.0)
-			_apply_dot(target, amount, 1.0, 3.0)
-
-		"ELECTRIFY":
-			var amount: float = effect.get("damage_amount", 30.0)
-			Log.debug("EffectExecutor: ELECTRIFY %.0f on %s" % [amount, target.name])
-			if target.has_method("take_damage"):
-				target.take_damage(amount)
-
-		"TRANSFORM":
-			var tags_to_add: Array = effect.get("tags_to_add", [])
-			var tags_to_remove: Array = effect.get("tags_to_remove", [])
-			if target.has_method("add_tag"):
-				for tag in tags_to_add:
-					target.add_tag(tag, tag_duration)
-			if target.has_method("remove_tag"):
-				for tag in tags_to_remove:
-					target.remove_tag(tag)
 		_:
 			Log.warn("EffectExecutor: Unknown effect type '%s'" % effect_type)
 
@@ -142,39 +110,3 @@ func _get_collision_position(body_a: Node, body_b: Node) -> Vector2:
 	if body_a is Node2D and body_b is Node2D:
 		return (body_a.global_position + body_b.global_position) / 2.0
 	return Vector2.ZERO
-
-
-func _apply_impulse(target: Node, body_a: Node, body_b: Node, magnitude: float) -> void:
-	if target is not RigidBody2D:
-		return
-	var source: Node = body_b if target == body_a else body_a
-	if source is Node2D and target is Node2D:
-		var direction: Vector2 = (target.global_position - source.global_position).normalized()
-		target.apply_central_impulse(direction * magnitude)
-
-
-func _apply_dot(target: Node, damage_per_tick: float, tick_interval: float, duration: float) -> void:
-	if not target.has_method("take_damage"):
-		return
-	Log.debug("EffectExecutor: DOT on %s (%.1f dmg every %.1fs for %.1fs)" % [target.name, damage_per_tick, tick_interval, duration])
-	var timer := Timer.new()
-	timer.wait_time = tick_interval
-	timer.one_shot = false
-	target.add_child(timer)
-
-	var state := [int(duration / tick_interval)]  # Array wrapper: GDScript lambdas capture primitives by value, so an int can't be mutated across calls
-	timer.timeout.connect(func():
-		if not is_instance_valid(timer):
-			return
-		if not is_instance_valid(target):
-			timer.queue_free()
-			return
-		if state[0] <= 0:
-			timer.queue_free()
-			return
-		state[0] -= 1
-		target.take_damage(damage_per_tick)
-	)
-	timer.start()
-
-
