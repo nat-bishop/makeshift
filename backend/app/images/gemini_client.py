@@ -42,26 +42,32 @@ async def generate_image(prompt: str) -> bytes:
     Uses the native async API. Limits concurrency with a semaphore
     and enforces a timeout.
     """
+    from google.genai import errors as genai_errors
     from google.genai import types
 
     logger.info("gemini_generate_start", prompt_len=len(prompt))
     client = _get_client()
 
-    async with _semaphore:
-        response = await asyncio.wait_for(
-            client.aio.models.generate_content(
-                model=settings.image_model,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_modalities=["IMAGE"],
-                    image_config=types.ImageConfig(
-                        image_size="1K",
-                        aspect_ratio="1:1",
+    try:
+        async with _semaphore:
+            response = await asyncio.wait_for(
+                client.aio.models.generate_content(
+                    model=settings.image_model,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        response_modalities=["IMAGE"],
+                        image_config=types.ImageConfig(
+                            image_size="512",
+                            aspect_ratio="1:1",
+                        ),
                     ),
                 ),
-            ),
-            timeout=settings.image_timeout_seconds,
-        )
+                timeout=settings.image_timeout_seconds,
+            )
+    except genai_errors.APIError as exc:
+        raise RuntimeError(
+            f"Gemini API {exc.code} for model '{settings.image_model}': {exc.message or exc.status}"
+        ) from None
 
     if response.parts is None:
         reason = "unknown"

@@ -108,11 +108,11 @@ async def _generate_and_deliver_sprite(
             return
 
         await send_sprite_ready(session_id, object_id, result.sprite_url)
-    except Exception:
+    except Exception as exc:
         logger.error(
             "sprite_delivery_failed",
             object_id=object_id,
-            exc_info=True,
+            error=str(exc),
         )
         try:
             await send_sprite_failed(session_id, object_id, "generation_exception")

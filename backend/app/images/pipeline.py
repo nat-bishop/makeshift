@@ -181,9 +181,8 @@ async def generate_sprite(
     try:
         final_bytes = await _generate_static_sprite(prompt, remove_bg)
 
-        if settings.sprite_cache_enabled:
-            cache_path.parent.mkdir(parents=True, exist_ok=True)
-            cache_path.write_bytes(final_bytes)
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        cache_path.write_bytes(final_bytes)
 
         logger.info(
             "sprite_generated",
