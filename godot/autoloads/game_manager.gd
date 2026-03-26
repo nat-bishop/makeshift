@@ -4,6 +4,7 @@ enum GameState { MENU, PLAYING, PAUSED }
 
 var current_state: GameState = GameState.MENU
 var current_level: int = 0
+var debug_mode: bool = false
 
 const LEVEL_SCENES: Array[String] = [
 	"res://scenes/levels/level_01.tscn",
@@ -16,6 +17,13 @@ const GAME_SCENE: String = "res://scenes/game/game.tscn"
 
 func _ready() -> void:
 	EventBus.level_completed.connect(_on_level_completed)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("toggle_debug"):
+		debug_mode = !debug_mode
+		EventBus.debug_toggled.emit(debug_mode)
+		Log.debug("GameManager: Debug mode %s" % ("ON" if debug_mode else "OFF"))
 
 
 func change_scene_to_file(path: String) -> void:

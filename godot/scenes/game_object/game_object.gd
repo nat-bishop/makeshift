@@ -49,6 +49,13 @@ func init_from_blueprint(bp: Dictionary) -> void:
 		add_child(_behavior_executor)
 		_behavior_executor.init_behaviors(behaviors, self)
 
+	# Debug label for overlay
+	var debug_label_script: GDScript = preload("res://scripts/ui/debug_label.gd")
+	var debug_label := Label.new()
+	debug_label.set_script(debug_label_script)
+	add_child(debug_label)
+	debug_label.init(self)
+
 	Log.info("GameObject: Initialized '%s' (id=%s) with %d tags, %d behaviors, durability=%d" % [bp.get("name", "?"), object_id, tags.size(), behaviors.size(), current_durability])
 
 
