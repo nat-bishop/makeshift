@@ -7,7 +7,6 @@ from pydantic import BaseModel
 from app.config import settings
 from app.engine.rules_data import ALL_RULES
 from app.models.session import WorldObject
-from app.seed.objects import SEED_OBJECTS
 from app.sessions.manager import SessionManager
 
 logger = structlog.get_logger()
@@ -21,7 +20,6 @@ class CreateSessionResponse(BaseModel):
     session_id: str
     created_at: str
     budget_remaining: float
-    seed_objects: list[dict]
     rules: list[dict]
     ws_url: str
 
@@ -45,10 +43,6 @@ async def create_session(request: Request) -> CreateSessionResponse:
     session = await manager.create_session()
     logger.info("session_created", session_id=session.id, budget=session.budget_remaining)
 
-    # Seed objects into the session
-    await manager.save_objects_batch(session.id, SEED_OBJECTS)
-    seed_blueprints = [bp.model_dump(mode="json") for bp in SEED_OBJECTS]
-
     host = request.headers.get("host", f"{settings.host}:{settings.port}")
     ws_url = f"ws://{host}/ws/{session.id}"
 
@@ -56,7 +50,6 @@ async def create_session(request: Request) -> CreateSessionResponse:
         session_id=session.id,
         created_at=session.created_at,
         budget_remaining=session.budget_remaining,
-        seed_objects=seed_blueprints,
         rules=_RULES_JSON,
         ws_url=ws_url,
     )

@@ -79,7 +79,6 @@ async def test_create_session(client: AsyncClient) -> None:
     assert resp.status_code == 200
     data = resp.json()
     assert "session_id" in data
-    assert len(data["seed_objects"]) == 15
     assert isinstance(data["rules"], list)
     assert len(data["rules"]) > 0
     assert data["ws_url"].startswith("ws://")

@@ -35,7 +35,7 @@ uv run pytest -k "test_name"              # single test by name
 
 - **Image pipeline** (`images/pipeline.py`, `images/flux_client.py`): Cache-first. Flux Pro v1.1 (`fal-ai/flux-pro/v1.1`) → bg removal (local rembg or cloud birefnet) → resize by size_category → cache by SHA-256 hash of the Flux prompt.
 
-- **Session persistence** (`sessions/manager.py`): aiosqlite, 2 tables (sessions, objects). 15 seed objects per session. Budget: $1.00 at $0.041/object.
+- **Session persistence** (`sessions/manager.py`): aiosqlite, 2 tables (sessions, objects). Budget: $1.00 at $0.041/object.
 
 - **WebSocket** (`ws/handler.py`): Per-session multi-client broadcast. Messages: sprite_ready, sprite_failed, error, ping/pong.
 
@@ -56,7 +56,7 @@ Key systems: `EffectExecutor` (12 effect types including DOT), `PhysicsApplicato
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| POST | `/api/sessions` | Create session (returns seed objects, rules, ws_url) |
+| POST | `/api/sessions` | Create session (returns rules, ws_url) |
 | GET | `/api/sessions/{id}` | Restore session |
 | PUT | `/api/sessions/{id}/sync` | Batch state sync from client |
 | POST | `/api/sessions/{id}/objects` | Create object from description |
