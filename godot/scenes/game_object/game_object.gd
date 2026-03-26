@@ -79,7 +79,7 @@ func take_damage(amount: float, element_color: Color = Color.WHITE) -> void:
 	if current_durability <= 0:
 		if _behavior_executor != null:
 			_behavior_executor.fire_trigger("ON_DESTROY")
-		Log.info("GameObject: '%s' (id=%s) destroyed" % [blueprint.get("name", "?"), object_id])
+		Log.info("GameObject: '%s' (id=%s) destroyed, final durability=%d" % [blueprint.get("name", "?"), object_id, current_durability])
 		queue_free()
 		return
 
@@ -114,10 +114,12 @@ func add_tag(tag: String, duration: float = 0.0) -> void:
 		var timer := Timer.new()
 		timer.wait_time = duration
 		timer.one_shot = true
-		timer.timeout.connect(remove_tag.bind(tag))
+		timer.timeout.connect(_on_decay_timer_expired.bind(tag))
 		add_child(timer)
 		timer.start()
 		_decay_timers[tag] = timer
+	if is_new:
+		Log.debug("GameObject: '%s' tags now: %s" % [blueprint.get("name", object_id), tags])
 
 
 func remove_tag(tag: String) -> void:
@@ -126,8 +128,14 @@ func remove_tag(tag: String) -> void:
 		return
 	Log.debug("GameObject: '%s' -tag %s" % [blueprint.get("name", object_id), tag])
 	tags.erase(tag)
+	Log.debug("GameObject: '%s' tags now: %s" % [blueprint.get("name", object_id), tags])
 	_reapply_physics()
 	object_visual.refresh_tag_visuals(tags)
+
+
+func _on_decay_timer_expired(tag: String) -> void:
+	Log.debug("GameObject: Decay timer expired for tag '%s' on '%s'" % [tag, blueprint.get("name", object_id)])
+	remove_tag(tag)
 
 
 func _cancel_decay_timer(tag: String) -> void:

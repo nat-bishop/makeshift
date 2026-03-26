@@ -45,6 +45,7 @@ func set_object_id(id: String) -> void:
 
 func set_sprite(texture: Texture2D) -> void:
 	if _sprite_applied:
+		Log.debug("ObjectVisual: Sprite already applied for %s, ignoring duplicate" % _object_id)
 		return
 	_sprite_applied = true
 
@@ -57,6 +58,7 @@ func set_sprite(texture: Texture2D) -> void:
 	var tex_size: float = texture.get_width()
 	_sprite.scale = Vector2.ONE * (world_size / tex_size)
 	_sprite.texture = texture
+	Log.debug("ObjectVisual: Sprite applied for %s (size=%s, scale=%.2f)" % [_object_id, size_category, _sprite.scale.x])
 
 	# Update collision shape to match sprite's opaque region
 	if parent.has_node("PhysicsApplicator"):
