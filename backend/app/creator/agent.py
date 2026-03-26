@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import time
 import uuid
+from typing import TYPE_CHECKING
 
 import structlog
 from pydantic_ai import Agent
-from pydantic_ai.models import Model
 
 from app.config import settings
+
+if TYPE_CHECKING:
+    from pydantic_ai.models import Model
 from app.models.blueprint import CreatorOutput, GameObjectBlueprint, VisualDescriptor
 from app.models.tags import Tag
 
@@ -218,8 +221,8 @@ Budget: tags 5+1+1=7/10, behaviors 5/8. Sits inert until fire adds HOT tag → e
 _agent: Agent[None, CreatorOutput] | None = None
 
 
-def _build_model() -> Model:
-    """Route to local SGLang (OpenAI-compatible) or Google based on LOCAL_LLM_URL."""
+def _build_model() -> Model | str:
+    """Route to local SGLang (OpenAI-compatible) or cloud based on LOCAL_LLM_URL."""
     if settings.local_llm_url:
         from pydantic_ai.models.openai import OpenAIChatModel
         from pydantic_ai.providers.openai import OpenAIProvider
@@ -231,29 +234,26 @@ def _build_model() -> Model:
         logger.info("llm_model_built", model=settings.llm_model, base_url=settings.local_llm_url)
         return model
 
-    from pydantic_ai.models.google import GoogleModel
-    from pydantic_ai.providers.google import GoogleProvider
-
-    logger.info("llm_model_built", model=settings.llm_model, provider="google")
-    return GoogleModel(
-        settings.llm_model.removeprefix("google-gla:"),
-        provider=GoogleProvider(api_key=settings.google_api_key),
-    )
+    logger.info("llm_model_built", model=settings.llm_model)
+    return settings.llm_model
 
 
 def _get_agent() -> Agent[None, CreatorOutput]:
     global _agent
-    if _agent is None:
-        _agent = Agent(
-            _build_model(),
-            output_type=CreatorOutput,
-            retries=3,
-            system_prompt=SYSTEM_PROMPT,
-            model_settings={
-                "timeout": settings.llm_timeout_seconds,
-                "temperature": settings.llm_temperature,
-            },
-        )
+    if _agent is not None:
+        logger.debug("agent_cached")
+        return _agent
+    _agent = Agent(
+        _build_model(),
+        output_type=CreatorOutput,
+        retries=3,
+        system_prompt=SYSTEM_PROMPT,
+        model_settings={
+            "timeout": settings.llm_timeout_seconds,
+            "temperature": settings.llm_temperature,
+        },
+    )
+    logger.info("agent_created", model=settings.llm_model)
     return _agent
 
 

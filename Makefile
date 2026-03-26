@@ -39,12 +39,13 @@ check: lint typecheck test ## Run all checks
 clear-sprites: ## Delete all cached sprites
 	rm -f backend/static/sprites/*.png
 
-SGLANG_LLM_CONFIG ?= services/sglang/llm-config.yaml
-SGLANG_LLM_PID = .sglang-llm.pid
-
-serve-llm: ## Start SGLang LLM server
-	SGLANG_ENABLE_JIT_DEEPGEMM=0 sglang serve --config $(SGLANG_LLM_CONFIG) & echo $$! > $(SGLANG_LLM_PID)
-	@echo "SGLang LLM starting. Run 'make wait-llm' to wait for ready."
+serve-llm: ## Start SGLang LLM server (runs in WSL2, blocks terminal)
+	wsl -d Ubuntu-24.04 -u root -- /bin/bash -c '\
+		export COLUMNS=80 LINES=24 SGLANG_ENABLE_JIT_DEEPGEMM=0; \
+		/opt/sglang/bin/python -m sglang.launch_server \
+			--model-path Qwen/Qwen3.5-7B \
+			--port 5200 \
+			--mem-fraction-static 0.40'
 
 wait-llm: ## Wait for SGLang LLM to be ready
 	@echo "Waiting for SGLang LLM..."
@@ -52,7 +53,7 @@ wait-llm: ## Wait for SGLang LLM to be ready
 	@echo "SGLang LLM ready"
 
 stop-llm: ## Stop SGLang LLM server
-	@if [ -f $(SGLANG_LLM_PID) ]; then kill $$(cat $(SGLANG_LLM_PID)) 2>/dev/null; rm -f $(SGLANG_LLM_PID); fi
+	@wsl -d Ubuntu-24.04 -u root -- /bin/bash -c 'pkill -f "sglang.launch_server.*5200" 2>/dev/null' || true
 	@echo "SGLang LLM stopped"
 
 down: ## Stop the backend server
