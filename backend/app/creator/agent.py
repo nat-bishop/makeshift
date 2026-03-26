@@ -221,22 +221,25 @@ _agent: Agent[None, CreatorOutput] | None = None
 
 def _get_agent() -> Agent[None, CreatorOutput]:
     global _agent
-    if _agent is None:
-        provider = GoogleProvider(api_key=settings.google_api_key)
-        model = GoogleModel(
-            settings.llm_model.removeprefix("google-gla:"),
-            provider=provider,
-        )
-        _agent = Agent(
-            model,
-            output_type=CreatorOutput,
-            retries=3,
-            system_prompt=SYSTEM_PROMPT,
-            model_settings={
-                "timeout": settings.llm_timeout_seconds,
-                "temperature": settings.llm_temperature,
-            },
-        )
+    if _agent is not None:
+        logger.debug("agent_cached")
+        return _agent
+    provider = GoogleProvider(api_key=settings.google_api_key)
+    model = GoogleModel(
+        settings.llm_model.removeprefix("google-gla:"),
+        provider=provider,
+    )
+    _agent = Agent(
+        model,
+        output_type=CreatorOutput,
+        retries=3,
+        system_prompt=SYSTEM_PROMPT,
+        model_settings={
+            "timeout": settings.llm_timeout_seconds,
+            "temperature": settings.llm_temperature,
+        },
+    )
+    logger.info("agent_created", model=settings.llm_model)
     return _agent
 
 
@@ -252,10 +255,12 @@ async def create_object(description: str) -> GameObjectBlueprint:
         agent = _get_agent()
         result = await agent.run(f"Create a game object for: {description}")
         creator_output = result.output
+        elapsed = time.monotonic() - t0
         logger.info(
             "llm_create_success",
             object_name=creator_output.name,
             tag_count=len(creator_output.tags),
+            elapsed=round(elapsed, 2),
         )
     except Exception as e:
         elapsed = time.monotonic() - t0
@@ -286,5 +291,12 @@ async def create_object(description: str) -> GameObjectBlueprint:
         tags=creator_output.tags,
         behaviors=creator_output.behaviors,
         visual_descriptor=creator_output.visual_descriptor,
+    )
+    logger.debug(
+        "blueprint_created",
+        object_id=blueprint.id,
+        power_cost=blueprint.power_cost,
+        behavior_cost=blueprint.behavior_cost,
+        starting_durability=blueprint.starting_durability,
     )
     return blueprint
