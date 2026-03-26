@@ -127,10 +127,10 @@ func _try_execute(behavior_index: int, pre_resolved_target: Node = null) -> bool
 	var trigger: String = b.get("trigger", "")
 	var action: String = b.get("action", "")
 
-	# Continuous actions (movement) skip cooldown — they need per-frame force
-	# application and are self-limiting via max_speed.
+	# Movement actions skip cooldown — apply_central_force needs per-frame
+	# application and is self-limiting via max_speed.
 	var skip_cooldown: bool = (
-		action in BehaviorMaps.CONTINUOUS_ACTIONS
+		action in BehaviorMaps.MOVEMENT_ACTIONS
 		or trigger == "ALWAYS"
 		or trigger == "ON_CREATE"
 		or trigger == "ON_DESTROY"
@@ -145,18 +145,19 @@ func _try_execute(behavior_index: int, pre_resolved_target: Node = null) -> bool
 				return false
 		_cooldowns[behavior_index] = now
 
-	return _execute_behavior(behavior_index, pre_resolved_target)
+	return _execute_behavior(behavior_index, pre_resolved_target, action)
 
 
-func _execute_behavior(behavior_index: int, pre_resolved_target: Node = null) -> bool:
+func _execute_behavior(behavior_index: int, pre_resolved_target: Node = null, action: String = "") -> bool:
 	var b: Dictionary = _behaviors[behavior_index]
+	if action.is_empty():
+		action = b.get("action", "")
 
 	# Use pre-resolved target if provided, otherwise resolve fresh
 	var target: Node = pre_resolved_target if pre_resolved_target != null else _resolve_target(behavior_index, null)
 
 	# Null target for actions that require one is normal (target died, not spawned yet).
 	# Return false without counting an error.
-	var action: String = b.get("action", "")
 	if action in _TARGET_REQUIRED_ACTIONS:
 		if target == null or not is_instance_valid(target):
 			return false
@@ -205,6 +206,7 @@ func _execute_behavior(behavior_index: int, pre_resolved_target: Node = null) ->
 			Log.info("BehaviorExecutor: Disabling behavior %d after %d errors on '%s'" % [
 				behavior_index, count, _owner_body.blueprint.get("name", "?")])
 			_disabled_behaviors[behavior_index] = true
+			_behavior_errors.erase(behavior_index)
 
 	return success
 

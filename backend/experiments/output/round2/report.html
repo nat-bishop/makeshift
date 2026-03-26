@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Round 2: Gemini Flash Sprite Sheets</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #111; color: #ddd; padding: 24px; }
+  h1 { margin-bottom: 4px; }
+  .summary { color: #999; margin-bottom: 24px; }
+  h2 { margin: 32px 0 12px; color: #fff; border-bottom: 1px solid #333; padding-bottom: 4px; }
+  .controls { margin: 12px 0 20px; display: flex; gap: 16px; align-items: center; }
+  .controls label { font-size: 13px; color: #999; }
+  .controls input { width: 100px; }
+  .controls span { font-size: 13px; color: #fff; min-width: 36px; }
+  .row { display: flex; flex-wrap: wrap; gap: 16px; }
+  .card { background: #1a1a1a; border: 1px solid #333; border-radius: 8px;
+           padding: 12px; width: 220px; }
+  .card-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .card-meta { font-size: 11px; color: #666; margin-bottom: 8px; }
+  canvas.anim { display: block; margin: 0 auto 8px; image-rendering: pixelated;
+                 border: 1px solid #333; cursor: pointer; }
+  .sheet { width: 100%; border: 1px solid #222; margin-top: 4px; }
+  .error-card { border-color: #633; }
+  .error-msg { color: #c44; font-size: 12px; }
+  details { margin-top: 8px; }
+  summary { font-size: 11px; color: #888; cursor: pointer; }
+  code { font-size: 10px; color: #8f8; word-break: break-all; display: block; margin-top: 4px; }
+</style>
+</head>
+<body>
+<h1>Round 2: Gemini Flash Sprite Sheets</h1>
+<div class="summary">
+  Model: gemini-3.1-flash-image-preview |
+  16/16 succeeded |
+  ~112c total |
+  308s wall time
+</div>
+<div class="controls">
+  <label>FPS:</label>
+  <input type="range" id="fps" min="1" max="12" value="4">
+  <span id="fps-val">4</span>
+  <label>Click animation to pause</label>
+</div>
+<h2>Cow</h2><div class="row"><div class="card"><div class="card-title">Cow walk (text, minimal)</div><div class="card-meta">text-only | 20.4s</div><canvas class="anim" data-src="cow-text-walk-minimal.png" data-grid="2" width="200" height="200"></canvas><a href="cow-text-walk-minimal.png" target="_blank"><img src="cow-text-walk-minimal.png" class="sheet" alt="cow-text-walk-minimal"></a><details><summary>Prompt</summary><code>2x2 grid sprite sheet, 4-frame walk cycle of a green cow, mixed media collage paper cutout style, green with white accents, consistent character, solid #1a1a1a background, no text</code></details></div><div class="card"><div class="card-title">Cow walk (text, choreography)</div><div class="card-meta">text-only | 22.7s</div><canvas class="anim" data-src="cow-text-walk-choreo.png" data-grid="2" width="200" height="200"></canvas><a href="cow-text-walk-choreo.png" target="_blank"><img src="cow-text-walk-choreo.png" class="sheet" alt="cow-text-walk-choreo"></a><details><summary>Prompt</summary><code>2x2 grid sprite sheet with 4 animation frames, each frame centered in its quadrant. A green cow walking, mixed media collage paper cutout style, green with white accents. Frame 1 (top-left): right legs forward, left legs back. Frame 2 (top-right): legs passing, body slightly lifted. Frame 3 (bottom-left): left legs forward, right legs back. Frame 4 (bottom-right): legs passing again, completing the cycle. CRITICAL: same cow, same proportions, same facing direction in every frame. Solid #1a1a1a background in every quadrant, no text.</code></details></div><div class="card"><div class="card-title">Cow walk (template 4x4)</div><div class="card-meta">4x4 template | 16.9s</div><canvas class="anim" data-src="cow-tpl-walk.png" data-grid="4" width="200" height="200"></canvas><a href="cow-tpl-walk.png" target="_blank"><img src="cow-tpl-walk.png" class="sheet" alt="cow-tpl-walk"></a><details><summary>Prompt</summary><code>Animation: a green cow walking, mixed media collage paper cutout style, green with white accents, 16-frame walk cycle</code></details></div><div class="card"><div class="card-title">Cow walk (template 2x2)</div><div class="card-meta">2x2 template | 18.5s</div><canvas class="anim" data-src="cow-tpl2-walk.png" data-grid="2" width="200" height="200"></canvas><a href="cow-tpl2-walk.png" target="_blank"><img src="cow-tpl2-walk.png" class="sheet" alt="cow-tpl2-walk"></a><details><summary>Prompt</summary><code>Animation: a green cow walking, mixed media collage paper cutout style, green with white accents, 4-frame walk cycle</code></details></div></div><h2>Dragon</h2><div class="row"><div class="card"><div class="card-title">Dragon walk (text, minimal)</div><div class="card-meta">text-only | 17.6s</div><canvas class="anim" data-src="dragon-text-walk-minimal.png" data-grid="2" width="200" height="200"></canvas><a href="dragon-text-walk-minimal.png" target="_blank"><img src="dragon-text-walk-minimal.png" class="sheet" alt="dragon-text-walk-minimal"></a><details><summary>Prompt</summary><code>2x2 grid sprite sheet, 4-frame walk cycle of a red fire dragon, mixed media collage paper cutout style, red with orange accents, consistent character, solid #1a1a1a background, no text</code></details></div><div class="card"><div class="card-title">Dragon walk (text, choreography)</div><div class="card-meta">text-only | 13.8s</div><canvas class="anim" data-src="dragon-text-walk-choreo.png" data-grid="2" width="200" height="200"></canvas><a href="dragon-text-walk-choreo.png" target="_blank"><img src="dragon-text-walk-choreo.png" class="sheet" alt="dragon-text-walk-choreo"></a><details><summary>Prompt</summary><code>2x2 grid sprite sheet with 4 animation frames, each frame centered in its quadrant. A red fire dragon walking right, mixed media collage paper cutout style, red with orange accents, side view. Frame 1: right front leg forward, left hind leg forward. Frame 2: legs mid-stride, wings slightly raised. Frame 3: left front leg forward, right hind leg forward. Frame 4: legs mid-stride, wings slightly lowered. CRITICAL: same dragon, same size, same facing direction in every frame. Solid #1a1a1a background, no text.</code></details></div><div class="card"><div class="card-title">Dragon walk (template 4x4)</div><div class="card-meta">4x4 template | 26.7s</div><canvas class="anim" data-src="dragon-tpl-walk.png" data-grid="4" width="200" height="200"></canvas><a href="dragon-tpl-walk.png" target="_blank"><img src="dragon-tpl-walk.png" class="sheet" alt="dragon-tpl-walk"></a><details><summary>Prompt</summary><code>Animation: a red fire dragon walking, mixed media collage paper cutout style, red with orange accents, side view, 16-frame walk cycle</code></details></div><div class="card"><div class="card-title">Dragon walk (template 2x2)</div><div class="card-meta">2x2 template | 17.9s</div><canvas class="anim" data-src="dragon-tpl2-walk.png" data-grid="2" width="200" height="200"></canvas><a href="dragon-tpl2-walk.png" target="_blank"><img src="dragon-tpl2-walk.png" class="sheet" alt="dragon-tpl2-walk"></a><details><summary>Prompt</summary><code>Animation: a red fire dragon walking, mixed media collage paper cutout style, red with orange accents, side view, 4-frame walk cycle</code></details></div></div><h2>Slime</h2><div class="row"><div class="card"><div class="card-title">Slime bounce (text, minimal)</div><div class="card-meta">text-only | 20.1s</div><canvas class="anim" data-src="slime-text-bounce-minimal.png" data-grid="2" width="200" height="200"></canvas><a href="slime-text-bounce-minimal.png" target="_blank"><img src="slime-text-bounce-minimal.png" class="sheet" alt="slime-text-bounce-minimal"></a><details><summary>Prompt</summary><code>2x2 grid sprite sheet, 4-frame bounce cycle of a blue slime blob, mixed media collage paper cutout style, blue with cyan accents, consistent character, solid #1a1a1a background, no text</code></details></div><div class="card"><div class="card-title">Slime bounce (text, choreography)</div><div class="card-meta">text-only | 19.1s</div><canvas class="anim" data-src="slime-text-bounce-choreo.png" data-grid="2" width="200" height="200"></canvas><a href="slime-text-bounce-choreo.png" target="_blank"><img src="slime-text-bounce-choreo.png" class="sheet" alt="slime-text-bounce-choreo"></a><details><summary>Prompt</summary><code>2x2 grid sprite sheet with 4 animation frames, each frame centered in its quadrant. A blue slime blob bouncing, mixed media collage paper cutout style, blue with cyan accents, translucent gel material. Frame 1: resting on ground, wide and flat. Frame 2: compressing down, very wide and squished. Frame 3: stretching up tall and narrow, leaving the ground. Frame 4: at peak height, round shape, starting to fall back. CRITICAL: same slime, same style in every frame, only shape changes. Solid #1a1a1a background, no text.</code></details></div><div class="card"><div class="card-title">Slime bounce (template 4x4)</div><div class="card-meta">4x4 template | 14.5s</div><canvas class="anim" data-src="slime-tpl-bounce.png" data-grid="4" width="200" height="200"></canvas><a href="slime-tpl-bounce.png" target="_blank"><img src="slime-tpl-bounce.png" class="sheet" alt="slime-tpl-bounce"></a><details><summary>Prompt</summary><code>Animation: a blue slime blob bouncing up and down, mixed media collage paper cutout style, blue with cyan accents, 16-frame bounce cycle showing squash and stretch</code></details></div><div class="card"><div class="card-title">Slime bounce (template 2x2)</div><div class="card-meta">2x2 template | 31.4s</div><canvas class="anim" data-src="slime-tpl2-bounce.png" data-grid="2" width="200" height="200"></canvas><a href="slime-tpl2-bounce.png" target="_blank"><img src="slime-tpl2-bounce.png" class="sheet" alt="slime-tpl2-bounce"></a><details><summary>Prompt</summary><code>Animation: a blue slime blob bouncing, mixed media collage paper cutout style, blue with cyan accents, 4-frame bounce cycle with squash and stretch</code></details></div></div><h2>Knight</h2><div class="row"><div class="card"><div class="card-title">Knight walk (text, choreo)</div><div class="card-meta">text-only | 26.3s</div><canvas class="anim" data-src="knight-text-walk.png" data-grid="2" width="200" height="200"></canvas><a href="knight-text-walk.png" target="_blank"><img src="knight-text-walk.png" class="sheet" alt="knight-text-walk"></a><details><summary>Prompt</summary><code>2x2 grid sprite sheet with 4 animation frames, each frame centered in its quadrant. A small knight in silver armor walking right, mixed media collage paper cutout style, silver with red cape accents. Frame 1: right foot forward. Frame 2: feet together mid-stride. Frame 3: left foot forward. Frame 4: feet together mid-stride. CRITICAL: same knight, same proportions in every frame. Solid #1a1a1a background, no text.</code></details></div><div class="card"><div class="card-title">Knight walk (template 2x2)</div><div class="card-meta">2x2 template | 12.8s</div><canvas class="anim" data-src="knight-tpl2-walk.png" data-grid="2" width="200" height="200"></canvas><a href="knight-tpl2-walk.png" target="_blank"><img src="knight-tpl2-walk.png" class="sheet" alt="knight-tpl2-walk"></a><details><summary>Prompt</summary><code>Animation: a small knight in silver armor walking, mixed media collage paper cutout style, silver with red cape accents, 4-frame walk cycle, side view</code></details></div></div><h2>Cat</h2><div class="row"><div class="card"><div class="card-title">Cat walk (text, choreo)</div><div class="card-meta">text-only | 13.0s</div><canvas class="anim" data-src="cat-text-walk.png" data-grid="2" width="200" height="200"></canvas><a href="cat-text-walk.png" target="_blank"><img src="cat-text-walk.png" class="sheet" alt="cat-text-walk"></a><details><summary>Prompt</summary><code>2x2 grid sprite sheet with 4 animation frames, each frame centered in its quadrant. An orange tabby cat walking right, mixed media collage paper cutout style, orange with cream accents. Frame 1: right front paw forward. Frame 2: mid-stride. Frame 3: left front paw forward. Frame 4: mid-stride. CRITICAL: same cat, same proportions in every frame. Solid #1a1a1a background, no text.</code></details></div><div class="card"><div class="card-title">Cat walk (template 2x2)</div><div class="card-meta">2x2 template | 16.0s</div><canvas class="anim" data-src="cat-tpl2-walk.png" data-grid="2" width="200" height="200"></canvas><a href="cat-tpl2-walk.png" target="_blank"><img src="cat-tpl2-walk.png" class="sheet" alt="cat-tpl2-walk"></a><details><summary>Prompt</summary><code>Animation: an orange tabby cat walking, mixed media collage paper cutout style, orange with cream accents, 4-frame walk cycle, side view</code></details></div></div>
+
+<script>
+let fps = 4;
+let paused = false;
+let frameIndex = 0;
+let lastTime = 0;
+const cells = [];
+
+document.querySelectorAll("canvas.anim").forEach(canvas => {
+  const ctx = canvas.getContext("2d");
+  const img = new Image();
+  const grid = parseInt(canvas.dataset.grid);
+  const cell = { canvas, ctx, img, grid, loaded: false };
+  img.onload = () => { cell.loaded = true; };
+  img.src = canvas.dataset.src;
+  cells.push(cell);
+  canvas.addEventListener("click", () => {
+    paused = !paused;
+  });
+});
+
+function draw() {
+  for (const c of cells) {
+    if (!c.loaded) continue;
+    const frame = frameIndex % (c.grid * c.grid);
+    const col = frame % c.grid;
+    const row = Math.floor(frame / c.grid);
+    const fw = c.img.naturalWidth / c.grid;
+    const fh = c.img.naturalHeight / c.grid;
+    c.ctx.clearRect(0, 0, c.canvas.width, c.canvas.height);
+    c.ctx.drawImage(c.img, col*fw, row*fh, fw, fh, 0, 0, c.canvas.width, c.canvas.height);
+  }
+}
+
+function animate(ts) {
+  if (!paused && ts - lastTime >= 1000 / fps) {
+    lastTime = ts;
+    frameIndex++;
+    draw();
+  }
+  requestAnimationFrame(animate);
+}
+
+document.getElementById("fps").addEventListener("input", e => {
+  fps = parseInt(e.target.value);
+  document.getElementById("fps-val").textContent = fps;
+});
+
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>

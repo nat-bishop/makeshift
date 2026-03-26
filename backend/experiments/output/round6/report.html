@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Round 6: Simple Choreography Test</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #111; color: #ddd; padding: 24px; }
+  h1 { margin-bottom: 4px; }
+  h3 { font-size: 14px; margin-bottom: 8px; }
+  .summary { color: #999; margin-bottom: 20px; }
+  .controls { margin: 8px 0 20px; display: flex; gap: 16px; align-items: center; }
+  .controls label { font-size: 13px; color: #999; }
+  .controls input { width: 120px; }
+  .controls span { font-size: 13px; color: #fff; min-width: 36px; }
+  .row { display: flex; flex-wrap: wrap; gap: 20px; }
+  .card { background: #1a1a1a; border: 1px solid #333; border-radius: 8px;
+           padding: 16px; width: 280px; }
+  canvas.anim { display: block; margin: 0 auto 8px; image-rendering: pixelated;
+                 border: 1px solid #333; cursor: pointer; }
+  .sheet { width: 100%; border: 1px solid #222; margin-top: 4px; }
+  .meta { font-size: 11px; color: #666; margin-top: 4px; }
+  .error-card { border-color: #633; }
+  .error-msg { color: #c44; font-size: 12px; }
+  details { margin-top: 8px; }
+  summary { font-size: 11px; color: #888; cursor: pointer; }
+  code { font-size: 10px; color: #8f8; word-break: break-all; display: block; margin-top: 4px; }
+</style>
+</head>
+<body>
+<h1>Round 6: Simple Choreography &mdash; Orange Tabby Cat</h1>
+<div class="summary">
+  Each test animates ONE specific body part. Everything else stays identical.<br>
+  Model: gemini-3.1-flash-image-preview | 4/4 succeeded | 84s
+</div>
+<div class="controls">
+  <label>FPS:</label>
+  <input type="range" id="fps" min="1" max="8" value="3">
+  <span id="fps-val">3</span>
+  <label>Click to pause</label>
+</div>
+<div class="row"><div class="card"><h3>Breathing (chest only)</h3><canvas class="anim" data-src="breathing.png" data-grid="2" width="240" height="240"></canvas><a href="breathing.png" target="_blank"><img src="breathing.png" class="sheet" alt="breathing"></a><div class="meta">34.5s</div><details><summary>Prompt</summary><code>2x2 grid sprite sheet with 4 animation frames, each frame centered in its quadrant. an orange tabby cat, mixed media collage style paper cutout, side view facing right, green with white accents. Frame 1 (top-left): cat standing relaxed, normal posture. Frame 2 (top-right): IDENTICAL cat, chest slightly puffed out from inhaling. Frame 3 (bottom-left): IDENTICAL to frame 1, chest back to normal. Frame 4 (bottom-right): IDENTICAL cat, chest slightly compressed from exhaling. CRITICAL: the ONLY difference between frames is the chest size. Same legs, same head, same tail, same position, same size. Solid #1a1a1a background, no text.</code></details></div><div class="card"><h3>Tail Swish</h3><canvas class="anim" data-src="tail-swish.png" data-grid="2" width="240" height="240"></canvas><a href="tail-swish.png" target="_blank"><img src="tail-swish.png" class="sheet" alt="tail-swish"></a><div class="meta">18.0s</div><details><summary>Prompt</summary><code>2x2 grid sprite sheet with 4 animation frames, each frame centered in its quadrant. an orange tabby cat, mixed media collage style paper cutout, side view facing right, green with white accents. Frame 1 (top-left): cat standing, tail curved upward to the right. Frame 2 (top-right): IDENTICAL cat, tail straight out behind. Frame 3 (bottom-left): IDENTICAL cat, tail curved downward to the left. Frame 4 (bottom-right): IDENTICAL cat, tail straight out behind. CRITICAL: the ONLY difference between frames is the tail position. Same body, same legs, same head position, same size. Solid #1a1a1a background, no text.</code></details></div><div class="card"><h3>Head Bob</h3><canvas class="anim" data-src="head-bob.png" data-grid="2" width="240" height="240"></canvas><a href="head-bob.png" target="_blank"><img src="head-bob.png" class="sheet" alt="head-bob"></a><div class="meta">17.0s</div><details><summary>Prompt</summary><code>2x2 grid sprite sheet with 4 animation frames, each frame centered in its quadrant. an orange tabby cat, mixed media collage style paper cutout, side view facing right, green with white accents. Frame 1 (top-left): cat standing, head at normal height. Frame 2 (top-right): IDENTICAL cat, head raised slightly, ears perked. Frame 3 (bottom-left): IDENTICAL cat, head back to normal height. Frame 4 (bottom-right): IDENTICAL cat, head dipped slightly lower. CRITICAL: the ONLY difference between frames is the head height. Same body, same legs, same tail, same size. Solid #1a1a1a background, no text.</code></details></div><div class="card"><h3>Blink Cycle</h3><canvas class="anim" data-src="blink.png" data-grid="2" width="240" height="240"></canvas><a href="blink.png" target="_blank"><img src="blink.png" class="sheet" alt="blink"></a><div class="meta">14.5s</div><details><summary>Prompt</summary><code>2x2 grid sprite sheet with 4 animation frames, each frame centered in its quadrant. an orange tabby cat, mixed media collage style paper cutout, side view facing right, green with white accents. Frame 1 (top-left): cat standing, eyes fully open. Frame 2 (top-right): IDENTICAL cat, eyes half-closed, sleepy. Frame 3 (bottom-left): IDENTICAL cat, eyes fully closed, blinking. Frame 4 (bottom-right): IDENTICAL cat, eyes half-open, waking back up. CRITICAL: the ONLY difference between frames is the eyes. Same body, same legs, same tail, same head position, same size. Solid #1a1a1a background, no text.</code></details></div></div>
+
+<script>
+let fps = 3, paused = false, frameIndex = 0, lastTime = 0;
+const cells = [];
+document.querySelectorAll("canvas.anim").forEach(canvas => {
+  const ctx = canvas.getContext("2d");
+  const img = new Image();
+  const grid = parseInt(canvas.dataset.grid);
+  const cell = { canvas, ctx, img, grid, loaded: false };
+  img.onload = () => { cell.loaded = true; };
+  img.src = canvas.dataset.src;
+  cells.push(cell);
+  canvas.addEventListener("click", () => { paused = !paused; });
+});
+function draw() {
+  for (const c of cells) {
+    if (!c.loaded) continue;
+    const frame = frameIndex % (c.grid * c.grid);
+    const col = frame % c.grid, row = Math.floor(frame / c.grid);
+    const fw = c.img.naturalWidth / c.grid, fh = c.img.naturalHeight / c.grid;
+    c.ctx.clearRect(0, 0, c.canvas.width, c.canvas.height);
+    c.ctx.drawImage(c.img, col*fw, row*fh, fw, fh, 0, 0, c.canvas.width, c.canvas.height);
+  }
+}
+function animate(ts) {
+  if (!paused && ts - lastTime >= 1000/fps) { lastTime = ts; frameIndex++; draw(); }
+  requestAnimationFrame(animate);
+}
+document.getElementById("fps").addEventListener("input", e => {
+  fps = parseInt(e.target.value);
+  document.getElementById("fps-val").textContent = fps;
+});
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>
