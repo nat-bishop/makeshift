@@ -29,6 +29,7 @@ var _dead: bool = false
 
 func _ready() -> void:
 	add_to_group("player")
+	add_to_group("living")
 
 	var kick_shape := RectangleShape2D.new()
 	kick_shape.size = Vector2(KICK_RANGE, KICK_HEIGHT)
@@ -105,6 +106,8 @@ func _perform_kick() -> void:
 		if collider is RigidBody2D:
 			collider.apply_central_impulse(kick_dir * KICK_FORCE)
 			WorldMutations.apply_damage(collider, KICK_DAMAGE)
+			if collider.has_method("fire_behavior_trigger"):
+				collider.fire_behavior_trigger("ON_CONTACT", self)
 			Log.debug("Player: Kicked '%s'" % collider.name)
 
 

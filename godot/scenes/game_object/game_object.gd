@@ -149,6 +149,11 @@ func _reapply_physics() -> void:
 	physics_applicator.apply(tags, visual_descriptor)
 
 
+func fire_behavior_trigger(trigger_name: String, source: Node = null) -> void:
+	if _behavior_executor != null:
+		_behavior_executor.fire_trigger(trigger_name, source)
+
+
 func _on_body_entered(body: Node) -> void:
 	if not body.has_method("get_tags") and not body.has_method("get_effective_tags"):
 		return

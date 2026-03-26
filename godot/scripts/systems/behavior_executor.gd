@@ -60,6 +60,10 @@ func init_behaviors(behaviors: Array, owner: RigidBody2D) -> void:
 			break
 	if not has_tick_behaviors:
 		set_physics_process(false)
+	else:
+		# Forces (apply_central_force) are ignored on sleeping bodies —
+		# disable sleep so tick-driven behaviors can move the object.
+		_owner_body.can_sleep = false
 
 	Log.info("BehaviorExecutor: Initialized %d behaviors for '%s'" % [
 		_behaviors.size(), _owner_body.blueprint.get("name", "?")])
