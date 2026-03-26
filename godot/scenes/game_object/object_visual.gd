@@ -31,9 +31,19 @@ func set_placeholder(visual_descriptor: Dictionary) -> void:
 	image.fill(color)
 	var texture := ImageTexture.create_from_image(image)
 	_sprite.texture = texture
+	_sprite.scale = Vector2.ONE  # Placeholder is already at world size
 
 
 func set_sprite(texture: Texture2D) -> void:
+	# Scale texture to correct world size based on size_category
+	var parent := get_parent()
+	var visual_descriptor: Dictionary = parent.blueprint.get("visual_descriptor", {})
+	var size_category: String = visual_descriptor.get("size_category", "medium")
+	var size_data: Dictionary = PhysicsComposer.get_size_data(size_category)
+	var world_size: float = size_data["sprite"]
+	var tex_size: float = texture.get_width()
+	_sprite.scale = Vector2.ONE * (world_size / tex_size)
+
 	# Crossfade from placeholder to real sprite
 	var old_alpha: float = _sprite.modulate.a
 	_sprite.modulate.a = 0.0
@@ -43,9 +53,10 @@ func set_sprite(texture: Texture2D) -> void:
 	tween.tween_property(_sprite, "modulate:a", old_alpha, 0.3)
 
 	# Update collision shape to match sprite's opaque region
-	var parent := get_parent()
 	if parent.has_node("PhysicsApplicator"):
-		parent.get_node("PhysicsApplicator").call_deferred("update_shape_from_sprite", texture)
+		parent.get_node("PhysicsApplicator").call_deferred(
+			"update_shape_from_sprite", texture, world_size
+		)
 
 
 func _get_placeholder_color(tags: Array) -> Color:

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import base64
-
 import structlog
 from fastapi import WebSocket, WebSocketDisconnect
 
@@ -73,20 +71,15 @@ async def _broadcast(session_id: str, message: dict[str, object]) -> None:
 async def send_sprite_ready(
     session_id: str,
     object_id: str,
-    sprite_bytes: bytes,
-    width: int,
-    height: int,
+    sprite_url: str,
 ) -> None:
-    """Push a sprite to all connected clients for a session."""
-    sprite_b64 = base64.b64encode(sprite_bytes).decode()
+    """Notify clients that a sprite is ready and where to fetch it."""
     await _broadcast(
         session_id,
         {
             "type": "sprite_ready",
             "object_id": object_id,
-            "sprite_png_base64": sprite_b64,
-            "width": width,
-            "height": height,
+            "sprite_url": sprite_url,
         },
     )
 

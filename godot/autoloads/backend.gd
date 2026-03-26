@@ -197,14 +197,22 @@ func _handle_ws_message(text: String) -> void:
 
 func _handle_sprite_ready(data: Dictionary) -> void:
 	var object_id: String = data.get("object_id", "")
-	var sprite_b64: String = data.get("sprite_png_base64", "")
-	if object_id.is_empty() or sprite_b64.is_empty():
+	var sprite_url: String = data.get("sprite_url", "")
+	if object_id.is_empty() or sprite_url.is_empty():
+		Log.warn("Backend: Malformed sprite_ready message: %s" % [data])
 		return
 
-	var png_data: PackedByteArray = Marshalls.base64_to_raw(sprite_b64)
+	var full_url: String = base_url + sprite_url
+	Log.debug("Backend: Fetching sprite for %s from %s" % [object_id, full_url])
+
+	var body: PackedByteArray = await _fetch_binary(full_url)
+	if body.is_empty():
+		Log.warn("Backend: Sprite fetch failed for %s" % object_id)
+		return
+
 	var image := Image.new()
-	var err: int = image.load_png_from_buffer(png_data)
-	if err != OK:
+	var load_err: int = image.load_png_from_buffer(body)
+	if load_err != OK:
 		Log.warn("Backend: Failed to decode sprite PNG for %s" % object_id)
 		return
 
@@ -287,6 +295,29 @@ func _http_get(path: String, extra_headers: PackedStringArray = PackedStringArra
 
 func _http_put(path: String, body: Dictionary) -> Dictionary:
 	return await _request(HTTPClient.METHOD_PUT, path, body)
+
+
+func _fetch_binary(url: String) -> PackedByteArray:
+	var http := HTTPRequest.new()
+	http.timeout = 15.0
+	add_child(http)
+
+	var err: int = http.request(url)
+	if err != OK:
+		Log.warn("Backend: Binary fetch failed for %s: %d" % [url, err])
+		http.queue_free()
+		return PackedByteArray()
+
+	var response: Array = await http.request_completed
+	http.queue_free()
+
+	var result_code: int = response[0]
+	var status_code: int = response[1]
+	if result_code != HTTPRequest.RESULT_SUCCESS or status_code != 200:
+		Log.warn("Backend: Binary fetch error %s (result=%d, status=%d)" % [url, result_code, status_code])
+		return PackedByteArray()
+
+	return response[3]
 
 
 const _METHOD_NAMES: Array[String] = ["GET", "HEAD", "POST", "PUT", "DELETE", "CONNECT", "OPTIONS", "TRACE", "PATCH"]

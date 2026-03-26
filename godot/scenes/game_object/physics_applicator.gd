@@ -31,23 +31,27 @@ func apply(tags: Array, visual_descriptor: Dictionary) -> void:
 		_configure_shape(size_category, base_form)
 
 
-func update_shape_from_sprite(texture: Texture2D) -> void:
+func update_shape_from_sprite(texture: Texture2D, world_size: float) -> void:
 	var image: Image = texture.get_image()
 	var used_rect: Rect2i = image.get_used_rect()
 	if used_rect.size.x == 0 or used_rect.size.y == 0:
 		return
 
+	# Scale from texture pixels to world units
+	var tex_size: float = float(image.get_width())
+	var world_scale: float = world_size / tex_size
+
 	# Offset: shift collision center to match opaque region center
-	var sprite_center := Vector2(image.get_width() / 2.0, image.get_height() / 2.0)
+	var sprite_center := Vector2(tex_size / 2.0, float(image.get_height()) / 2.0)
 	var rect_center := Vector2(
 		used_rect.position.x + used_rect.size.x / 2.0,
 		used_rect.position.y + used_rect.size.y / 2.0
 	)
 
 	var rect := RectangleShape2D.new()
-	rect.size = Vector2(used_rect.size.x, used_rect.size.y)
+	rect.size = Vector2(used_rect.size.x, used_rect.size.y) * world_scale
 	_collision_shape.shape = rect
-	_collision_shape.position = rect_center - sprite_center
+	_collision_shape.position = (rect_center - sprite_center) * world_scale
 	_has_sprite_shape = true
 	Log.debug("PhysicsApplicator: Sprite shape %s offset %s" % [rect.size, _collision_shape.position])
 

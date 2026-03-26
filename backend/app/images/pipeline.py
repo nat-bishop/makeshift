@@ -20,6 +20,14 @@ RemoveBg: TypeAlias = Callable[[bytes], Awaitable[bytes]]
 
 STATIC_DIR = Path(__file__).resolve().parent.parent.parent / "static"
 
+# Sprite textures are saved at Flux's native resolution.  World size is
+# determined separately by size_category on the client side.
+TEXTURE_RESOLUTION = 512
+
+# Fraction of the canvas the opaque content should fill (leaves a thin
+# transparent border so collision shapes don't extend to the very edge).
+FILL_FRACTION = 0.9
+
 # Tag-based placeholder colors
 TAG_COLOR_MAP: dict[Tag, str] = {
     Tag.HEAT_SOURCE: "#FF4444",
@@ -91,25 +99,61 @@ def get_cached_sprite_path(prompt: str) -> Path:
     return STATIC_DIR / "sprites" / f"{h}.png"
 
 
+def get_sprite_url(prompt: str) -> str:
+    """Public URL path for a sprite's cache file."""
+    return f"/static/sprites/{get_cached_sprite_path(prompt).name}"
+
+
+def _crop_and_fit(
+    img: Image.Image,
+    target_size: int,
+    fill_fraction: float = FILL_FRACTION,
+) -> Image.Image:
+    """Crop to opaque content and fit within *target_size*, preserving aspect ratio.
+
+    The opaque region is scaled to fill *fill_fraction* of the canvas
+    (default 90 %) and centred on a transparent square canvas.
+    """
+    bbox = img.getbbox()
+    if bbox is None:
+        return Image.new("RGBA", (target_size, target_size), (0, 0, 0, 0))
+
+    cropped = img.crop(bbox)
+    max_extent = int(target_size * fill_fraction)
+    w, h = cropped.size
+    scale = min(max_extent / w, max_extent / h)
+    new_w = max(1, round(w * scale))
+    new_h = max(1, round(h * scale))
+    resized = cropped.resize((new_w, new_h), Image.Resampling.LANCZOS)
+
+    canvas = Image.new("RGBA", (target_size, target_size), (0, 0, 0, 0))
+    paste_x = (target_size - new_w) // 2
+    paste_y = (target_size - new_h) // 2
+    canvas.paste(resized, (paste_x, paste_y))
+    return canvas
+
+
 async def generate_sprite(
     object_id: str,
     visual_descriptor: VisualDescriptor,
     tags: list[Tag],
     remove_bg: RemoveBg,
-) -> bytes | None:
-    """Full image pipeline: check cache → generate → remove bg → resize → cache.
+) -> str | None:
+    """Full image pipeline: check cache → generate → remove bg → crop & fit → cache.
 
-    Returns the final PNG bytes, or None on failure.
+    Returns the URL path of the cached sprite (e.g. "/static/sprites/abc123.png"),
+    or None on failure.
     """
     from app.config import settings
     from app.images.flux_client import generate_image
 
     prompt = build_prompt(visual_descriptor)
     cache_path = get_cached_sprite_path(prompt)
+    sprite_url = get_sprite_url(prompt)
 
     if settings.sprite_cache_enabled and cache_path.exists():
         logger.debug("sprite_cache_hit", object_id=object_id)
-        return cache_path.read_bytes()
+        return sprite_url
 
     t0 = time.monotonic()
     try:
@@ -118,8 +162,8 @@ async def generate_sprite(
         output_bytes = await remove_bg(raw_bytes)
         output_img = Image.open(io.BytesIO(output_bytes)).convert("RGBA")
 
-        target_size = SIZE_PIXEL_MAP[visual_descriptor.size_category]
-        output_img = output_img.resize((target_size, target_size), Image.Resampling.LANCZOS)
+        # Content-aware crop and fit to texture resolution
+        output_img = _crop_and_fit(output_img, TEXTURE_RESOLUTION)
 
         buf = io.BytesIO()
         output_img.save(buf, format="PNG")
@@ -134,7 +178,7 @@ async def generate_sprite(
             elapsed=round(time.monotonic() - t0, 2),
             size_bytes=len(final_bytes),
         )
-        return final_bytes
+        return sprite_url
 
     except (httpx.HTTPError, TimeoutError, OSError, ValueError):
         logger.error(

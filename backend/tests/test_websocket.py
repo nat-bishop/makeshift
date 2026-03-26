@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import base64
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock
@@ -98,14 +97,12 @@ def test_ws_connection_cleanup() -> None:
 async def test_send_sprite_ready_broadcast() -> None:
     mock_ws = AsyncMock()
     _connections["test-session"] = {mock_ws}
-    await send_sprite_ready("test-session", "obj-1", b"fake_png", 64, 64)
+    await send_sprite_ready("test-session", "obj-1", "/static/sprites/abc123.png")
     mock_ws.send_json.assert_called_once()
     msg = mock_ws.send_json.call_args[0][0]
     assert msg["type"] == "sprite_ready"
     assert msg["object_id"] == "obj-1"
-    assert msg["sprite_png_base64"] == base64.b64encode(b"fake_png").decode()
-    assert msg["width"] == 64
-    assert msg["height"] == 64
+    assert msg["sprite_url"] == "/static/sprites/abc123.png"
 
 
 async def test_send_sprite_failed_broadcast() -> None:
@@ -124,7 +121,7 @@ async def test_broadcast_multiple_clients() -> None:
     ws2 = AsyncMock()
     ws3 = AsyncMock()
     _connections["test-session"] = {ws1, ws2, ws3}
-    await send_sprite_ready("test-session", "obj-1", b"png", 32, 32)
+    await send_sprite_ready("test-session", "obj-1", "/static/sprites/abc.png")
     for mock_ws in (ws1, ws2, ws3):
         mock_ws.send_json.assert_called_once()
         msg = mock_ws.send_json.call_args[0][0]

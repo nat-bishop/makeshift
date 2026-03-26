@@ -93,7 +93,10 @@ CONDUCTING↔INSULATING, REFLECTIVE↔STICKY
 - color_secondary: Secondary/accent color as hex (e.g., "#222222")
 - color_secondary_name: Natural language accent color name (e.g., "dark orange", "silver", "charcoal")
 - visual_effects: List of visual effects like "glowing", "flaming", "sparkling", "dripping", "smoking", "frozen_particles"
-- size_category: One of "tiny", "small", "medium", "large", "huge" — pick based on what the object naturally is
+- size_category: One of "tiny", "small", "medium", "large", "huge" — the player character is \
+"small"-to-"medium" sized. Pick relative to the player: "tiny" for coins, keys, bugs, pebbles; \
+"small" for swords, bottles, small animals, tools; "medium" for crates, dogs, chairs, shields; \
+"large" for doors, boulders, bears, large furniture; "huge" for walls, trees, dragons, buildings
 - bg_color: Solid background color hex for sprite generation. Pick a color that (1) contrasts with the subject's \
 colors so background removal works cleanly, and (2) is close to a natural/earthy tone (this is a 2D sandbox — \
 use tones like #4A6741 for outdoor, #4A6B8A for sky/water, #2A2A2A for dark, #808080 as generic fallback). \
