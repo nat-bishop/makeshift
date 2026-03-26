@@ -65,7 +65,11 @@ async def get_session(session_id: str, request: Request) -> GetSessionResponse:
         logger.warning("session_not_found", session_id=session_id)
         raise HTTPException(status_code=404, detail="Session not found")
 
-    logger.info("session_restored", session_id=session_id)
+    logger.info(
+        "session_restored",
+        session_id=session_id,
+        object_count=len(session.objects),
+    )
 
     host = request.headers.get("host", f"{settings.host}:{settings.port}")
     ws_url = f"ws://{host}/ws/{session.id}"
@@ -88,7 +92,11 @@ async def sync_session(session_id: str, body: SyncRequest, request: Request) -> 
         logger.warning("sync_session_not_found")
         raise HTTPException(status_code=404, detail="Session not found")
 
-    logger.debug("session_sync", has_objects=body.objects is not None)
+    logger.debug(
+        "session_sync",
+        session_id=session_id,
+        object_count=len(body.objects) if body.objects is not None else 0,
+    )
 
     await manager.save_state(
         session_id,

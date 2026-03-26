@@ -27,10 +27,14 @@ async def websocket_handler(websocket: WebSocket, session_id: str) -> None:
         return
 
     await websocket.accept()
-    logger.info("ws_connected", session_id=session_id)
 
     # Register connection for sprite delivery (multi-client)
     _connections.setdefault(session_id, set()).add(websocket)
+    logger.info(
+        "ws_connected",
+        session_id=session_id,
+        connection_count=len(_connections[session_id]),
+    )
 
     try:
         while True:
@@ -53,13 +57,25 @@ async def websocket_handler(websocket: WebSocket, session_id: str) -> None:
         # Clean up connection
         ws_set = _connections.get(session_id, set())
         ws_set.discard(websocket)
+        remaining = len(ws_set)
         if not ws_set:
             _connections.pop(session_id, None)
+        logger.info(
+            "ws_connection_cleaned_up",
+            session_id=session_id,
+            remaining_connections=remaining,
+        )
 
 
 async def _broadcast(session_id: str, message: dict[str, object]) -> None:
     """Send a JSON message to all connected clients for a session."""
     ws_set = _connections.get(session_id, set())
+    logger.debug(
+        "ws_broadcast",
+        session_id=session_id,
+        msg_type=message.get("type"),
+        recipient_count=len(ws_set),
+    )
     for ws in list(ws_set):
         try:
             await ws.send_json(message)
@@ -74,6 +90,12 @@ async def send_sprite_ready(
     sprite_url: str,
 ) -> None:
     """Notify clients that a sprite is ready and where to fetch it."""
+    logger.info(
+        "send_sprite_ready",
+        session_id=session_id,
+        object_id=object_id,
+        sprite_url=sprite_url,
+    )
     msg: dict[str, object] = {
         "type": "sprite_ready",
         "object_id": object_id,
@@ -84,6 +106,12 @@ async def send_sprite_ready(
 
 async def send_sprite_failed(session_id: str, object_id: str, reason: str = "") -> None:
     """Notify clients that sprite generation failed for an object."""
+    logger.warning(
+        "send_sprite_failed",
+        session_id=session_id,
+        object_id=object_id,
+        reason=reason,
+    )
     await _broadcast(
         session_id,
         {

@@ -25,13 +25,20 @@ async def session_context_middleware(
     try:
         start = time.monotonic()
         response = await call_next(request)
-        elapsed = time.monotonic() - start
+        elapsed = round(time.monotonic() - start, 2)
+        logger.debug(
+            "request_completed",
+            path=request.url.path,
+            method=request.method,
+            elapsed=elapsed,
+            status=response.status_code,
+        )
         if elapsed > 1.0:
             logger.warning(
                 "slow_request",
                 path=request.url.path,
                 method=request.method,
-                elapsed=round(elapsed, 2),
+                elapsed=elapsed,
                 status=response.status_code,
             )
         return response
