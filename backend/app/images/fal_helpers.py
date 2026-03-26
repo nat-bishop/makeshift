@@ -20,11 +20,13 @@ def _get_http_client() -> httpx.AsyncClient:
     global _http_client
     if _http_client is None:
         _http_client = httpx.AsyncClient()
+        logger.info("fal_http_client_created")
     return _http_client
 
 
 async def close_http_client() -> None:
     global _http_client
+    logger.info("fal_http_client_closing", had_client=_http_client is not None)
     if _http_client is not None:
         await _http_client.aclose()
         _http_client = None

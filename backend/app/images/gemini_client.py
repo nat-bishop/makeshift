@@ -23,6 +23,7 @@ def _get_client() -> Any:
         from google import genai
 
         _client = genai.Client(api_key=settings.google_api_key)
+        logger.info("gemini_client_initialized", model=settings.image_model)
     return _client
 
 
@@ -30,6 +31,7 @@ def _ensure_png(data: bytes) -> bytes:
     """Convert to PNG if Gemini returned JPEG."""
     if data[:4] == b"\x89PNG":
         return data
+    logger.debug("ensure_png_conversion", input_size=len(data))
     img = Image.open(io.BytesIO(data)).convert("RGBA")
     buf = io.BytesIO()
     img.save(buf, format="PNG")
