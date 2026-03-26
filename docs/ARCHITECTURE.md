@@ -40,6 +40,7 @@ Godot 4 Client                          FastAPI Backend
 | `placement_started` | — | Ghost preview active, awaiting click |
 | `placement_ended` | — | Placement confirmed or cancelled |
 | `debug_toggled` | enabled: bool | Debug overlay visibility changed |
+| `player_died` | — | Player death event |
 
 ## Object Creation Pipeline
 
@@ -53,7 +54,7 @@ Full flow from player input to world-placed object with sprite:
 6. **Atomic persist** → `track_cost_and_save_object()` charges $0.041 + saves blueprint (including behaviors) in one commit
 7. **Immediate response** → Client receives blueprint JSON (with behaviors) + placeholder PNG (colored rounded rectangle) + budget_remaining. `EventBus.creation_requested` was emitted on submit — `Game` starts a `MaterializeEffect` at the spawn point (paper scraps coalesce over 1.2s, then idle-bob)
 8. **Background sprite generation** → `asyncio.Task` held in module-level `_background_tasks` set (prevents GC). Runs image pipeline (see below)
-9. **WebSocket delivery** → `send_sprite_ready()` broadcasts base64 PNG to all session clients → Godot decodes to `ImageTexture` → `EventBus.sprite_ready` emitted
+9. **WebSocket delivery** → `send_sprite_ready()` broadcasts `{sprite_url}` to all session clients → Godot fetches PNG via HTTP → decodes to `ImageTexture` → `EventBus.sprite_ready` emitted
 10. **Placement mode** → On `sprite_ready` (or `sprite_failed` fallback to placeholder), `MaterializeEffect.resolve()` scatters scraps and frees itself; a semi-transparent ghost preview spawns at that position and follows the mouse. Left-click calls `world.spawn_object()` at the cursor; Escape cancels. `EventBus.placement_started` / `placement_ended` bracket the mode. Object is NOT added to the world until placement is confirmed.
 
 `EventBus.creation_failed` cancels the effect and discards the pending blueprint at any point in the flow.
@@ -63,17 +64,17 @@ Full flow from player input to world-placed object with sprite:
 `images/pipeline.py` — cache-first sprite generation:
 
 ```
-1. Cache check    → static/sprites/{hash}.png exists? Return cached bytes
+1. Cache check    → static/sprites/{hash}.png exists? Return cached URL
                      (skipped entirely if SPRITE_CACHE_ENABLED=false)
-2. Prompt build   → "pixel art game sprite, side view, flat lighting, clean edges,
-                     {size} {base_form} made of {material},
+2. Prompt build   → "mixed media collage style paper cutout, side view, flat lighting,
+                     clean edges, {size} {base_form} made of {material},
                      {color_primary_name} with {color_secondary_name} accents, {effects},
                      single centered object, solid {bg_color} background, no text"
-3. Flux generate  → fal-ai/flux-pro/v1.1, 512×512 default
+3. Flux generate  → fal-ai/flux-pro/v1.1
 4. Remove bg      → local rembg (birefnet-general model, alpha matting)
                      or cloud fal.ai/birefnet (configured via BG_REMOVAL_BACKEND)
-5. Resize         → LANCZOS to target size from SIZE_PIXEL_MAP:
-                     tiny=32, small=48, medium=64, large=96, huge=128
+5. Crop & fit     → LANCZOS resize to fill 90% of a 512×512 canvas (TEXTURE_RESOLUTION).
+                     World display size is determined client-side by size_category.
 6. Cache write    → PNG saved to static/sprites/{hash}.png
                      (skipped if SPRITE_CACHE_ENABLED=false)
 ```
@@ -301,7 +302,7 @@ Endpoint: `ws://{host}/ws/{session_id}`. Session must exist or connection is rej
 |-----------|------|---------|
 | Client → Server | `ping` | — |
 | Server → Client | `pong` | — |
-| Server → Client | `sprite_ready` | `object_id`, `sprite_png_base64`, `width`, `height` |
+| Server → Client | `sprite_ready` | `object_id`, `sprite_url` |
 | Server → Client | `sprite_failed` | `object_id`, `reason` |
 | Server → Client | `error` | `message` |
 

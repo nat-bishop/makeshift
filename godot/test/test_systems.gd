@@ -173,7 +173,7 @@ func _test_game_manager() -> void:
 	_section("GameManager")
 	_assert("starts in MENU state (0)", _game_manager.current_state == 0)
 	_assert("current_level starts at 0", _game_manager.current_level == 0)
-	_assert("has 3 level scenes", _game_manager.LEVEL_SCENES.size() == 3)
+	_assert("has 3 levels", _game_manager.LEVELS.size() == 3)
 	_assert("has start_game()", _game_manager.has_method("start_game"))
 	_assert("has pause_game()", _game_manager.has_method("pause_game"))
 	_assert("has resume_game()", _game_manager.has_method("resume_game"))

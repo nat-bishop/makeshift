@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     # Model configuration
     llm_model: str = "google-gla:gemini-3.1-flash-lite-preview"
     llm_temperature: float = 0.0
-    image_model: str = "fal-ai/flux-pro/v1.1"
+    image_model: str = "gemini-3.1-flash-image-preview"
     rembg_model: str = "birefnet-general"
     bg_removal_backend: Literal["local", "cloud"] = "local"
     sprite_cache_enabled: bool = True

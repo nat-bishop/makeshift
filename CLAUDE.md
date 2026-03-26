@@ -33,7 +33,7 @@ uv run pytest -k "test_name"              # single test by name
 
 - **Rule engine** (`engine/resolver.py`, `engine/rules_data.py`): `RuleResolver` — two-tier matching (O(1) pair index + O(n) wildcard scan). 43 rules. Mirrored client-side in Godot's `RuleEngine` autoload.
 
-- **Image pipeline** (`images/pipeline.py`, `images/flux_client.py`): Cache-first. Flux Pro v1.1 (`fal-ai/flux-pro/v1.1`) → bg removal (local rembg or cloud birefnet) → resize by size_category → cache by SHA-256 hash of the Flux prompt.
+- **Image pipeline** (`images/pipeline.py`, `images/flux_client.py`): Cache-first. Flux Pro v1.1 (`fal-ai/flux-pro/v1.1`) → bg removal (local rembg or cloud birefnet) → crop & fit to 512×512 → cache by SHA-256 hash of the Flux prompt. World display size is determined client-side by `size_category`.
 
 - **Session persistence** (`sessions/manager.py`): aiosqlite, 2 tables (sessions, objects). Budget: $1.00 at $0.041/object.
 
@@ -43,7 +43,7 @@ uv run pytest -k "test_name"              # single test by name
 
 | Autoload | Purpose |
 |----------|---------|
-| `EventBus` | Central signal bus (10 signals: interaction_triggered, object_created, sprite_ready, sprite_failed, level_completed, creation_requested, creation_failed, placement_started, placement_ended, debug_toggled) |
+| `EventBus` | Central signal bus (11 signals: interaction_triggered, object_created, sprite_ready, sprite_failed, level_completed, creation_requested, creation_failed, placement_started, placement_ended, debug_toggled, player_died) |
 | `Backend` | HTTP + WebSocket client, session persistence, sprite cache, 10s sync timer |
 | `GameManager` | Game state (MENU/PLAYING/PAUSED), level management, scene transitions, `debug_mode` flag (toggled by `toggle_debug` input, emits `debug_toggled`) |
 | `RuleEngine` | Client-side rule matching (mirrors backend resolver) |

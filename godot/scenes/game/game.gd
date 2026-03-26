@@ -26,8 +26,11 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
+	var mouse_pos := get_global_mouse_position()
+	if _materialize_effect and is_instance_valid(_materialize_effect):
+		_materialize_effect.global_position = mouse_pos
 	if _placement_active and is_instance_valid(_placement_ghost):
-		_placement_ghost.global_position = get_global_mouse_position()
+		_placement_ghost.global_position = mouse_pos
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -48,10 +51,10 @@ func _get_pending_id() -> String:
 
 func _load_current_level() -> void:
 	var level_index: int = GameManager.current_level
-	if level_index >= GameManager.LEVEL_SCENES.size():
+	if level_index >= GameManager.LEVELS.size():
 		return
 
-	var level_path: String = GameManager.LEVEL_SCENES[level_index]
+	var level_path: String = GameManager.LEVELS[level_index]["scene"]
 	var level_scene: PackedScene = load(level_path)
 	if level_scene == null:
 		Log.error("Game: Failed to load level: %s" % level_path)
@@ -81,12 +84,13 @@ func _on_level_completed(_level_id: int) -> void:
 
 func _on_creation_requested() -> void:
 	_clear_pending()
-	var spawn_pos: Vector2 = player.global_position + SPAWN_OFFSET
+	var spawn_pos: Vector2 = get_global_mouse_position()
 	var effect := Node2D.new()
 	effect.set_script(MaterializeEffect)
 	effect.global_position = spawn_pos
 	world.add_child(effect)
 	_materialize_effect = effect
+	set_process(true)
 	Log.debug("Game: Materialization effect started at %s" % str(spawn_pos))
 
 
@@ -127,6 +131,7 @@ func _on_creation_failed() -> void:
 		_materialize_effect = null
 		Log.debug("Game: Materialization effect cancelled (creation failed)")
 	_pending_blueprint = {}
+	set_process(false)
 
 
 func _begin_placement() -> void:
@@ -210,3 +215,5 @@ func _clear_pending() -> void:
 		_materialize_effect.queue_free()
 		_materialize_effect = null
 	_pending_blueprint = {}
+	if not _placement_active:
+		set_process(false)

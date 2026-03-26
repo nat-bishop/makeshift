@@ -40,7 +40,7 @@ const PLATFORM_TEX: Texture2D = preload("res://assets/tilesets/cardboard_platfor
 
 func _create_platform(pos: Vector2, size: Vector2, texture: Texture2D = PLATFORM_TEX) -> void:
 	var body := StaticBody2D.new()
-	body.position = pos
+	body.position = pos + size / 2
 	body.collision_layer = CollisionLayers.TERRAIN
 	body.collision_mask = 0
 
@@ -48,12 +48,12 @@ func _create_platform(pos: Vector2, size: Vector2, texture: Texture2D = PLATFORM
 	var rect := RectangleShape2D.new()
 	rect.size = size
 	shape.shape = rect
-	shape.position = size / 2
 	body.add_child(shape)
 
 	var visual := TextureRect.new()
 	visual.texture = texture
 	visual.size = size
+	visual.position = -size / 2
 	visual.stretch_mode = TextureRect.STRETCH_TILE
 	body.add_child(visual)
 

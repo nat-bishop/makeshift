@@ -5,9 +5,11 @@ const JUMP_VELOCITY: float = -400.0
 const GRAVITY: float = 980.0
 const PUSH_FORCE: float = 80.0
 const KICK_FORCE: float = 400.0
+const KICK_DAMAGE: float = 10.0
 const KICK_RANGE: float = 48.0
 const KICK_HEIGHT: float = 32.0
 const KICK_COOLDOWN: float = 0.5
+const VOID_THRESHOLD: float = 1200.0
 
 enum State { IDLE, WALK, JUMP, FALL }
 
@@ -34,6 +36,10 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	_process_normal_movement(GRAVITY, SPEED, delta)
 	move_and_slide()
+	if global_position.y > VOID_THRESHOLD:
+		EventBus.player_died.emit()
+		set_physics_process(false)
+		return
 	_push_rigid_bodies()
 	_process_kick(delta)
 	_update_animation()
@@ -89,6 +95,7 @@ func _perform_kick() -> void:
 		var collider = result["collider"]
 		if collider is RigidBody2D:
 			collider.apply_central_impulse(kick_dir * KICK_FORCE)
+			WorldMutations.apply_damage(collider, KICK_DAMAGE)
 			Log.debug("Player: Kicked '%s'" % collider.name)
 
 

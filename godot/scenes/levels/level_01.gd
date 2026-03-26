@@ -22,7 +22,7 @@ func _build_terrain() -> void:
 
 func _create_kill_zone(pos: Vector2, size: Vector2) -> void:
 	var area := Area2D.new()
-	area.position = pos
+	area.position = pos + size / 2
 	area.collision_layer = CollisionLayers.HAZARDS
 	area.collision_mask = CollisionLayers.PLAYER
 
@@ -30,7 +30,6 @@ func _create_kill_zone(pos: Vector2, size: Vector2) -> void:
 	var rect := RectangleShape2D.new()
 	rect.size = size
 	shape.shape = rect
-	shape.position = size / 2
 	area.add_child(shape)
 
 	area.body_entered.connect(_on_kill_zone_entered)

@@ -21,8 +21,8 @@ RemoveBg: TypeAlias = Callable[[bytes], Awaitable[bytes]]
 
 STATIC_DIR = Path(__file__).resolve().parent.parent.parent / "static"
 
-# Sprite textures are saved at Flux's native resolution.  World size is
-# determined separately by size_category on the client side.
+# Sprite textures are saved at this resolution.  World size is determined
+# separately by size_category on the client side.
 TEXTURE_RESOLUTION = 512
 
 # Fraction of the canvas the opaque content should fill (leaves a thin
@@ -57,7 +57,7 @@ class SpriteResult:
 
 
 def _prompt_hash(prompt: str) -> str:
-    """Hash the Flux prompt for cache keying. Same prompt → same image."""
+    """Hash the image prompt for cache keying. Same prompt → same image."""
     return hashlib.sha256(prompt.encode()).hexdigest()[:16]
 
 
@@ -145,8 +145,8 @@ async def _generate_static_sprite(
     prompt: str,
     remove_bg: RemoveBg,
 ) -> bytes:
-    """Generate a single static sprite via Flux at 512x512."""
-    from app.images.flux_client import generate_image
+    """Generate a single static sprite via Gemini at 512x512."""
+    from app.images.gemini_client import generate_image
 
     raw_bytes = await generate_image(prompt)
     output_bytes = await remove_bg(raw_bytes)

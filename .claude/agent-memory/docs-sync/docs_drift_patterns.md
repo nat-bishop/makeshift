@@ -18,7 +18,9 @@ type: project
 - docs/ARCHITECTURE.md Session & Persistence: blueprint_json schema is implicit — note when new fields are added that don't require migration.
 - ARCHITECTURE.md Object Creation Pipeline: deferred spawn / placement mode steps are easy to miss when adding new signals or UX states. Pipeline step count has grown to 10; check game.gd and event_bus.gd together when updating.
 - ARCHITECTURE.md Image Generation Pipeline: cache key description and Flux model name drift independently from each other. Cache key is now a hash of the full prompt string (not individual VisualDescriptor fields) — easy to misremember. Model is `fal-ai/flux-pro/v1.1`, configured via `settings.image_model` in config.py.
-- EventBus signal count: was documented as 4 in early versions; grew to 10 as placement and creation flow signals were added. ARCHITECTURE.md now has an explicit signal table; CLAUDE.md autoload table lists all 10 by name.
+- EventBus signal count: was documented as 4 in early versions; grew to 11 as placement, creation flow, and gameplay signals were added. ARCHITECTURE.md has the authoritative signal table; CLAUDE.md autoload table lists all signals by name. `player_died` was added with no docs update — check event_bus.gd directly when signal count matters.
+- ARCHITECTURE.md WebSocket payload for `sprite_ready`: previously embedded base64 PNG (`sprite_png_base64, width, height`); now sends `sprite_url` only — Godot fetches the PNG via a separate HTTP request. This is a recurring shape of change (delivery mechanism changes without docs update).
+- ARCHITECTURE.md Image pipeline step 5: previously described per-size LANCZOS resize to SIZE_PIXEL_MAP values (32-128px). Now saves at 512×512 (TEXTURE_RESOLUTION); client-side size_category determines world display size. Prompt style also changed from "pixel art" to "mixed media collage style paper cutout" — both the prompt text and the output size are drift-prone.
 
 ## Key structural decisions made during behavior system sync
 

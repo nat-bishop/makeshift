@@ -44,5 +44,5 @@ def setup_logging() -> None:
     handler.setFormatter(formatter)
     logging.basicConfig(level=level, handlers=[handler], force=True)
 
-    for lib in ("httpx", "httpcore", "fal_client", "PIL"):
+    for lib in ("httpx", "httpcore", "fal_client", "google.genai", "PIL"):
         logging.getLogger(lib).setLevel(logging.WARNING)

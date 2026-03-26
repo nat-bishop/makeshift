@@ -300,11 +300,11 @@ func _test_game_state_flow() -> void:
 	_assert("Initial state is MENU", _game_manager.current_state == 0)  # MENU
 	_assert("Initial level is 0", _game_manager.current_level == 0)
 	_assert("GAME_SCENE defined", _game_manager.GAME_SCENE != "")
-	_assert("3 levels defined", _game_manager.LEVEL_SCENES.size() == 3)
+	_assert("3 levels defined", _game_manager.LEVELS.size() == 3)
 
 	# Verify level scene paths are loadable
-	for i in range(_game_manager.LEVEL_SCENES.size()):
-		var path: String = _game_manager.LEVEL_SCENES[i]
+	for i in range(_game_manager.LEVELS.size()):
+		var path: String = _game_manager.LEVELS[i]["scene"]
 		var scene = load(path)
 		_assert("Level %d scene exists" % (i + 1), scene != null)
 
