@@ -3,12 +3,6 @@ extends Node
 var _sprite: Sprite2D
 var _object_id: String = ""
 
-# Sprite sheet animation state
-var _is_animated: bool = false
-var _frame_count: int = 1
-var _frame_duration: float = 0.0
-var _anim_timer: float = 0.0
-
 # Programmatic animation state
 var _time: float = 0.0
 var _base_sprite_y: float = 0.0
@@ -26,16 +20,10 @@ var _programmatic_initialized: bool = false
 func _ready() -> void:
 	_sprite = get_parent().get_node("Sprite2D")
 	EventBus.sprite_ready.connect(_on_sprite_ready)
+	set_process(false)
 
 
 func _process(delta: float) -> void:
-	# Sprite sheet frame cycling (LIVING)
-	if _is_animated:
-		_anim_timer += delta
-		if _anim_timer >= _frame_duration:
-			_anim_timer -= _frame_duration
-			_sprite.frame = (_sprite.frame + 1) % _frame_count
-
 	# Programmatic effects (tag-driven)
 	if _programmatic_initialized:
 		_time += delta
@@ -48,8 +36,7 @@ func set_object_id(id: String) -> void:
 	var cached: Texture2D = Backend.get_cached_sprite(id)
 	if cached != null:
 		Log.debug("ObjectVisual: Cache hit for %s" % id)
-		var animation: Dictionary = Backend.get_cached_animation(id)
-		set_sprite(cached, animation)
+		set_sprite(cached)
 	else:
 		Log.debug("ObjectVisual: No cached sprite for %s, using placeholder" % id)
 
@@ -68,34 +55,14 @@ func set_placeholder(visual_descriptor: Dictionary) -> void:
 	_sprite.scale = Vector2.ONE  # Placeholder is already at world size
 
 
-func set_sprite(texture: Texture2D, animation: Dictionary = {}) -> void:
-	# Configure sprite sheet animation if metadata present
-	if not animation.is_empty():
-		var cols: int = animation.get("columns", 1)
-		var rows: int = animation.get("rows", 1)
-		_frame_count = animation.get("frame_count", 1)
-		var fps: int = animation.get("fps", 6)
-		_sprite.hframes = cols
-		_sprite.vframes = rows
-		_sprite.frame = 0
-		_frame_duration = 1.0 / fps
-		_anim_timer = 0.0
-		_is_animated = true
-	else:
-		_sprite.hframes = 1
-		_sprite.vframes = 1
-		_is_animated = false
-
+func set_sprite(texture: Texture2D) -> void:
 	# Scale texture to correct world size based on size_category
 	var parent := get_parent()
 	var visual_descriptor: Dictionary = parent.blueprint.get("visual_descriptor", {})
 	var size_category: String = visual_descriptor.get("size_category", "medium")
 	var size_data: Dictionary = PhysicsComposer.get_size_data(size_category)
 	var world_size: float = size_data["sprite"]
-	# For sprite sheets, texture width includes all columns
 	var tex_size: float = texture.get_width()
-	if not animation.is_empty():
-		tex_size = tex_size / animation.get("columns", 1)
 	_sprite.scale = Vector2.ONE * (world_size / tex_size)
 
 	# Crossfade from placeholder to real sprite
@@ -109,7 +76,7 @@ func set_sprite(texture: Texture2D, animation: Dictionary = {}) -> void:
 	# Update collision shape to match sprite's opaque region
 	if parent.has_node("PhysicsApplicator"):
 		parent.get_node("PhysicsApplicator").call_deferred(
-			"update_shape_from_sprite", texture, world_size, animation
+			"update_shape_from_sprite", texture, world_size
 		)
 
 
@@ -122,9 +89,9 @@ func _get_placeholder_color(tags: Array) -> Color:
 	return TagColors.DEFAULT
 
 
-func _on_sprite_ready(id: String, texture: Texture2D, animation: Dictionary) -> void:
+func _on_sprite_ready(id: String, texture: Texture2D) -> void:
 	if id == _object_id:
-		set_sprite(texture, animation)
+		set_sprite(texture)
 
 
 func init_programmatic_anims(tags: Array) -> void:
@@ -158,7 +125,9 @@ func init_programmatic_anims(tags: Array) -> void:
 	if _has_bouncy:
 		get_parent().body_entered.connect(_on_bounce_collision)
 
-	_programmatic_initialized = true
+	if _has_floating or _has_glowing or _has_bouncy or _has_electric or _has_wind_source or _has_frozen:
+		_programmatic_initialized = true
+		set_process(true)
 
 
 func _apply_programmatic_anims(_delta: float) -> void:
@@ -209,3 +178,5 @@ func _on_bounce_collision(_body: Node) -> void:
 func _exit_tree() -> void:
 	if EventBus.sprite_ready.is_connected(_on_sprite_ready):
 		EventBus.sprite_ready.disconnect(_on_sprite_ready)
+	if _has_bouncy and get_parent().body_entered.is_connected(_on_bounce_collision):
+		get_parent().body_entered.disconnect(_on_bounce_collision)

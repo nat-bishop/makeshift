@@ -10,9 +10,7 @@ from pydantic import BaseModel, Field
 
 from app.creator.agent import create_object
 from app.images.pipeline import RemoveBg
-from app.models.behaviors import Behavior
 from app.models.blueprint import VisualDescriptor
-from app.models.tags import Tag
 from app.sessions.manager import SessionManager
 from app.ws.handler import send_sprite_failed, send_sprite_ready
 
@@ -78,8 +76,6 @@ async def create_object_endpoint(
             session_id,
             blueprint.id,
             blueprint.visual_descriptor,
-            blueprint.tags,
-            blueprint.behaviors,
             remove_bg,
         )
     )
@@ -97,8 +93,6 @@ async def _generate_and_deliver_sprite(
     session_id: str,
     object_id: str,
     visual_descriptor: VisualDescriptor,
-    tags: list[Tag],
-    behaviors: list[Behavior],
     remove_bg: RemoveBg,
 ) -> None:
     """Background task: generate sprite and push via WebSocket."""
@@ -106,17 +100,14 @@ async def _generate_and_deliver_sprite(
 
     try:
         result = await generate_sprite(
-            object_id, visual_descriptor, tags, remove_bg, behaviors
+            object_id, visual_descriptor, remove_bg
         )
         if result is None:
             logger.warning("sprite_generation_returned_none", object_id=object_id)
             await send_sprite_failed(session_id, object_id, "generation_failed")
             return
 
-        animation = result.animation.to_dict() if result.animation else None
-        await send_sprite_ready(
-            session_id, object_id, result.sprite_url, animation
-        )
+        await send_sprite_ready(session_id, object_id, result.sprite_url)
     except Exception:
         logger.error(
             "sprite_delivery_failed",

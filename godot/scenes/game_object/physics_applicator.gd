@@ -31,16 +31,8 @@ func apply(tags: Array, visual_descriptor: Dictionary) -> void:
 		_configure_shape(size_category, base_form)
 
 
-func update_shape_from_sprite(texture: Texture2D, world_size: float, animation: Dictionary = {}) -> void:
+func update_shape_from_sprite(texture: Texture2D, world_size: float) -> void:
 	var image: Image = texture.get_image()
-
-	# For sprite sheets, extract just the first frame for collision
-	if not animation.is_empty():
-		var cols: int = animation.get("columns", 1)
-		var rows: int = animation.get("rows", 1)
-		var fw: int = image.get_width() / cols
-		var fh: int = image.get_height() / rows
-		image = image.get_region(Rect2i(0, 0, fw, fh))
 
 	var used_rect: Rect2i = image.get_used_rect()
 	if used_rect.size.x == 0 or used_rect.size.y == 0:

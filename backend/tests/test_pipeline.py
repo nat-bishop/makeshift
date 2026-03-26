@@ -11,7 +11,6 @@ from app.images.pipeline import (
     _crop_and_fit,
     _prompt_hash,
     build_prompt,
-    build_spritesheet_prompt,
     generate_placeholder,
     get_cached_sprite_path,
 )
@@ -186,29 +185,3 @@ def test_crop_and_fit_content_fills_canvas() -> None:
     assert 110 <= content_w <= 120  # ~90% of 128
 
 
-# --- Spritesheet prompt tests ---
-
-
-def test_spritesheet_prompt_differs_from_static() -> None:
-    vd = _make_visual()
-    static = build_prompt(vd)
-    sheet = build_spritesheet_prompt(vd, has_movement=True)
-    assert static != sheet
-    assert get_cached_sprite_path(static) != get_cached_sprite_path(sheet)
-
-
-def test_build_spritesheet_prompt_walk() -> None:
-    vd = _make_visual(base_form="cat", material="fur")
-    prompt = build_spritesheet_prompt(vd, has_movement=True)
-    assert "walk cycle" in prompt
-    assert "2x2 grid" in prompt
-    assert "cat" in prompt
-    assert "fur" in prompt
-
-
-def test_build_spritesheet_prompt_idle() -> None:
-    vd = _make_visual(base_form="tree", material="wood")
-    prompt = build_spritesheet_prompt(vd, has_movement=False)
-    assert "idle animation" in prompt
-    assert "2x2 grid" in prompt
-    assert "tree" in prompt

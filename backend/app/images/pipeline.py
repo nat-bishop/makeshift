@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import hashlib
 import io
 import time
@@ -13,8 +12,6 @@ import httpx
 import structlog
 from PIL import Image, ImageDraw
 
-from app.images.animation import AnimationMeta, get_animation_config
-from app.models.behaviors import Behavior
 from app.models.blueprint import VisualDescriptor
 from app.models.tags import SIZE_PIXEL_MAP, Tag
 
@@ -54,10 +51,9 @@ TAG_COLOR_MAP: dict[Tag, str] = {
 
 @dataclass
 class SpriteResult:
-    """Result of sprite generation — static or animated."""
+    """Result of sprite generation."""
 
     sprite_url: str
-    animation: AnimationMeta | None = None
 
 
 def _prompt_hash(prompt: str) -> str:
@@ -102,40 +98,6 @@ def build_prompt(visual_descriptor: VisualDescriptor) -> str:
     if vd.visual_effects:
         parts.append(", ".join(vd.visual_effects))
     parts.append(f"single centered object, solid {vd.bg_color} background, no text")
-    return ", ".join(parts)
-
-
-def build_spritesheet_prompt(
-    visual_descriptor: VisualDescriptor, has_movement: bool
-) -> str:
-    """Build a Flux prompt for a 2x2 animation sprite sheet."""
-    vd = visual_descriptor
-    if has_movement:
-        anim = (
-            "4-frame walk cycle: "
-            "frame 1 right foot forward, frame 2 passing, "
-            "frame 3 left foot forward, frame 4 passing"
-        )
-    else:
-        anim = (
-            "4-frame idle animation: "
-            "frame 1 neutral, frame 2 slight inhale, "
-            "frame 3 neutral, frame 4 slight exhale with blink"
-        )
-
-    parts = [
-        "2x2 grid sprite sheet with 4 animation frames",
-        "each frame centered in its own quadrant",
-        f"{vd.size_category} {vd.base_form} made of {vd.material}",
-        f"{vd.color_primary_name} with {vd.color_secondary_name} accents",
-    ]
-    if vd.visual_effects:
-        parts.append(", ".join(vd.visual_effects))
-    parts.extend([
-        f"mixed media collage style paper cutout, {anim}",
-        "consistent character across all 4 frames",
-        f"solid {vd.bg_color} background in every quadrant, no text",
-    ])
     return ", ".join(parts)
 
 
@@ -196,116 +158,40 @@ async def _generate_static_sprite(
     return buf.getvalue()
 
 
-async def _generate_spritesheet(
-    object_id: str,
-    prompt: str,
-    remove_bg: RemoveBg,
-) -> bytes:
-    """Generate a 2x2 sprite sheet via Flux at 1024x1024."""
-    from app.images.flux_client import generate_image
-    from app.images.spritesheet import reassemble_grid, split_grid
-
-    raw_bytes = await generate_image(prompt, width=1024, height=1024)
-
-    # Split into 4 frames
-    frame_bytes_list = split_grid(raw_bytes, grid=2)
-
-    # Remove background from all frames concurrently
-    logger.debug(
-        "spritesheet_bg_removal_start",
-        object_id=object_id,
-        frames=len(frame_bytes_list),
-    )
-    clean_frames = list(
-        await asyncio.gather(*[remove_bg(fb) for fb in frame_bytes_list])
-    )
-
-    # Crop and fit each frame to texture resolution
-    processed_frames: list[bytes] = []
-    for frame_bytes in clean_frames:
-        img = Image.open(io.BytesIO(frame_bytes)).convert("RGBA")
-        img = _crop_and_fit(img, TEXTURE_RESOLUTION)
-        buf = io.BytesIO()
-        img.save(buf, format="PNG")
-        processed_frames.append(buf.getvalue())
-
-    # Reassemble into sprite sheet
-    return reassemble_grid(processed_frames, grid=2)
-
-
 async def generate_sprite(
     object_id: str,
     visual_descriptor: VisualDescriptor,
-    tags: list[Tag],
     remove_bg: RemoveBg,
-    behaviors: list[Behavior] | None = None,
 ) -> SpriteResult | None:
     """Full image pipeline: check cache → generate → remove bg → crop & fit → cache.
 
-    Returns a SpriteResult with the URL and optional animation metadata,
-    or None on failure.
+    Returns a SpriteResult with the URL, or None on failure.
     """
     from app.config import settings
 
-    anim_config = get_animation_config(tags, behaviors or [])
-    is_animated = anim_config.animated
-
-    if is_animated:
-        prompt = build_spritesheet_prompt(
-            visual_descriptor, anim_config.has_movement
-        )
-    else:
-        prompt = build_prompt(visual_descriptor)
-
+    prompt = build_prompt(visual_descriptor)
     cache_path = get_cached_sprite_path(prompt)
     sprite_url = get_sprite_url(prompt)
 
     if settings.sprite_cache_enabled and cache_path.exists():
-        logger.debug(
-            "sprite_cache_hit", object_id=object_id, animated=is_animated
-        )
-        animation = (
-            AnimationMeta(fps=anim_config.fps) if is_animated else None
-        )
-        return SpriteResult(sprite_url=sprite_url, animation=animation)
+        logger.debug("sprite_cache_hit", object_id=object_id)
+        return SpriteResult(sprite_url=sprite_url)
 
     t0 = time.monotonic()
     try:
-        if is_animated:
-            try:
-                final_bytes = await _generate_spritesheet(
-                    object_id, prompt, remove_bg
-                )
-            except (httpx.HTTPError, TimeoutError, OSError, ValueError):
-                logger.warning(
-                    "spritesheet_generation_failed_fallback_to_static",
-                    object_id=object_id,
-                    exc_info=True,
-                )
-                prompt = build_prompt(visual_descriptor)
-                cache_path = get_cached_sprite_path(prompt)
-                sprite_url = get_sprite_url(prompt)
-                final_bytes = await _generate_static_sprite(prompt, remove_bg)
-                is_animated = False
-        else:
-            final_bytes = await _generate_static_sprite(prompt, remove_bg)
+        final_bytes = await _generate_static_sprite(prompt, remove_bg)
 
         if settings.sprite_cache_enabled:
             cache_path.parent.mkdir(parents=True, exist_ok=True)
             cache_path.write_bytes(final_bytes)
 
-        animation = (
-            AnimationMeta(fps=anim_config.fps) if is_animated else None
-        )
-
         logger.info(
             "sprite_generated",
             object_id=object_id,
-            animated=is_animated,
             elapsed=round(time.monotonic() - t0, 2),
             size_bytes=len(final_bytes),
         )
-        return SpriteResult(sprite_url=sprite_url, animation=animation)
+        return SpriteResult(sprite_url=sprite_url)
 
     except (httpx.HTTPError, TimeoutError, OSError, ValueError):
         logger.error(
