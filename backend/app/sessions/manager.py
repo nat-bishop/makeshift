@@ -24,7 +24,9 @@ class SessionManager:
     async def session_exists(self, session_id: str) -> bool:
         """Check if a session exists without loading full state."""
         cursor = await self._db.execute("SELECT 1 FROM sessions WHERE id = ?", (session_id,))
-        return await cursor.fetchone() is not None
+        exists = await cursor.fetchone() is not None
+        logger.debug("session_exists_check", session_id=session_id, exists=exists)
+        return exists
 
     async def get_budget_info(self, session_id: str) -> tuple[float, float] | None:
         """Return (budget_remaining, budget_limit) or None if session doesn't exist."""
@@ -36,7 +38,11 @@ class SessionManager:
         if row is None:
             return None
         budget_limit, budget_used = row
-        return budget_limit - budget_used, budget_limit
+        remaining = budget_limit - budget_used
+        logger.debug(
+            "budget_info", session_id=session_id, remaining=remaining, limit=budget_limit
+        )
+        return remaining, budget_limit
 
     async def create_session(self) -> Session:
         """Create a new session with default state."""
@@ -130,6 +136,7 @@ class SessionManager:
             """,
             (session_id, blueprint.id, blueprint_json, x, y, durability),
         )
+        logger.debug("object_saved", session_id=session_id, object_id=blueprint.id)
         if commit:
             await self._db.commit()
 
@@ -159,6 +166,7 @@ class SessionManager:
             ],
         )
         await self._db.commit()
+        logger.debug("objects_batch_saved", session_id=session_id, count=len(blueprints))
 
     async def _sync_objects(self, session_id: str, objects: list[WorldObject]) -> None:
         """Sync objects: remove deleted, upsert current."""
@@ -167,13 +175,20 @@ class SessionManager:
                 "DELETE FROM objects WHERE session_id = ?",
                 (session_id,),
             )
+            logger.debug("sync_objects_cleared", session_id=session_id)
             return
 
         current_ids = [obj.object_id for obj in objects]
         placeholders = ",".join("?" for _ in current_ids)
-        await self._db.execute(
+        delete_cursor = await self._db.execute(
             f"DELETE FROM objects WHERE session_id = ? AND object_id NOT IN ({placeholders})",
             (session_id, *current_ids),
+        )
+        logger.debug(
+            "sync_objects",
+            session_id=session_id,
+            deleted=delete_cursor.rowcount,
+            upserted=len(objects),
         )
         await self._db.executemany(
             """
@@ -225,9 +240,16 @@ class SessionManager:
         )
         row = await row_cursor.fetchone()
         if row is None:
+            logger.warning("budget_reserve_session_not_found", session_id=session_id)
             return False, -1.0
         remaining: float = row[0]
         if cursor.rowcount == 0:
+            logger.warning(
+                "budget_reserve_insufficient",
+                session_id=session_id,
+                requested=amount,
+                remaining=remaining,
+            )
             return False, remaining
         logger.debug("budget_reserved", amount=amount, remaining=remaining)
         return True, remaining
