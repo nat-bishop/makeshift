@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://game_scene"]
+[gd_scene load_steps=9 format=3 uid="uid://game_scene"]
 
 [ext_resource type="Script" path="res://scenes/game/game.gd" id="1_game"]
 [ext_resource type="PackedScene" uid="uid://world_scene" path="res://scenes/world/world.tscn" id="2_world"]
@@ -8,7 +8,6 @@
 [ext_resource type="Texture2D" path="res://assets/backgrounds/sky.png" id="6_sky"]
 [ext_resource type="Texture2D" path="res://assets/backgrounds/clouds.png" id="7_clouds"]
 [ext_resource type="Texture2D" path="res://assets/backgrounds/far_hills.png" id="8_hills"]
-[ext_resource type="Texture2D" path="res://assets/backgrounds/ground.png" id="9_ground"]
 
 [node name="Game" type="Node2D"]
 script = ExtResource("1_game")
@@ -39,14 +38,6 @@ motion_scale = Vector2(0.3, 0)
 [node name="Sprite2D" type="Sprite2D" parent="ParallaxBackground/HillsLayer"]
 position = Vector2(640, 350)
 texture = ExtResource("8_hills")
-
-[node name="GroundLayer" type="ParallaxLayer" parent="ParallaxBackground"]
-motion_mirroring = Vector2(4128, 0)
-motion_scale = Vector2(0.5, 0)
-
-[node name="Sprite2D" type="Sprite2D" parent="ParallaxBackground/GroundLayer"]
-position = Vector2(640, 550)
-texture = ExtResource("9_ground")
 
 [node name="World" parent="." instance=ExtResource("2_world")]
 
