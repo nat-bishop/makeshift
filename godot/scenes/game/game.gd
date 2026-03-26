@@ -101,7 +101,7 @@ func _on_object_created(blueprint: Dictionary) -> void:
 		Log.debug("Game: Waiting for sprite for '%s'" % blueprint.get("name", "?"))
 
 
-func _on_sprite_ready(id: String, _texture: Texture2D) -> void:
+func _on_sprite_ready(id: String, _texture: Texture2D, _animation: Dictionary) -> void:
 	if id != _get_pending_id() or _get_pending_id() == "":
 		return
 

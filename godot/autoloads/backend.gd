@@ -8,6 +8,7 @@ var _ws_connected: bool = false
 var _reconnect_timer: float = 0.0
 var _reconnect_delay: float = 1.0
 var _sprite_cache: Dictionary = {}  # object_id -> Texture2D
+var _animation_cache: Dictionary = {}  # object_id -> Dictionary (animation metadata)
 var _pending_sprites: Array = []  # object_ids waiting for sprites
 var _sync_timer: float = 0.0
 const SYNC_INTERVAL: float = 10.0
@@ -126,6 +127,10 @@ func get_cached_sprite(object_id: String) -> Texture2D:
 	return _sprite_cache.get(object_id, null)
 
 
+func get_cached_animation(object_id: String) -> Dictionary:
+	return _animation_cache.get(object_id, {})
+
+
 # --- WebSocket ---
 
 func _connect_websocket() -> void:
@@ -220,8 +225,14 @@ func _handle_sprite_ready(data: Dictionary) -> void:
 	_sprite_cache[object_id] = texture
 	_pending_sprites.erase(object_id)
 
-	Log.info("Backend: Sprite ready for %s" % object_id)
-	EventBus.sprite_ready.emit(object_id, texture)
+	var animation: Dictionary = {}
+	var anim_data = data.get("animation", null)
+	if anim_data is Dictionary:
+		animation = anim_data
+		_animation_cache[object_id] = animation
+
+	Log.info("Backend: Sprite ready for %s (animated=%s)" % [object_id, str(not animation.is_empty())])
+	EventBus.sprite_ready.emit(object_id, texture, animation)
 
 
 func _handle_sprite_failed(data: Dictionary) -> void:

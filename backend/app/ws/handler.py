@@ -72,16 +72,16 @@ async def send_sprite_ready(
     session_id: str,
     object_id: str,
     sprite_url: str,
+    animation: dict[str, int] | None = None,
 ) -> None:
     """Notify clients that a sprite is ready and where to fetch it."""
-    await _broadcast(
-        session_id,
-        {
-            "type": "sprite_ready",
-            "object_id": object_id,
-            "sprite_url": sprite_url,
-        },
-    )
+    msg: dict[str, object] = {
+        "type": "sprite_ready",
+        "object_id": object_id,
+        "sprite_url": sprite_url,
+        "animation": animation,
+    }
+    await _broadcast(session_id, msg)
 
 
 async def send_sprite_failed(session_id: str, object_id: str, reason: str = "") -> None:

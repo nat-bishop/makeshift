@@ -34,6 +34,7 @@ func init_from_blueprint(bp: Dictionary) -> void:
 	physics_applicator.apply(tags, visual_descriptor)
 	object_visual.set_placeholder(visual_descriptor)
 	object_visual.set_object_id(object_id)
+	object_visual.init_programmatic_anims(tags)
 
 	# Add to groups for behavior target resolution
 	add_to_group("game_objects")
