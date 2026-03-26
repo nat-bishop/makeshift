@@ -26,7 +26,7 @@ func _ready() -> void:
 	var lifetime_timer := Timer.new()
 	lifetime_timer.wait_time = BehaviorMaps.PROJECTILE_LIFETIME
 	lifetime_timer.one_shot = true
-	lifetime_timer.timeout.connect(queue_free)
+	lifetime_timer.timeout.connect(_on_lifetime_expired)
 	add_child(lifetime_timer)
 	lifetime_timer.start()
 
@@ -52,6 +52,9 @@ func init_projectile(direction: Vector2, damage: float, payload_tag: String, sou
 	circle.radius = 8.0
 	shape.shape = circle
 	add_child(shape)
+
+	var source_name: String = _source.name if _source else "unknown"
+	Log.debug("Projectile: Spawned from '%s' dir=(%.1f,%.1f) dmg=%.0f tag='%s'" % [source_name, direction.x, direction.y, damage, payload_tag])
 
 
 func get_tags() -> Array:
@@ -95,3 +98,8 @@ func _create_visual(payload_tag: String) -> void:
 	var sprite := Sprite2D.new()
 	sprite.texture = _texture_cache[key]
 	add_child(sprite)
+
+
+func _on_lifetime_expired() -> void:
+	Log.debug("Projectile: Expired without hitting anything")
+	queue_free()
