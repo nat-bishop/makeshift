@@ -37,6 +37,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     logger.info(
         "server_starting",
         llm_model=settings.llm_model,
+        local_llm_url=settings.local_llm_url,
         image_model=settings.image_model,
         image_backend=settings.image_backend,
         bg_removal=settings.bg_removal_backend,

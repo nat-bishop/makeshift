@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import time
 import uuid
+from typing import TYPE_CHECKING
 
 import structlog
 from pydantic_ai import Agent
 
 from app.config import settings
+
+if TYPE_CHECKING:
+    from pydantic_ai.models import Model
 from app.models.blueprint import CreatorOutput, GameObjectBlueprint, VisualDescriptor
 from app.models.tags import Tag
 
@@ -204,13 +208,30 @@ Budget: tags 5+1+1=7/10, behaviors 5/8. Sits inert until fire adds HOT tag → e
 _agent: Agent[None, CreatorOutput] | None = None
 
 
+def _build_model() -> Model | str:
+    """Route to local SGLang (OpenAI-compatible) or cloud based on LOCAL_LLM_URL."""
+    if settings.local_llm_url:
+        from pydantic_ai.models.openai import OpenAIChatModel
+        from pydantic_ai.providers.openai import OpenAIProvider
+
+        model = OpenAIChatModel(
+            settings.llm_model,
+            provider=OpenAIProvider(base_url=settings.local_llm_url, api_key="unused"),
+        )
+        logger.info("llm_model_built", model=settings.llm_model, base_url=settings.local_llm_url)
+        return model
+
+    logger.info("llm_model_built", model=settings.llm_model)
+    return settings.llm_model
+
+
 def _get_agent() -> Agent[None, CreatorOutput]:
     global _agent
     if _agent is not None:
         logger.debug("agent_cached")
         return _agent
     _agent = Agent(
-        settings.llm_model,
+        _build_model(),
         output_type=CreatorOutput,
         retries=3,
         system_prompt=SYSTEM_PROMPT,

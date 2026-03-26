@@ -1,0 +1,3 @@
+model_path: Qwen/Qwen3.5-7B
+port: 5200
+mem_fraction_static: 0.40
