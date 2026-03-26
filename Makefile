@@ -42,7 +42,12 @@ clear-sprites: ## Delete all cached sprites
 
 serve-gpu: ## Start SGLang FLUX server (runs in WSL2, blocks terminal)
 	wsl -d Ubuntu-24.04 -u root -- /bin/bash -c '\
-		export COLUMNS=80 LINES=24 SGLANG_ENABLE_JIT_DEEPGEMM=0 SGLANG_CACHE_DIT_ENABLED=true; \
+		export COLUMNS=80 LINES=24 && \
+		export CUDA_HOME=/usr/local/cuda && \
+		export PATH="$$CUDA_HOME/bin:$$PATH" && \
+		export LD_LIBRARY_PATH="$$CUDA_HOME/lib64:$$LD_LIBRARY_PATH" && \
+		export SGLANG_ENABLE_JIT_DEEPGEMM=0 && \
+		export SGLANG_CACHE_DIT_ENABLED=true && \
 		/opt/sglang/bin/python -m sglang.launch_server \
 			--model-path black-forest-labs/FLUX.2-klein-4b-fp8 \
 			--port 5100'
