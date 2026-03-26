@@ -54,6 +54,8 @@ func resolve_collision(body_a: Node, body_b: Node, cascade_depth: int = 0) -> vo
 	# Find matching rules
 	var rules: Array = RuleEngine.find_matching_rules(tags_a, tags_b)
 	if rules.is_empty():
+		if not tags_a.is_empty() and not tags_b.is_empty():
+			Log.debug("CollisionResolver: No rules matched for %s %s vs %s %s" % [body_a.name, tags_a, body_b.name, tags_b])
 		return
 
 	Log.debug("CollisionResolver: %d rules matched for %s vs %s" % [rules.size(), body_a.name, body_b.name])
@@ -115,6 +117,7 @@ func _cascade_via_space_query(body: Node2D, cascade_depth: int) -> void:
 	query.exclude = [body.get_rid()] if body is PhysicsBody2D else []
 
 	var results: Array = space_state.intersect_shape(query, 32)
+	Log.debug("CollisionResolver: Space query found %d neighbors near %s at %s" % [results.size(), body.name, body.global_position])
 	for result in results:
 		var neighbor: Node = result.get("collider", null)
 		if neighbor == null or neighbor == body:

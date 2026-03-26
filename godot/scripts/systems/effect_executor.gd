@@ -15,6 +15,7 @@ func execute(rule: Dictionary, body_a: Node, body_b: Node, cascade_depth: int = 
 	Log.debug("EffectExecutor: Executing rule '%s' (%d effects, cascade_depth=%d)" % [rule.get("rule_id", "?"), effects.size(), cascade_depth])
 	for effect in effects:
 		if effect is not Dictionary:
+			Log.debug("EffectExecutor: Skipping non-Dictionary effect in rule '%s'" % rule.get("rule_id", "?"))
 			continue
 		var targets: Array[Node] = _get_targets(effect, body_a, body_b)
 		var effect_type: String = effect.get("effect_type", "")
@@ -100,6 +101,7 @@ func _get_targets(effect: Dictionary, body_a: Node, body_b: Node) -> Array[Node]
 			targets.append(body_a)
 			targets.append(body_b)
 		_:
+			Log.debug("EffectExecutor: Unknown target '%s', defaulting to body_b" % target_str)
 			targets.append(body_b)
 	return targets
 
