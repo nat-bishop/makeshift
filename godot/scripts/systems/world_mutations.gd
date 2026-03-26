@@ -8,36 +8,47 @@ extends RefCounted
 
 static func apply_damage(target: Node, amount: float, element_color: Color = Color.WHITE) -> void:
 	if not target.has_method("take_damage"):
+		Log.debug("WorldMutations: %s has no take_damage method, skipping" % target.name)
 		return
+	Log.debug("WorldMutations: apply_damage %.1f to %s" % [amount, target.name])
 	target.take_damage(amount, element_color)
 
 
 static func apply_heal(target: Node, amount: float) -> void:
 	if not target.has_method("heal"):
+		Log.debug("WorldMutations: %s has no heal method, skipping" % target.name)
 		return
+	Log.debug("WorldMutations: apply_heal %.1f to %s" % [amount, target.name])
 	target.heal(amount)
 
 
 static func apply_add_tag(target: Node, tag: String, duration: float = 0.0) -> void:
 	if not target.has_method("add_tag"):
+		Log.debug("WorldMutations: %s has no add_tag method, skipping" % target.name)
 		return
+	Log.debug("WorldMutations: apply_add_tag %s to %s%s" % [tag, target.name, " (%.1fs)" % duration if duration > 0.0 else ""])
 	target.add_tag(tag, duration)
 
 
 static func apply_remove_tag(target: Node, tag: String) -> void:
 	if not target.has_method("remove_tag"):
+		Log.debug("WorldMutations: %s has no remove_tag method, skipping" % target.name)
 		return
+	Log.debug("WorldMutations: apply_remove_tag %s from %s" % [tag, target.name])
 	target.remove_tag(tag)
 
 
 static func apply_impulse(target: Node, direction: Vector2, magnitude: float) -> void:
 	if target is not RigidBody2D:
+		Log.debug("WorldMutations: %s is not RigidBody2D, skipping impulse" % target.name)
 		return
+	Log.debug("WorldMutations: apply_impulse to %s dir=%s mag=%.0f" % [target.name, direction, magnitude])
 	target.apply_central_impulse(direction * magnitude)
 
 
 static func apply_dot(target: Node, damage_per_tick: float, tick_interval: float, duration: float, element_color: Color = Color.WHITE) -> void:
 	if not target.has_method("take_damage"):
+		Log.debug("WorldMutations: %s has no take_damage method, skipping DOT" % target.name)
 		return
 	Log.debug("WorldMutations: DOT on %s (%.1f dmg every %.1fs for %.1fs)" % [target.name, damage_per_tick, tick_interval, duration])
 
@@ -62,6 +73,7 @@ static func apply_dot(target: Node, damage_per_tick: float, tick_interval: float
 			timer.queue_free()
 			return
 		if state[0] <= 0:
+			Log.debug("WorldMutations: DOT finished on %s" % target.name)
 			timer.queue_free()
 			return
 		state[0] -= 1
