@@ -189,7 +189,7 @@ func _confirm_placement() -> void:
 
 	_end_placement()
 
-	Log.debug("Game: Placed '%s' at %s" % [blueprint.get("name", "?"), str(final_pos)])
+	Log.info("Game: Placed '%s' at (%.0f, %.0f)" % [blueprint.get("name", "?"), final_pos.x, final_pos.y])
 	world.spawn_object(blueprint, final_pos)
 
 

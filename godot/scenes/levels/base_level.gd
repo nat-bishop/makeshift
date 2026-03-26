@@ -12,6 +12,7 @@ extends Node2D
 
 
 func _ready() -> void:
+	Log.info("Level: Ready — id=%d path=%s" % [level_id, scene_file_path])
 	goal_area.body_entered.connect(_on_goal_body_entered)
 
 

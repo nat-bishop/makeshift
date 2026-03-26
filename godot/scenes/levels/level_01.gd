@@ -9,6 +9,7 @@ func _ready() -> void:
 	next_level_path = "res://scenes/levels/level_02.tscn"
 	super._ready()
 	_build_terrain()
+	Log.debug("Level: Terrain built for level_01 (Cross the Gap)")
 
 
 func _build_terrain() -> void:

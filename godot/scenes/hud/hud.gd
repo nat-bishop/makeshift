@@ -162,6 +162,7 @@ func _build_damage_flash() -> void:
 
 
 func _update_health_bar(current: int, maximum: int) -> void:
+	Log.debug("HUD: Health bar updated %d/%d" % [current, maximum])
 	_health_bar.max_value = maximum
 	_health_bar.value = current
 	_health_label.text = "%d/%d" % [current, maximum]
@@ -191,22 +192,26 @@ func _on_player_healed(amount: float, current: int, maximum: int) -> void:
 
 
 func _show_pause_menu() -> void:
+	Log.debug("HUD: Pause menu shown")
 	_pause_menu.visible = true
 	GameManager.pause_game()
 
 
 func _hide_pause_menu() -> void:
+	Log.debug("HUD: Pause menu hidden")
 	_pause_menu.visible = false
 	GameManager.resume_game()
 
 
 func _on_main_menu_pressed() -> void:
+	Log.info("HUD: Returning to main menu")
 	_pause_menu.visible = false
 	_game_over_panel.visible = false
 	GameManager.return_to_menu()
 
 
 func _on_retry_pressed() -> void:
+	Log.info("HUD: Retry pressed")
 	_game_over_panel.visible = false
 	GameManager.restart_level()
 
@@ -230,8 +235,10 @@ func _on_debug_toggled(enabled: bool) -> void:
 func _on_player_died() -> void:
 	if _health_bar.value > 0:
 		_game_over_title.text = "You fell!"
+		Log.info("HUD: Game over — player fell")
 	else:
 		_game_over_title.text = "You died!"
+		Log.info("HUD: Game over — player died (health depleted)")
 	_game_over_panel.visible = true
 	GameManager.pause_game()
 
