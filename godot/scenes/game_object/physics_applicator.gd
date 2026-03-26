@@ -23,11 +23,13 @@ func apply(tags: Array, visual_descriptor: Dictionary) -> void:
 	mat.bounce = physics["bounce"]
 	_body.physics_material_override = mat
 
+	var base_form: String = visual_descriptor.get("base_form", "box")
+	var size_category: String = visual_descriptor.get("size_category", "medium")
+	Log.debug("PhysicsApplicator: Applied physics for '%s' — form=%s, size=%s, mass=%.1f, friction=%.2f, bounce=%.2f, gravity=%.1f" % [_body.blueprint.get("name", ""), base_form, size_category, physics["mass"], physics["friction"], physics["bounce"], physics["gravity"]])
+
 	# Configure collision shape from size_category and base_form
 	# Skip if already using a sprite-derived shape
 	if not _has_sprite_shape:
-		var size_category: String = visual_descriptor.get("size_category", "medium")
-		var base_form: String = visual_descriptor.get("base_form", "box")
 		_configure_shape(size_category, base_form)
 
 
@@ -76,3 +78,4 @@ func _configure_shape(size_category: String, base_form: String) -> void:
 			var rect := RectangleShape2D.new()
 			rect.size = Vector2(collision_size, collision_size)
 			_collision_shape.shape = rect
+	Log.debug("PhysicsApplicator: Shape %s (collision_size=%d) for '%s'" % [shape_type, collision_size, _body.blueprint.get("name", "")])
