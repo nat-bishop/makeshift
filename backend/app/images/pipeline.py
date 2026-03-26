@@ -40,14 +40,9 @@ TAG_COLOR_MAP: dict[Tag, str] = {
 }
 
 
-def _descriptor_hash(vd: VisualDescriptor) -> str:
-    """Stable hash of a VisualDescriptor for cache keying."""
-    effects = ",".join(sorted(vd.visual_effects))
-    data = (
-        f"{vd.base_form}|{vd.material}|{vd.color_primary_name}"
-        f"|{vd.color_secondary_name}|{effects}|{vd.size_category}|{vd.bg_color}"
-    )
-    return hashlib.sha256(data.encode()).hexdigest()[:16]
+def _prompt_hash(prompt: str) -> str:
+    """Hash the Flux prompt for cache keying. Same prompt → same image."""
+    return hashlib.sha256(prompt.encode()).hexdigest()[:16]
 
 
 def generate_placeholder(visual_descriptor: VisualDescriptor, tags: list[Tag]) -> bytes:
@@ -90,9 +85,9 @@ def build_prompt(visual_descriptor: VisualDescriptor) -> str:
     return ", ".join(parts)
 
 
-def get_cached_sprite_path(visual_descriptor: VisualDescriptor) -> Path:
-    """Return the expected cache path for a given visual descriptor."""
-    h = _descriptor_hash(visual_descriptor)
+def get_cached_sprite_path(prompt: str) -> Path:
+    """Return the expected cache path for a given prompt."""
+    h = _prompt_hash(prompt)
     return STATIC_DIR / "sprites" / f"{h}.png"
 
 
@@ -106,34 +101,32 @@ async def generate_sprite(
 
     Returns the final PNG bytes, or None on failure.
     """
+    from app.config import settings
     from app.images.flux_client import generate_image
 
-    # Check cache
-    cache_path = get_cached_sprite_path(visual_descriptor)
-    if cache_path.exists():
+    prompt = build_prompt(visual_descriptor)
+    cache_path = get_cached_sprite_path(prompt)
+
+    if settings.sprite_cache_enabled and cache_path.exists():
         logger.debug("sprite_cache_hit", object_id=object_id)
         return cache_path.read_bytes()
 
     t0 = time.monotonic()
     try:
-        # Generate via Flux
-        prompt = build_prompt(visual_descriptor)
         raw_bytes = await generate_image(prompt)
 
-        # Remove background
         output_bytes = await remove_bg(raw_bytes)
         output_img = Image.open(io.BytesIO(output_bytes)).convert("RGBA")
 
-        # Resize to target size
         target_size = SIZE_PIXEL_MAP[visual_descriptor.size_category]
         output_img = output_img.resize((target_size, target_size), Image.Resampling.LANCZOS)
 
-        # Save to cache
-        cache_path.parent.mkdir(parents=True, exist_ok=True)
         buf = io.BytesIO()
         output_img.save(buf, format="PNG")
         final_bytes = buf.getvalue()
-        cache_path.write_bytes(final_bytes)
+        if settings.sprite_cache_enabled:
+            cache_path.parent.mkdir(parents=True, exist_ok=True)
+            cache_path.write_bytes(final_bytes)
 
         logger.info(
             "sprite_generated",

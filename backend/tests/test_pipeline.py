@@ -8,7 +8,7 @@ import re
 from app.images.pipeline import (
     STATIC_DIR,
     TAG_COLOR_MAP,
-    _descriptor_hash,
+    _prompt_hash,
     build_prompt,
     generate_placeholder,
     get_cached_sprite_path,
@@ -34,19 +34,19 @@ def _make_visual(**kwargs: object) -> VisualDescriptor:
     return VisualDescriptor(**defaults)  # type: ignore[arg-type]
 
 
-def test_descriptor_hash_deterministic() -> None:
-    vd = _make_visual()
-    assert _descriptor_hash(vd) == _descriptor_hash(vd)
+def test_prompt_hash_deterministic() -> None:
+    prompt = build_prompt(_make_visual())
+    assert _prompt_hash(prompt) == _prompt_hash(prompt)
 
 
-def test_descriptor_hash_different_inputs() -> None:
-    a = _make_visual(base_form="cube")
-    b = _make_visual(base_form="sphere")
-    assert _descriptor_hash(a) != _descriptor_hash(b)
+def test_prompt_hash_different_inputs() -> None:
+    a = build_prompt(_make_visual(base_form="cube"))
+    b = build_prompt(_make_visual(base_form="sphere"))
+    assert _prompt_hash(a) != _prompt_hash(b)
 
 
-def test_descriptor_hash_length() -> None:
-    h = _descriptor_hash(_make_visual())
+def test_prompt_hash_length() -> None:
+    h = _prompt_hash(build_prompt(_make_visual()))
     assert len(h) == 16
     assert re.fullmatch(r"[0-9a-f]{16}", h)
 
@@ -113,11 +113,12 @@ def test_build_prompt_without_effects() -> None:
 
 
 def test_get_cached_sprite_path() -> None:
-    path = get_cached_sprite_path(_make_visual())
+    prompt = build_prompt(_make_visual())
+    path = get_cached_sprite_path(prompt)
     assert path.suffix == ".png"
     assert path.parent == STATIC_DIR / "sprites"
 
 
 def test_get_cached_sprite_path_deterministic() -> None:
-    vd = _make_visual()
-    assert get_cached_sprite_path(vd) == get_cached_sprite_path(vd)
+    prompt = build_prompt(_make_visual())
+    assert get_cached_sprite_path(prompt) == get_cached_sprite_path(prompt)
