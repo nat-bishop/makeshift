@@ -25,7 +25,7 @@ uv run pytest -k "test_name"              # single test by name
 
 **Backend** (`backend/app/`): FastAPI application with these key subsystems:
 
-- **Object creation pipeline** (`creator/agent.py` → `routers/objects.py` → `images/pipeline.py` → `ws/handler.py`): Player text → PydanticAI agent (Gemini) → `CreatorOutput` (tags + behaviors) → placeholder PNG immediate response → background Flux sprite generation → WebSocket `sprite_ready` delivery. See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for full 9-step flow.
+- **Object creation pipeline** (`creator/agent.py` → `routers/objects.py` → `images/pipeline.py` → `ws/handler.py`): Player text → PydanticAI agent (Gemini) → `CreatorOutput` (tags + behaviors) → immediate JSON response (blueprint + `placeholder_png_base64`, not displayed client-side) → background Flux sprite generation → WebSocket `sprite_ready` delivery. See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for full 9-step flow.
 
 - **Tag system** (`models/tags.py`): 30 `Tag` StrEnum values, 7 categories, power costs 1-5, budget of 10. 14 contradiction pairs enforced via `ModelRetry`. Tags define what objects *are* — physics, interactions, and durability. See [GAME_DESIGN.md](docs/GAME_DESIGN.md) for design rationale.
 
@@ -99,6 +99,7 @@ Requires `.env` file (see `.env.example`):
 - `BehaviorExecutor` disables itself after 3 consecutive action errors to prevent runaway behavior on bad LLM output
 - Behavior-added tags (via `ADD_TAGS` action) have a 10s duration; they auto-remove via decay timer in `GameObject.add_tag()`
 - Movement conflicts resolved by fixed trigger priority: `ON_HEALTH_LOW` > `ON_TAG_ADDED` > `ON_DAMAGED` > `ON_CONTACT` > `ON_PROXIMITY` > `ON_TIMER` > `ALWAYS`
+- `ObjectVisual.set_sprite()` is guarded by `_sprite_applied: bool` — prevents double application when a cache hit in `set_object_id()` races with a late `sprite_ready` signal. `set_sprite()` sets texture + scale directly; no tween (a previous crossfade tween that set `modulate.a = 0` caused permanent invisibility on double-call)
 - `body_entered` collision handling is deferred via `call_deferred("_resolve_deferred", body)` — resolving collisions directly in the signal callback crashes Godot with "Can't change state while flushing queries" because resolution can chain into `add_tag` → `_reapply_physics` → new shapes
 - Backend autoload uses `127.0.0.1` not `localhost` — avoids DNS resolution delays and IPv6 fallback issues on some systems
 

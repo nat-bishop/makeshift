@@ -111,6 +111,9 @@ const PAYLOAD_TAG_MAP := {
 # --- Movement actions (used for conflict resolution) ---
 const MOVEMENT_ACTIONS := ["MOVE_TOWARD", "MOVE_AWAY", "PATROL"]
 
+# --- Continuous actions: need per-frame execution, self-limiting via max_speed ---
+const CONTINUOUS_ACTIONS := ["MOVE_TOWARD", "MOVE_AWAY", "PATROL"]
+
 # --- Projectile constants ---
 const PROJECTILE_BASE_TAGS := ["SOLID", "LIGHT", "BREAKABLE"]
 const PROJECTILE_DURABILITY := 15

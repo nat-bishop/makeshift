@@ -52,6 +52,7 @@ func _create_platform(pos: Vector2, size: Vector2, texture: Texture2D = PLATFORM
 
 	var visual := TextureRect.new()
 	visual.texture = texture
+	visual.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	visual.size = size
 	visual.position = -size / 2
 	visual.stretch_mode = TextureRect.STRETCH_TILE

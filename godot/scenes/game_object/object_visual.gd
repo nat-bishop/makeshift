@@ -2,6 +2,7 @@ extends Node
 
 var _sprite: Sprite2D
 var _object_id: String = ""
+var _sprite_applied: bool = false
 
 # Programmatic animation state
 var _time: float = 0.0
@@ -38,24 +39,14 @@ func set_object_id(id: String) -> void:
 		Log.debug("ObjectVisual: Cache hit for %s" % id)
 		set_sprite(cached)
 	else:
-		Log.debug("ObjectVisual: No cached sprite for %s, using placeholder" % id)
-
-
-func set_placeholder(visual_descriptor: Dictionary) -> void:
-	var tags: Array = get_parent().tags
-	var size_category: String = visual_descriptor.get("size_category", "medium")
-	var size_data: Dictionary = PhysicsComposer.get_size_data(size_category)
-	var sprite_size: int = size_data["sprite"]
-
-	var color: Color = _get_placeholder_color(tags)
-	var image := Image.create(sprite_size, sprite_size, false, Image.FORMAT_RGBA8)
-	image.fill(color)
-	var texture := ImageTexture.create_from_image(image)
-	_sprite.texture = texture
-	_sprite.scale = Vector2.ONE  # Placeholder is already at world size
+		Log.debug("ObjectVisual: No cached sprite for %s, waiting for signal" % id)
 
 
 func set_sprite(texture: Texture2D) -> void:
+	if _sprite_applied:
+		return
+	_sprite_applied = true
+
 	# Scale texture to correct world size based on size_category
 	var parent := get_parent()
 	var visual_descriptor: Dictionary = parent.blueprint.get("visual_descriptor", {})
@@ -64,29 +55,13 @@ func set_sprite(texture: Texture2D) -> void:
 	var world_size: float = size_data["sprite"]
 	var tex_size: float = texture.get_width()
 	_sprite.scale = Vector2.ONE * (world_size / tex_size)
-
-	# Crossfade from placeholder to real sprite
-	var old_alpha: float = _sprite.modulate.a
-	_sprite.modulate.a = 0.0
 	_sprite.texture = texture
-
-	var tween := _sprite.create_tween()
-	tween.tween_property(_sprite, "modulate:a", old_alpha, 0.3)
 
 	# Update collision shape to match sprite's opaque region
 	if parent.has_node("PhysicsApplicator"):
 		parent.get_node("PhysicsApplicator").call_deferred(
 			"update_shape_from_sprite", texture, world_size
 		)
-
-
-func _get_placeholder_color(tags: Array) -> Color:
-	for tag in tags:
-		var tag_str: String = str(tag)
-		var color: Color = TagColors.get_color(tag_str)
-		if color != TagColors.DEFAULT:
-			return color
-	return TagColors.DEFAULT
 
 
 func _on_sprite_ready(id: String, texture: Texture2D) -> void:

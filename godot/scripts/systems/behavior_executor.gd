@@ -7,7 +7,8 @@ extends Node
 const CL = preload("res://scripts/data/collision_layers.gd")
 
 # Tick trigger types processed in _physics_process, ordered by priority (highest first).
-const _TICK_TRIGGERS: Array = ["ON_HEALTH_LOW", "ON_PROXIMITY", "ALWAYS"]
+# ON_HEALTH_LOW is event-fired from game_object.take_damage(), not polled here.
+const _TICK_TRIGGERS: Array = ["ON_PROXIMITY", "ALWAYS"]
 
 var _owner_body: RigidBody2D
 var _behaviors: Array[Dictionary] = []
@@ -20,12 +21,14 @@ var _patrol_direction: float = 1.0  # 1.0 = right, -1.0 = left
 var _patrol_distance: float = 0.0
 const PATROL_MAX_DISTANCE: float = 200.0
 const TARGET_UPDATE_INTERVAL: float = 0.3
-const MAX_CONSECUTIVE_ERRORS: int = 3
+const MAX_BEHAVIOR_ERRORS: int = 5
 const MAX_EXPLOSION_RESULTS: int = 32
+# Actions that require a resolved target to function
+const _TARGET_REQUIRED_ACTIONS := ["MOVE_TOWARD", "MOVE_AWAY", "DEAL_DAMAGE", "APPLY_FORCE", "ATTRACT", "SPAWN_PROJECTILE", "HEAL", "ADD_TAGS", "REMOVE_TAGS"]
 
 var _target_update_timer: float = 0.0
-var _consecutive_errors: int = 0
-var _disabled: bool = false
+var _behavior_errors: Dictionary = {}  # behavior_index -> consecutive error count
+var _disabled_behaviors: Dictionary = {}  # behavior_index -> true
 
 var _projectile_scene: PackedScene
 
@@ -63,24 +66,21 @@ func init_behaviors(behaviors: Array, owner: RigidBody2D) -> void:
 
 
 func fire_trigger(trigger_name: String, event_body: Node = null) -> void:
-	if _disabled:
-		return
 	for i in _behaviors_by_trigger.get(trigger_name, []):
-		_execute_behavior(i, event_body)
+		if i in _disabled_behaviors:
+			continue
+		_try_execute(i, event_body)
 
 
 func on_tag_added(tag: String) -> void:
-	if _disabled:
-		return
 	for i in _behaviors_by_trigger.get("ON_TAG_ADDED", []):
+		if i in _disabled_behaviors:
+			continue
 		if _behaviors[i].get("trigger_tag", "") == tag:
-			_execute_behavior(i, null)
+			_try_execute(i, null)
 
 
 func _physics_process(delta: float) -> void:
-	if _disabled:
-		return
-
 	# Update target cache periodically
 	_target_update_timer += delta
 	if _target_update_timer >= TARGET_UPDATE_INTERVAL:
@@ -95,6 +95,8 @@ func _physics_process(delta: float) -> void:
 	for trigger_type in _TICK_TRIGGERS:
 		var priority: int = BehaviorMaps.TRIGGER_PRIORITY.get(trigger_type, 99)
 		for i in _behaviors_by_trigger.get(trigger_type, []):
+			if i in _disabled_behaviors:
+				continue
 			var b: Dictionary = _behaviors[i]
 			var resolved_target: Node = null
 
@@ -106,10 +108,6 @@ func _physics_process(delta: float) -> void:
 				var range_px: float = BehaviorMaps.RANGE_PX.get(b.get("range", "MEDIUM"), 128.0)
 				var dist: float = _owner_body.global_position.distance_to(resolved_target.global_position)
 				if dist > range_px:
-					continue
-			elif trigger_type == "ON_HEALTH_LOW":
-				var starting: int = _owner_body.blueprint.get("starting_durability", 150)
-				if _owner_body.current_durability >= starting / 2:
 					continue
 
 			# Movement exclusivity: skip lower-priority movement if one already ran
@@ -127,9 +125,18 @@ func _physics_process(delta: float) -> void:
 func _try_execute(behavior_index: int, pre_resolved_target: Node = null) -> bool:
 	var b: Dictionary = _behaviors[behavior_index]
 	var trigger: String = b.get("trigger", "")
+	var action: String = b.get("action", "")
 
-	# Check cooldown for triggers that repeat
-	if trigger != "ALWAYS" and trigger != "ON_CREATE" and trigger != "ON_DESTROY":
+	# Continuous actions (movement) skip cooldown — they need per-frame force
+	# application and are self-limiting via max_speed.
+	var skip_cooldown: bool = (
+		action in BehaviorMaps.CONTINUOUS_ACTIONS
+		or trigger == "ALWAYS"
+		or trigger == "ON_CREATE"
+		or trigger == "ON_DESTROY"
+	)
+
+	if not skip_cooldown:
 		var interval_key: String = b.get("interval", "MEDIUM")
 		var cooldown: float = BehaviorMaps.INTERVAL_SECONDS.get(interval_key, 1.5)
 		var now: float = Time.get_ticks_msec() / 1000.0
@@ -147,10 +154,16 @@ func _execute_behavior(behavior_index: int, pre_resolved_target: Node = null) ->
 	# Use pre-resolved target if provided, otherwise resolve fresh
 	var target: Node = pre_resolved_target if pre_resolved_target != null else _resolve_target(behavior_index, null)
 
+	# Null target for actions that require one is normal (target died, not spawned yet).
+	# Return false without counting an error.
+	var action: String = b.get("action", "")
+	if action in _TARGET_REQUIRED_ACTIONS:
+		if target == null or not is_instance_valid(target):
+			return false
+
 	if not _check_condition(b, target):
 		return false
 
-	var action: String = b.get("action", "")
 	var success := true
 
 	match action:
@@ -183,14 +196,15 @@ func _execute_behavior(behavior_index: int, pre_resolved_target: Node = null) ->
 			success = false
 
 	if success:
-		_consecutive_errors = 0
+		_behavior_errors.erase(behavior_index)
 		_emit_message(b)
 	else:
-		_consecutive_errors += 1
-		if _consecutive_errors >= MAX_CONSECUTIVE_ERRORS:
-			Log.info("BehaviorExecutor: Disabling after %d consecutive errors on '%s'" % [
-				_consecutive_errors, _owner_body.blueprint.get("name", "?")])
-			_disabled = true
+		var count: int = _behavior_errors.get(behavior_index, 0) + 1
+		_behavior_errors[behavior_index] = count
+		if count >= MAX_BEHAVIOR_ERRORS:
+			Log.info("BehaviorExecutor: Disabling behavior %d after %d errors on '%s'" % [
+				behavior_index, count, _owner_body.blueprint.get("name", "?")])
+			_disabled_behaviors[behavior_index] = true
 
 	return success
 
@@ -432,11 +446,11 @@ func _setup_timer(behavior_index: int, behavior: Dictionary) -> void:
 
 
 func _on_timer_fired(behavior_index: int) -> void:
-	if _disabled:
+	if behavior_index in _disabled_behaviors:
 		return
 	if behavior_index in _one_shot_fired:
 		return
-	_execute_behavior(behavior_index, null)
+	_try_execute(behavior_index, null)
 
 	var b: Dictionary = _behaviors[behavior_index]
 	var interval_key: String = b.get("interval", "MEDIUM")

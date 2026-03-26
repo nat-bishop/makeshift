@@ -32,7 +32,6 @@ func init_from_blueprint(bp: Dictionary) -> void:
 
 	var visual_descriptor: Dictionary = bp.get("visual_descriptor", {})
 	physics_applicator.apply(tags, visual_descriptor)
-	object_visual.set_placeholder(visual_descriptor)
 	object_visual.set_object_id(object_id)
 	object_visual.init_programmatic_anims(tags)
 

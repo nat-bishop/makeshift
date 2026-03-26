@@ -33,7 +33,7 @@ Godot 4 Client                          FastAPI Backend
 | `interaction_triggered` | source_name, source_tags, target_name, target_tags, effect_message, world_pos | Rule engine collision result (HUD feedback) |
 | `object_created` | blueprint: Dictionary | Backend returned blueprint; triggers placement flow |
 | `sprite_ready` | object_id: String, texture: Texture2D | Decoded sprite available |
-| `sprite_failed` | object_id: String | Sprite generation failed; use placeholder |
+| `sprite_failed` | object_id: String | Sprite generation failed; proceed to placement without texture |
 | `level_completed` | level_id: int | Level win condition met |
 | `creation_requested` | — | Player submitted description; start materialize effect |
 | `creation_failed` | — | Backend rejected creation; cancel effect |
@@ -52,10 +52,10 @@ Full flow from player input to world-placed object with sprite:
 4. **LLM agent** → `creator.agent.create_object()` runs PydanticAI agent (Gemini 3.1 Flash Lite Preview, 3 retries). Validators enforce: 1-3 word name, 2-6 tags, no contradictions, tag budget ≤ 10, 0-3 behaviors, behavior budget ≤ 6. Falls back to generic "Mysterious {description}" on failure
 5. **Blueprint construction** → `GameObjectBlueprint` adds UUID, computed fields: `power_cost`, `behavior_cost`, `starting_durability`
 6. **Atomic persist** → `track_cost_and_save_object()` charges $0.041 + saves blueprint (including behaviors) in one commit
-7. **Immediate response** → Client receives blueprint JSON (with behaviors) + placeholder PNG (colored rounded rectangle) + budget_remaining. `EventBus.creation_requested` was emitted on submit — `Game` starts a `MaterializeEffect` at the spawn point (paper scraps coalesce over 1.2s, then idle-bob)
+7. **Immediate response** → Client receives blueprint JSON (with behaviors) + `placeholder_png_base64` (colored rounded rectangle, backend-generated but not displayed client-side) + budget_remaining. `EventBus.creation_requested` was emitted on submit — `Game` starts a `MaterializeEffect` at the spawn point (paper scraps coalesce over 1.2s, then idle-bob)
 8. **Background sprite generation** → `asyncio.Task` held in module-level `_background_tasks` set (prevents GC). Runs image pipeline (see below)
 9. **WebSocket delivery** → `send_sprite_ready()` broadcasts `{sprite_url}` to all session clients → Godot fetches PNG via HTTP → decodes to `ImageTexture` → `EventBus.sprite_ready` emitted
-10. **Placement mode** → On `sprite_ready` (or `sprite_failed` fallback to placeholder), `MaterializeEffect.resolve()` scatters scraps and frees itself; a semi-transparent ghost preview spawns at that position and follows the mouse. Left-click calls `world.spawn_object()` at the cursor; Escape cancels. `EventBus.placement_started` / `placement_ended` bracket the mode. Object is NOT added to the world until placement is confirmed.
+10. **Placement mode** → On `sprite_ready` (or `sprite_failed`, which proceeds without a texture), `MaterializeEffect.resolve()` scatters scraps and frees itself; a semi-transparent ghost preview spawns at that position and follows the mouse. Left-click calls `world.spawn_object()` at the cursor; Escape cancels. `EventBus.placement_started` / `placement_ended` bracket the mode. Object is NOT added to the world until placement is confirmed.
 
 `EventBus.creation_failed` cancels the effect and discards the pending blueprint at any point in the flow.
 
@@ -85,7 +85,7 @@ Full flow from player input to world-placed object with sprite:
 
 **Concurrency**: Semaphore-limited to `MAX_CONCURRENT_IMAGE_REQUESTS` (default 3).
 
-**Placeholder generation**: `generate_placeholder()` creates a colored rounded rectangle using the first matching tag color from `TAG_COLOR_MAP` (15 tags have mapped colors) or the descriptor's primary color.
+**Placeholder generation**: `generate_placeholder()` creates a colored rounded rectangle using the first matching tag color from `TAG_COLOR_MAP` (15 tags have mapped colors) or the descriptor's primary color. Sent to the client in `placeholder_png_base64` but not displayed — placement waits for the real sprite (or skips to placement on `sprite_failed`).
 
 ## Rule Engine
 
