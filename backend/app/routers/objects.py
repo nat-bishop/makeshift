@@ -62,12 +62,14 @@ async def create_object_endpoint(
 
     # Save object
     await manager.save_object(session_id, blueprint)
+    logger.debug("object_saved", session_id=session_id, object_id=blueprint.id)
 
     # Generate placeholder and kick off async sprite generation
     from app.images.pipeline import generate_placeholder
 
     placeholder_bytes = generate_placeholder(blueprint.visual_descriptor, blueprint.tags)
     placeholder_b64 = base64.b64encode(placeholder_bytes).decode()
+    logger.debug("placeholder_generated", object_id=blueprint.id, size_bytes=len(placeholder_bytes))
 
     # Schedule async sprite generation (will deliver via WebSocket)
     remove_bg = request.app.state.remove_bg
@@ -81,6 +83,7 @@ async def create_object_endpoint(
     )
     _background_tasks.add(task)
     task.add_done_callback(_background_tasks.discard)
+    logger.debug("sprite_task_created", session_id=session_id, object_id=blueprint.id)
 
     return CreateObjectResponse(
         blueprint=blueprint.model_dump(mode="json"),
@@ -98,6 +101,7 @@ async def _generate_and_deliver_sprite(
     """Background task: generate sprite and push via WebSocket."""
     from app.images.pipeline import generate_sprite
 
+    logger.info("sprite_generation_start", session_id=session_id, object_id=object_id)
     try:
         result = await generate_sprite(
             object_id, visual_descriptor, remove_bg
@@ -108,6 +112,12 @@ async def _generate_and_deliver_sprite(
             return
 
         await send_sprite_ready(session_id, object_id, result.sprite_url)
+        logger.info(
+            "sprite_delivery_success",
+            session_id=session_id,
+            object_id=object_id,
+            sprite_url=result.sprite_url,
+        )
     except Exception as exc:
         logger.error(
             "sprite_delivery_failed",
