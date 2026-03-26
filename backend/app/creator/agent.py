@@ -104,8 +104,11 @@ Never use the subject's primary or secondary color.
 
 ## Behaviors (Optional)
 
-Objects can have autonomous behaviors — actions they perform on their own. Most objects are passive \
-(no behaviors). Only add behaviors when the description implies action, movement, or timed effects.
+Objects can have autonomous behaviors — actions they perform on their own. Give objects at least one \
+behavior when they have any implied action, reactivity, or natural ability. Living creatures should \
+almost always have behaviors. Even inanimate objects can have reactive behaviors (a barrel explodes \
+when damaged, a torch burns on contact). Only truly inert objects (walls, blocks, platforms) should \
+have zero behaviors.
 
 ### Triggers (when the behavior fires)
 - ALWAYS: Every tick (use for movement — move_toward, move_away, patrol)
@@ -139,7 +142,7 @@ Objects can have autonomous behaviors — actions they perform on their own. Mos
 - NEAREST_PLAYER: Closest player
 - CONTACT_BODY: The thing that triggered the event (only with ON_CONTACT, ON_DAMAGED, ON_PROXIMITY)
 
-### Behavior budget = 6, max 3 behaviors
+### Behavior budget = 8, max 3 behaviors
 Cost per behavior = max(1, base_cost + intensity_modifier). SPAWN_PROJECTILE/EXPLODE floor at 2.
 Intensity modifiers: MINIMAL=-1, LOW=0, MEDIUM=0, HIGH=+1, EXTREME=+2.
 
@@ -160,15 +163,21 @@ Short player-facing feedback when the behavior fires. E.g., "The dragon breathes
 
 ## Examples
 
-"fire sword" → name="Fire Sword", tags=[SOLID, RIGID, SHARP, HEAT_SOURCE], behaviors=[], \
+"fire sword" → name="Fire Sword", tags=[SOLID, RIGID, SHARP, HEAT_SOURCE], \
+behaviors=[{trigger="ON_CONTACT", action="DEAL_DAMAGE", target="CONTACT_BODY", intensity="LOW", \
+message="The blade sears!"}], \
 visual={base_form="sword", material="metal", color_primary="#CC3300", color_primary_name="fiery red", \
 color_secondary="#FF6600", color_secondary_name="bright orange", \
 visual_effects=["flaming"], size_category="medium", bg_color="#4A6741"}
+Budget: tags 1+1+2+3=7/10, behaviors 2/8.
 
-"ice wall" → name="Ice Wall", tags=[SOLID, RIGID, FROZEN, COLD, BREAKABLE], behaviors=[], \
+"ice wall" → name="Ice Wall", tags=[SOLID, RIGID, FROZEN, COLD, BREAKABLE], \
+behaviors=[{trigger="ON_DAMAGED", action="APPLY_FORCE", target="CONTACT_BODY", intensity="MEDIUM", \
+message="Ice shards push you back!"}], \
 visual={base_form="wall", material="ice", color_primary="#88CCFF", color_primary_name="pale ice blue", \
 color_secondary="#FFFFFF", color_secondary_name="white", \
 visual_effects=["frozen_particles"], size_category="large", bg_color="#5A4A3A"}
+Budget: tags 1+1+2+1+1=6/10, behaviors 2/8.
 
 "fire-breathing dragon" → name="Fire Dragon", tags=[LIVING, HEAT_SOURCE, HOT], \
 behaviors=[{trigger="ALWAYS", action="MOVE_TOWARD", target="NEAREST_LIVING", speed="MEDIUM", \
@@ -178,7 +187,7 @@ intensity="HIGH", interval="SLOW", message="The dragon breathes fire!"}], \
 visual={base_form="dragon", material="scales", color_primary="#CC0000", color_primary_name="deep red", \
 color_secondary="#FF6600", color_secondary_name="orange", \
 visual_effects=["flaming", "glowing"], size_category="large", bg_color="#4A6741"}
-Budget: tags 3+3+2=8/10, behaviors 2+4=6/6.
+Budget: tags 3+3+2=8/10, behaviors 2+4=6/8.
 
 "time bomb" → name="Time Bomb", tags=[EXPLOSIVE, SOLID, RIGID], \
 behaviors=[{trigger="ON_TIMER", action="EXPLODE", intensity="EXTREME", range="FAR", \
@@ -186,15 +195,17 @@ interval="ONCE_MEDIUM", message="BOOM!"}], \
 visual={base_form="sphere", material="metal", color_primary="#FF4444", color_primary_name="red", \
 color_secondary="#222222", color_secondary_name="black", \
 visual_effects=["glowing"], size_category="small", bg_color="#4A6741"}
-Budget: tags 5+1+1=7/10, behaviors 5/6.
+Budget: tags 5+1+1=7/10, behaviors 5/8.
 
 "guard dog" → name="Guard Dog", tags=[LIVING, SOLID, FLEXIBLE], \
 behaviors=[{trigger="ALWAYS", action="MOVE_TOWARD", target="NEAREST_PLAYER", speed="FAST", \
-message="Wags tail"}], \
+message="Wags tail"}, \
+{trigger="ON_PROXIMITY", action="DEAL_DAMAGE", target="NEAREST_PLAYER", intensity="LOW", \
+range="TOUCH", interval="MEDIUM", message="The dog bites!"}], \
 visual={base_form="dog", material="fur", color_primary="#8B4513", color_primary_name="brown", \
 color_secondary="#D2B48C", color_secondary_name="tan", \
 visual_effects=[], size_category="medium", bg_color="#4A6B8A"}
-Budget: tags 3+1+1=5/10, behaviors 2/6.
+Budget: tags 3+1+1=5/10, behaviors 2+2=4/8.
 
 "reactive bomb" → name="Reactive Bomb", tags=[EXPLOSIVE, SOLID, FLAMMABLE], \
 behaviors=[{trigger="ON_TAG_ADDED", trigger_tag="HOT", action="EXPLODE", intensity="EXTREME", \
@@ -202,7 +213,7 @@ range="FAR", message="The bomb detonates!"}], \
 visual={base_form="barrel", material="metal", color_primary="#FF4444", color_primary_name="red", \
 color_secondary="#FFD700", color_secondary_name="gold", \
 visual_effects=["sparkling"], size_category="medium", bg_color="#2A2A2A"}
-Budget: tags 5+1+1=7/10, behaviors 5/6. Sits inert until fire adds HOT tag → explodes.
+Budget: tags 5+1+1=7/10, behaviors 5/8. Sits inert until fire adds HOT tag → explodes.
 """
 
 _agent: Agent[None, CreatorOutput] | None = None

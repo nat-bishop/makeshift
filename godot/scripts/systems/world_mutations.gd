@@ -6,10 +6,10 @@ extends RefCounted
 ## to ensure a single codepath for all game-state mutations.
 
 
-static func apply_damage(target: Node, amount: float) -> void:
+static func apply_damage(target: Node, amount: float, element_color: Color = Color.WHITE) -> void:
 	if not target.has_method("take_damage"):
 		return
-	target.take_damage(amount)
+	target.take_damage(amount, element_color)
 
 
 static func apply_heal(target: Node, amount: float) -> void:
@@ -36,7 +36,7 @@ static func apply_impulse(target: Node, direction: Vector2, magnitude: float) ->
 	target.apply_central_impulse(direction * magnitude)
 
 
-static func apply_dot(target: Node, damage_per_tick: float, tick_interval: float, duration: float) -> void:
+static func apply_dot(target: Node, damage_per_tick: float, tick_interval: float, duration: float, element_color: Color = Color.WHITE) -> void:
 	if not target.has_method("take_damage"):
 		return
 	Log.debug("WorldMutations: DOT on %s (%.1f dmg every %.1fs for %.1fs)" % [target.name, damage_per_tick, tick_interval, duration])
@@ -65,6 +65,6 @@ static func apply_dot(target: Node, damage_per_tick: float, tick_interval: float
 			timer.queue_free()
 			return
 		state[0] -= 1
-		WorldMutations.apply_damage(target, damage_per_tick)
+		WorldMutations.apply_damage(target, damage_per_tick, element_color)
 	)
 	timer.start()

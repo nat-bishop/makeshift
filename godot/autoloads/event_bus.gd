@@ -11,3 +11,6 @@ signal placement_started
 signal placement_ended
 signal debug_toggled(enabled: bool)
 signal player_died
+signal player_damaged(amount: float, current: int, maximum: int)
+signal player_healed(amount: float, current: int, maximum: int)
+signal effect_applied(effect_type: String, amount: float, element_color: Color, world_pos: Vector2)

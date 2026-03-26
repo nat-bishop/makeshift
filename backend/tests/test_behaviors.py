@@ -254,13 +254,14 @@ class TestCreatorOutputBehaviors:
                         intensity=Intensity.EXTREME,
                     ),
                     Behavior(
-                        trigger=BehaviorTrigger.ALWAYS,
-                        action=BehaviorAction.MOVE_TOWARD,
+                        trigger=BehaviorTrigger.ON_PROXIMITY,
+                        action=BehaviorAction.SPAWN_PROJECTILE,
                         target=BehaviorTarget.NEAREST_LIVING,
+                        intensity=Intensity.EXTREME,
                     ),
                 ],
                 visual_descriptor=_make_visual(),
-            )  # 5 + 2 = 7 > 6
+            )  # 5 + 5 = 10 > 8
 
     def test_max_3_behaviors(self) -> None:
         with pytest.raises(ValidationError):
@@ -337,8 +338,8 @@ class TestCreatorOutputBehaviors:
         )
         assert len(out.behaviors) == 1
 
-    def test_behavior_budget_exactly_6_valid(self) -> None:
-        """Dragon: MOVE_TOWARD(2) + SPAWN_PROJECTILE@HIGH(4) = 6."""
+    def test_behavior_budget_at_max_valid(self) -> None:
+        """Dragon: MOVE_TOWARD(2) + SPAWN_PROJECTILE@HIGH(4) = 6 (within budget of 8)."""
         out = CreatorOutput(
             name="Dragon",
             tags=[Tag.LIVING, Tag.SOLID],

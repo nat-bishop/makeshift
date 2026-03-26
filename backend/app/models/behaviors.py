@@ -86,7 +86,7 @@ class BehaviorCondition(BaseModel):
 
 # --- Cost tables ---
 
-BEHAVIOR_BUDGET: int = 6
+BEHAVIOR_BUDGET: int = 8
 
 BEHAVIOR_ACTION_COSTS: dict[BehaviorAction, int] = {
     BehaviorAction.SELF_DESTRUCT: 1,

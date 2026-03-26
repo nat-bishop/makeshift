@@ -16,6 +16,7 @@ var _has_frozen: bool = false
 var _electric_next: float = 0.0
 var _electric_flash_timer: float = 0.0
 var _programmatic_initialized: bool = false
+var _hit_flash_timer: float = 0.0
 
 
 func _ready() -> void:
@@ -36,7 +37,7 @@ func set_object_id(id: String) -> void:
 	# Check if sprite is already cached
 	var cached: Texture2D = Backend.get_cached_sprite(id)
 	if cached != null:
-		Log.debug("ObjectVisual: Cache hit for %s" % id)
+		Log.debug("ObjectVisual: Sprite already loaded for %s" % id)
 		set_sprite(cached)
 	else:
 		Log.debug("ObjectVisual: No cached sprite for %s, waiting for signal" % id)
@@ -69,8 +70,7 @@ func _on_sprite_ready(id: String, texture: Texture2D) -> void:
 		set_sprite(texture)
 
 
-func init_programmatic_anims(tags: Array) -> void:
-	_base_sprite_y = _sprite.position.y
+func _update_tag_flags(tags: Array) -> void:
 	_has_floating = "FLOATING" in tags
 	_has_glowing = "GLOWING" in tags
 	_has_bouncy = "BOUNCY" in tags
@@ -78,21 +78,31 @@ func init_programmatic_anims(tags: Array) -> void:
 	_has_wind_source = "WIND_SOURCE" in tags
 	_has_frozen = "FROZEN" in tags
 
-	# Apply shaders for LIQUID, GAS, MOLTEN
-	if "LIQUID" in tags or "MOLTEN" in tags:
-		var shader: Shader = preload("res://shaders/ripple.gdshader")
-		var mat := ShaderMaterial.new()
-		mat.shader = shader
-		if "MOLTEN" in tags:
-			mat.set_shader_parameter("amplitude", 0.04)
-			mat.set_shader_parameter("speed", 2.0)
-		_sprite.material = mat
 
+func _apply_tag_shaders(tags: Array) -> void:
+	if "LIQUID" in tags or "MOLTEN" in tags:
+		if not (_sprite.material is ShaderMaterial and _sprite.material.shader == preload("res://shaders/ripple.gdshader")):
+			var shader: Shader = preload("res://shaders/ripple.gdshader")
+			var mat := ShaderMaterial.new()
+			mat.shader = shader
+			if "MOLTEN" in tags:
+				mat.set_shader_parameter("amplitude", 0.04)
+				mat.set_shader_parameter("speed", 2.0)
+			_sprite.material = mat
 	elif "GAS" in tags:
-		var shader: Shader = preload("res://shaders/gas.gdshader")
-		var mat := ShaderMaterial.new()
-		mat.shader = shader
-		_sprite.material = mat
+		if not (_sprite.material is ShaderMaterial and _sprite.material.shader == preload("res://shaders/gas.gdshader")):
+			var shader: Shader = preload("res://shaders/gas.gdshader")
+			var mat := ShaderMaterial.new()
+			mat.shader = shader
+			_sprite.material = mat
+	else:
+		_sprite.material = null
+
+
+func init_programmatic_anims(tags: Array) -> void:
+	_base_sprite_y = _sprite.position.y
+	_update_tag_flags(tags)
+	_apply_tag_shaders(tags)
 
 	if _has_electric:
 		_electric_next = randf_range(0.5, 2.0)
@@ -137,8 +147,64 @@ func _apply_programmatic_anims(_delta: float) -> void:
 				_electric_flash_timer = 0.08
 				_electric_next = randf_range(0.5, 2.0)
 
-	if _has_glowing or _has_frozen or _has_electric:
+	if _hit_flash_timer > 0.0:
+		_hit_flash_timer -= _delta
+	elif _has_glowing or _has_frozen or _has_electric:
 		_sprite.modulate = Color(color.r, color.g, color.b, alpha)
+
+
+func flash_hit(color: Color) -> void:
+	if _sprite == null:
+		return
+	_hit_flash_timer = 0.15
+	var original: Color = _sprite.modulate
+	var tween := _sprite.create_tween()
+	tween.tween_property(_sprite, "modulate", color, 0.07)
+	tween.tween_property(_sprite, "modulate", original, 0.08)
+
+
+func spawn_particles(color: Color, count: int = 5) -> void:
+	if _sprite == null:
+		return
+	var center: Vector2 = _sprite.position
+	for i in range(count):
+		var particle := ColorRect.new()
+		particle.size = Vector2(4, 4)
+		particle.color = color
+		particle.position = center - Vector2(2, 2)
+		add_child(particle)
+
+		var angle: float = randf() * TAU
+		var dir := Vector2(cos(angle), sin(angle) - 0.5).normalized()
+		var end_pos: Vector2 = particle.position + dir * 30.0
+
+		var tween := particle.create_tween()
+		tween.set_parallel(true)
+		tween.tween_property(particle, "position", end_pos, 0.5)
+		tween.tween_property(particle, "modulate:a", 0.0, 0.5)
+		tween.set_parallel(false)
+		tween.tween_callback(particle.queue_free)
+
+
+func refresh_tag_visuals(tags: Array) -> void:
+	_update_tag_flags(tags)
+	_apply_tag_shaders(tags)
+
+	if _has_electric and _electric_next <= 0.0:
+		_electric_next = randf_range(0.5, 2.0)
+
+	# Enable/disable processing based on active animated tags
+	var needs_process: bool = _has_floating or _has_glowing or _has_bouncy or _has_electric or _has_wind_source or _has_frozen
+	if needs_process:
+		_programmatic_initialized = true
+		set_process(true)
+	elif _programmatic_initialized:
+		# Reset sprite state when no animated tags remain
+		_sprite.modulate = Color.WHITE
+		_sprite.position.y = _base_sprite_y
+		_sprite.rotation = 0.0
+		_programmatic_initialized = false
+		set_process(false)
 
 
 func _on_bounce_collision(_body: Node) -> void:

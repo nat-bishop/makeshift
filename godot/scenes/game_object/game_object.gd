@@ -71,9 +71,10 @@ func get_object_id() -> String:
 	return object_id
 
 
-func take_damage(amount: float) -> void:
+func take_damage(amount: float, element_color: Color = Color.WHITE) -> void:
 	current_durability -= int(amount)
 	Log.debug("GameObject: '%s' took %.0f damage, durability=%d" % [blueprint.get("name", object_id), amount, current_durability])
+	object_visual.flash_hit(element_color)
 
 	if current_durability <= 0:
 		if _behavior_executor != null:
@@ -94,6 +95,7 @@ func heal(amount: float) -> void:
 	var starting: int = blueprint.get("starting_durability", 150)
 	current_durability = min(current_durability + int(amount), starting)
 	Log.debug("GameObject: '%s' healed %.0f, durability=%d" % [blueprint.get("name", object_id), amount, current_durability])
+	object_visual.flash_hit(TagColors.HEAL)
 
 
 func add_tag(tag: String, duration: float = 0.0) -> void:
@@ -102,6 +104,9 @@ func add_tag(tag: String, duration: float = 0.0) -> void:
 		tags.append(tag)
 		Log.debug("GameObject: '%s' +tag %s%s" % [blueprint.get("name", object_id), tag, " (%.1fs)" % duration if duration > 0.0 else ""])
 		_reapply_physics()
+		object_visual.refresh_tag_visuals(tags)
+		if tag in TagColors.COLORS:
+			object_visual.spawn_particles(TagColors.get_color(tag))
 		if _behavior_executor != null:
 			_behavior_executor.on_tag_added(tag)
 	if duration > 0.0:
@@ -122,6 +127,7 @@ func remove_tag(tag: String) -> void:
 	Log.debug("GameObject: '%s' -tag %s" % [blueprint.get("name", object_id), tag])
 	tags.erase(tag)
 	_reapply_physics()
+	object_visual.refresh_tag_visuals(tags)
 
 
 func _cancel_decay_timer(tag: String) -> void:
