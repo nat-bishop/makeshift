@@ -9,13 +9,21 @@ extends PanelContainer
 @onready var _reveal_tags: HFlowContainer = %RevealTags
 @onready var _reveal_size: Label = %RevealSize
 @onready var _reveal_cost: Label = %RevealCost
+@onready var _close_button: Button = %CloseButton
+@onready var _behavior_section: VBoxContainer = %BehaviorSection
+@onready var _behavior_list: VBoxContainer = %BehaviorList
 
 var _is_creating := false
 var _is_showing_reveal := false
+var _is_hovered := false
+var _fade_timer: float = -1.0
+
+const REVEAL_TIMEOUT: float = 10.0
+const FADE_DURATION: float = 0.5
 
 
 func _ready() -> void:
-	var style := _make_stylebox(
+	var style := InfoWidgets.make_stylebox(
 		Color(0.12, 0.12, 0.15, 0.95), 8, 16, 12, 1, Color(0.4, 0.4, 0.5, 0.8)
 	)
 	add_theme_stylebox_override("panel", style)
@@ -23,18 +31,32 @@ func _ready() -> void:
 	description_input.max_length = 500
 	create_button.pressed.connect(_on_create_pressed)
 	description_input.text_submitted.connect(_on_text_submitted)
+	_close_button.pressed.connect(_dismiss_reveal)
 	status_label.text = ""
 	_reveal_card.visible = false
 
+	mouse_entered.connect(_on_mouse_entered)
+	mouse_exited.connect(_on_mouse_exited)
+
 
 func focus_input() -> void:
+	# Reset reveal state if panel was reopened while reveal was active
+	if _is_showing_reveal:
+		_is_showing_reveal = false
+		_fade_timer = -1.0
+		_reveal_card.modulate.a = 1.0
+		_reveal_card.visible = false
+		_creation_form.visible = true
 	description_input.grab_focus()
 
 
-func _unhandled_input(event: InputEvent) -> void:
-	if _is_showing_reveal and event.is_pressed():
-		_dismiss_reveal()
-		get_viewport().set_input_as_handled()
+func _process(delta: float) -> void:
+	if not _is_showing_reveal or _fade_timer < 0.0 or _is_hovered:
+		return
+	_fade_timer -= delta
+	if _fade_timer <= 0.0:
+		_fade_timer = -1.0
+		_auto_fade_out()
 
 
 func _on_create_pressed() -> void:
@@ -86,60 +108,67 @@ func _submit() -> void:
 func _show_reveal(blueprint: Dictionary) -> void:
 	_is_showing_reveal = true
 	_creation_form.visible = false
+	_reveal_card.modulate.a = 1.0
 	_reveal_card.visible = true
 
 	_reveal_name.text = blueprint.get("name", "Unknown")
 
+	# Tags
 	for child in _reveal_tags.get_children():
 		child.queue_free()
 	var tags: Array = blueprint.get("tags", [])
 	for tag in tags:
-		var badge := _create_tag_badge(str(tag))
-		_reveal_tags.add_child(badge)
+		_reveal_tags.add_child(InfoWidgets.create_tag_badge(str(tag)))
 
+	# Behaviors
+	for child in _behavior_list.get_children():
+		child.queue_free()
+	var behaviors: Array = blueprint.get("behaviors", [])
+	_behavior_section.visible = not behaviors.is_empty()
+	for b in behaviors:
+		_behavior_list.add_child(InfoWidgets.create_behavior_label(b))
+
+	# Stats
 	var vd: Dictionary = blueprint.get("visual_descriptor", {})
 	_reveal_size.text = vd.get("size_category", "medium").to_upper()
 
 	var power_cost: int = blueprint.get("power_cost", 0)
 	_reveal_cost.text = "%d / 10" % power_cost
 
+	# Fade-in and start auto-fade timer
 	_reveal_card.modulate.a = 0.0
+	_fade_timer = REVEAL_TIMEOUT
 	var tween := create_tween()
 	tween.tween_property(_reveal_card, "modulate:a", 1.0, 0.25)
 
 
 func _dismiss_reveal() -> void:
 	_is_showing_reveal = false
+	_fade_timer = -1.0
+	_reveal_card.modulate.a = 1.0
 	_reveal_card.visible = false
 	_creation_form.visible = true
 	visible = false
 
 
-func _create_tag_badge(tag: String) -> Label:
-	var badge := Label.new()
-	badge.text = " %s " % tag
-	badge.add_theme_font_size_override("font_size", 12)
-	var color: Color = TagColors.get_color(tag)
-	badge.add_theme_color_override("font_color", color)
-	badge.add_theme_stylebox_override("normal", _make_stylebox(Color(color, 0.15), 3, 4, 1))
-	return badge
+func _auto_fade_out() -> void:
+	var tween := create_tween()
+	tween.tween_property(_reveal_card, "modulate:a", 0.0, FADE_DURATION)
+	tween.tween_callback(func():
+		if not _is_hovered:
+			_dismiss_reveal()
+	)
 
 
-static func _make_stylebox(bg_color: Color, corner_radius: int, content_margin_h: float, content_margin_v: float, border_width: int = 0, border_color: Color = Color.TRANSPARENT) -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = bg_color
-	style.corner_radius_top_left = corner_radius
-	style.corner_radius_top_right = corner_radius
-	style.corner_radius_bottom_left = corner_radius
-	style.corner_radius_bottom_right = corner_radius
-	style.content_margin_left = content_margin_h
-	style.content_margin_right = content_margin_h
-	style.content_margin_top = content_margin_v
-	style.content_margin_bottom = content_margin_v
-	if border_width > 0:
-		style.border_width_left = border_width
-		style.border_width_right = border_width
-		style.border_width_top = border_width
-		style.border_width_bottom = border_width
-		style.border_color = border_color
-	return style
+func _on_mouse_entered() -> void:
+	_is_hovered = true
+	if _is_showing_reveal and _reveal_card.modulate.a < 1.0:
+		var tween := create_tween()
+		tween.tween_property(_reveal_card, "modulate:a", 1.0, 0.1)
+		_fade_timer = REVEAL_TIMEOUT
+
+
+func _on_mouse_exited() -> void:
+	_is_hovered = false
+	if _is_showing_reveal:
+		_fade_timer = REVEAL_TIMEOUT

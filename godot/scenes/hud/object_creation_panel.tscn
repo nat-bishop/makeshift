@@ -42,11 +42,23 @@ visible = false
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="RevealName" type="Label" parent="RevealCard"]
+[node name="HeaderRow" type="HBoxContainer" parent="RevealCard"]
+layout_mode = 2
+
+[node name="RevealName" type="Label" parent="RevealCard/HeaderRow"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 20
-horizontal_alignment = 1
+
+[node name="CloseButton" type="Button" parent="RevealCard/HeaderRow"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(28, 28)
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 0.8)
+text = "x"
+flat = true
 
 [node name="Separator1" type="HSeparator" parent="RevealCard"]
 layout_mode = 2
@@ -63,6 +75,27 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/h_separation = 4
 theme_override_constants/v_separation = 4
+
+[node name="BehaviorSection" type="VBoxContainer" parent="RevealCard"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Separator2" type="HSeparator" parent="RevealCard/BehaviorSection"]
+layout_mode = 2
+theme_override_styles/separator = null
+
+[node name="BehaviorsLabel" type="Label" parent="RevealCard/BehaviorSection"]
+layout_mode = 2
+text = "Behaviors"
+theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
+
+[node name="BehaviorList" type="VBoxContainer" parent="RevealCard/BehaviorSection"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 2
 
 [node name="StatsRow" type="HBoxContainer" parent="RevealCard"]
 layout_mode = 2
@@ -97,10 +130,3 @@ theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 14
-
-[node name="DismissHint" type="Label" parent="RevealCard"]
-layout_mode = 2
-text = "Press any key to continue"
-horizontal_alignment = 1
-theme_override_font_sizes/font_size = 10
-theme_override_colors/font_color = Color(0.5, 0.5, 0.5, 1)

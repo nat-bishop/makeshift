@@ -52,7 +52,7 @@ func init_from_blueprint(bp: Dictionary) -> void:
 
 	# Debug label for overlay
 	var debug_label_script: GDScript = preload("res://scripts/ui/debug_label.gd")
-	var debug_label := Label.new()
+	var debug_label := PanelContainer.new()
 	debug_label.set_script(debug_label_script)
 	add_child(debug_label)
 	debug_label.init(self)
