@@ -24,15 +24,8 @@ logger = structlog.get_logger()
 
 
 class VisualDescriptor(BaseModel):
-    base_form: str
-    material: str
-    color_primary: str = Field(pattern=r"^#[0-9a-fA-F]{6}$")
-    color_primary_name: str
-    color_secondary: str = Field(pattern=r"^#[0-9a-fA-F]{6}$")
-    color_secondary_name: str
-    visual_effects: list[str]
+    visual_description: str
     size_category: Literal["tiny", "small", "medium", "large", "huge"]
-    bg_color: str = Field(pattern=r"^#[0-9a-fA-F]{6}$")
 
 
 class CreatorOutput(BaseModel):

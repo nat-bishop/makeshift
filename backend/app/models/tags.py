@@ -99,10 +99,3 @@ TAG_CONTRADICTIONS: list[frozenset[Tag]] = [
 
 OBJECT_TAG_BUDGET: int = 10
 
-SIZE_PIXEL_MAP: dict[str, int] = {
-    "tiny": 32,
-    "small": 48,
-    "medium": 64,
-    "large": 96,
-    "huge": 128,
-}

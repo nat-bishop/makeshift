@@ -7,14 +7,14 @@
 - Python 3.11+
 - [uv](https://docs.astral.sh/uv/) package manager
 - [Godot 4.3](https://godotengine.org/) (for the client)
-- API keys: [Google AI](https://ai.google.dev/) (Gemini) + [fal.ai](https://fal.ai/) (Flux image generation)
+- API keys: [Google AI](https://ai.google.dev/) (Gemini — LLM + image generation); [fal.ai](https://fal.ai/) only if using cloud background removal
 
 ## Quick Start
 
 ```bash
 # Configure environment
 cp .env.example .env
-# Edit .env with your GOOGLE_API_KEY and FAL_KEY
+# Edit .env with your GOOGLE_API_KEY (FAL_KEY only needed for cloud bg removal)
 # Optional: set SPRITE_CACHE_ENABLED=false to force sprite regeneration
 
 # Install dependencies

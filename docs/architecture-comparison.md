@@ -39,7 +39,7 @@ The 15 seed objects already created per session (in `routers/sessions.py`) are a
 
 **Scribblenauts pattern:** Material sub-categories — Metal, Plastic, Fabric, Stone, Wood, Glass, Paper — were first-class gameplay properties. Metal objects were heavy, fire-immune, and magnet-attractable. Wooden objects were flammable. Glass was breakable. These weren't just visual descriptors; they drove physics and interaction rules.
 
-**Our gap:** We have `material` as a field on `VisualDescriptor` (`models/blueprint.py`), but it's **visual-only** — used in `images/pipeline.py:build_prompt()` to generate the sprite prompt ("sword made of ice") and nowhere else. The actual gameplay behavior is driven entirely by tags. A "wooden shield" and a "metal shield" with identical tags behave identically in `CollisionResolver`.
+**Our gap:** `VisualDescriptor` (`models/blueprint.py`) has only `visual_description` (free text) and `size_category` — both visual-only, used in `images/pipeline.py:build_prompt()` to generate the sprite prompt. The actual gameplay behavior is driven entirely by tags. A "wooden shield" and a "metal shield" with identical tags behave identically in `CollisionResolver`.
 
 **Recommendation:** Either promote material to a gameplay-relevant field with a material→tag mapping (e.g., "wood" auto-adds `FLAMMABLE`, "metal" auto-adds `CONDUCTING + HEAVY`, "glass" auto-adds `BREAKABLE + REFLECTIVE`), or — simpler — add a `check_material_tag_consistency` validator to `CreatorOutput` that uses `ModelRetry` (as the existing `check_contradictions` validator does in `models/blueprint.py`) to ensure the LLM assigns tags consistent with the stated material. The latter approach keeps the tag system as the single source of gameplay truth while reducing the chance of "metal flammable sword" hallucinations.
 
@@ -113,11 +113,11 @@ The 15 seed objects already created per session (in `routers/sessions.py`) are a
 
 ### 2. Latency: object creation is not instant
 
-**The problem:** In Scribblenauts, typing "jetpack" and pressing Enter spawned the object instantly — the 22,000-entry database was a local lookup. Our pipeline requires: LLM API call (~1–3s) → placeholder PNG generation → background Flux image generation (~10–20s) → WebSocket sprite delivery. The immediate response from `routers/objects.py` returns a placeholder, but the full sprite arrives asynchronously.
+**The problem:** In Scribblenauts, typing "jetpack" and pressing Enter spawned the object instantly — the 22,000-entry database was a local lookup. Our pipeline requires: LLM API call (~1–3s) → background Gemini image generation → WebSocket sprite delivery. The immediate response from `routers/objects.py` returns a blueprint, but the sprite arrives asynchronously. The client enters a materialize animation while waiting.
 
-**Where it bites:** The creation flow in `routers/objects.py` returns `placeholder_png_base64` immediately, and the Godot client (`Backend` autoload) renders placeholders via `ObjectVisual`. But there's a perceptible delay between "I typed something" and "I have a usable object," and a longer delay before the object *looks* like what I described. This breaks the Scribblenauts magic of instant materialization.
+**Where it bites:** There's a perceptible delay between "I typed something" and "I have a usable object with a sprite," and a longer delay before the object *looks* like what I described. This breaks the Scribblenauts magic of instant materialization.
 
-**Mitigation:** The placeholder system is already the right approach. To improve perceived speed: (a) expand the prototype library with pre-generated sprites for common objects, (b) consider client-side sprite prediction or pre-fetching for likely descriptions, (c) lean into the delay as a game mechanic ("the object is materializing..."). Do not attempt to make the LLM call synchronous with gameplay — that path leads to unplayable latency spikes.
+**Mitigation:** The materialize-animation-while-waiting approach is already the right approach. To improve perceived speed: (a) expand the prototype library with pre-generated sprites for common objects, (b) consider client-side sprite prediction or pre-fetching for likely descriptions, (c) lean into the delay as a game mechanic ("the object is materializing..."). Do not attempt to make the LLM call synchronous with gameplay — that path leads to unplayable latency spikes.
 
 ### 3. Cost ceiling: every object costs real money
 
@@ -125,7 +125,7 @@ The 15 seed objects already created per session (in `routers/sessions.py`) are a
 
 **Where it bites:** The budget constraint in `routers/objects.py` returns HTTP 402 when the session budget is exhausted. Players who want to experiment broadly — Scribblenauts' core appeal — hit a hard wall. The 15 seed objects per session help, but 24 total objects is a fraction of what Scribblenauts allowed.
 
-**Mitigation:** The prototype library (STEAL §1) could serve common objects without LLM calls, reserving the budget for novel creations. Sprite caching by visual descriptor hash (`images/pipeline.py:_descriptor_hash()`) already avoids redundant image generation. Consider a tiered system: prototype-based objects are free, LLM-generated objects cost budget. This aligns with Scribblenauts' own DS-era "Budget Meter" for simultaneous objects — but our constraint is economic, not hardware.
+**Mitigation:** The prototype library (STEAL §1) could serve common objects without LLM calls, reserving the budget for novel creations. Sprite caching by prompt hash (`images/pipeline.py:_prompt_hash()`) already avoids redundant image generation for identical prompts. Consider a tiered system: prototype-based objects are free, LLM-generated objects cost budget. This aligns with Scribblenauts' own DS-era "Budget Meter" for simultaneous objects — but our constraint is economic, not hardware.
 
 ### 4. Hallucinated properties: plausible but mechanically incoherent objects
 
@@ -143,13 +143,13 @@ The 15 seed objects already created per session (in `routers/sessions.py`) are a
 
 **Mitigation:** This is a deliberate design tradeoff — 33 tags keep the system learnable and the budget math simple. Resist the temptation to grow to 50+ tags. Instead, address specific gaps through the archetype field (STEAL §2) and lifecycle hooks (STEAL §3). A "flying carpet" doesn't need a FLY tag if it has archetype "vehicle" and tags `[FLOATING, WEARABLE, FLEXIBLE]`. A "treasure chest" doesn't need a CONTAINER tag if it has a lifecycle hook `on_interact → spawn contained object`. Extend through composition, not vocabulary expansion.
 
-### 6. Sprite cache collision: visual descriptors as deduplication keys
+### 6. Sprite cache collision: prompt text as deduplication key
 
-**The problem:** Our sprite cache keys on visual descriptor hash (`images/pipeline.py:_descriptor_hash()`), which means two objects with the same `base_form`, `material`, `color_primary_name`, `color_secondary_name`, `visual_effects`, `size_category`, and `bg_color` share a sprite — even if they have different names, tags, and gameplay behavior. Scribblenauts had ~4,000 unique visual assets explicitly mapped to objects; we generate on demand and deduplicate aggressively.
+**The problem:** Our sprite cache keys on the full `build_prompt()` output (`images/pipeline.py:_prompt_hash()`), which means two objects with the same name + `visual_description` share a sprite — even if they have different tags and gameplay behavior. Scribblenauts had ~4,000 unique visual assets explicitly mapped to objects; we generate on demand and deduplicate aggressively.
 
-**Where it bites:** A "fire sword" and a "cursed blade" might both get `base_form: "sword", material: "metal", color_primary_name: "fiery red"` and share a sprite despite having very different tags and intended aesthetics. Conversely, slight LLM variation in color names ("dark red" vs. "deep crimson") causes cache misses and redundant Flux API calls for visually near-identical objects.
+**Where it bites:** A "fire sword" with a generic `visual_description` and another "fire sword" created later will hit the same cache entry regardless of different intended tags or aesthetics. Conversely, slight LLM variation in `visual_description` phrasing causes cache misses and redundant Gemini API calls for visually near-identical intended objects.
 
-**Mitigation:** The hash function in `_descriptor_hash()` could normalize color names (map to nearest named color) to reduce false misses. For false hits (same visual, different intent), the LLM should be prompted to include gameplay-relevant visual cues in `visual_effects` — a TOXIC sword should have `["dripping", "green glow"]` that distinguishes it from a HEAT_SOURCE sword with `["flaming", "ember particles"]`. This is already partially handled by the visual descriptor system but could be more intentional.
+**Mitigation:** The LLM should be prompted to include gameplay-relevant visual cues in `visual_description` — a TOXIC sword should mention dripping green liquid to distinguish it from a HEAT_SOURCE sword with flames. This ties the visual description to tags, making cache hits more semantically meaningful. This is partially handled by the system prompt in `creator/agent.py` but could be more intentional.
 
 ### 7. No QA history: every LLM-generated object is untested
 

@@ -25,15 +25,8 @@ from pydantic_ai import ModelRetry
 
 def _make_visual() -> VisualDescriptor:
     return VisualDescriptor(
-        base_form="cube",
-        material="stone",
-        color_primary="#888888",
-        color_primary_name="gray",
-        color_secondary="#666666",
-        color_secondary_name="dark gray",
-        visual_effects=[],
+        visual_description="a gray stone cube",
         size_category="medium",
-        bg_color="#808080",
     )
 
 

@@ -15,15 +15,8 @@ from app.models.tags import Tag
 
 def make_visual(**kwargs: object) -> VisualDescriptor:
     defaults: dict[str, object] = {
-        "base_form": "cube",
-        "material": "stone",
-        "color_primary": "#888888",
-        "color_primary_name": "gray",
-        "color_secondary": "#666666",
-        "color_secondary_name": "dark gray",
-        "visual_effects": [],
+        "visual_description": "a gray stone cube",
         "size_category": "medium",
-        "bg_color": "#4A6741",
     }
     defaults.update(kwargs)
     return VisualDescriptor(**defaults)  # type: ignore[arg-type]
@@ -48,7 +41,7 @@ def test_system_prompt_mentions_contradictions():
 
 def test_fallback_object_structure():
     """Verify the fallback object matches expected shape."""
-    vd = make_visual(visual_effects=["sparkling"])
+    vd = make_visual()
     fallback = CreatorOutput(
         name="Mysterious Fire Sword",
         tags=[Tag.SOLID, Tag.RIGID],
@@ -86,7 +79,7 @@ def test_fallback_object_is_valid_creator_output() -> None:
     co = CreatorOutput(
         name="Mysterious Object",
         tags=[Tag.SOLID, Tag.RIGID],
-        visual_descriptor=make_visual(visual_effects=["sparkling"]),
+        visual_descriptor=make_visual(),
     )
     assert co.name == "Mysterious Object"
     assert len(co.tags) == 2

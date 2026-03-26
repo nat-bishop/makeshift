@@ -11,7 +11,7 @@ const CL = preload("res://scripts/data/collision_layers.gd")
 const _TICK_TRIGGERS: Array = ["ON_PROXIMITY", "ALWAYS"]
 
 var _owner_body: RigidBody2D
-var _behaviors: Array[Dictionary] = []
+var _behaviors: Array = []
 var _behaviors_by_trigger: Dictionary = {}  # trigger_name -> [behavior_indices]
 var _cooldowns: Dictionary = {}  # behavior_index -> last_fire_time
 var _target_cache: Dictionary = {}  # behavior_index -> cached target Node

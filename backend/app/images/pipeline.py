@@ -8,12 +8,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TypeAlias
 
-import httpx
 import structlog
-from PIL import Image, ImageDraw
+from PIL import Image
 
-from app.models.blueprint import VisualDescriptor
-from app.models.tags import SIZE_PIXEL_MAP, Tag
+from app.models.blueprint import GameObjectBlueprint, VisualDescriptor
 
 logger = structlog.get_logger()
 
@@ -29,25 +27,6 @@ TEXTURE_RESOLUTION = 512
 # transparent border so collision shapes don't extend to the very edge).
 FILL_FRACTION = 0.9
 
-# Tag-based placeholder colors
-TAG_COLOR_MAP: dict[Tag, str] = {
-    Tag.HEAT_SOURCE: "#FF4444",
-    Tag.HOT: "#FF6600",
-    Tag.MOLTEN: "#FF2200",
-    Tag.FROZEN: "#88CCFF",
-    Tag.COLD: "#44AAFF",
-    Tag.LIVING: "#44CC44",
-    Tag.TOXIC: "#88FF00",
-    Tag.ELECTRIC: "#FFFF00",
-    Tag.CORROSIVE: "#AAFF00",
-    Tag.EXPLOSIVE: "#FF8800",
-    Tag.GLOWING: "#FFFFAA",
-    Tag.MAGNETIC: "#AA44FF",
-    Tag.WIND_SOURCE: "#CCCCFF",
-    Tag.LIQUID: "#4488FF",
-    Tag.GAS: "#CCCCCC",
-}
-
 
 @dataclass
 class SpriteResult:
@@ -61,43 +40,13 @@ def _prompt_hash(prompt: str) -> str:
     return hashlib.sha256(prompt.encode()).hexdigest()[:16]
 
 
-def generate_placeholder(visual_descriptor: VisualDescriptor, tags: list[Tag]) -> bytes:
-    """Generate a colored rectangle placeholder PNG from the visual descriptor and tags."""
-    size = SIZE_PIXEL_MAP[visual_descriptor.size_category]
-
-    # Pick color: first matching tag color, or use primary color from descriptor
-    color = visual_descriptor.color_primary
-    for tag in tags:
-        if tag in TAG_COLOR_MAP:
-            color = TAG_COLOR_MAP[tag]
-            break
-
-    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
-    draw.rounded_rectangle(
-        [(2, 2), (size - 3, size - 3)],
-        radius=4,
-        fill=color,
-        outline="#000000",
-        width=1,
-    )
-
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    return buf.getvalue()
-
-
-def build_prompt(visual_descriptor: VisualDescriptor) -> str:
-    """Build a Flux image generation prompt from a VisualDescriptor."""
-    vd = visual_descriptor
+def build_prompt(name: str, visual_descriptor: VisualDescriptor) -> str:
+    """Build an image generation prompt from a name and VisualDescriptor."""
     parts = [
         "mixed media collage style paper cutout, side view, flat lighting, clean edges",
-        f"{vd.size_category} {vd.base_form} made of {vd.material}",
-        f"{vd.color_primary_name} with {vd.color_secondary_name} accents",
+        f"{name}, {visual_descriptor.visual_description}",
+        "single centered object, contrasting solid background color, no text",
     ]
-    if vd.visual_effects:
-        parts.append(", ".join(vd.visual_effects))
-    parts.append(f"single centered object, solid {vd.bg_color} background, no text")
     return ", ".join(parts)
 
 
@@ -106,10 +55,6 @@ def get_cached_sprite_path(prompt: str) -> Path:
     h = _prompt_hash(prompt)
     return STATIC_DIR / "sprites" / f"{h}.png"
 
-
-def get_sprite_url(prompt: str) -> str:
-    """Public URL path for a sprite's cache file."""
-    return f"/static/sprites/{get_cached_sprite_path(prompt).name}"
 
 
 def _crop_and_fit(
@@ -162,8 +107,7 @@ async def _generate_static_sprite(
 
 
 async def generate_sprite(
-    object_id: str,
-    visual_descriptor: VisualDescriptor,
+    blueprint: GameObjectBlueprint,
     remove_bg: RemoveBg,
 ) -> SpriteResult | None:
     """Full image pipeline: check cache → generate → remove bg → crop & fit → cache.
@@ -172,9 +116,10 @@ async def generate_sprite(
     """
     from app.config import settings
 
-    prompt = build_prompt(visual_descriptor)
+    object_id = blueprint.id
+    prompt = build_prompt(blueprint.name, blueprint.visual_descriptor)
     cache_path = get_cached_sprite_path(prompt)
-    sprite_url = get_sprite_url(prompt)
+    sprite_url = f"/static/sprites/{cache_path.name}"
 
     if settings.sprite_cache_enabled and cache_path.exists():
         logger.debug("sprite_cache_hit", object_id=object_id)
@@ -202,7 +147,7 @@ async def generate_sprite(
         )
         return SpriteResult(sprite_url=sprite_url)
 
-    except (httpx.HTTPError, TimeoutError, OSError, ValueError):
+    except (RuntimeError, TimeoutError, OSError, ValueError):
         logger.error(
             "sprite_generation_failed",
             object_id=object_id,

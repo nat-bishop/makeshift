@@ -17,46 +17,14 @@ from pydantic_ai import ModelRetry
 
 def _make_visual(**kwargs: object) -> VisualDescriptor:
     defaults: dict[str, object] = {
-        "base_form": "cube",
-        "material": "stone",
-        "color_primary": "#888888",
-        "color_primary_name": "gray",
-        "color_secondary": "#666666",
-        "color_secondary_name": "dark gray",
-        "visual_effects": [],
+        "visual_description": "a gray stone cube",
         "size_category": "medium",
-        "bg_color": "#4A6741",
     }
     defaults.update(kwargs)
     return VisualDescriptor(**defaults)  # type: ignore[arg-type]
 
 
 class TestVisualDescriptor:
-    def test_valid_hex_colors(self) -> None:
-        vd = _make_visual(color_primary="#FF4444", color_secondary="#222222")
-        assert vd.color_primary == "#FF4444"
-
-    @pytest.mark.parametrize(
-        "bad_color",
-        ["red", "#FFF", "FF4444", "#ZZZZZZ", ""],
-    )
-    def test_invalid_color_primary_raises(self, bad_color: str) -> None:
-        with pytest.raises(ValidationError):
-            _make_visual(color_primary=bad_color)
-
-    @pytest.mark.parametrize(
-        "bad_color",
-        ["blue", "#000", "666666"],
-    )
-    def test_invalid_color_secondary_raises(self, bad_color: str) -> None:
-        with pytest.raises(ValidationError):
-            _make_visual(color_secondary=bad_color)
-
-    def test_empty_visual_effects(self) -> None:
-        """Empty visual_effects list is valid."""
-        vd = _make_visual(visual_effects=[])
-        assert vd.visual_effects == []
-
     def test_valid_size_categories(self) -> None:
         for size in ("tiny", "small", "medium", "large", "huge"):
             vd = _make_visual(size_category=size)

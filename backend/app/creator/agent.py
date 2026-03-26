@@ -84,21 +84,14 @@ CONDUCTING↔INSULATING, REFLECTIVE↔STICKY, HEAT_SOURCE↔FLAMMABLE
 
 ## Visual Descriptor
 
-- base_form: The basic shape/silhouette (e.g., "sword", "shield", "plank", "sphere", "cube", "bottle", "axe")
-- material: What it appears made of (e.g., "metal", "wood", "crystal", "ice", "stone", "cloth")
-- color_primary: Primary color as hex (e.g., "#FF4444")
-- color_primary_name: Natural language color name for image generation (e.g., "fiery red", "pale blue", "dark forest green")
-- color_secondary: Secondary/accent color as hex (e.g., "#222222")
-- color_secondary_name: Natural language accent color name (e.g., "dark orange", "silver", "charcoal")
-- visual_effects: List of visual effects like "glowing", "flaming", "sparkling", "dripping", "smoking", "frozen_particles"
+- visual_description: A short natural-language description of what the object looks like — its shape, \
+material, colors, and distinctive features. Describe the object's APPEARANCE, not an image prompt. \
+1-2 sentences. Examples: "a curved steel blade with a fiery red edge and dark leather grip", \
+"a round wooden barrel with iron bands and a fuse on top", "a fluffy brown dog with floppy ears and a wagging tail"
 - size_category: One of "tiny", "small", "medium", "large", "huge" — the player character is \
 "small"-to-"medium" sized. Pick relative to the player: "tiny" for coins, keys, bugs, pebbles; \
 "small" for swords, bottles, small animals, tools; "medium" for crates, dogs, chairs, shields; \
 "large" for doors, boulders, bears, large furniture; "huge" for walls, trees, dragons, buildings
-- bg_color: Solid background color hex for sprite generation. Pick a color that (1) contrasts with the subject's \
-colors so background removal works cleanly, and (2) is close to a natural/earthy tone (this is a 2D sandbox — \
-use tones like #4A6741 for outdoor, #4A6B8A for sky/water, #2A2A2A for dark, #808080 as generic fallback). \
-Never use the subject's primary or secondary color.
 
 ## Behaviors (Optional)
 
@@ -164,17 +157,15 @@ Short player-facing feedback when the behavior fires. E.g., "The dragon breathes
 "fire sword" → name="Fire Sword", tags=[SOLID, RIGID, SHARP, HEAT_SOURCE], \
 behaviors=[{trigger="ON_CONTACT", action="DEAL_DAMAGE", target="CONTACT_BODY", intensity="LOW", \
 message="The blade sears!"}], \
-visual={base_form="sword", material="metal", color_primary="#CC3300", color_primary_name="fiery red", \
-color_secondary="#FF6600", color_secondary_name="bright orange", \
-visual_effects=["flaming"], size_category="medium", bg_color="#4A6741"}
+visual={visual_description="a curved steel sword with a fiery red blade and bright orange edge, wreathed in flames", \
+size_category="medium"}
 Budget: tags 1+1+2+3=7/10, behaviors 2/8.
 
 "ice wall" → name="Ice Wall", tags=[SOLID, RIGID, FROZEN, COLD, BREAKABLE], \
 behaviors=[{trigger="ON_DAMAGED", action="APPLY_FORCE", target="CONTACT_BODY", intensity="MEDIUM", \
 message="Ice shards push you back!"}], \
-visual={base_form="wall", material="ice", color_primary="#88CCFF", color_primary_name="pale ice blue", \
-color_secondary="#FFFFFF", color_secondary_name="white", \
-visual_effects=["frozen_particles"], size_category="large", bg_color="#5A4A3A"}
+visual={visual_description="a tall translucent ice wall with jagged frozen edges and frosty white surface", \
+size_category="large"}
 Budget: tags 1+1+2+1+1=6/10, behaviors 2/8.
 
 "fire-breathing dragon" → name="Fire Dragon", tags=[LIVING, HEAT_SOURCE, HOT], \
@@ -182,17 +173,15 @@ behaviors=[{trigger="ALWAYS", action="MOVE_TOWARD", target="NEAREST_LIVING", spe
 condition={condition_type="not_has_tag", tag="FROZEN"}, message="The dragon stalks its prey..."}, \
 {trigger="ON_PROXIMITY", action="SPAWN_PROJECTILE", target="NEAREST_LIVING", range="CLOSE", \
 intensity="HIGH", interval="SLOW", message="The dragon breathes fire!"}], \
-visual={base_form="dragon", material="scales", color_primary="#CC0000", color_primary_name="deep red", \
-color_secondary="#FF6600", color_secondary_name="orange", \
-visual_effects=["flaming", "glowing"], size_category="large", bg_color="#4A6741"}
+visual={visual_description="a large red dragon with orange underbelly, leathery wings, and smoke rising from its nostrils", \
+size_category="large"}
 Budget: tags 3+3+2=8/10, behaviors 2+4=6/8.
 
 "time bomb" → name="Time Bomb", tags=[EXPLOSIVE, SOLID, RIGID], \
 behaviors=[{trigger="ON_TIMER", action="EXPLODE", intensity="EXTREME", range="FAR", \
 interval="ONCE_MEDIUM", message="BOOM!"}], \
-visual={base_form="sphere", material="metal", color_primary="#FF4444", color_primary_name="red", \
-color_secondary="#222222", color_secondary_name="black", \
-visual_effects=["glowing"], size_category="small", bg_color="#4A6741"}
+visual={visual_description="a small round black metal bomb with a glowing red fuse and warning markings", \
+size_category="small"}
 Budget: tags 5+1+1=7/10, behaviors 5/8.
 
 "guard dog" → name="Guard Dog", tags=[LIVING, SOLID, FLEXIBLE], \
@@ -200,17 +189,15 @@ behaviors=[{trigger="ALWAYS", action="MOVE_TOWARD", target="NEAREST_PLAYER", spe
 message="Wags tail"}, \
 {trigger="ON_PROXIMITY", action="DEAL_DAMAGE", target="NEAREST_PLAYER", intensity="LOW", \
 range="TOUCH", interval="MEDIUM", message="The dog bites!"}], \
-visual={base_form="dog", material="fur", color_primary="#8B4513", color_primary_name="brown", \
-color_secondary="#D2B48C", color_secondary_name="tan", \
-visual_effects=[], size_category="medium", bg_color="#4A6B8A"}
+visual={visual_description="a stocky brown dog with tan paws, floppy ears, and a wagging tail", \
+size_category="medium"}
 Budget: tags 3+1+1=5/10, behaviors 2+2=4/8.
 
 "reactive bomb" → name="Reactive Bomb", tags=[EXPLOSIVE, SOLID, FLAMMABLE], \
 behaviors=[{trigger="ON_TAG_ADDED", trigger_tag="HOT", action="EXPLODE", intensity="EXTREME", \
 range="FAR", message="The bomb detonates!"}], \
-visual={base_form="barrel", material="metal", color_primary="#FF4444", color_primary_name="red", \
-color_secondary="#FFD700", color_secondary_name="gold", \
-visual_effects=["sparkling"], size_category="medium", bg_color="#2A2A2A"}
+visual={visual_description="a rusty metal barrel painted red with a gold hazard symbol and sparking wires", \
+size_category="medium"}
 Budget: tags 5+1+1=7/10, behaviors 5/8. Sits inert until fire adds HOT tag → explodes.
 """
 
@@ -265,15 +252,8 @@ async def create_object(description: str) -> GameObjectBlueprint:
             name=f"Mysterious {fallback_name}",
             tags=[Tag.SOLID, Tag.RIGID],
             visual_descriptor=VisualDescriptor(
-                base_form="cube",
-                material="stone",
-                color_primary="#888888",
-                color_primary_name="gray",
-                color_secondary="#666666",
-                color_secondary_name="dark gray",
-                visual_effects=["sparkling"],
+                visual_description="a mysterious glowing gray stone cube with sparkling flecks",
                 size_category="medium",
-                bg_color="#4A6741",
             ),
         )
 

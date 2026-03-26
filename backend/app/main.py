@@ -49,17 +49,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     # Initialize background removal callable
     if settings.bg_removal_backend == "local":
-        from rembg import new_session
-        from rembg import remove as rembg_remove
+        from app.images.gpu_bg import make_gpu_remover
 
-        session = new_session(model_name=settings.rembg_model)
-
-        async def _remove_bg(image_bytes: bytes) -> bytes:
-            from typing import cast
-
-            return cast(bytes, rembg_remove(data=image_bytes, session=session, alpha_matting=True))
-
-        app.state.remove_bg = _remove_bg
+        app.state.remove_bg = make_gpu_remover()
     else:
         from app.images.cloud_bg import make_cloud_remover
 

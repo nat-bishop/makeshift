@@ -2,13 +2,13 @@
 
 ## Core Concept
 
-"Scribblenauts meets Terraria" — a 2D physics sandbox where players type text descriptions to create game objects. An LLM (Gemini) interprets descriptions into tagged blueprints with visual descriptors and autonomous behaviors. A generative model (Flux) produces pixel art sprites. Objects interact through a tag-based rule system and behavior system, enabling emergent puzzle-solving: fire melts ice, a dragon patrols and breathes fire, a time bomb explodes after a delay.
+"Scribblenauts meets Terraria" — a 2D physics sandbox where players type text descriptions to create game objects. An LLM (Gemini) interprets descriptions into tagged blueprints with visual descriptors and autonomous behaviors. Gemini image generation produces sprites. Objects interact through a tag-based rule system and behavior system, enabling emergent puzzle-solving: fire melts ice, a dragon patrols and breathes fire, a time bomb explodes after a delay.
 
 Player creativity is constrained by two budget systems — every object has a tag budget of 10 and a behavior budget of 6. Tags define what an object *is*; behaviors define what it *does*. Together they create meaningful design choices: a fire source (SOLID+RIGID+HEAT_SOURCE+HOT = 7 tag cost) leaves room for a MOVE_TOWARD behavior (cost 2), while adding EXPLODE on low health (cost 3) turns any object into a trap.
 
 ## Tag System
 
-30 tags across 7 categories. Tags are the atomic unit of the entire game — they drive physics, interactions, durability, and visual placeholders.
+30 tags across 7 categories. Tags are the atomic unit of the entire game — they drive physics, interactions, and durability.
 
 ### Categories and Cost Curve
 
@@ -172,7 +172,7 @@ After submitting a creation request:
 2. When the HTTP response arrives, the game waits for the sprite. If the sprite is already cached (WebSocket beat HTTP), placement begins immediately.
 3. Player enters placement mode — a semi-transparent ghost follows the mouse. If the sprite arrives while in placement mode, the ghost updates live.
 4. Left-click to confirm placement; Escape to cancel. Placement spawns the object at the clicked world position.
-5. If sprite generation fails entirely, placement proceeds with the placeholder colored square.
+5. If sprite generation fails entirely, placement proceeds without a sprite (ghost shows no texture).
 
 During placement, the HUD hint changes to "Click: Place | Esc: Cancel".
 

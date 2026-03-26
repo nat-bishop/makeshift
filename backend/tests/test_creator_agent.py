@@ -29,15 +29,8 @@ def _sample_creator_output() -> CreatorOutput:
         name="Fire Sword",
         tags=[Tag.SOLID, Tag.SHARP, Tag.HEAT_SOURCE],
         visual_descriptor=VisualDescriptor(
-            base_form="sword",
-            material="metal",
-            color_primary="#CC3300",
-            color_primary_name="fiery red",
-            color_secondary="#FF6600",
-            color_secondary_name="bright orange",
-            visual_effects=["flaming"],
+            visual_description="a curved steel sword with a fiery red blade wreathed in flames",
             size_category="medium",
-            bg_color="#4A6741",
         ),
     )
 
@@ -71,15 +64,8 @@ async def test_fallback_visual_defaults() -> None:
     with patch("app.creator.agent._get_agent", return_value=_mock_agent_error()):
         bp = await create_object("anything")
     v = bp.visual_descriptor
-    assert v.base_form == "cube"
-    assert v.material == "stone"
-    assert v.color_primary == "#888888"
-    assert v.color_primary_name == "gray"
-    assert v.color_secondary == "#666666"
-    assert v.color_secondary_name == "dark gray"
-    assert v.visual_effects == ["sparkling"]
+    assert "stone" in v.visual_description or "cube" in v.visual_description
     assert v.size_category == "medium"
-    assert v.bg_color == "#4A6741"
 
 
 async def test_fallback_no_behaviors() -> None:

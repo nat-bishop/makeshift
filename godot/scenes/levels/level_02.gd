@@ -10,11 +10,7 @@ const BRIDGE_SEGMENT_BLUEPRINT := {
 	"name": "Wooden Plank",
 	"tags": ["SOLID", "RIGID", "FLAMMABLE", "BREAKABLE"],
 	"visual_descriptor": {
-		"base_form": "plank",
-		"material": "wood",
-		"color_primary": "#8B6914",
-		"color_secondary": "#A0812A",
-		"visual_effects": [],
+		"visual_description": "a flat wooden plank with visible wood grain",
 		"size_category": "medium",
 	},
 }
@@ -24,11 +20,7 @@ const TORCH_BLUEPRINT := {
 	"name": "Torch",
 	"tags": ["SOLID", "RIGID", "HEAT_SOURCE", "HOT", "GLOWING", "LIGHT"],
 	"visual_descriptor": {
-		"base_form": "torch",
-		"material": "wood",
-		"color_primary": "#FF6600",
-		"color_secondary": "#884400",
-		"visual_effects": ["flaming", "glowing"],
+		"visual_description": "a wooden torch with a bright orange flame on top",
 		"size_category": "small",
 	},
 }

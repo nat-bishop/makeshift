@@ -13,14 +13,6 @@ const SIZE_TO_PHYSICS: Dictionary = {
 	"huge": {"sprite": 256, "collision": 224},
 }
 
-const ELONGATED_FORMS: Array[String] = [
-	"sword", "plank", "rope", "ladder", "wand", "torch", "fan",
-]
-
-const ROUND_FORMS: Array[String] = [
-	"sphere", "ball", "boulder", "wheel",
-]
-
 
 static func compose_physics(tags: Array) -> Dictionary:
 	var mass_entries: Array = []
@@ -79,10 +71,3 @@ static func get_size_data(size_category: String) -> Dictionary:
 	return SIZE_TO_PHYSICS.get(size_category, SIZE_TO_PHYSICS["medium"])
 
 
-static func shape_from_base_form(base_form: String) -> String:
-	if base_form in ELONGATED_FORMS:
-		return "capsule"
-	elif base_form in ROUND_FORMS:
-		return "circle"
-	else:
-		return "rectangle"

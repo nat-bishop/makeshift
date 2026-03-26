@@ -23,14 +23,13 @@ func apply(tags: Array, visual_descriptor: Dictionary) -> void:
 	mat.bounce = physics["bounce"]
 	_body.physics_material_override = mat
 
-	var base_form: String = visual_descriptor.get("base_form", "box")
 	var size_category: String = visual_descriptor.get("size_category", "medium")
-	Log.debug("PhysicsApplicator: Applied physics for '%s' — form=%s, size=%s, mass=%.1f, friction=%.2f, bounce=%.2f, gravity=%.1f" % [_body.blueprint.get("name", ""), base_form, size_category, physics["mass"], physics["friction"], physics["bounce"], physics["gravity"]])
+	Log.debug("PhysicsApplicator: Applied physics for '%s' — size=%s, mass=%.1f, friction=%.2f, bounce=%.2f, gravity=%.1f" % [_body.blueprint.get("name", ""), size_category, physics["mass"], physics["friction"], physics["bounce"], physics["gravity"]])
 
-	# Configure collision shape from size_category and base_form
-	# Skip if already using a sprite-derived shape
+	# Configure fallback collision shape from size_category
+	# Will be overridden by sprite-derived shape once sprite loads
 	if not _has_sprite_shape:
-		_configure_shape(size_category, base_form)
+		_configure_shape(size_category)
 
 
 func update_shape_from_sprite(texture: Texture2D, world_size: float) -> void:
@@ -59,23 +58,10 @@ func update_shape_from_sprite(texture: Texture2D, world_size: float) -> void:
 	Log.debug("PhysicsApplicator: Sprite shape %s offset %s" % [rect.size, _collision_shape.position])
 
 
-func _configure_shape(size_category: String, base_form: String) -> void:
+func _configure_shape(size_category: String) -> void:
 	var size_data: Dictionary = PhysicsComposer.get_size_data(size_category)
 	var collision_size: int = size_data["collision"]
-	var shape_type: String = PhysicsComposer.shape_from_base_form(base_form)
-
-	match shape_type:
-		"capsule":
-			var capsule := CapsuleShape2D.new()
-			capsule.radius = collision_size * 0.25
-			capsule.height = collision_size
-			_collision_shape.shape = capsule
-		"circle":
-			var circle := CircleShape2D.new()
-			circle.radius = collision_size * 0.5
-			_collision_shape.shape = circle
-		_:
-			var rect := RectangleShape2D.new()
-			rect.size = Vector2(collision_size, collision_size)
-			_collision_shape.shape = rect
-	Log.debug("PhysicsApplicator: Shape %s (collision_size=%d) for '%s'" % [shape_type, collision_size, _body.blueprint.get("name", "")])
+	var rect := RectangleShape2D.new()
+	rect.size = Vector2(collision_size, collision_size)
+	_collision_shape.shape = rect
+	Log.debug("PhysicsApplicator: Fallback shape rect (collision_size=%d) for '%s'" % [collision_size, _body.blueprint.get("name", "")])

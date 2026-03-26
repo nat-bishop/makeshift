@@ -8,9 +8,9 @@ Godot 4 Client                          FastAPI Backend
 │ ObjectCreationPanel                  │                          │
 │   └─ Backend.create_object() ──POST──►  /api/sessions/{id}/objects │
 │                                      │    └─ PydanticAI agent ─────► Gemini LLM
-│ Backend (autoload)                   │    └─ placeholder PNG ◄──┘  │
-│   ├─ HTTP client ◄─── JSON ─────────┤      (tags + behaviors)  │
-│   └─ WebSocket  ◄── sprite_ready ───┤  Background task ────────────► Flux (fal.ai)
+│ Backend (autoload)                   │      (tags + behaviors)  │
+│   ├─ HTTP client ◄─── JSON ─────────┤                          │
+│   └─ WebSocket  ◄── sprite_ready ───┤  Background task ────────────► Gemini image gen
 │                                      │    └─ rembg / birefnet  │
 │ RuleEngine (autoload)                │                          │
 │   └─ mirrors backend rules           │  aiosqlite               │
@@ -51,8 +51,8 @@ Full flow from player input to world-placed object with sprite:
 3. **Budget check** → `SessionManager.get_budget_info()` verifies remaining budget (rejects with 402 if exhausted)
 4. **LLM agent** → `creator.agent.create_object()` runs PydanticAI agent (Gemini 3.1 Flash Lite Preview, 3 retries). Validators enforce: 1-3 word name, 2-6 tags, no contradictions, tag budget ≤ 10, 0-3 behaviors, behavior budget ≤ 6. Falls back to generic "Mysterious {description}" on failure
 5. **Blueprint construction** → `GameObjectBlueprint` adds UUID, computed fields: `power_cost`, `behavior_cost`, `starting_durability`
-6. **Atomic persist** → `track_cost_and_save_object()` charges $0.041 + saves blueprint (including behaviors) in one commit
-7. **Immediate response** → Client receives blueprint JSON (with behaviors) + `placeholder_png_base64` (colored rounded rectangle, backend-generated but not displayed client-side) + budget_remaining. `EventBus.creation_requested` was emitted on submit — `Game` starts a `MaterializeEffect` at the spawn point (paper scraps coalesce over 1.2s, then idle-bob)
+6. **Atomic persist** → `reserve_budget()` + `save_object()` charge $0.041 and save blueprint (including behaviors)
+7. **Immediate response** → Client receives blueprint JSON (with behaviors) + `budget_remaining`. `EventBus.creation_requested` was emitted on submit — `Game` starts a `MaterializeEffect` at the spawn point (paper scraps coalesce over 1.2s, then idle-bob)
 8. **Background sprite generation** → `asyncio.Task` held in module-level `_background_tasks` set (prevents GC). Runs image pipeline (see below)
 9. **WebSocket delivery** → `send_sprite_ready()` broadcasts `{sprite_url}` to all session clients → Godot fetches PNG via HTTP → decodes to `ImageTexture` → `EventBus.sprite_ready` emitted
 10. **Placement mode** → On `sprite_ready` (or `sprite_failed`, which proceeds without a texture), `MaterializeEffect.resolve()` scatters scraps and frees itself; a semi-transparent ghost preview spawns at that position and follows the mouse. Left-click calls `world.spawn_object()` at the cursor; Escape cancels. `EventBus.placement_started` / `placement_ended` bracket the mode. Object is NOT added to the world until placement is confirmed.
@@ -66,12 +66,12 @@ Full flow from player input to world-placed object with sprite:
 ```
 1. Cache check    → static/sprites/{hash}.png exists? Return cached URL
                      (skipped entirely if SPRITE_CACHE_ENABLED=false)
-2. Prompt build   → "mixed media collage style paper cutout, side view, flat lighting,
-                     clean edges, {size} {base_form} made of {material},
-                     {color_primary_name} with {color_secondary_name} accents, {effects},
-                     single centered object, solid {bg_color} background, no text"
-3. Flux generate  → fal-ai/flux-pro/v1.1
-4. Remove bg      → local rembg (birefnet-general model, alpha matting)
+2. Prompt build   → build_prompt(name, visual_descriptor):
+                     "mixed media collage style paper cutout, side view, flat lighting,
+                      clean edges, {name}, {visual_description},
+                      single centered object, contrasting solid background color, no text"
+3. Gemini generate → gemini_client.generate_image(prompt) via IMAGE_MODEL
+4. Remove bg      → local rembg via gpu_bg.make_gpu_remover()
                      or cloud fal.ai/birefnet (configured via BG_REMOVAL_BACKEND)
 5. Crop & fit     → LANCZOS resize to fill 90% of a 512×512 canvas (TEXTURE_RESOLUTION).
                      World display size is determined client-side by size_category.
@@ -79,13 +79,13 @@ Full flow from player input to world-placed object with sprite:
                      (skipped if SPRITE_CACHE_ENABLED=false)
 ```
 
-**Cache key**: SHA-256 of the full Flux prompt string, truncated to 16 hex chars. Identical prompts share a cached sprite regardless of which object requested them.
+**Cache key**: SHA-256 of the full prompt string (`build_prompt` output), truncated to 16 hex chars. Identical prompts share a cached sprite regardless of which object requested them.
 
-**`SPRITE_CACHE_ENABLED`**: Boolean env var (default `true`). When `false`, cache reads and writes are both skipped — every request hits Flux.
+**`SPRITE_CACHE_ENABLED`**: Boolean env var (default `true`). When `false`, cache reads and writes are both skipped — every request hits Gemini.
 
 **Concurrency**: Semaphore-limited to `MAX_CONCURRENT_IMAGE_REQUESTS` (default 3).
 
-**Placeholder generation**: `generate_placeholder()` creates a colored rounded rectangle using the first matching tag color from `TAG_COLOR_MAP` (15 tags have mapped colors) or the descriptor's primary color. Sent to the client in `placeholder_png_base64` but not displayed — placement waits for the real sprite (or skips to placement on `sprite_failed`).
+**`generate_sprite(blueprint, remove_bg)`**: Takes a `GameObjectBlueprint` directly. Builds prompt from `blueprint.name` + `blueprint.visual_descriptor`.
 
 ## Rule Engine
 
@@ -269,7 +269,7 @@ body_entered signal (from GameObject)
 
 Tag mutations (via `add_tag`/`remove_tag`) trigger `_reapply_physics()` to recalculate.
 
-**Sprite-driven collision shape**: Initial shape is derived from `size_category` + `base_form` (rect/circle/capsule). When a real sprite loads, `ObjectVisual.set_sprite()` calls `PhysicsApplicator.update_shape_from_sprite()` via `call_deferred`. That method reads the texture's opaque bounding rect (`Image.get_used_rect()`), replaces the `CollisionShape2D` with a `RectangleShape2D` sized to the opaque region, and offsets it to match the sprite's visual center. Once set, `_has_sprite_shape = true` prevents `apply()` from overwriting it on subsequent tag mutations.
+**Sprite-driven collision shape**: Pre-sprite fallback is a rectangle sized from `size_category` via `PhysicsComposer.get_size_data()`. When a real sprite loads, `ObjectVisual.set_sprite()` calls `PhysicsApplicator.update_shape_from_sprite()` via `call_deferred`. That method reads the texture's opaque bounding rect (`Image.get_used_rect()`), replaces the `CollisionShape2D` with a `RectangleShape2D` sized to the opaque region, and offsets it to match the sprite's visual center. Once set, `_has_sprite_shape = true` prevents `apply()` from overwriting it on subsequent tag mutations.
 
 ## Session & Persistence
 

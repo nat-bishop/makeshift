@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -30,15 +29,8 @@ def _make_blueprint() -> GameObjectBlueprint:
         description="a fire sword",
         tags=[Tag.SOLID, Tag.RIGID, Tag.SHARP, Tag.HEAT_SOURCE],
         visual_descriptor=VisualDescriptor(
-            base_form="sword",
-            material="metal",
-            color_primary="#CC3300",
-            color_primary_name="fiery red",
-            color_secondary="#FF6600",
-            color_secondary_name="bright orange",
-            visual_effects=["flaming"],
+            visual_description="a curved steel sword with a fiery red blade wreathed in flames",
             size_category="medium",
-            bg_color="#4A6741",
         ),
     )
 
@@ -92,8 +84,6 @@ async def test_create_object_success() -> None:
         assert resp.status_code == 200
         data = resp.json()
         assert "blueprint" in data
-        assert isinstance(data["placeholder_png_base64"], str)
-        assert len(data["placeholder_png_base64"]) > 0
         assert "budget_remaining" in data
 
 
@@ -129,21 +119,6 @@ async def test_create_object_budget_exceeded() -> None:
                 json={"description": "fire sword"},
             )
         assert resp.status_code == 402
-
-
-async def test_create_object_placeholder_is_valid_png() -> None:
-    async with _test_client() as (client, _app):
-        session_id = await _create_session(client)
-        with patch(
-            "app.routers.objects.create_object", new_callable=AsyncMock
-        ) as mock_create:
-            mock_create.return_value = _make_blueprint()
-            resp = await client.post(
-                f"/api/sessions/{session_id}/objects",
-                json={"description": "fire sword"},
-            )
-        png_bytes = base64.b64decode(resp.json()["placeholder_png_base64"])
-        assert png_bytes[:4] == b"\x89PNG"
 
 
 async def test_create_object_blueprint_structure() -> None:

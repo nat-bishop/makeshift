@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import base64
 from typing import Any
 
 import structlog
@@ -10,7 +9,7 @@ from pydantic import BaseModel, Field
 
 from app.creator.agent import create_object
 from app.images.pipeline import RemoveBg
-from app.models.blueprint import VisualDescriptor
+from app.models.blueprint import GameObjectBlueprint
 from app.sessions.manager import SessionManager
 from app.ws.handler import send_sprite_failed, send_sprite_ready
 
@@ -30,7 +29,6 @@ class CreateObjectRequest(BaseModel):
 
 class CreateObjectResponse(BaseModel):
     blueprint: dict
-    placeholder_png_base64: str
     budget_remaining: float
 
 
@@ -40,7 +38,7 @@ async def create_object_endpoint(
 ) -> CreateObjectResponse:
     """Create a new game object from a text description.
 
-    Returns the blueprint and placeholder immediately.
+    Returns the blueprint immediately.
     Sprite generation happens async and is delivered via WebSocket.
     """
     db = request.app.state.db
@@ -64,22 +62,10 @@ async def create_object_endpoint(
     await manager.save_object(session_id, blueprint)
     logger.debug("object_saved", session_id=session_id, object_id=blueprint.id)
 
-    # Generate placeholder and kick off async sprite generation
-    from app.images.pipeline import generate_placeholder
-
-    placeholder_bytes = generate_placeholder(blueprint.visual_descriptor, blueprint.tags)
-    placeholder_b64 = base64.b64encode(placeholder_bytes).decode()
-    logger.debug("placeholder_generated", object_id=blueprint.id, size_bytes=len(placeholder_bytes))
-
     # Schedule async sprite generation (will deliver via WebSocket)
     remove_bg = request.app.state.remove_bg
     task = asyncio.create_task(
-        _generate_and_deliver_sprite(
-            session_id,
-            blueprint.id,
-            blueprint.visual_descriptor,
-            remove_bg,
-        )
+        _generate_and_deliver_sprite(session_id, blueprint, remove_bg)
     )
     _background_tasks.add(task)
     task.add_done_callback(_background_tasks.discard)
@@ -87,25 +73,22 @@ async def create_object_endpoint(
 
     return CreateObjectResponse(
         blueprint=blueprint.model_dump(mode="json"),
-        placeholder_png_base64=placeholder_b64,
         budget_remaining=budget_remaining,
     )
 
 
 async def _generate_and_deliver_sprite(
     session_id: str,
-    object_id: str,
-    visual_descriptor: VisualDescriptor,
+    blueprint: GameObjectBlueprint,
     remove_bg: RemoveBg,
 ) -> None:
     """Background task: generate sprite and push via WebSocket."""
     from app.images.pipeline import generate_sprite
 
+    object_id = blueprint.id
     logger.info("sprite_generation_start", session_id=session_id, object_id=object_id)
     try:
-        result = await generate_sprite(
-            object_id, visual_descriptor, remove_bg
-        )
+        result = await generate_sprite(blueprint, remove_bg)
         if result is None:
             logger.warning("sprite_generation_returned_none", object_id=object_id)
             await send_sprite_failed(session_id, object_id, "generation_failed")
