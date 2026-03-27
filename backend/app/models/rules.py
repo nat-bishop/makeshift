@@ -1,7 +1,14 @@
+from enum import StrEnum
+
 from pydantic import BaseModel
 
 from app.models.effects import Effect
 from app.models.tags import Tag
+
+
+class TriggerMode(StrEnum):
+    CONTACT = "CONTACT"
+    FIELD = "FIELD"
 
 
 class InteractionRule(BaseModel):
@@ -14,3 +21,4 @@ class InteractionRule(BaseModel):
     cascade_eligible: bool
     effects: list[Effect]
     tags_blocked_by: set[Tag] = set()  # rule skipped if B-side object has any of these
+    trigger_mode: TriggerMode = TriggerMode.CONTACT

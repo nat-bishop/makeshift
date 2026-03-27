@@ -1,5 +1,5 @@
 from app.models.effects import Effect, EffectTarget, EffectType
-from app.models.rules import InteractionRule
+from app.models.rules import InteractionRule, TriggerMode
 from app.models.tags import Tag
 
 ALL_RULES: list[InteractionRule] = [
@@ -16,6 +16,7 @@ ALL_RULES: list[InteractionRule] = [
         bidirectional=True,
         cascade_eligible=True,
         tags_blocked_by={Tag.INSULATING},
+        trigger_mode=TriggerMode.FIELD,
         effects=[
             Effect(
                 effect_type=EffectType.ADD_TAG,
@@ -47,6 +48,7 @@ ALL_RULES: list[InteractionRule] = [
         bidirectional=True,
         cascade_eligible=False,
         tags_blocked_by={Tag.INSULATING},
+        trigger_mode=TriggerMode.FIELD,
         effects=[
             Effect(
                 effect_type=EffectType.REMOVE_TAG,
@@ -75,6 +77,7 @@ ALL_RULES: list[InteractionRule] = [
         priority=15,
         bidirectional=True,
         cascade_eligible=False,
+        trigger_mode=TriggerMode.FIELD,
         effects=[
             Effect(
                 effect_type=EffectType.REMOVE_TAG,
@@ -117,6 +120,7 @@ ALL_RULES: list[InteractionRule] = [
         bidirectional=True,
         cascade_eligible=False,
         tags_blocked_by={Tag.INSULATING},
+        trigger_mode=TriggerMode.FIELD,
         effects=[
             Effect(
                 effect_type=EffectType.ADD_TAG,
@@ -180,6 +184,7 @@ ALL_RULES: list[InteractionRule] = [
         bidirectional=True,
         cascade_eligible=True,
         tags_blocked_by={Tag.INSULATING},
+        trigger_mode=TriggerMode.FIELD,
         effects=[
             Effect(
                 effect_type=EffectType.DAMAGE,
@@ -204,6 +209,7 @@ ALL_RULES: list[InteractionRule] = [
         bidirectional=True,
         cascade_eligible=False,
         tags_blocked_by={Tag.INSULATING},
+        trigger_mode=TriggerMode.FIELD,
         effects=[
             Effect(
                 effect_type=EffectType.DAMAGE,
@@ -247,11 +253,12 @@ ALL_RULES: list[InteractionRule] = [
         priority=5,
         bidirectional=False,
         cascade_eligible=False,
+        trigger_mode=TriggerMode.FIELD,
         effects=[
             Effect(
                 effect_type=EffectType.APPLY_FORCE,
                 target=EffectTarget.B,
-                force_magnitude=100.0,
+                force_magnitude=45.0,
                 message="Blown away by the wind!",
             ),
         ],
@@ -265,11 +272,12 @@ ALL_RULES: list[InteractionRule] = [
         priority=6,
         bidirectional=False,
         cascade_eligible=False,
+        trigger_mode=TriggerMode.FIELD,
         effects=[
             Effect(
                 effect_type=EffectType.APPLY_FORCE,
                 target=EffectTarget.B,
-                force_magnitude=150.0,
+                force_magnitude=50.0,
                 message="The gas is dispersed by the wind.",
             ),
         ],
@@ -283,11 +291,12 @@ ALL_RULES: list[InteractionRule] = [
         priority=6,
         bidirectional=True,
         cascade_eligible=False,
+        trigger_mode=TriggerMode.FIELD,
         effects=[
             Effect(
                 effect_type=EffectType.APPLY_FORCE,
                 target=EffectTarget.B,
-                force_magnitude=-80.0,
+                force_magnitude=-35.0,
                 message="Pulled by magnetic force!",
             ),
         ],
@@ -301,6 +310,7 @@ ALL_RULES: list[InteractionRule] = [
         priority=10,
         bidirectional=True,
         cascade_eligible=False,
+        trigger_mode=TriggerMode.FIELD,
         effects=[
             Effect(
                 effect_type=EffectType.DAMAGE,
@@ -338,6 +348,7 @@ ALL_RULES: list[InteractionRule] = [
         bidirectional=True,
         cascade_eligible=False,
         tags_blocked_by={Tag.INSULATING},
+        trigger_mode=TriggerMode.FIELD,
         effects=[
             Effect(
                 effect_type=EffectType.ADD_TAG,
@@ -498,6 +509,7 @@ ALL_RULES: list[InteractionRule] = [
         priority=8,
         bidirectional=True,
         cascade_eligible=False,
+        trigger_mode=TriggerMode.FIELD,
         effects=[
             Effect(
                 effect_type=EffectType.DAMAGE,
@@ -553,11 +565,12 @@ ALL_RULES: list[InteractionRule] = [
         priority=7,
         bidirectional=False,
         cascade_eligible=False,
+        trigger_mode=TriggerMode.FIELD,
         effects=[
             Effect(
                 effect_type=EffectType.APPLY_FORCE,
                 target=EffectTarget.B,
-                force_magnitude=200.0,
+                force_magnitude=60.0,
                 message="Launched skyward by the wind!",
             ),
         ],
@@ -589,11 +602,12 @@ ALL_RULES: list[InteractionRule] = [
         priority=5,
         bidirectional=False,
         cascade_eligible=False,
+        trigger_mode=TriggerMode.FIELD,
         effects=[
             Effect(
                 effect_type=EffectType.APPLY_FORCE,
                 target=EffectTarget.BOTH,
-                force_magnitude=-60.0,
+                force_magnitude=-30.0,
                 message="Magnets snap together!",
             ),
         ],
@@ -607,11 +621,12 @@ ALL_RULES: list[InteractionRule] = [
         priority=2,
         bidirectional=True,
         cascade_eligible=False,
+        trigger_mode=TriggerMode.FIELD,
         effects=[
             Effect(
                 effect_type=EffectType.APPLY_FORCE,
                 target=EffectTarget.B,
-                force_magnitude=-30.0,
+                force_magnitude=-8.0,
                 message="Drawn to the light...",
             ),
         ],
@@ -824,6 +839,7 @@ ALL_RULES: list[InteractionRule] = [
         bidirectional=True,
         cascade_eligible=True,
         tags_blocked_by={Tag.INSULATING},
+        trigger_mode=TriggerMode.FIELD,
         effects=[
             Effect(
                 effect_type=EffectType.ADD_TAG,
@@ -843,6 +859,7 @@ ALL_RULES: list[InteractionRule] = [
         bidirectional=True,
         cascade_eligible=True,
         tags_blocked_by={Tag.INSULATING},
+        trigger_mode=TriggerMode.FIELD,
         effects=[
             Effect(
                 effect_type=EffectType.ADD_TAG,
@@ -879,6 +896,7 @@ ALL_RULES: list[InteractionRule] = [
         priority=8,
         bidirectional=True,
         cascade_eligible=True,
+        trigger_mode=TriggerMode.FIELD,
         effects=[
             Effect(
                 effect_type=EffectType.ADD_TAG,
