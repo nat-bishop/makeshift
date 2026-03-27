@@ -4,15 +4,15 @@
     "char_desc": "a knight in plate armor with a sword and red cape",
     "strategy_id": "A_minimal",
     "strategy_name": "Minimal",
-    "animation_type": "Idle breathing",
-    "animation_description": "A looping animation of a knight standing tall and shifting weight while breathing.",
+    "animation_type": "idle_breathing",
+    "animation_description": "A knight standing in a neutral stance with their chest rising and falling to simulate breathing.",
     "cells": {
-      "1": "Standing upright with sword held loosely at the side, chest slightly expanded.",
-      "2": "Shoulders dropping slightly as the chest exhales, knees bending marginally.",
-      "3": "Weight shifting to the opposite leg with the sword arm swaying outward.",
-      "4": "Returning to the initial stance with chest fully expanded and posture reset."
+      "1": "Standing upright with both feet planted and shoulders pulled back, sword held firmly in a downward resting position.",
+      "2": "Slightly crouching with knees bent and chest expanded as if inhaling deeply.",
+      "3": "Maintaining the crouched position with the chest contracting as if exhaling.",
+      "4": "Returning to the neutral standing position with shoulders relaxed and sword held steady."
     },
-    "image_prompt": "CHARACTER: A knight in full silver plate armor with a closed visor helmet, red cape flowing behind, brown leather belt with a sheathed sword, steel gauntlets and greaves. The character is shown in side view, facing right. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame Idle breathing cycle for this character. A looping animation of a knight standing tall and shifting weight while breathing.\n\nTHE FOUR FRAMES:\nCell 1: Standing upright with sword held loosely at the side, chest slightly expanded.\n\nCell 2: Shoulders dropping slightly as the chest exhales, knees bending marginally.\n\nCell 3: Weight shifting to the opposite leg with the sword arm swaying outward.\n\nCell 4: Returning to the initial stance with chest fully expanded and posture reset.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT pose from the others. If two cells look the same, the animation will not work.\n- The character's appearance, colors, and art style must be IDENTICAL in all four cells. Only the pose changes.\n- The character's full body must be visible in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
+    "image_prompt": "CHARACTER: A knight in full silver plate armor with a closed visor helmet, red cape flowing behind, brown leather belt with a sheathed sword, steel gauntlets and greaves. The character is shown in side view, facing right, moving toward the right edge of the image. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame idle_breathing cycle for this character. A knight standing in a neutral stance with their chest rising and falling to simulate breathing.\n\nTHE FOUR FRAMES:\nCell 1: Standing upright with both feet planted and shoulders pulled back, sword held firmly in a downward resting position.\n\nCell 2: Slightly crouching with knees bent and chest expanded as if inhaling deeply.\n\nCell 3: Maintaining the crouched position with the chest contracting as if exhaling.\n\nCell 4: Returning to the neutral standing position with shoulders relaxed and sword held steady.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. The character is moving to the right. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT pose from the others. If two cells look the same, the animation will not work.\n- The character's face, body shape, clothing, colors, and art style must be IDENTICAL in all four cells. The only thing that changes between cells is the pose.\n- The character's full body must be visible from head to feet in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
     "sheet": "knight_A_minimal/sheet.png",
     "frames": [
       "knight_A_minimal/frame_1.png",
@@ -20,7 +20,7 @@
       "knight_A_minimal/frame_3.png",
       "knight_A_minimal/frame_4.png"
     ],
-    "timing_s": 17.9,
+    "timing_s": 44.28,
     "error": null
   },
   {
@@ -29,14 +29,14 @@
     "strategy_id": "B_detailed",
     "strategy_name": "Detailed with context",
     "animation_type": "walk",
-    "animation_description": "A standard rhythmic walking cycle for a knight in heavy plate armor, emphasizing weight and momentum through a standard four-frame stride.",
+    "animation_description": "A standard rhythmic walking cycle for a knight in heavy armor, characterized by a steady gait with coordinated arm and leg movements and a slight bobbing motion to convey weight.",
     "cells": {
-      "1": "The knight stands with legs in a wide stride, the right leg forward and the left leg back. The sword is held at the hip, and the cape hangs straight down behind the back.",
-      "2": "The knight pushes off the ground, with both legs moving toward the center of the frame. The torso is slightly lowered, and the cape flares outward toward the left edge to suggest forward momentum.",
-      "3": "The knight is in a mirrored stride position with the left leg forward and the right leg back. The sword arm shifts slightly forward, and the cape settles back toward the center of the body.",
-      "4": "The knight prepares for the next step, lifting the right leg toward the front while the body begins to rise. The cape swings slightly toward the right edge as the knight shifts weight to complete the cycle."
+      "1": "The knight stands in a neutral pose with legs slightly parted, right leg forward and left leg back. The right arm is bent at the elbow holding the sword hilt near the waist, while the left arm is pulled slightly back.",
+      "2": "The knight transitions into a stride with the left leg swinging forward and the right leg pushing off the ground. The body leans slightly forward, and the sword arm shifts forward to maintain balance.",
+      "3": "The knight is at the peak of the stride with the left leg planted firmly toward the right edge and the right leg trailing behind. The body is at its highest point, and the cape flows backward to emphasize forward momentum.",
+      "4": "The knight begins to bring the right leg forward to reset the stance, with the left leg bearing the weight. The sword arm pulls back toward the hip, and the body compresses slightly in preparation to step again."
     },
-    "image_prompt": "CHARACTER: A knight in full silver plate armor with a closed visor helmet, red cape flowing behind, brown leather belt with a sheathed sword, steel gauntlets and greaves. The character is shown in side view, facing right. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame walk cycle for this character. A standard rhythmic walking cycle for a knight in heavy plate armor, emphasizing weight and momentum through a standard four-frame stride.\n\nTHE FOUR FRAMES:\nCell 1: The knight stands with legs in a wide stride, the right leg forward and the left leg back. The sword is held at the hip, and the cape hangs straight down behind the back.\n\nCell 2: The knight pushes off the ground, with both legs moving toward the center of the frame. The torso is slightly lowered, and the cape flares outward toward the left edge to suggest forward momentum.\n\nCell 3: The knight is in a mirrored stride position with the left leg forward and the right leg back. The sword arm shifts slightly forward, and the cape settles back toward the center of the body.\n\nCell 4: The knight prepares for the next step, lifting the right leg toward the front while the body begins to rise. The cape swings slightly toward the right edge as the knight shifts weight to complete the cycle.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT pose from the others. If two cells look the same, the animation will not work.\n- The character's appearance, colors, and art style must be IDENTICAL in all four cells. Only the pose changes.\n- The character's full body must be visible in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
+    "image_prompt": "CHARACTER: A knight in full silver plate armor with a closed visor helmet, red cape flowing behind, brown leather belt with a sheathed sword, steel gauntlets and greaves. The character is shown in side view, facing right, moving toward the right edge of the image. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame walk cycle for this character. A standard rhythmic walking cycle for a knight in heavy armor, characterized by a steady gait with coordinated arm and leg movements and a slight bobbing motion to convey weight.\n\nTHE FOUR FRAMES:\nCell 1: The knight stands in a neutral pose with legs slightly parted, right leg forward and left leg back. The right arm is bent at the elbow holding the sword hilt near the waist, while the left arm is pulled slightly back.\n\nCell 2: The knight transitions into a stride with the left leg swinging forward and the right leg pushing off the ground. The body leans slightly forward, and the sword arm shifts forward to maintain balance.\n\nCell 3: The knight is at the peak of the stride with the left leg planted firmly toward the right edge and the right leg trailing behind. The body is at its highest point, and the cape flows backward to emphasize forward momentum.\n\nCell 4: The knight begins to bring the right leg forward to reset the stance, with the left leg bearing the weight. The sword arm pulls back toward the hip, and the body compresses slightly in preparation to step again.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. The character is moving to the right. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT pose from the others. If two cells look the same, the animation will not work.\n- The character's face, body shape, clothing, colors, and art style must be IDENTICAL in all four cells. The only thing that changes between cells is the pose.\n- The character's full body must be visible from head to feet in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
     "sheet": "knight_B_detailed/sheet.png",
     "frames": [
       "knight_B_detailed/frame_1.png",
@@ -44,7 +44,7 @@
       "knight_B_detailed/frame_3.png",
       "knight_B_detailed/frame_4.png"
     ],
-    "timing_s": 15.43,
+    "timing_s": 20.85,
     "error": null
   },
   {
@@ -53,14 +53,14 @@
     "strategy_id": "C_taxonomy",
     "strategy_name": "Movement taxonomy",
     "animation_type": "BIPEDAL WALK",
-    "animation_description": "A knight in plate armor strides forward with a rhythmic gait, sword held at the ready.",
+    "animation_description": "A armored knight performs a standard walking gait with weight shifting between legs while the cape flows behind.",
     "cells": {
-      "1": "The knight stands with feet side-by-side, weight centered. The sword is held firmly in the right hand, while the red cape hangs straight down the back.",
-      "2": "The left leg steps forward toward the right edge, bending at the knee. The right arm swings back slightly, and the cape flares out behind the character.",
-      "3": "The knight plants the left foot firmly on the ground while the right leg begins to lift. The torso leans slightly forward toward the right edge, and the sword is held level.",
-      "4": "The right leg swings forward toward the right edge, passing the left leg. The cape ripples forward due to the momentum, and the left arm pulls back to maintain balance."
+      "1": "The knight stands with the right leg forward and the left leg back. The sword is held firmly at the hip, and the cape hangs straight down behind the back.",
+      "2": "The knight shifts weight forward, lifting the back left leg off the ground. The sword hand swings slightly forward, and the cape begins to billow toward the left edge.",
+      "3": "The knight plants the left leg forward, placing the right leg behind. The torso leans slightly toward the right edge, and the cape ripples fully behind the knight.",
+      "4": "The knight pushes off the ground with the back right leg, preparing to step forward again. The sword arm pulls back toward the hip, and the cape settles back toward the body."
     },
-    "image_prompt": "CHARACTER: A knight in full silver plate armor with a closed visor helmet, red cape flowing behind, brown leather belt with a sheathed sword, steel gauntlets and greaves. The character is shown in side view, facing right. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame BIPEDAL WALK cycle for this character. A knight in plate armor strides forward with a rhythmic gait, sword held at the ready.\n\nTHE FOUR FRAMES:\nCell 1: The knight stands with feet side-by-side, weight centered. The sword is held firmly in the right hand, while the red cape hangs straight down the back.\n\nCell 2: The left leg steps forward toward the right edge, bending at the knee. The right arm swings back slightly, and the cape flares out behind the character.\n\nCell 3: The knight plants the left foot firmly on the ground while the right leg begins to lift. The torso leans slightly forward toward the right edge, and the sword is held level.\n\nCell 4: The right leg swings forward toward the right edge, passing the left leg. The cape ripples forward due to the momentum, and the left arm pulls back to maintain balance.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT pose from the others. If two cells look the same, the animation will not work.\n- The character's appearance, colors, and art style must be IDENTICAL in all four cells. Only the pose changes.\n- The character's full body must be visible in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
+    "image_prompt": "CHARACTER: A knight in full silver plate armor with a closed visor helmet, red cape flowing behind, brown leather belt with a sheathed sword, steel gauntlets and greaves. The character is shown in side view, facing right, moving toward the right edge of the image. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame BIPEDAL WALK cycle for this character. A armored knight performs a standard walking gait with weight shifting between legs while the cape flows behind.\n\nTHE FOUR FRAMES:\nCell 1: The knight stands with the right leg forward and the left leg back. The sword is held firmly at the hip, and the cape hangs straight down behind the back.\n\nCell 2: The knight shifts weight forward, lifting the back left leg off the ground. The sword hand swings slightly forward, and the cape begins to billow toward the left edge.\n\nCell 3: The knight plants the left leg forward, placing the right leg behind. The torso leans slightly toward the right edge, and the cape ripples fully behind the knight.\n\nCell 4: The knight pushes off the ground with the back right leg, preparing to step forward again. The sword arm pulls back toward the hip, and the cape settles back toward the body.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. The character is moving to the right. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT pose from the others. If two cells look the same, the animation will not work.\n- The character's face, body shape, clothing, colors, and art style must be IDENTICAL in all four cells. The only thing that changes between cells is the pose.\n- The character's full body must be visible from head to feet in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
     "sheet": "knight_C_taxonomy/sheet.png",
     "frames": [
       "knight_C_taxonomy/frame_1.png",
@@ -68,31 +68,31 @@
       "knight_C_taxonomy/frame_3.png",
       "knight_C_taxonomy/frame_4.png"
     ],
-    "timing_s": 21.75,
+    "timing_s": 14.77,
     "error": null
   },
   {
     "char_id": "knight",
     "char_desc": "a knight in plate armor with a sword and red cape",
-    "strategy_id": "D_img_aware",
-    "strategy_name": "Image-gen aware",
+    "strategy_id": "D_img_aware_v2",
+    "strategy_name": "Image-gen aware v2",
     "animation_type": "walk",
-    "animation_description": "A side-profile walking cycle of a knight in plate armor, showing a rhythmic stride with sword held at the hip.",
+    "animation_description": "A side-view walk cycle for a heavily armored knight. The motion emphasizes the weight of the plate armor through a rhythmic shift between deep lunges and upright, compact strides, with the cape trailing behind to emphasize forward momentum.",
     "cells": {
-      "1": "Contact pose: character faces right, left leg forward and straight, right leg back and bent, sword held at hip, silhouette is wide, cape trailing slightly behind.",
-      "2": "Passing pose: character faces right, legs close together, right leg lifting off the ground, sword arm slightly forward, silhouette is narrow and upright, cape flowing behind.",
-      "3": "Contact pose: character faces right, right leg forward and straight, left leg back and bent, sword held at hip, silhouette is wide, cape trailing behind.",
-      "4": "Passing pose: character faces right, legs close together, left leg lifting off the ground, sword arm slightly forward, silhouette is narrow and upright, cape flowing behind."
+      "1": "The knight is facing right in a deep lunge with the leading leg extended toward the right edge and the trailing leg stretched back. The body is low to the ground and the red cape is billowing backward behind the knight's torso.",
+      "2": "The knight is facing right in a tall, compact passing pose with the legs pulled close together directly under the body. The silhouette is narrow and vertical, with the cape flowing horizontally behind the knight's back.",
+      "3": "The knight is facing right in a wide lunge, mirroring the stride of Cell 1 but with the OTHER leg leading toward the right edge. The body is compressed and low, with the sword held steady and the cape trailing in an arch behind the knight.",
+      "4": "The knight is facing right in a tall, narrow passing pose with legs close together, similar to Cell 2. The body is stretched to its maximum height, and the cape is gathered slightly closer to the body as the knight prepares to step forward again."
     },
-    "image_prompt": "CHARACTER: A knight in full silver plate armor with a closed visor helmet, red cape flowing behind, brown leather belt with a sheathed sword, steel gauntlets and greaves. The character is shown in side view, facing right. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame walk cycle for this character. A side-profile walking cycle of a knight in plate armor, showing a rhythmic stride with sword held at the hip.\n\nTHE FOUR FRAMES:\nCell 1: Contact pose: character faces right, left leg forward and straight, right leg back and bent, sword held at hip, silhouette is wide, cape trailing slightly behind.\n\nCell 2: Passing pose: character faces right, legs close together, right leg lifting off the ground, sword arm slightly forward, silhouette is narrow and upright, cape flowing behind.\n\nCell 3: Contact pose: character faces right, right leg forward and straight, left leg back and bent, sword held at hip, silhouette is wide, cape trailing behind.\n\nCell 4: Passing pose: character faces right, legs close together, left leg lifting off the ground, sword arm slightly forward, silhouette is narrow and upright, cape flowing behind.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT pose from the others. If two cells look the same, the animation will not work.\n- The character's appearance, colors, and art style must be IDENTICAL in all four cells. Only the pose changes.\n- The character's full body must be visible in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
-    "sheet": "knight_D_img_aware/sheet.png",
+    "image_prompt": "CHARACTER: A knight in full silver plate armor with a closed visor helmet, red cape flowing behind, brown leather belt with a sheathed sword, steel gauntlets and greaves. The character is shown in side view, facing right, moving toward the right edge of the image. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame walk cycle for this character. A side-view walk cycle for a heavily armored knight. The motion emphasizes the weight of the plate armor through a rhythmic shift between deep lunges and upright, compact strides, with the cape trailing behind to emphasize forward momentum.\n\nTHE FOUR FRAMES:\nCell 1: The knight is facing right in a deep lunge with the leading leg extended toward the right edge and the trailing leg stretched back. The body is low to the ground and the red cape is billowing backward behind the knight's torso.\n\nCell 2: The knight is facing right in a tall, compact passing pose with the legs pulled close together directly under the body. The silhouette is narrow and vertical, with the cape flowing horizontally behind the knight's back.\n\nCell 3: The knight is facing right in a wide lunge, mirroring the stride of Cell 1 but with the OTHER leg leading toward the right edge. The body is compressed and low, with the sword held steady and the cape trailing in an arch behind the knight.\n\nCell 4: The knight is facing right in a tall, narrow passing pose with legs close together, similar to Cell 2. The body is stretched to its maximum height, and the cape is gathered slightly closer to the body as the knight prepares to step forward again.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. The character is moving to the right. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT pose from the others. Cells 1 and 3 show wide, low lunging strides with legs spread apart. Cells 2 and 4 show narrow, tall passing poses with legs close together as the knight moves forward. If two cells look the same, the animation will not work.\n- The character's face, body shape, clothing, colors, and art style must be IDENTICAL in all four cells. The only thing that changes between cells is the pose.\n- The character's full body must be visible from head to feet in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
+    "sheet": "knight_D_img_aware_v2/sheet.png",
     "frames": [
-      "knight_D_img_aware/frame_1.png",
-      "knight_D_img_aware/frame_2.png",
-      "knight_D_img_aware/frame_3.png",
-      "knight_D_img_aware/frame_4.png"
+      "knight_D_img_aware_v2/frame_1.png",
+      "knight_D_img_aware_v2/frame_2.png",
+      "knight_D_img_aware_v2/frame_3.png",
+      "knight_D_img_aware_v2/frame_4.png"
     ],
-    "timing_s": 19.83,
+    "timing_s": 17.03,
     "error": null
   },
   {
@@ -101,14 +101,14 @@
     "strategy_id": "A_minimal",
     "strategy_name": "Minimal",
     "animation_type": "bouncing_idle",
-    "animation_description": "The slime blob rhythmically compresses and expands to create a simple vertical bounce loop.",
+    "animation_description": "The slime blob rhythmically compresses and expands to create a simple bouncing idle animation loop.",
     "cells": {
       "1": "The slime is in a neutral, rounded standing position.",
-      "2": "The slime squashes downwards, widening its base and flattening its top.",
-      "3": "The slime stretches vertically, elongating its body as it begins to rise.",
-      "4": "The slime reaches its peak height, tapering slightly at the top before returning to neutral."
+      "2": "The slime squashes downward, flattening its body against the floor.",
+      "3": "The slime stretches vertically, reaching its peak height as it prepares to land.",
+      "4": "The slime returns to its slightly compressed state, ready to loop back to the start."
     },
-    "image_prompt": "CHARACTER: A cheerful bright green slime blob with a rounded dome shape, two large oval white eyes with black pupils near the top, a small open smile, slightly translucent body with a subtle shine. The character is shown in side view, facing right. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame bouncing_idle cycle for this character. The slime blob rhythmically compresses and expands to create a simple vertical bounce loop.\n\nTHE FOUR FRAMES:\nCell 1: The slime is in a neutral, rounded standing position.\n\nCell 2: The slime squashes downwards, widening its base and flattening its top.\n\nCell 3: The slime stretches vertically, elongating its body as it begins to rise.\n\nCell 4: The slime reaches its peak height, tapering slightly at the top before returning to neutral.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT pose from the others. If two cells look the same, the animation will not work.\n- The character's appearance, colors, and art style must be IDENTICAL in all four cells. Only the pose changes.\n- The character's full body must be visible in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
+    "image_prompt": "CHARACTER: A cheerful bright green slime blob with a rounded dome shape, two large oval white eyes with black pupils near the top, a small open smile, slightly translucent body with a subtle shine. The character is shown in side view, facing right, moving toward the right edge of the image. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame bouncing_idle cycle for this character. The slime blob rhythmically compresses and expands to create a simple bouncing idle animation loop.\n\nTHE FOUR FRAMES:\nCell 1: The slime is in a neutral, rounded standing position.\n\nCell 2: The slime squashes downward, flattening its body against the floor.\n\nCell 3: The slime stretches vertically, reaching its peak height as it prepares to land.\n\nCell 4: The slime returns to its slightly compressed state, ready to loop back to the start.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. The character is moving to the right. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT pose from the others. If two cells look the same, the animation will not work.\n- The character's face, body shape, clothing, colors, and art style must be IDENTICAL in all four cells. The only thing that changes between cells is the pose.\n- The character's full body must be visible from head to feet in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
     "sheet": "slime_A_minimal/sheet.png",
     "frames": [
       "slime_A_minimal/frame_1.png",
@@ -116,7 +116,7 @@
       "slime_A_minimal/frame_3.png",
       "slime_A_minimal/frame_4.png"
     ],
-    "timing_s": 17.27,
+    "timing_s": 15.19,
     "error": null
   },
   {
@@ -125,14 +125,14 @@
     "strategy_id": "B_detailed",
     "strategy_name": "Detailed with context",
     "animation_type": "bounce",
-    "animation_description": "The slime performs a rhythmic vertical bounce, compressing its body upon landing and stretching out as it pushes off the ground to move forward.",
+    "animation_description": "A rhythmic vertical bounce where the slime body compresses upon impact and stretches during the upward arc to simulate a gelatinous, cheerful movement.",
     "cells": {
-      "1": "The slime is fully compressed against the ground, shaped like a wide, flat oval. Its eyes are positioned low and wide, showing a squashed expression.",
-      "2": "The slime begins to expand upward, stretching its body into a tall, vertical oval shape. The eyes are slightly stretched vertically, and the base remains in contact with the ground.",
-      "3": "The slime is at the peak of its jump, hovering mid-air in a rounded, circular shape. The eyes are round and centered, showing a state of weightlessness.",
-      "4": "The slime is descending toward the ground, tilting slightly forward to gain momentum toward the right. It begins to widen at the base, preparing to absorb the impact of the next landing."
+      "1": "The slime is in a neutral, rounded blob shape resting on the ground. Its eyes are wide and centered, and its body is slightly wider than it is tall.",
+      "2": "The slime is mid-ascent, vertically elongated into an oval shape to show upward momentum. The eyes are positioned near the top of the blob, looking slightly upward with a happy expression.",
+      "3": "The slime reaches the peak of its bounce, becoming a flattened, wide disc shape. The eyes are pushed toward the bottom half of the blob as it prepares to descend.",
+      "4": "The slime is mid-descent, beginning to stretch vertically again as it prepares to touch the ground. The eyes are centered, and the base of the blob is slightly rounded as it readies for the next impact."
     },
-    "image_prompt": "CHARACTER: A cheerful bright green slime blob with a rounded dome shape, two large oval white eyes with black pupils near the top, a small open smile, slightly translucent body with a subtle shine. The character is shown in side view, facing right. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame bounce cycle for this character. The slime performs a rhythmic vertical bounce, compressing its body upon landing and stretching out as it pushes off the ground to move forward.\n\nTHE FOUR FRAMES:\nCell 1: The slime is fully compressed against the ground, shaped like a wide, flat oval. Its eyes are positioned low and wide, showing a squashed expression.\n\nCell 2: The slime begins to expand upward, stretching its body into a tall, vertical oval shape. The eyes are slightly stretched vertically, and the base remains in contact with the ground.\n\nCell 3: The slime is at the peak of its jump, hovering mid-air in a rounded, circular shape. The eyes are round and centered, showing a state of weightlessness.\n\nCell 4: The slime is descending toward the ground, tilting slightly forward to gain momentum toward the right. It begins to widen at the base, preparing to absorb the impact of the next landing.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT pose from the others. If two cells look the same, the animation will not work.\n- The character's appearance, colors, and art style must be IDENTICAL in all four cells. Only the pose changes.\n- The character's full body must be visible in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
+    "image_prompt": "CHARACTER: A cheerful bright green slime blob with a rounded dome shape, two large oval white eyes with black pupils near the top, a small open smile, slightly translucent body with a subtle shine. The character is shown in side view, facing right, moving toward the right edge of the image. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame bounce cycle for this character. A rhythmic vertical bounce where the slime body compresses upon impact and stretches during the upward arc to simulate a gelatinous, cheerful movement.\n\nTHE FOUR FRAMES:\nCell 1: The slime is in a neutral, rounded blob shape resting on the ground. Its eyes are wide and centered, and its body is slightly wider than it is tall.\n\nCell 2: The slime is mid-ascent, vertically elongated into an oval shape to show upward momentum. The eyes are positioned near the top of the blob, looking slightly upward with a happy expression.\n\nCell 3: The slime reaches the peak of its bounce, becoming a flattened, wide disc shape. The eyes are pushed toward the bottom half of the blob as it prepares to descend.\n\nCell 4: The slime is mid-descent, beginning to stretch vertically again as it prepares to touch the ground. The eyes are centered, and the base of the blob is slightly rounded as it readies for the next impact.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. The character is moving to the right. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT pose from the others. If two cells look the same, the animation will not work.\n- The character's face, body shape, clothing, colors, and art style must be IDENTICAL in all four cells. The only thing that changes between cells is the pose.\n- The character's full body must be visible from head to feet in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
     "sheet": "slime_B_detailed/sheet.png",
     "frames": [
       "slime_B_detailed/frame_1.png",
@@ -140,7 +140,7 @@
       "slime_B_detailed/frame_3.png",
       "slime_B_detailed/frame_4.png"
     ],
-    "timing_s": 18.6,
+    "timing_s": 13.81,
     "error": null
   },
   {
@@ -149,14 +149,14 @@
     "strategy_id": "C_taxonomy",
     "strategy_name": "Movement taxonomy",
     "animation_type": "BOUNCE",
-    "animation_description": "A cheerful slime blob cycles through a squash-and-stretch motion to propel itself forward along the ground.",
+    "animation_description": "A cheerful slime blob cycles through a squash-and-stretch pattern to propel itself forward in a rhythmic hopping motion.",
     "cells": {
-      "1": "The slime is fully compressed against the ground in a wide, flattened oval shape. Its eyes are positioned low near the base of its body, looking forward toward the right edge.",
-      "2": "The slime begins to stretch upward into a tall, vertical teardrop shape as it starts to lift off the ground. The body leans slightly toward the right edge to initiate forward momentum.",
-      "3": "The slime reaches its maximum height, forming a thin, elongated vertical pillar. The top of the body curves forward toward the right edge while the base is completely off the ground.",
-      "4": "The slime descends and begins to widen as it prepares to impact the floor. The body shape is an angled oval leaning toward the right edge, with its eyes wide and centered."
+      "1": "The slime is fully squashed flat against the ground in a wide, oval shape. Its eyes are positioned low toward the right edge of the body.",
+      "2": "The slime begins to stretch upward into an elongated teardrop shape as it starts to lift off the ground. Its eyes are widening and shifting toward the upper right.",
+      "3": "The slime is at the peak of its arc, fully stretched into a tall, thin vertical oval. It is tilted slightly toward the right edge as if mid-air.",
+      "4": "The slime is descending and beginning to compress back down toward the surface. Its body is angled forward toward the right edge, preparing to land and squash again."
     },
-    "image_prompt": "CHARACTER: A cheerful bright green slime blob with a rounded dome shape, two large oval white eyes with black pupils near the top, a small open smile, slightly translucent body with a subtle shine. The character is shown in side view, facing right. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame BOUNCE cycle for this character. A cheerful slime blob cycles through a squash-and-stretch motion to propel itself forward along the ground.\n\nTHE FOUR FRAMES:\nCell 1: The slime is fully compressed against the ground in a wide, flattened oval shape. Its eyes are positioned low near the base of its body, looking forward toward the right edge.\n\nCell 2: The slime begins to stretch upward into a tall, vertical teardrop shape as it starts to lift off the ground. The body leans slightly toward the right edge to initiate forward momentum.\n\nCell 3: The slime reaches its maximum height, forming a thin, elongated vertical pillar. The top of the body curves forward toward the right edge while the base is completely off the ground.\n\nCell 4: The slime descends and begins to widen as it prepares to impact the floor. The body shape is an angled oval leaning toward the right edge, with its eyes wide and centered.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT pose from the others. If two cells look the same, the animation will not work.\n- The character's appearance, colors, and art style must be IDENTICAL in all four cells. Only the pose changes.\n- The character's full body must be visible in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
+    "image_prompt": "CHARACTER: A cheerful bright green slime blob with a rounded dome shape, two large oval white eyes with black pupils near the top, a small open smile, slightly translucent body with a subtle shine. The character is shown in side view, facing right, moving toward the right edge of the image. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame BOUNCE cycle for this character. A cheerful slime blob cycles through a squash-and-stretch pattern to propel itself forward in a rhythmic hopping motion.\n\nTHE FOUR FRAMES:\nCell 1: The slime is fully squashed flat against the ground in a wide, oval shape. Its eyes are positioned low toward the right edge of the body.\n\nCell 2: The slime begins to stretch upward into an elongated teardrop shape as it starts to lift off the ground. Its eyes are widening and shifting toward the upper right.\n\nCell 3: The slime is at the peak of its arc, fully stretched into a tall, thin vertical oval. It is tilted slightly toward the right edge as if mid-air.\n\nCell 4: The slime is descending and beginning to compress back down toward the surface. Its body is angled forward toward the right edge, preparing to land and squash again.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. The character is moving to the right. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT pose from the others. If two cells look the same, the animation will not work.\n- The character's face, body shape, clothing, colors, and art style must be IDENTICAL in all four cells. The only thing that changes between cells is the pose.\n- The character's full body must be visible from head to feet in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
     "sheet": "slime_C_taxonomy/sheet.png",
     "frames": [
       "slime_C_taxonomy/frame_1.png",
@@ -164,47 +164,37 @@
       "slime_C_taxonomy/frame_3.png",
       "slime_C_taxonomy/frame_4.png"
     ],
-    "timing_s": 14.74,
+    "timing_s": 17.01,
     "error": null
   },
   {
     "char_id": "slime",
     "char_desc": "a cheerful green slime blob with big eyes",
-    "strategy_id": "D_img_aware",
-    "strategy_name": "Image-gen aware",
-    "animation_type": "bounce",
-    "animation_description": "A cheerful green slime blob performing a rhythmic vertical bounce cycle while moving toward the right.",
-    "cells": {
-      "1": "The slime is in a neutral, rounded blob shape, sitting low on the ground, facing right, with its eyes wide and centered.",
-      "2": "The slime is stretching vertically, elongated and tall, beginning to lift off the ground, facing right, with its body tapering upward.",
-      "3": "The slime is at the peak of its bounce, fully stretched and thin, hovering in the air, facing right, appearing weightless and fluid.",
-      "4": "The slime is squashed horizontally, wide and flat against the ground upon landing, facing right, with its eyes positioned low near the base."
-    },
-    "image_prompt": "CHARACTER: A cheerful bright green slime blob with a rounded dome shape, two large oval white eyes with black pupils near the top, a small open smile, slightly translucent body with a subtle shine. The character is shown in side view, facing right. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame bounce cycle for this character. A cheerful green slime blob performing a rhythmic vertical bounce cycle while moving toward the right.\n\nTHE FOUR FRAMES:\nCell 1: The slime is in a neutral, rounded blob shape, sitting low on the ground, facing right, with its eyes wide and centered.\n\nCell 2: The slime is stretching vertically, elongated and tall, beginning to lift off the ground, facing right, with its body tapering upward.\n\nCell 3: The slime is at the peak of its bounce, fully stretched and thin, hovering in the air, facing right, appearing weightless and fluid.\n\nCell 4: The slime is squashed horizontally, wide and flat against the ground upon landing, facing right, with its eyes positioned low near the base.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT pose from the others. If two cells look the same, the animation will not work.\n- The character's appearance, colors, and art style must be IDENTICAL in all four cells. Only the pose changes.\n- The character's full body must be visible in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
-    "sheet": "slime_D_img_aware/sheet.png",
-    "frames": [
-      "slime_D_img_aware/frame_1.png",
-      "slime_D_img_aware/frame_2.png",
-      "slime_D_img_aware/frame_3.png",
-      "slime_D_img_aware/frame_4.png"
-    ],
-    "timing_s": 27.58,
-    "error": null
+    "strategy_id": "D_img_aware_v2",
+    "strategy_name": "Image-gen aware v2",
+    "animation_type": "",
+    "animation_description": "",
+    "cells": {},
+    "image_prompt": "",
+    "sheet": "",
+    "frames": [],
+    "timing_s": 2.49,
+    "error": "JSONDecodeError: Illegal trailing comma before end of object: line 9 column 241 (char 1311)"
   },
   {
     "char_id": "wolf",
     "char_desc": "a grey wolf",
     "strategy_id": "A_minimal",
     "strategy_name": "Minimal",
-    "animation_type": "wolf trot",
-    "animation_description": "A rhythmic cycle of a wolf trotting with diagonal limbs moving in sync.",
+    "animation_type": "wolf_trot",
+    "animation_description": "A rhythmic cycle of a wolf walking forward with synchronized leg movements.",
     "cells": {
-      "1": "Front right and back left legs are extended forward while the opposite legs are planted firmly on the ground.",
-      "2": "The wolf transitions into a neutral standing posture with all four paws close together beneath the torso.",
-      "3": "Front left and back right legs are extended forward while the opposite legs are planted firmly on the ground.",
-      "4": "The body shifts weight back to the initial starting position to prepare for the next stride."
+      "1": "Front-left and back-right legs are extended forward while the opposite legs push off the ground.",
+      "2": "All four legs are tucked toward the center of the body as the torso begins to shift weight.",
+      "3": "Front-right and back-left legs are extended forward while the opposite legs push off the ground.",
+      "4": "The body reaches a neutral standing pose with all paws touching the ground before the next stride."
     },
-    "image_prompt": "CHARACTER: A grey wolf with thick fur, pointed ears, a bushy tail, yellow eyes, dark grey back and lighter grey underbelly, four strong legs with dark paws. The character is shown in side view, facing right. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame wolf trot cycle for this character. A rhythmic cycle of a wolf trotting with diagonal limbs moving in sync.\n\nTHE FOUR FRAMES:\nCell 1: Front right and back left legs are extended forward while the opposite legs are planted firmly on the ground.\n\nCell 2: The wolf transitions into a neutral standing posture with all four paws close together beneath the torso.\n\nCell 3: Front left and back right legs are extended forward while the opposite legs are planted firmly on the ground.\n\nCell 4: The body shifts weight back to the initial starting position to prepare for the next stride.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT pose from the others. If two cells look the same, the animation will not work.\n- The character's appearance, colors, and art style must be IDENTICAL in all four cells. Only the pose changes.\n- The character's full body must be visible in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
+    "image_prompt": "CHARACTER: A grey wolf with thick fur, pointed ears, a bushy tail, yellow eyes, dark grey back and lighter grey underbelly, four strong legs with dark paws. The character is shown in side view, facing right, moving toward the right edge of the image. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame wolf_trot cycle for this character. A rhythmic cycle of a wolf walking forward with synchronized leg movements.\n\nTHE FOUR FRAMES:\nCell 1: Front-left and back-right legs are extended forward while the opposite legs push off the ground.\n\nCell 2: All four legs are tucked toward the center of the body as the torso begins to shift weight.\n\nCell 3: Front-right and back-left legs are extended forward while the opposite legs push off the ground.\n\nCell 4: The body reaches a neutral standing pose with all paws touching the ground before the next stride.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. The character is moving to the right. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT pose from the others. If two cells look the same, the animation will not work.\n- The character's face, body shape, clothing, colors, and art style must be IDENTICAL in all four cells. The only thing that changes between cells is the pose.\n- The character's full body must be visible from head to feet in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
     "sheet": "wolf_A_minimal/sheet.png",
     "frames": [
       "wolf_A_minimal/frame_1.png",
@@ -212,7 +202,7 @@
       "wolf_A_minimal/frame_3.png",
       "wolf_A_minimal/frame_4.png"
     ],
-    "timing_s": 16.33,
+    "timing_s": 21.57,
     "error": null
   },
   {
@@ -221,14 +211,14 @@
     "strategy_id": "B_detailed",
     "strategy_name": "Detailed with context",
     "animation_type": "walk",
-    "animation_description": "A rhythmic, steady four-legged walk cycle where the wolf moves forward with a coordinated stride, alternating limbs to maintain balance and momentum.",
+    "animation_description": "A rhythmic quadrupedal gait where the wolf moves forward with a steady, purposeful stride, alternating limb positions to simulate walking on all fours.",
     "cells": {
-      "1": "The wolf stands with its front-right and back-left legs extended toward the right edge. The back-right and front-left legs are tucked under the torso, preparing to push off.",
-      "2": "The wolf is in a low, compressed stance with all four paws near the center of the frame. The back is slightly arched and the head is held level with the shoulders.",
-      "3": "The wolf shifts its weight, extending the front-left and back-right legs toward the right edge. The front-right and back-left legs are lifted off the ground and pulled forward under the body.",
-      "4": "The wolf reaches the peak of its stride with the body elongated. The torso is stretched out, and the legs are positioned to transition back into the starting contact pose."
+      "1": "The wolf stands with its front-right and back-left legs planted firmly on the ground. The body is in a neutral, elongated posture with the head held level and the tail extended horizontally behind.",
+      "2": "The wolf lifts its front-left and back-right legs into the air, bending the knees to prepare for a forward step. The torso shifts slightly forward, and the spine arches downward to accommodate the weight shift.",
+      "3": "The front-left and back-right legs reach forward, landing firmly on the ground ahead of the center of gravity. The back is flattened, and the head dips slightly to maintain momentum.",
+      "4": "The wolf pushes off with its front-right and back-left legs, causing the body to stretch and compress as it prepares to repeat the cycle. The front-left leg is fully extended forward, while the back-right leg is tucked underneath the midsection."
     },
-    "image_prompt": "CHARACTER: A grey wolf with thick fur, pointed ears, a bushy tail, yellow eyes, dark grey back and lighter grey underbelly, four strong legs with dark paws. The character is shown in side view, facing right. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame walk cycle for this character. A rhythmic, steady four-legged walk cycle where the wolf moves forward with a coordinated stride, alternating limbs to maintain balance and momentum.\n\nTHE FOUR FRAMES:\nCell 1: The wolf stands with its front-right and back-left legs extended toward the right edge. The back-right and front-left legs are tucked under the torso, preparing to push off.\n\nCell 2: The wolf is in a low, compressed stance with all four paws near the center of the frame. The back is slightly arched and the head is held level with the shoulders.\n\nCell 3: The wolf shifts its weight, extending the front-left and back-right legs toward the right edge. The front-right and back-left legs are lifted off the ground and pulled forward under the body.\n\nCell 4: The wolf reaches the peak of its stride with the body elongated. The torso is stretched out, and the legs are positioned to transition back into the starting contact pose.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT pose from the others. If two cells look the same, the animation will not work.\n- The character's appearance, colors, and art style must be IDENTICAL in all four cells. Only the pose changes.\n- The character's full body must be visible in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
+    "image_prompt": "CHARACTER: A grey wolf with thick fur, pointed ears, a bushy tail, yellow eyes, dark grey back and lighter grey underbelly, four strong legs with dark paws. The character is shown in side view, facing right, moving toward the right edge of the image. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame walk cycle for this character. A rhythmic quadrupedal gait where the wolf moves forward with a steady, purposeful stride, alternating limb positions to simulate walking on all fours.\n\nTHE FOUR FRAMES:\nCell 1: The wolf stands with its front-right and back-left legs planted firmly on the ground. The body is in a neutral, elongated posture with the head held level and the tail extended horizontally behind.\n\nCell 2: The wolf lifts its front-left and back-right legs into the air, bending the knees to prepare for a forward step. The torso shifts slightly forward, and the spine arches downward to accommodate the weight shift.\n\nCell 3: The front-left and back-right legs reach forward, landing firmly on the ground ahead of the center of gravity. The back is flattened, and the head dips slightly to maintain momentum.\n\nCell 4: The wolf pushes off with its front-right and back-left legs, causing the body to stretch and compress as it prepares to repeat the cycle. The front-left leg is fully extended forward, while the back-right leg is tucked underneath the midsection.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. The character is moving to the right. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT pose from the others. If two cells look the same, the animation will not work.\n- The character's face, body shape, clothing, colors, and art style must be IDENTICAL in all four cells. The only thing that changes between cells is the pose.\n- The character's full body must be visible from head to feet in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
     "sheet": "wolf_B_detailed/sheet.png",
     "frames": [
       "wolf_B_detailed/frame_1.png",
@@ -236,7 +226,7 @@
       "wolf_B_detailed/frame_3.png",
       "wolf_B_detailed/frame_4.png"
     ],
-    "timing_s": 17.1,
+    "timing_s": 17.75,
     "error": null
   },
   {
@@ -247,12 +237,12 @@
     "animation_type": "QUADRUPED WALK",
     "animation_description": "A rhythmic four-legged stride where diagonal pairs of legs move in synchronization to propel the wolf forward.",
     "cells": {
-      "1": "The wolf stands with its front-left and back-right legs planted firmly on the ground. The front-right leg is lifted midway through a forward stride, while the back-left leg is pushing off the ground.",
-      "2": "The wolf shifts its weight forward with all four paws momentarily near the center of the frame. The back-left leg is now tucked under the torso, and the front-left leg begins to reach toward the right edge.",
-      "3": "The front-right and back-left legs are planted firmly on the ground. The front-left leg is lifted high in the air, and the back-right leg is pushing off the ground to initiate the next stride.",
-      "4": "The wolf is in a mid-stride transition with its body stretched horizontally. The back-right leg is tucked under the belly, and the front-right leg reaches far toward the right edge to prepare for the next contact point."
+      "1": "The wolf stands with its front-right and back-left legs planted firmly on the ground. The front-left and back-right legs are lifted and bent inward toward the body.",
+      "2": "The wolf shifts its weight forward, with the front-right leg pushing off the ground. The back-left leg is extended backward while the front-left and back-right legs swing forward.",
+      "3": "The wolf plants its front-left and back-right legs firmly on the ground to support its weight. The front-right and back-left legs are now lifted and tucked close to the torso.",
+      "4": "The wolf continues its forward momentum with the front-left leg pushing off the ground. The back-right leg is extended backward, and the front-right and back-left legs are swinging forward to reset the cycle."
     },
-    "image_prompt": "CHARACTER: A grey wolf with thick fur, pointed ears, a bushy tail, yellow eyes, dark grey back and lighter grey underbelly, four strong legs with dark paws. The character is shown in side view, facing right. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame QUADRUPED WALK cycle for this character. A rhythmic four-legged stride where diagonal pairs of legs move in synchronization to propel the wolf forward.\n\nTHE FOUR FRAMES:\nCell 1: The wolf stands with its front-left and back-right legs planted firmly on the ground. The front-right leg is lifted midway through a forward stride, while the back-left leg is pushing off the ground.\n\nCell 2: The wolf shifts its weight forward with all four paws momentarily near the center of the frame. The back-left leg is now tucked under the torso, and the front-left leg begins to reach toward the right edge.\n\nCell 3: The front-right and back-left legs are planted firmly on the ground. The front-left leg is lifted high in the air, and the back-right leg is pushing off the ground to initiate the next stride.\n\nCell 4: The wolf is in a mid-stride transition with its body stretched horizontally. The back-right leg is tucked under the belly, and the front-right leg reaches far toward the right edge to prepare for the next contact point.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT pose from the others. If two cells look the same, the animation will not work.\n- The character's appearance, colors, and art style must be IDENTICAL in all four cells. Only the pose changes.\n- The character's full body must be visible in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
+    "image_prompt": "CHARACTER: A grey wolf with thick fur, pointed ears, a bushy tail, yellow eyes, dark grey back and lighter grey underbelly, four strong legs with dark paws. The character is shown in side view, facing right, moving toward the right edge of the image. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame QUADRUPED WALK cycle for this character. A rhythmic four-legged stride where diagonal pairs of legs move in synchronization to propel the wolf forward.\n\nTHE FOUR FRAMES:\nCell 1: The wolf stands with its front-right and back-left legs planted firmly on the ground. The front-left and back-right legs are lifted and bent inward toward the body.\n\nCell 2: The wolf shifts its weight forward, with the front-right leg pushing off the ground. The back-left leg is extended backward while the front-left and back-right legs swing forward.\n\nCell 3: The wolf plants its front-left and back-right legs firmly on the ground to support its weight. The front-right and back-left legs are now lifted and tucked close to the torso.\n\nCell 4: The wolf continues its forward momentum with the front-left leg pushing off the ground. The back-right leg is extended backward, and the front-right and back-left legs are swinging forward to reset the cycle.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. The character is moving to the right. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT pose from the others. If two cells look the same, the animation will not work.\n- The character's face, body shape, clothing, colors, and art style must be IDENTICAL in all four cells. The only thing that changes between cells is the pose.\n- The character's full body must be visible from head to feet in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
     "sheet": "wolf_C_taxonomy/sheet.png",
     "frames": [
       "wolf_C_taxonomy/frame_1.png",
@@ -260,31 +250,31 @@
       "wolf_C_taxonomy/frame_3.png",
       "wolf_C_taxonomy/frame_4.png"
     ],
-    "timing_s": 15.99,
+    "timing_s": 23.79,
     "error": null
   },
   {
     "char_id": "wolf",
     "char_desc": "a grey wolf",
-    "strategy_id": "D_img_aware",
-    "strategy_name": "Image-gen aware",
+    "strategy_id": "D_img_aware_v2",
+    "strategy_name": "Image-gen aware v2",
     "animation_type": "walk",
-    "animation_description": "A grey wolf performing a natural, rhythmic walk cycle moving toward the right.",
+    "animation_description": "A rhythmic quadrupedal walk cycle showcasing the shifting weight of a wolf. The motion focuses on the diagonal gait pattern, where the front and back limbs move in coordination to create a fluid, predatory stride.",
     "cells": {
-      "1": "The wolf is in a neutral standing pose facing right, front-right leg extended forward and back-left leg planted firmly, creating a balanced silhouette.",
-      "2": "The wolf is in mid-stride facing right, front legs are tucked close together under the chest while back legs are pushing off the ground, creating a compact silhouette.",
-      "3": "The wolf is in a forward-reaching pose facing right, back-right leg extended far forward and front-left leg reaching ahead, creating a wide, elongated silhouette.",
-      "4": "The wolf is in a weight-transfer pose facing right, front legs are planted and back legs are lifting off the ground, creating a slightly crouched and dynamic silhouette."
+      "1": "The wolf is in a wide stride, facing right, with the leading front leg planted far forward and the trailing back leg extended far back. The body is low to the ground in a crouching silhouette, and the tail hangs low behind.",
+      "2": "The wolf is in a narrow passing pose, facing right, with all four legs tucked close together underneath the torso. The body is at its tallest, fully extended, with the head held high and the tail held horizontally.",
+      "3": "The wolf is in a wide stride, facing right, mirroring the silhouette of Cell 1 but with the other set of legs leading the motion. The back is arched slightly, the body is low, and the tail sweeps behind the trailing leg.",
+      "4": "The wolf is in a narrow passing pose, facing right, identical in silhouette width to Cell 2 but with the opposite legs tucked beneath the body. The frame shows the body stretched vertically with the head thrust forward toward the right edge."
     },
-    "image_prompt": "CHARACTER: A grey wolf with thick fur, pointed ears, a bushy tail, yellow eyes, dark grey back and lighter grey underbelly, four strong legs with dark paws. The character is shown in side view, facing right. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame walk cycle for this character. A grey wolf performing a natural, rhythmic walk cycle moving toward the right.\n\nTHE FOUR FRAMES:\nCell 1: The wolf is in a neutral standing pose facing right, front-right leg extended forward and back-left leg planted firmly, creating a balanced silhouette.\n\nCell 2: The wolf is in mid-stride facing right, front legs are tucked close together under the chest while back legs are pushing off the ground, creating a compact silhouette.\n\nCell 3: The wolf is in a forward-reaching pose facing right, back-right leg extended far forward and front-left leg reaching ahead, creating a wide, elongated silhouette.\n\nCell 4: The wolf is in a weight-transfer pose facing right, front legs are planted and back legs are lifting off the ground, creating a slightly crouched and dynamic silhouette.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT pose from the others. If two cells look the same, the animation will not work.\n- The character's appearance, colors, and art style must be IDENTICAL in all four cells. Only the pose changes.\n- The character's full body must be visible in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
-    "sheet": "wolf_D_img_aware/sheet.png",
+    "image_prompt": "CHARACTER: A grey wolf with thick fur, pointed ears, a bushy tail, yellow eyes, dark grey back and lighter grey underbelly, four strong legs with dark paws. The character is shown in side view, facing right, moving toward the right edge of the image. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame walk cycle for this character. A rhythmic quadrupedal walk cycle showcasing the shifting weight of a wolf. The motion focuses on the diagonal gait pattern, where the front and back limbs move in coordination to create a fluid, predatory stride.\n\nTHE FOUR FRAMES:\nCell 1: The wolf is in a wide stride, facing right, with the leading front leg planted far forward and the trailing back leg extended far back. The body is low to the ground in a crouching silhouette, and the tail hangs low behind.\n\nCell 2: The wolf is in a narrow passing pose, facing right, with all four legs tucked close together underneath the torso. The body is at its tallest, fully extended, with the head held high and the tail held horizontally.\n\nCell 3: The wolf is in a wide stride, facing right, mirroring the silhouette of Cell 1 but with the other set of legs leading the motion. The back is arched slightly, the body is low, and the tail sweeps behind the trailing leg.\n\nCell 4: The wolf is in a narrow passing pose, facing right, identical in silhouette width to Cell 2 but with the opposite legs tucked beneath the body. The frame shows the body stretched vertically with the head thrust forward toward the right edge.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. The character is moving to the right. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT pose from the others. Cells 1 and 3 show wide, low strides with the body compressed. Cells 2 and 4 show narrow, tall passing poses where the legs are tucked closer together. If two cells look the same, the animation will not work.\n- The character's face, body shape, clothing, colors, and art style must be IDENTICAL in all four cells. The only thing that changes between cells is the pose.\n- The character's full body must be visible from head to feet in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
+    "sheet": "wolf_D_img_aware_v2/sheet.png",
     "frames": [
-      "wolf_D_img_aware/frame_1.png",
-      "wolf_D_img_aware/frame_2.png",
-      "wolf_D_img_aware/frame_3.png",
-      "wolf_D_img_aware/frame_4.png"
+      "wolf_D_img_aware_v2/frame_1.png",
+      "wolf_D_img_aware_v2/frame_2.png",
+      "wolf_D_img_aware_v2/frame_3.png",
+      "wolf_D_img_aware_v2/frame_4.png"
     ],
-    "timing_s": 25.41,
+    "timing_s": 23.8,
     "error": null
   },
   {
@@ -293,14 +283,14 @@
     "strategy_id": "A_minimal",
     "strategy_name": "Minimal",
     "animation_type": "floating pulse",
-    "animation_description": "The jellyfish rhythmically contracts and expands its bell while its tentacles trail beneath in a fluid, undulating motion.",
+    "animation_description": "The jellyfish rhythmically expands and contracts its bell while its tentacles trail behind in a fluid, undulating motion.",
     "cells": {
-      "1": "The bell is fully expanded and rounded, with tentacles hanging straight down in a relaxed state.",
-      "2": "The bell begins to constrict inward at the base, causing the tentacles to bunch slightly and sway toward the center.",
-      "3": "The bell is at its maximum contraction, pushing the tentacles outward and upward in a dynamic flare.",
-      "4": "The bell starts to release and widen again, allowing the tentacles to drift back into a vertical, trailing position."
+      "1": "The bell is fully expanded and domed, with tentacles hanging straight down in a relaxed, vertical cluster.",
+      "2": "The bell begins to compress inward at the base, causing the tentacles to flare outward and sway slightly to the left.",
+      "3": "The bell is at its tightest point of contraction, pulling the tentacles upward toward the center in a gathered bunch.",
+      "4": "The bell begins to expand again, pushing the tentacles outward and downward in a sweeping, flowing motion to the right to reset the cycle."
     },
-    "image_prompt": "CHARACTER: A translucent bioluminescent jellyfish with a smooth bell-shaped dome glowing soft blue-purple, long trailing tentacles that fade to transparent at the tips, small glowing dots along the tentacles. The character is shown in side view, facing right. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame floating pulse cycle for this character. The jellyfish rhythmically contracts and expands its bell while its tentacles trail beneath in a fluid, undulating motion.\n\nTHE FOUR FRAMES:\nCell 1: The bell is fully expanded and rounded, with tentacles hanging straight down in a relaxed state.\n\nCell 2: The bell begins to constrict inward at the base, causing the tentacles to bunch slightly and sway toward the center.\n\nCell 3: The bell is at its maximum contraction, pushing the tentacles outward and upward in a dynamic flare.\n\nCell 4: The bell starts to release and widen again, allowing the tentacles to drift back into a vertical, trailing position.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT pose from the others. If two cells look the same, the animation will not work.\n- The character's appearance, colors, and art style must be IDENTICAL in all four cells. Only the pose changes.\n- The character's full body must be visible in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
+    "image_prompt": "CHARACTER: A translucent bioluminescent jellyfish with a smooth bell-shaped dome glowing soft blue-purple, long trailing tentacles that fade to transparent at the tips, small glowing dots along the tentacles. The character is shown in side view, facing right, moving toward the right edge of the image. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame floating pulse cycle for this character. The jellyfish rhythmically expands and contracts its bell while its tentacles trail behind in a fluid, undulating motion.\n\nTHE FOUR FRAMES:\nCell 1: The bell is fully expanded and domed, with tentacles hanging straight down in a relaxed, vertical cluster.\n\nCell 2: The bell begins to compress inward at the base, causing the tentacles to flare outward and sway slightly to the left.\n\nCell 3: The bell is at its tightest point of contraction, pulling the tentacles upward toward the center in a gathered bunch.\n\nCell 4: The bell begins to expand again, pushing the tentacles outward and downward in a sweeping, flowing motion to the right to reset the cycle.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. The character is moving to the right. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT pose from the others. If two cells look the same, the animation will not work.\n- The character's face, body shape, clothing, colors, and art style must be IDENTICAL in all four cells. The only thing that changes between cells is the pose.\n- The character's full body must be visible from head to feet in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
     "sheet": "jellyfish_A_minimal/sheet.png",
     "frames": [
       "jellyfish_A_minimal/frame_1.png",
@@ -308,7 +298,7 @@
       "jellyfish_A_minimal/frame_3.png",
       "jellyfish_A_minimal/frame_4.png"
     ],
-    "timing_s": 22.25,
+    "timing_s": 16.21,
     "error": null
   },
   {
@@ -317,14 +307,14 @@
     "strategy_id": "B_detailed",
     "strategy_name": "Detailed with context",
     "animation_type": "float",
-    "animation_description": "A rhythmic pulsing cycle where the jellyfish bell expands and contracts while tentacles trail behind in a wave-like motion to simulate buoyancy in air.",
+    "animation_description": "A rhythmic pulsing cycle where the jellyfish bell expands and contracts while trailing its tentacles to simulate buoyancy in a fluid medium.",
     "cells": {
-      "1": "The bell is fully expanded to its widest, most circular shape. The tentacles are gathered closely together and hang straight down toward the bottom edge.",
-      "2": "The bell begins to compress inward, curving slightly at the edges. The tentacles start to fan out and sway toward the left edge, trailing behind the forward movement.",
-      "3": "The bell is at its most compressed, flattened state, appearing smaller and more elongated horizontally. The tentacles are fully extended in a wide, sweeping curve toward the left edge.",
-      "4": "The bell starts to expand outward again to regain its volume. The tentacles begin to whip back toward the center, preparing to reset to the starting position."
+      "1": "The bell is fully contracted, rounded and compact, with all tentacles pulled tightly toward the underside. The main body is positioned at its highest point in the frame.",
+      "2": "The bell begins to flare outward, creating a wider, flatter shape as it starts to drift slightly downward. The tentacles begin to splay outward and downward, trailing behind the movement.",
+      "3": "The bell is at its maximum expansion, stretched wide and thin, positioned at the lowest point of the float. The tentacles are fully extended and fanned out in a graceful, flowing curve toward the left.",
+      "4": "The bell begins to pull inward again, returning to a more bulbous shape as the creature rises. The tentacles cluster back toward the center, trailing behind the rising body to prepare for the next contraction."
     },
-    "image_prompt": "CHARACTER: A translucent bioluminescent jellyfish with a smooth bell-shaped dome glowing soft blue-purple, long trailing tentacles that fade to transparent at the tips, small glowing dots along the tentacles. The character is shown in side view, facing right. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame float cycle for this character. A rhythmic pulsing cycle where the jellyfish bell expands and contracts while tentacles trail behind in a wave-like motion to simulate buoyancy in air.\n\nTHE FOUR FRAMES:\nCell 1: The bell is fully expanded to its widest, most circular shape. The tentacles are gathered closely together and hang straight down toward the bottom edge.\n\nCell 2: The bell begins to compress inward, curving slightly at the edges. The tentacles start to fan out and sway toward the left edge, trailing behind the forward movement.\n\nCell 3: The bell is at its most compressed, flattened state, appearing smaller and more elongated horizontally. The tentacles are fully extended in a wide, sweeping curve toward the left edge.\n\nCell 4: The bell starts to expand outward again to regain its volume. The tentacles begin to whip back toward the center, preparing to reset to the starting position.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT pose from the others. If two cells look the same, the animation will not work.\n- The character's appearance, colors, and art style must be IDENTICAL in all four cells. Only the pose changes.\n- The character's full body must be visible in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
+    "image_prompt": "CHARACTER: A translucent bioluminescent jellyfish with a smooth bell-shaped dome glowing soft blue-purple, long trailing tentacles that fade to transparent at the tips, small glowing dots along the tentacles. The character is shown in side view, facing right, moving toward the right edge of the image. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame float cycle for this character. A rhythmic pulsing cycle where the jellyfish bell expands and contracts while trailing its tentacles to simulate buoyancy in a fluid medium.\n\nTHE FOUR FRAMES:\nCell 1: The bell is fully contracted, rounded and compact, with all tentacles pulled tightly toward the underside. The main body is positioned at its highest point in the frame.\n\nCell 2: The bell begins to flare outward, creating a wider, flatter shape as it starts to drift slightly downward. The tentacles begin to splay outward and downward, trailing behind the movement.\n\nCell 3: The bell is at its maximum expansion, stretched wide and thin, positioned at the lowest point of the float. The tentacles are fully extended and fanned out in a graceful, flowing curve toward the left.\n\nCell 4: The bell begins to pull inward again, returning to a more bulbous shape as the creature rises. The tentacles cluster back toward the center, trailing behind the rising body to prepare for the next contraction.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. The character is moving to the right. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT pose from the others. If two cells look the same, the animation will not work.\n- The character's face, body shape, clothing, colors, and art style must be IDENTICAL in all four cells. The only thing that changes between cells is the pose.\n- The character's full body must be visible from head to feet in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
     "sheet": "jellyfish_B_detailed/sheet.png",
     "frames": [
       "jellyfish_B_detailed/frame_1.png",
@@ -332,7 +322,7 @@
       "jellyfish_B_detailed/frame_3.png",
       "jellyfish_B_detailed/frame_4.png"
     ],
-    "timing_s": 17.53,
+    "timing_s": 30.2,
     "error": null
   },
   {
@@ -341,14 +331,14 @@
     "strategy_id": "C_taxonomy",
     "strategy_name": "Movement taxonomy",
     "animation_type": "FLOAT/BOB",
-    "animation_description": "A bioluminescent jellyfish rhythmically pulses its bell while drifting horizontally through the air, with its long tentacles trailing behind in a fluid wave motion.",
+    "animation_description": "The jellyfish rhythmically pulses its bell while drifting forward, with its tentacles trailing behind in a fluid motion.",
     "cells": {
-      "1": "The bell is fully expanded and wide, positioned at the highest point of the vertical bob. The long tentacles hang straight down and slightly toward the left edge due to forward momentum.",
-      "2": "The bell begins to contract inward and pulls slightly downward, losing its rounded shape. The tentacles start to curve upward, forming a gentle wave pattern trailing toward the left edge.",
-      "3": "The bell is at its most compressed state, appearing narrow and pulled toward the bottom of the frame. The tentacles whip forward in a tight S-curve, trailing behind the bell toward the left edge.",
-      "4": "The bell expands rapidly, pushing the body back up to its peak height. The tentacles stretch out into a long, trailing line that ripples toward the left edge as the jellyfish glides forward."
+      "1": "The bell is fully expanded and wide, positioned at the highest point of the float cycle. Trailing tentacles are bunched closely together and hang straight down toward the bottom edge.",
+      "2": "The bell begins to contract inward at the sides, shifting the body slightly toward the right edge. The tentacles start to fan out and curve gracefully toward the left edge due to the forward momentum.",
+      "3": "The bell is at its most compressed and narrow state, positioned at the lowest point of the float cycle. The tentacles spread wide and ripple in a long, flowing wave pattern trailing behind the body.",
+      "4": "The bell begins to expand outward again while drifting further toward the right edge. The tentacles lose their wide spread and begin to pull back toward the center as the body prepares to rise."
     },
-    "image_prompt": "CHARACTER: A translucent bioluminescent jellyfish with a smooth bell-shaped dome glowing soft blue-purple, long trailing tentacles that fade to transparent at the tips, small glowing dots along the tentacles. The character is shown in side view, facing right. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame FLOAT/BOB cycle for this character. A bioluminescent jellyfish rhythmically pulses its bell while drifting horizontally through the air, with its long tentacles trailing behind in a fluid wave motion.\n\nTHE FOUR FRAMES:\nCell 1: The bell is fully expanded and wide, positioned at the highest point of the vertical bob. The long tentacles hang straight down and slightly toward the left edge due to forward momentum.\n\nCell 2: The bell begins to contract inward and pulls slightly downward, losing its rounded shape. The tentacles start to curve upward, forming a gentle wave pattern trailing toward the left edge.\n\nCell 3: The bell is at its most compressed state, appearing narrow and pulled toward the bottom of the frame. The tentacles whip forward in a tight S-curve, trailing behind the bell toward the left edge.\n\nCell 4: The bell expands rapidly, pushing the body back up to its peak height. The tentacles stretch out into a long, trailing line that ripples toward the left edge as the jellyfish glides forward.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT pose from the others. If two cells look the same, the animation will not work.\n- The character's appearance, colors, and art style must be IDENTICAL in all four cells. Only the pose changes.\n- The character's full body must be visible in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
+    "image_prompt": "CHARACTER: A translucent bioluminescent jellyfish with a smooth bell-shaped dome glowing soft blue-purple, long trailing tentacles that fade to transparent at the tips, small glowing dots along the tentacles. The character is shown in side view, facing right, moving toward the right edge of the image. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame FLOAT/BOB cycle for this character. The jellyfish rhythmically pulses its bell while drifting forward, with its tentacles trailing behind in a fluid motion.\n\nTHE FOUR FRAMES:\nCell 1: The bell is fully expanded and wide, positioned at the highest point of the float cycle. Trailing tentacles are bunched closely together and hang straight down toward the bottom edge.\n\nCell 2: The bell begins to contract inward at the sides, shifting the body slightly toward the right edge. The tentacles start to fan out and curve gracefully toward the left edge due to the forward momentum.\n\nCell 3: The bell is at its most compressed and narrow state, positioned at the lowest point of the float cycle. The tentacles spread wide and ripple in a long, flowing wave pattern trailing behind the body.\n\nCell 4: The bell begins to expand outward again while drifting further toward the right edge. The tentacles lose their wide spread and begin to pull back toward the center as the body prepares to rise.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. The character is moving to the right. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT pose from the others. If two cells look the same, the animation will not work.\n- The character's face, body shape, clothing, colors, and art style must be IDENTICAL in all four cells. The only thing that changes between cells is the pose.\n- The character's full body must be visible from head to feet in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
     "sheet": "jellyfish_C_taxonomy/sheet.png",
     "frames": [
       "jellyfish_C_taxonomy/frame_1.png",
@@ -356,31 +346,31 @@
       "jellyfish_C_taxonomy/frame_3.png",
       "jellyfish_C_taxonomy/frame_4.png"
     ],
-    "timing_s": 17.81,
+    "timing_s": 22.83,
     "error": null
   },
   {
     "char_id": "jellyfish",
     "char_desc": "a bioluminescent jellyfish floating in air",
-    "strategy_id": "D_img_aware",
-    "strategy_name": "Image-gen aware",
+    "strategy_id": "D_img_aware_v2",
+    "strategy_name": "Image-gen aware v2",
     "animation_type": "float",
-    "animation_description": "A bioluminescent jellyfish rhythmically pulsates its bell while trailing its tentacles through the air in a smooth floating loop.",
+    "animation_description": "A rhythmic pulsing float cycle where the jellyfish bell expands and contracts to propel its movement. The tentacles follow in a fluid, trailing motion that creates a continuous, organic sway through the air.",
     "cells": {
-      "1": "The jellyfish bell is fully expanded and wide, facing right, with tentacles hanging straight down in a relaxed, compact vertical cluster.",
-      "2": "The jellyfish bell is slightly compressed and flattened, facing right, with tentacles beginning to flare outward and sway backward as if moving forward.",
-      "3": "The jellyfish bell is at maximum inward contraction, narrow and tall, facing right, with tentacles trailing far behind in a long, elegant wave.",
-      "4": "The jellyfish bell is partially expanded and rounded, facing right, with tentacles drifting upward and forward, resetting the cycle to the wide pose."
+      "1": "The jellyfish is at the peak of its expansion, showing a wide, flattened bell shape facing toward the right edge. Long, bioluminescent tentacles are splayed outward in a wide arc, trailing behind the main body mass.",
+      "2": "The jellyfish is in a compressed, narrow state as the bell contracts, causing the silhouette to stretch vertically. The tentacles are pulled tightly toward the center, creating a compact, upright shape facing toward the right edge.",
+      "3": "The jellyfish enters a secondary expansion phase, mirroring the wide silhouette of Cell 1 but with the bell slightly tilted downward. The tentacles are spread wide again, creating a broad, asymmetrical splash of movement toward the right edge.",
+      "4": "The jellyfish returns to a tall, narrow contraction phase, mirroring the verticality of Cell 2. The tentacles are gathered underneath the bell, forming a streamlined, dense vertical silhouette facing toward the right edge."
     },
-    "image_prompt": "CHARACTER: A translucent bioluminescent jellyfish with a smooth bell-shaped dome glowing soft blue-purple, long trailing tentacles that fade to transparent at the tips, small glowing dots along the tentacles. The character is shown in side view, facing right. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame float cycle for this character. A bioluminescent jellyfish rhythmically pulsates its bell while trailing its tentacles through the air in a smooth floating loop.\n\nTHE FOUR FRAMES:\nCell 1: The jellyfish bell is fully expanded and wide, facing right, with tentacles hanging straight down in a relaxed, compact vertical cluster.\n\nCell 2: The jellyfish bell is slightly compressed and flattened, facing right, with tentacles beginning to flare outward and sway backward as if moving forward.\n\nCell 3: The jellyfish bell is at maximum inward contraction, narrow and tall, facing right, with tentacles trailing far behind in a long, elegant wave.\n\nCell 4: The jellyfish bell is partially expanded and rounded, facing right, with tentacles drifting upward and forward, resetting the cycle to the wide pose.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT pose from the others. If two cells look the same, the animation will not work.\n- The character's appearance, colors, and art style must be IDENTICAL in all four cells. Only the pose changes.\n- The character's full body must be visible in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
-    "sheet": "jellyfish_D_img_aware/sheet.png",
+    "image_prompt": "CHARACTER: A translucent bioluminescent jellyfish with a smooth bell-shaped dome glowing soft blue-purple, long trailing tentacles that fade to transparent at the tips, small glowing dots along the tentacles. The character is shown in side view, facing right, moving toward the right edge of the image. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame float cycle for this character. A rhythmic pulsing float cycle where the jellyfish bell expands and contracts to propel its movement. The tentacles follow in a fluid, trailing motion that creates a continuous, organic sway through the air.\n\nTHE FOUR FRAMES:\nCell 1: The jellyfish is at the peak of its expansion, showing a wide, flattened bell shape facing toward the right edge. Long, bioluminescent tentacles are splayed outward in a wide arc, trailing behind the main body mass.\n\nCell 2: The jellyfish is in a compressed, narrow state as the bell contracts, causing the silhouette to stretch vertically. The tentacles are pulled tightly toward the center, creating a compact, upright shape facing toward the right edge.\n\nCell 3: The jellyfish enters a secondary expansion phase, mirroring the wide silhouette of Cell 1 but with the bell slightly tilted downward. The tentacles are spread wide again, creating a broad, asymmetrical splash of movement toward the right edge.\n\nCell 4: The jellyfish returns to a tall, narrow contraction phase, mirroring the verticality of Cell 2. The tentacles are gathered underneath the bell, forming a streamlined, dense vertical silhouette facing toward the right edge.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. The character is moving to the right. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT pose from the others. Cells 1 and 3 show the bell at maximum expansion (wide, low silhouette). Cells 2 and 4 show the bell at maximum contraction (narrow, tall silhouette) with tentacles bunched closer to the center. If two cells look the same, the animation will not work.\n- The character's face, body shape, clothing, colors, and art style must be IDENTICAL in all four cells. The only thing that changes between cells is the pose.\n- The character's full body must be visible from head to feet in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
+    "sheet": "jellyfish_D_img_aware_v2/sheet.png",
     "frames": [
-      "jellyfish_D_img_aware/frame_1.png",
-      "jellyfish_D_img_aware/frame_2.png",
-      "jellyfish_D_img_aware/frame_3.png",
-      "jellyfish_D_img_aware/frame_4.png"
+      "jellyfish_D_img_aware_v2/frame_1.png",
+      "jellyfish_D_img_aware_v2/frame_2.png",
+      "jellyfish_D_img_aware_v2/frame_3.png",
+      "jellyfish_D_img_aware_v2/frame_4.png"
     ],
-    "timing_s": 20.64,
+    "timing_s": 15.13,
     "error": null
   }
 ]

@@ -332,6 +332,9 @@ def generate_cells(system_prompt: str, character_desc: str) -> dict:
         text = text.split("\n", 1)[1]
         if text.endswith("```"):
             text = text[:-3].strip()
+    # Fix trailing commas before } or ] (common LLM JSON error)
+    import re
+    text = re.sub(r",\s*([}\]])", r"\1", text)
     return json.loads(text)
 
 
