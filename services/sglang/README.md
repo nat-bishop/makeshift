@@ -15,11 +15,12 @@ Two SGLang instances run side-by-side on the same GPU:
 
 ## FLUX Image Server (Docker)
 
+Both servers are managed via [honcho](https://honcho.readthedocs.io/) from the project root. See the root `Procfile.dev` for process definitions.
+
 ```bash
-make serve-gpu          # foreground (shows logs)
-make serve-gpu-bg       # background (detached)
-make wait-gpu           # wait until ready
-make stop-gpu           # stop
+make dev-servers                   # start all servers (gpu + llm + api)
+make dev-servers SERVICES="gpu api"  # start specific servers
+make wait-gpu                      # wait until FLUX is ready
 ```
 
 First run builds Docker image and downloads model (~45GB). Subsequent runs use cache.
@@ -36,9 +37,8 @@ HF_TOKEN=hf_...  # required for gated 9B model
 ## LLM Server (Qwen 3.5)
 
 ```bash
-make serve-llm          # start in WSL2
-make wait-llm           # wait until ready
-make stop-llm           # stop
+make dev-servers SERVICES="llm api"  # start LLM + backend
+make wait-llm                      # wait until LLM is ready
 ```
 
 Configure backend:
@@ -49,8 +49,9 @@ LOCAL_LLM_URL=http://127.0.0.1:5200/v1
 
 ### Alternative models
 
+Edit the `llm` entry in `Procfile.dev` at the project root, or run directly:
+
 ```bash
-# Edit the serve-llm target or run directly:
 wsl -d Ubuntu-24.04 -u root -- /bin/bash -c '\
     /opt/sglang/bin/python -m sglang.launch_server \
         --model-path Qwen/Qwen3.5-14B --port 5200 --mem-fraction-static 0.40'

@@ -59,6 +59,7 @@ select = [
 
 [tool.ruff.lint.per-file-ignores]
 "backend/app/creator/agent.py" = ["E501"]
+"backend/app/cli.py" = ["T20"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
@@ -101,3 +102,8 @@ init_forbid_extra = true
 init_typed = true
 warn_required_dynamic_aliases = true
 warn_untyped_fields = true
+
+[dependency-groups]
+dev = [
+    "honcho>=2.0.0",
+]

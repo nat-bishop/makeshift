@@ -47,3 +47,41 @@ services:
               count: 1
               capabilities: [gpu]
 
+  llm:
+    image: lmsysorg/sglang:dev-cu13
+    container_name: makeshift-sglang-llm
+    ports:
+      - "5200:5200"
+    volumes:
+      - ${HF_CACHE:-C:/Users/Nat/.cache/huggingface}:/root/.cache/huggingface
+    environment:
+      - HF_TOKEN=${HF_TOKEN:-}
+      - SGLANG_ENABLE_JIT_DEEPGEMM=0
+    entrypoint: ["python", "-m", "sglang.launch_server"]
+    command:
+      - --model-path
+      - Qwen/Qwen3.5-9B
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "5200"
+      - --mem-fraction-static
+      - "0.40"
+    ipc: host
+    pid: host
+    shm_size: "32g"
+    privileged: true
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5200/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 300s
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+

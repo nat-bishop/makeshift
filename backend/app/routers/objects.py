@@ -8,7 +8,6 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from app.creator.agent import create_object
-from app.images.pipeline import GenerateImage, RemoveBg
 from app.models.blueprint import GameObjectBlueprint
 from app.sessions.manager import SessionManager
 from app.ws.handler import send_sprite_failed, send_sprite_ready
@@ -63,11 +62,7 @@ async def create_object_endpoint(
     logger.debug("object_saved", session_id=session_id, object_id=blueprint.id)
 
     # Schedule async sprite generation (will deliver via WebSocket)
-    generate_image = request.app.state.generate_image
-    remove_bg = request.app.state.remove_bg
-    task = asyncio.create_task(
-        _generate_and_deliver_sprite(session_id, blueprint, generate_image, remove_bg)
-    )
+    task = asyncio.create_task(_generate_and_deliver_sprite(session_id, blueprint))
     _background_tasks.add(task)
     task.add_done_callback(_background_tasks.discard)
     logger.debug("sprite_task_created", session_id=session_id, object_id=blueprint.id)
@@ -81,8 +76,6 @@ async def create_object_endpoint(
 async def _generate_and_deliver_sprite(
     session_id: str,
     blueprint: GameObjectBlueprint,
-    generate_image: GenerateImage,
-    remove_bg: RemoveBg,
 ) -> None:
     """Background task: generate sprite and push via WebSocket."""
     from app.images.pipeline import generate_sprite
@@ -90,7 +83,7 @@ async def _generate_and_deliver_sprite(
     object_id = blueprint.id
     logger.info("sprite_generation_start", session_id=session_id, object_id=object_id)
     try:
-        result = await generate_sprite(blueprint, generate_image, remove_bg)
+        result = await generate_sprite(blueprint)
         if result is None:
             logger.warning("sprite_generation_returned_none", object_id=object_id)
             await send_sprite_failed(session_id, object_id, "generation_failed")

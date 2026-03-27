@@ -15,34 +15,43 @@
 # Configure environment
 cp .env.example .env
 # Edit .env with your GOOGLE_API_KEY (FAL_KEY only needed for cloud bg removal)
-# Optional: set SPRITE_CACHE_ENABLED=false to force sprite regeneration
 
 # Install dependencies
-uv sync
+make install
 
-# Run backend server (from repo root)
-uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
+# Start all servers + launch game
+make dev
 ```
 
-Then open the Godot client:
+If you're using cloud services (Gemini) instead of local GPU servers, start only what you need:
 
 ```bash
-godot --path godot/
-# Press F5 in the editor to play
+make dev SERVICES=api              # backend only (cloud LLM + cloud images)
+make dev SERVICES="api gpu"        # backend + local image server
+make dev SERVICES="api llm"        # backend + local LLM
+```
+
+You can also run servers without launching Godot:
+
+```bash
+make dev-servers                   # all servers
+make dev-servers SERVICES=api      # just the backend
 ```
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `uv sync` | Install all dependencies (including dev) |
-| `uv sync --no-dev` | Install production dependencies only |
-| `uv run pytest` | Run all tests |
-| `uv run pytest -k "test_name"` | Run a single test by name |
-| `uv run ruff check backend/` | Lint |
-| `uv run ruff check backend/ --fix` | Lint with autofix |
-| `uv run ruff format backend/` | Format |
-| `uv run mypy backend/` | Type checking |
+| `make dev` | Start all servers + launch game |
+| `make dev-servers` | Start all servers (no game) |
+| `make play` | Launch Godot game (servers must be running) |
+| `make godot` | Open Godot editor |
+| `make install` | Install all dependencies |
+| `make test` | Run all tests |
+| `make check` | Lint + typecheck + test |
+| `make fix` | Lint with autofix |
+| `make format` | Format code |
+| `make help` | Show all available targets |
 
 ## Documentation
 

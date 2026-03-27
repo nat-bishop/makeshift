@@ -16,6 +16,12 @@ make fix                       # autofix lint issues
 make format                    # format code
 make clear-sprites             # delete all cached sprites (backend/static/sprites/*.png)
 
+# CLI — test image gen, LLM, and sprite pipeline standalone (no server needed):
+make cli-create PROMPT="fire sword"        # run LLM creator, print JSON blueprint
+make cli-image PROMPT="a red sword"        # generate raw image (no bg removal)
+make cli-sprite PROMPT="fire sword"        # full pipeline: LLM → image → bg removal → crop
+make cli-status                            # check health of configured services
+
 # For more granular control:
 uv run pytest backend/tests/test_tags.py  # single test file
 uv run pytest -k "test_name"              # single test by name
@@ -33,7 +39,7 @@ uv run pytest -k "test_name"              # single test by name
 
 - **Rule engine** (`engine/resolver.py`, `engine/rules_data.py`): `RuleResolver` — two-tier matching (O(1) pair index + O(n) wildcard scan). 45 rules, 18 annotated `trigger_mode=TriggerMode.FIELD`. `TriggerMode` StrEnum (CONTACT | FIELD) on `InteractionRule` — default CONTACT. Mirrored client-side in Godot's `RuleEngine` autoload.
 
-- **Image pipeline** (`images/pipeline.py`, `images/gemini_client.py`, `images/local_image.py`): Cache-first. Three backends (`IMAGE_BACKEND`): `gemini` (Gemini image generation), `local` (SGLang FLUX server), `fal` (fal.ai). Local backend: FLUX.2-klein-9B with torchao float8 quantization via cache-dit, served by SGLang (`services/sglang/`), ~0.45s/image. All backends → bg removal (local rembg via `gpu_bg.make_gpu_remover()` or cloud fal.ai birefnet) → crop & fit to 512×512 → cache by SHA-256 hash of the prompt. Prompt template: `"mixed media collage style paper cutout, side view, flat lighting, clean edges, {name}, {visual_description}, single centered object, contrasting solid background color, no text"`. World display size determined client-side by `size_category`.
+- **Image pipeline** (`images/pipeline.py`, `images/gemini_client.py`, `images/local_image.py`): Self-contained with lazy singletons (`get_generate_image()`, `get_remove_bg()`) — no external wiring needed. Cache-first. Three backends (`IMAGE_BACKEND`): `gemini` (Gemini image generation), `local` (SGLang FLUX server), `fal` (fal.ai). Local backend: FLUX.2-klein-9B with torchao float8 quantization via cache-dit, served by SGLang (`services/sglang/`), ~0.45s/image. All backends → bg removal (local GPU via `gpu_bg` or cloud fal.ai birefnet) → crop & fit to 512×512 → cache by SHA-256 hash of the prompt. Prompt template: `"mixed media collage style paper cutout, side view, flat lighting, clean edges, {name}, {visual_description}, single centered object, contrasting solid background color, no text"`. World display size determined client-side by `size_category`. Also usable standalone via CLI (`make cli-sprite`).
 
 - **Session persistence** (`sessions/manager.py`): aiosqlite, 2 tables (sessions, objects). Budget: $1.00 at $0.041/object.
 

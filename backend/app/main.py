@@ -49,32 +49,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     (STATIC_DIR / "sprites").mkdir(exist_ok=True)
     DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Initialize background removal callable
-    if settings.bg_removal_backend == "local":
-        from app.images.gpu_bg import make_gpu_remover
+    # Warm up image pipeline singletons (lazy init on first call)
+    from app.images.pipeline import get_generate_image, get_remove_bg
 
-        app.state.remove_bg = make_gpu_remover()
-    else:
-        from app.images.cloud_bg import make_cloud_remover
-
-        app.state.remove_bg = make_cloud_remover()
-
-    # Initialize image generation callable
-    if settings.image_backend == "local":
-        from app.images.local_image import generate_image
-
-        app.state.generate_image = generate_image
-        logger.info("image_backend_local", url=settings.local_image_url)
-    elif settings.image_backend == "fal":
-        from app.images.fal_image import generate_image
-
-        app.state.generate_image = generate_image
-        logger.info("image_backend_fal")
-    else:
-        from app.images.gemini_client import generate_image
-
-        app.state.generate_image = generate_image
-        logger.info("image_backend_gemini")
+    get_generate_image()
+    get_remove_bg()
 
     # Initialize SQLite
     import aiosqlite

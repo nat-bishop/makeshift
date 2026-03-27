@@ -31,14 +31,14 @@ def _load_model() -> tuple[Any, torch.device, transforms.Compose]:
 
     with _load_lock:
         if _model is not None:
-            return _model, _device, _transform  # type: ignore[return-value]
+            return _model, _device, _transform
 
         from transformers import AutoModelForImageSegmentation
 
+        from app.config import settings
+
         _device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         logger.info("bg_model_loading", model=settings.bg_removal_model, device=str(_device))
-
-        from app.config import settings
 
         _model = AutoModelForImageSegmentation.from_pretrained(
             settings.bg_removal_model,
@@ -70,8 +70,8 @@ def _remove_bg_sync(image_bytes: bytes) -> bytes:
     img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     orig_size = img.size
 
-    input_tensor = transform(img).unsqueeze(0).to(device)  # type: ignore[union-attr]
-    if device.type == "cuda":  # type: ignore[union-attr]
+    input_tensor = transform(img).unsqueeze(0).to(device)
+    if device.type == "cuda":
         input_tensor = input_tensor.half()
 
     with torch.no_grad():

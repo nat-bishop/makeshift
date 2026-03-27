@@ -18,6 +18,46 @@ logger = structlog.get_logger()
 RemoveBg: TypeAlias = Callable[[bytes], Awaitable[bytes]]
 GenerateImage: TypeAlias = Callable[[str], Awaitable[bytes]]
 
+_generate_image: GenerateImage | None = None
+_remove_bg: RemoveBg | None = None
+
+
+def get_generate_image() -> GenerateImage:
+    """Lazy singleton — selects backend based on IMAGE_BACKEND setting."""
+    global _generate_image
+    if _generate_image is not None:
+        return _generate_image
+    from app.config import settings
+
+    if settings.image_backend == "local":
+        from app.images.local_image import generate_image
+    elif settings.image_backend == "fal":
+        from app.images.fal_image import generate_image
+    else:
+        from app.images.gemini_client import generate_image
+    _generate_image = generate_image
+    logger.info("image_backend_initialized", backend=settings.image_backend)
+    return _generate_image
+
+
+def get_remove_bg() -> RemoveBg:
+    """Lazy singleton — selects backend based on BG_REMOVAL_BACKEND setting."""
+    global _remove_bg
+    if _remove_bg is not None:
+        return _remove_bg
+    from app.config import settings
+
+    if settings.bg_removal_backend == "local":
+        from app.images.gpu_bg import make_gpu_remover
+
+        _remove_bg = make_gpu_remover()
+    else:
+        from app.images.cloud_bg import make_cloud_remover
+
+        _remove_bg = make_cloud_remover()
+    logger.info("bg_removal_initialized", backend=settings.bg_removal_backend)
+    return _remove_bg
+
 STATIC_DIR = Path(__file__).resolve().parent.parent.parent / "static"
 
 # Sprite textures are saved at this resolution.  World size is determined
@@ -88,12 +128,10 @@ def _crop_and_fit(
     return canvas
 
 
-async def _generate_static_sprite(
-    prompt: str,
-    generate_image: GenerateImage,
-    remove_bg: RemoveBg,
-) -> bytes:
+async def generate_static_sprite(prompt: str) -> bytes:
     """Generate a single static sprite at 512x512."""
+    generate_image = get_generate_image()
+    remove_bg = get_remove_bg()
     raw_bytes = await generate_image(prompt)
     logger.debug("bg_removal_start", input_size=len(raw_bytes))
     output_bytes = await remove_bg(raw_bytes)
@@ -108,8 +146,6 @@ async def _generate_static_sprite(
 
 async def generate_sprite(
     blueprint: GameObjectBlueprint,
-    generate_image: GenerateImage,
-    remove_bg: RemoveBg,
 ) -> SpriteResult | None:
     """Full image pipeline: check cache → generate → remove bg → crop & fit → cache.
 
@@ -129,7 +165,7 @@ async def generate_sprite(
     logger.debug("sprite_cache_miss", object_id=object_id)
     t0 = time.monotonic()
     try:
-        final_bytes = await _generate_static_sprite(prompt, generate_image, remove_bg)
+        final_bytes = await generate_static_sprite(prompt)
 
         cache_path.parent.mkdir(parents=True, exist_ok=True)
         cache_path.write_bytes(final_bytes)

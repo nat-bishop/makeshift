@@ -53,14 +53,20 @@ async def _test_client() -> AsyncIterator[tuple[AsyncClient, FastAPI]]:
     )""")
     await db.commit()
     app.state.db = db
-    app.state.generate_image = AsyncMock(return_value=b"fake_image")
-    app.state.remove_bg = AsyncMock(return_value=b"fake_image")
+    # Mock pipeline singletons so background sprite task doesn't hit real backends.
+    import app.images.pipeline as _pipeline
+
+    orig_gen, orig_bg = _pipeline._generate_image, _pipeline._remove_bg
+    _pipeline._generate_image = AsyncMock(return_value=b"fake_image")
+    _pipeline._remove_bg = AsyncMock(return_value=b"fake_image")
     try:
         async with AsyncClient(
             transport=ASGITransport(app=app), base_url="http://test"
         ) as client:
             yield client, app
     finally:
+        _pipeline._generate_image = orig_gen
+        _pipeline._remove_bg = orig_bg
         await db.close()
 
 
