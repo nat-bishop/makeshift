@@ -4,30 +4,31 @@ Two SGLang instances run side-by-side on the same GPU:
 
 | Server | Model | Port | Purpose |
 |--------|-------|------|---------|
-| FLUX | FLUX.2-klein-4b-fp8 | 5100 | Image generation |
+| FLUX | FLUX.2-klein-4b-fp8 | 5100 | Image generation (Docker) |
 | LLM | Qwen/Qwen3.5-7B | 5200 | Object creation (PydanticAI agent) |
 
-Both use `mem_fraction_static: 0.40` to share VRAM.
+## Prerequisites
 
-## Install
+- Docker Desktop with WSL2 backend
+- NVIDIA GPU driver installed (GPU passthrough is automatic with Docker Desktop)
+- Verify: `docker run --rm --gpus all nvidia/cuda:13.0.1-base-ubuntu24.04 nvidia-smi`
 
-```bash
-pip install 'sglang[all]'
-```
-
-## FLUX Image Server
+## FLUX Image Server (Docker)
 
 ```bash
-make serve-gpu          # start in WSL2
+make serve-gpu          # foreground (shows logs)
+make serve-gpu-bg       # background (detached)
 make wait-gpu           # wait until ready
 make stop-gpu           # stop
 ```
+
+First run builds Docker image (~15GB) and downloads model (~10GB). Subsequent runs use cache.
 
 Configure backend:
 ```env
 IMAGE_BACKEND=local
 LOCAL_IMAGE_URL=http://127.0.0.1:5100
-LOCAL_IMAGE_MODEL=black-forest-labs/FLUX.2-klein-4b-fp8
+LOCAL_IMAGE_MODEL=black-forest-labs/FLUX.2-klein-4B
 ```
 
 ## LLM Server (Qwen 3.5)

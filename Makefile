@@ -1,4 +1,4 @@
-.PHONY: serve godot play godot-import install test lint fix format typecheck check down clear-sprites serve-gpu wait-gpu stop-gpu serve-llm wait-llm stop-llm help
+.PHONY: serve godot play godot-import install test lint fix format typecheck check down clear-sprites serve-gpu serve-gpu-bg wait-gpu stop-gpu serve-llm wait-llm stop-llm help
 
 serve: ## Run backend server
 	uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
@@ -40,17 +40,11 @@ check: lint typecheck test ## Run all checks
 clear-sprites: ## Delete all cached sprites
 	rm -f backend/static/sprites/*.png
 
-serve-gpu: ## Start SGLang FLUX server (runs in WSL2, blocks terminal)
-	wsl -d Ubuntu-24.04 -u root -- /bin/bash -c '\
-		export COLUMNS=80 LINES=24 && \
-		export CUDA_HOME=/usr/local/cuda && \
-		export PATH="$$CUDA_HOME/bin:$$PATH" && \
-		export LD_LIBRARY_PATH="$$CUDA_HOME/lib64:$$LD_LIBRARY_PATH" && \
-		export SGLANG_ENABLE_JIT_DEEPGEMM=0 && \
-		export SGLANG_CACHE_DIT_ENABLED=true && \
-		/opt/sglang/bin/python -m sglang.launch_server \
-			--model-path black-forest-labs/FLUX.2-klein-4b-fp8 \
-			--port 5100'
+serve-gpu: ## Start SGLang FLUX server (Docker, shows logs)
+	docker compose -f services/sglang/docker-compose.yml up --build
+
+serve-gpu-bg: ## Start SGLang FLUX server (Docker, background)
+	docker compose -f services/sglang/docker-compose.yml up --build -d
 
 wait-gpu: ## Wait for SGLang to be ready
 	@echo "Waiting for SGLang..."
@@ -58,8 +52,7 @@ wait-gpu: ## Wait for SGLang to be ready
 	@echo "SGLang ready"
 
 stop-gpu: ## Stop SGLang FLUX server
-	@wsl -d Ubuntu-24.04 -u root -- /bin/bash -c 'pkill -f sglang.launch_server 2>/dev/null' || true
-	@echo "SGLang stopped"
+	docker compose -f services/sglang/docker-compose.yml down
 
 serve-llm: ## Start SGLang LLM server (runs in WSL2, blocks terminal)
 	wsl -d Ubuntu-24.04 -u root -- /bin/bash -c '\
