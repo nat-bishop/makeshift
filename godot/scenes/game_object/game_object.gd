@@ -6,6 +6,7 @@ var blueprint: Dictionary = {}
 var current_durability: int = 150
 var _decay_timers: Dictionary = {}  # tag name -> Timer
 var _behavior_executor: Node = null
+var _tag_field: Node = null
 
 @onready var physics_applicator: Node = $PhysicsApplicator
 @onready var object_visual: Node = $ObjectVisual
@@ -48,6 +49,10 @@ func init_from_blueprint(bp: Dictionary) -> void:
 		_behavior_executor.name = "BehaviorExecutor"
 		add_child(_behavior_executor)
 		_behavior_executor.init_behaviors(behaviors, self)
+
+	# Initialize field system if object has field-emitting tags
+	if FieldConfig.has_any_field_tag(tags):
+		_create_tag_field(tags)
 
 	# Debug label for overlay
 	var debug_label_script: GDScript = preload("res://scripts/ui/debug_label.gd")
@@ -109,6 +114,11 @@ func add_tag(tag: String, duration: float = 0.0) -> void:
 			object_visual.spawn_particles(TagColors.get_color(tag))
 		if _behavior_executor != null:
 			_behavior_executor.on_tag_added(tag)
+		# Update or create tag field for dynamic field tags (e.g., fire spread)
+		if _tag_field != null:
+			_tag_field.on_tags_changed(tags)
+		elif FieldConfig.has_any_field_tag(tags):
+			_create_tag_field(tags)
 	if duration > 0.0:
 		_cancel_decay_timer(tag)
 		var timer := Timer.new()
@@ -131,6 +141,8 @@ func remove_tag(tag: String) -> void:
 	Log.debug("GameObject: '%s' tags now: %s" % [blueprint.get("name", object_id), tags])
 	_reapply_physics()
 	object_visual.refresh_tag_visuals(tags)
+	if _tag_field != null:
+		_tag_field.on_tags_changed(tags)
 
 
 func _on_decay_timer_expired(tag: String) -> void:
@@ -150,6 +162,14 @@ func get_cascade_neighbors() -> Array:
 		if body != self and body.has_method("get_tags"):
 			neighbors.append(body)
 	return neighbors
+
+
+func _create_tag_field(current_tags: Array) -> void:
+	var field_script = preload("res://scripts/systems/tag_field.gd")
+	_tag_field = field_script.new()
+	_tag_field.name = "TagField"
+	add_child(_tag_field)
+	_tag_field.init_field(self, current_tags)
 
 
 func _reapply_physics() -> void:
