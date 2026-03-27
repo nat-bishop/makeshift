@@ -15,12 +15,16 @@ services:
       - NCCL_P2P_DISABLE=1
       - NCCL_SHM_DISABLE=1
       - NCCL_IB_DISABLE=1
-    entrypoint: ["sglang", "serve"]
+    entrypoint: ["/entrypoint.sh"]
     command:
       - --model-path
       - black-forest-labs/FLUX.2-klein-4B
-      - --backend
-      - diffusers
+      - --transformer-path
+      - /root/.cache/huggingface/flux2-klein-4b-fp8-channel
+      - --dit-cpu-offload
+      - "false"
+      - --text-encoder-cpu-offload
+      - "false"
       - --host
       - "0.0.0.0"
       - --port

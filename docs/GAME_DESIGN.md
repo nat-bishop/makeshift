@@ -62,7 +62,7 @@ Enforced by Pydantic validators on `CreatorOutput`. Violations trigger `ModelRet
 |----------|--------------|----------|
 | Fire/Heat | HEAT_SOURCE + FLAMMABLE → ignite, + FROZEN → melt, + EXPLOSIVE → detonate | Yes (ignite) |
 | Water/Cold | LIQUID + HEAT_SOURCE → extinguish, COLD + LIQUID → freeze | No |
-| Electricity | ELECTRIC + CONDUCTING → electrify + propagate, ELECTRIC + LIQUID → electrify | Yes (propagate) |
+| Electricity | ELECTRIC + CONDUCTING → electrify + propagate, ELECTRIC + LIQUID → electrify, ELECTRIC + FLAMMABLE → spark ignition, ELECTRIC + GAS → ionize plasma | Yes (conduction, spark, ionize) |
 | Physical | SHARP + BREAKABLE → damage, HEAVY + BREAKABLE → damage, BOUNCY + anything → force | No |
 | Counter | INSULATING blocks ELECTRIC, REFLECTIVE reflects HEAT_SOURCE | No |
 | Magnetic | MAGNETIC + CONDUCTING → attract force | No |
@@ -235,6 +235,7 @@ Priority: BREAKABLE checked first, then RIGID, then FLEXIBLE, then default.
 
 **Damage-over-time (DOT)** — rule-defined; applied via DAMAGE effect with `tick_interval`/`tick_duration` fields:
 - Ignition (HEAT_SOURCE + FLAMMABLE): 10 dmg/s for 5s (50 total)
+- Spark ignition (ELECTRIC + FLAMMABLE): 8 dmg/s for 3s (24 total); also adds HEAT_SOURCE + HOT
 - Corrosion (CORROSIVE + BREAKABLE): 15 dmg/s for 3s (45 total)
 
 DOT does not stack — a new DOT on an already-burning object replaces the existing one.
