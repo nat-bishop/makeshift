@@ -118,3 +118,8 @@ Requires `.env` file (see `.env.example`):
 
 - [Architecture](docs/ARCHITECTURE.md) — object creation pipeline, image generation, rule engine, behavior system, collision/cascade, physics, persistence, WebSocket protocol
 - [Game Design](docs/GAME_DESIGN.md) — tag system, behavior system design, rule philosophy, object economy, durability, levels
+- [Animation Pipeline](docs/ANIMATION_PIPELINE.md) — sprite sheet animation generation reference (not yet in production)
+- [Action Plan](docs/action-plan.md) — unified roadmap from all design analyses
+- [Scribblenauts Deep Dive](docs/scribblenauts-deep-dive.md) — Objectnaut engine research
+- [LLM Behavior Systems](docs/llm-behavior-systems.md) — literature review of LLM behavior generation
+- Archived analyses in `docs/archive/` — historical design documents consolidated into action-plan.md

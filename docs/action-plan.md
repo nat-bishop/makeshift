@@ -1,6 +1,6 @@
 # Unified Action Plan
 
-Cross-referenced from five analyses: [Gut Check](gut-check.md), [Design Review](design-review.md), [Architecture Comparison](architecture-comparison.md), [Balance Stress Test](balance-stress-test.md), [LLM Validation Audit](llm-validation-audit.md).
+Cross-referenced from five analyses: [Gut Check](archive/gut-check.md), [Design Review](archive/design-review.md), [Architecture Comparison](archive/architecture-comparison.md), [Balance Stress Test](archive/balance-stress-test.md), [LLM Validation Audit](archive/llm-validation-audit.md).
 
 Items flagged by multiple documents are marked with the number of sources. Contradictions between documents are called out inline.
 

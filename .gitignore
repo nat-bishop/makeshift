@@ -37,3 +37,18 @@ backend/static/sprites/
 # Claude Code
 .claude/settings.local.json
 .claude/worktrees/
+
+# Experiment outputs (binary)
+backend/experiments/output/
+backend/experiments/*.png
+
+# One-off benchmark output
+bench_output/
+
+# Art test/wip assets
+art/test/
+art/wip/
+
+# External tool outputs
+pixellab_output/
+pixellab_dashboard.html
