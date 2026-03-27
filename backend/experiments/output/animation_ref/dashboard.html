@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Animation Reference Experiment</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a1a2e;
+    color: #e0e0e0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    padding: 24px;
+  }
+  h1 { font-size: 24px; margin-bottom: 8px; color: #fff; }
+  .meta { font-size: 13px; color: #888; margin-bottom: 24px; }
+  .meta span { color: #aaa; }
+
+  .global-controls {
+    display: flex; gap: 16px; align-items: center;
+    margin-bottom: 24px; padding: 12px 16px;
+    background: #16213e; border: 1px solid #2a2a4a; border-radius: 8px;
+  }
+  .global-controls label { font-size: 13px; color: #888; }
+  .global-controls input[type=range] { width: 100px; }
+  .global-controls .fps-val { font-size: 13px; color: #fff; min-width: 36px; }
+
+  .subject-card {
+    background: #16213e;
+    border: 1px solid #2a2a4a;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  .subject-header {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
+  }
+  .subject-header h2 { font-size: 18px; color: #9ecfff; }
+  .subject-header .desc { font-size: 13px; color: #888; }
+  .subject-header .timing {
+    margin-left: auto; font-size: 12px; color: #666;
+  }
+
+  .subject-body {
+    display: flex; gap: 24px; align-items: flex-start;
+  }
+
+  .base-section {
+    flex-shrink: 0; text-align: center;
+  }
+  .base-section h3 {
+    font-size: 12px; color: #7b8794; text-transform: uppercase;
+    letter-spacing: 1px; margin-bottom: 8px;
+  }
+  .checker-bg {
+    background-image:
+      linear-gradient(45deg, #252535 25%, transparent 25%),
+      linear-gradient(-45deg, #252535 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #252535 75%),
+      linear-gradient(-45deg, transparent 75%, #252535 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+    border: 1px solid #333; border-radius: 4px;
+    display: inline-block;
+  }
+  .base-section img {
+    width: 128px; height: 128px;
+    image-rendering: auto;
+    display: block;
+  }
+
+  .anims-section { flex: 1; }
+
+  .anim-row {
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 16px; padding: 12px;
+    background: #0f1a2e; border: 1px solid #2a2a4a; border-radius: 8px;
+  }
+  .anim-label {
+    font-size: 13px; font-weight: 600; color: #c0d0e0;
+    width: 50px; flex-shrink: 0; text-transform: uppercase;
+  }
+
+  .anim-preview {
+    flex-shrink: 0; cursor: pointer; position: relative;
+  }
+  .anim-preview canvas {
+    border: 1px solid #333; border-radius: 4px;
+    image-rendering: auto;
+  }
+  .anim-preview .pause-icon {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 24px; color: rgba(255,255,255,0.7);
+    pointer-events: none; display: none;
+  }
+  .anim-preview.paused .pause-icon { display: block; }
+
+  .frame-strip {
+    display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
+  }
+  .frame-thumb {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    cursor: pointer;
+  }
+  .frame-thumb img {
+    width: 64px; height: 64px;
+    image-rendering: auto;
+    border: 2px solid transparent; border-radius: 4px;
+    transition: border-color 0.15s;
+  }
+  .frame-thumb img:hover { border-color: #5588cc; }
+  .frame-thumb.active img {
+    border-color: #5588cc;
+    box-shadow: 0 0 6px rgba(85, 136, 204, 0.4);
+  }
+  .frame-thumb .frame-label {
+    font-size: 10px; color: #666;
+  }
+  .frame-thumb.error img {
+    border-color: #633;
+    opacity: 0.4;
+  }
+
+  .prompt-panel {
+    margin-top: 12px;
+  }
+  .prompt-panel summary {
+    font-size: 12px; color: #888; cursor: pointer;
+    padding: 4px 0;
+  }
+  .prompt-panel summary:hover { color: #aaa; }
+  .prompt-content {
+    margin-top: 8px; padding: 12px;
+    background: #0a0f1e; border: 1px solid #1a1a3a; border-radius: 6px;
+    font-size: 11px; line-height: 1.6; color: #999;
+  }
+  .prompt-content .prompt-label {
+    font-weight: 600; color: #7b8794;
+    text-transform: uppercase; font-size: 10px;
+    letter-spacing: 0.5px; margin-top: 8px;
+  }
+  .prompt-content .prompt-label:first-child { margin-top: 0; }
+  .prompt-content .prompt-text {
+    margin: 4px 0 8px;
+    white-space: pre-wrap; word-break: break-word;
+  }
+
+  .error-banner {
+    background: #2a1520; border: 1px solid #4a2030;
+    color: #f08080; padding: 12px; border-radius: 8px;
+    font-size: 13px; margin: 8px 0;
+  }
+</style>
+</head>
+<body>
+
+<h1>Animation Reference Experiment</h1>
+<div class="meta">
+  Image model: <span id="image-model"></span> |
+  Text model: <span id="text-model"></span> |
+  Generated: <span id="generated-at"></span>
+</div>
+
+<div class="global-controls">
+  <label>FPS:</label>
+  <input type="range" id="fps-slider" min="1" max="8" value="4">
+  <span class="fps-val" id="fps-val">4</span>
+  <label>Click preview to pause/play</label>
+</div>
+
+<div id="subjects-container"></div>
+
+<script>
+const DATA = {
+  "generated_at": "2026-03-27T01:27:12.610911+00:00",
+  "image_model": "gemini-3.1-flash-image-preview",
+  "text_model": "gemini-3.1-flash-lite-preview",
+  "subjects": [
+    {
+      "id": "goblin",
+      "name": "goblin warrior",
+      "description": "a small green goblin warrior",
+      "base_prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, goblin warrior, a small green goblin warrior, single centered object, contrasting solid background color, no text",
+      "base_image": "goblin/base.png",
+      "animation_prompts": {
+        "idle": [
+          "Standing upright, chest slightly expanded, near leg planted firmly, tail relaxed behind.",
+          "Standing upright, chest neutral, near leg planted firmly, tail relaxed behind.",
+          "Standing upright, chest slightly contracted, near leg planted firmly, tail relaxed behind.",
+          "Standing upright, chest neutral, near leg planted firmly, tail relaxed behind."
+        ],
+        "walk": [
+          "Contact pose, near leg forward, far leg back, torso slightly compressed, arms swinging naturally.",
+          "Passing pose, near leg beneath body, far leg lifted, torso stretched vertically, arms aligned.",
+          "Contact pose, far leg forward, near leg back, torso slightly compressed, arms swinging naturally.",
+          "Passing pose, far leg beneath body, near leg lifted, torso stretched vertically, arms aligned."
+        ]
+      },
+      "frames": {
+        "idle": [
+          {
+            "image": "goblin/idle_1.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, goblin warrior, Standing upright, chest slightly expanded, near leg planted firmly, tail relaxed behind., single centered object, contrasting solid background color, no text",
+            "motion": "Standing upright, chest slightly expanded, near leg planted firmly, tail relaxed behind.",
+            "error": null
+          },
+          {
+            "image": "goblin/idle_2.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, goblin warrior, Standing upright, chest neutral, near leg planted firmly, tail relaxed behind., single centered object, contrasting solid background color, no text",
+            "motion": "Standing upright, chest neutral, near leg planted firmly, tail relaxed behind.",
+            "error": null
+          },
+          {
+            "image": "goblin/idle_3.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, goblin warrior, Standing upright, chest slightly contracted, near leg planted firmly, tail relaxed behind., single centered object, contrasting solid background color, no text",
+            "motion": "Standing upright, chest slightly contracted, near leg planted firmly, tail relaxed behind.",
+            "error": null
+          },
+          {
+            "image": "goblin/idle_4.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, goblin warrior, Standing upright, chest neutral, near leg planted firmly, tail relaxed behind., single centered object, contrasting solid background color, no text",
+            "motion": "Standing upright, chest neutral, near leg planted firmly, tail relaxed behind.",
+            "error": null
+          }
+        ],
+        "walk": [
+          {
+            "image": "goblin/walk_1.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, goblin warrior, Contact pose, near leg forward, far leg back, torso slightly compressed, arms swinging naturally., single centered object, contrasting solid background color, no text",
+            "motion": "Contact pose, near leg forward, far leg back, torso slightly compressed, arms swinging naturally.",
+            "error": null
+          },
+          {
+            "image": "goblin/walk_2.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, goblin warrior, Passing pose, near leg beneath body, far leg lifted, torso stretched vertically, arms aligned., single centered object, contrasting solid background color, no text",
+            "motion": "Passing pose, near leg beneath body, far leg lifted, torso stretched vertically, arms aligned.",
+            "error": null
+          },
+          {
+            "image": "goblin/walk_3.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, goblin warrior, Contact pose, far leg forward, near leg back, torso slightly compressed, arms swinging naturally., single centered object, contrasting solid background color, no text",
+            "motion": "Contact pose, far leg forward, near leg back, torso slightly compressed, arms swinging naturally.",
+            "error": null
+          },
+          {
+            "image": "goblin/walk_4.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, goblin warrior, Passing pose, far leg beneath body, near leg lifted, torso stretched vertically, arms aligned., single centered object, contrasting solid background color, no text",
+            "motion": "Passing pose, far leg beneath body, near leg lifted, torso stretched vertically, arms aligned.",
+            "error": null
+          }
+        ]
+      },
+      "timing": {
+        "base_s": 14.71,
+        "prompts_s": 1.68,
+        "frames_s": 20.08
+      },
+      "error": null
+    },
+    {
+      "id": "fairy",
+      "name": "fairy",
+      "description": "a blue fairy with dragonfly wings",
+      "base_prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, fairy, a blue fairy with dragonfly wings, single centered object, contrasting solid background color, no text",
+      "base_image": "fairy/base.png",
+      "animation_prompts": {
+        "idle": [
+          "floating upright, wings slightly spread, near arm at side",
+          "floating upright, wings slightly retracted, near arm at side",
+          "floating upright, wings slightly spread, near arm at side",
+          "floating upright, wings slightly retracted, near arm at side"
+        ],
+        "walk": [
+          "hovering mid-stride, near leg forward, far leg back, wings angled back",
+          "hovering weight shifted, near leg beneath body, far leg forward, wings angled forward",
+          "hovering mid-stride, near leg back, far leg forward, wings angled back",
+          "hovering weight shifted, near leg beneath body, far leg back, wings angled forward"
+        ]
+      },
+      "frames": {
+        "idle": [
+          {
+            "image": "fairy/idle_1.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, fairy, floating upright, wings slightly spread, near arm at side, single centered object, contrasting solid background color, no text",
+            "motion": "floating upright, wings slightly spread, near arm at side",
+            "error": null
+          },
+          {
+            "image": "fairy/idle_2.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, fairy, floating upright, wings slightly retracted, near arm at side, single centered object, contrasting solid background color, no text",
+            "motion": "floating upright, wings slightly retracted, near arm at side",
+            "error": null
+          },
+          {
+            "image": "fairy/idle_3.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, fairy, floating upright, wings slightly spread, near arm at side, single centered object, contrasting solid background color, no text",
+            "motion": "floating upright, wings slightly spread, near arm at side",
+            "error": null
+          },
+          {
+            "image": "fairy/idle_4.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, fairy, floating upright, wings slightly retracted, near arm at side, single centered object, contrasting solid background color, no text",
+            "motion": "floating upright, wings slightly retracted, near arm at side",
+            "error": null
+          }
+        ],
+        "walk": [
+          {
+            "image": "fairy/walk_1.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, fairy, hovering mid-stride, near leg forward, far leg back, wings angled back, single centered object, contrasting solid background color, no text",
+            "motion": "hovering mid-stride, near leg forward, far leg back, wings angled back",
+            "error": null
+          },
+          {
+            "image": "fairy/walk_2.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, fairy, hovering weight shifted, near leg beneath body, far leg forward, wings angled forward, single centered object, contrasting solid background color, no text",
+            "motion": "hovering weight shifted, near leg beneath body, far leg forward, wings angled forward",
+            "error": null
+          },
+          {
+            "image": "fairy/walk_3.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, fairy, hovering mid-stride, near leg back, far leg forward, wings angled back, single centered object, contrasting solid background color, no text",
+            "motion": "hovering mid-stride, near leg back, far leg forward, wings angled back",
+            "error": null
+          },
+          {
+            "image": "fairy/walk_4.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, fairy, hovering weight shifted, near leg beneath body, far leg back, wings angled forward, single centered object, contrasting solid background color, no text",
+            "motion": "hovering weight shifted, near leg beneath body, far leg back, wings angled forward",
+            "error": null
+          }
+        ]
+      },
+      "timing": {
+        "base_s": 8.62,
+        "prompts_s": 1.56,
+        "frames_s": 17.64
+      },
+      "error": null
+    },
+    {
+      "id": "slime",
+      "name": "pink slime",
+      "description": "a cheerful pink slime",
+      "base_prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, pink slime, a cheerful pink slime, single centered object, contrasting solid background color, no text",
+      "base_image": "slime/base.png",
+      "animation_prompts": {
+        "idle": [
+          "Slime standing upright, rounded shape, slightly expanded chest volume, surface smooth and stable.",
+          "Slime standing upright, rounded shape, chest volume slightly deflated, surface smooth and stable.",
+          "Slime standing upright, rounded shape, chest volume neutral, surface smooth and stable.",
+          "Slime standing upright, rounded shape, chest volume slightly expanded, surface smooth and stable."
+        ],
+        "walk": [
+          "Slime body squashed low to ground, rounded base, forward momentum, trailing edge dragging slightly.",
+          "Slime body stretched vertically, mid-bounce, rounded top, trailing edge lifting off ground.",
+          "Slime body elongated horizontally, maximum forward reach, rounded front, trailing edge pulling forward.",
+          "Slime body slightly squashed, settling forward, rounded top, trailing edge catching up to base."
+        ]
+      },
+      "frames": {
+        "idle": [
+          {
+            "image": "slime/idle_1.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, pink slime, Slime standing upright, rounded shape, slightly expanded chest volume, surface smooth and stable., single centered object, contrasting solid background color, no text",
+            "motion": "Slime standing upright, rounded shape, slightly expanded chest volume, surface smooth and stable.",
+            "error": null
+          },
+          {
+            "image": "slime/idle_2.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, pink slime, Slime standing upright, rounded shape, chest volume slightly deflated, surface smooth and stable., single centered object, contrasting solid background color, no text",
+            "motion": "Slime standing upright, rounded shape, chest volume slightly deflated, surface smooth and stable.",
+            "error": null
+          },
+          {
+            "image": "slime/idle_3.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, pink slime, Slime standing upright, rounded shape, chest volume neutral, surface smooth and stable., single centered object, contrasting solid background color, no text",
+            "motion": "Slime standing upright, rounded shape, chest volume neutral, surface smooth and stable.",
+            "error": null
+          },
+          {
+            "image": "slime/idle_4.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, pink slime, Slime standing upright, rounded shape, chest volume slightly expanded, surface smooth and stable., single centered object, contrasting solid background color, no text",
+            "motion": "Slime standing upright, rounded shape, chest volume slightly expanded, surface smooth and stable.",
+            "error": null
+          }
+        ],
+        "walk": [
+          {
+            "image": "slime/walk_1.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, pink slime, Slime body squashed low to ground, rounded base, forward momentum, trailing edge dragging slightly., single centered object, contrasting solid background color, no text",
+            "motion": "Slime body squashed low to ground, rounded base, forward momentum, trailing edge dragging slightly.",
+            "error": null
+          },
+          {
+            "image": "slime/walk_2.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, pink slime, Slime body stretched vertically, mid-bounce, rounded top, trailing edge lifting off ground., single centered object, contrasting solid background color, no text",
+            "motion": "Slime body stretched vertically, mid-bounce, rounded top, trailing edge lifting off ground.",
+            "error": null
+          },
+          {
+            "image": "slime/walk_3.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, pink slime, Slime body elongated horizontally, maximum forward reach, rounded front, trailing edge pulling forward., single centered object, contrasting solid background color, no text",
+            "motion": "Slime body elongated horizontally, maximum forward reach, rounded front, trailing edge pulling forward.",
+            "error": null
+          },
+          {
+            "image": "slime/walk_4.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, pink slime, Slime body slightly squashed, settling forward, rounded top, trailing edge catching up to base., single centered object, contrasting solid background color, no text",
+            "motion": "Slime body slightly squashed, settling forward, rounded top, trailing edge catching up to base.",
+            "error": null
+          }
+        ]
+      },
+      "timing": {
+        "base_s": 8.31,
+        "prompts_s": 2.05,
+        "frames_s": 21.07
+      },
+      "error": null
+    },
+    {
+      "id": "centipede",
+      "name": "centipede",
+      "description": "a purple segmented centipede",
+      "base_prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, centipede, a purple segmented centipede, single centered object, contrasting solid background color, no text",
+      "base_image": "centipede/base.png",
+      "animation_prompts": {
+        "idle": [
+          "Standing straight, segments slightly aligned, antennae held high, minimal breathing motion.",
+          "Standing straight, segments shifted subtly, antennae slightly lowered, neutral posture.",
+          "Standing straight, segments aligned, antennae held high, minimal breathing motion.",
+          "Standing straight, segments shifted subtly, antennae slightly lowered, neutral posture."
+        ],
+        "walk": [
+          "Body in shallow S-curve, near legs planted forward, far legs trailing behind.",
+          "Body segments compressed, legs bunched beneath torso, mid-stride posture.",
+          "Body in stretched S-curve, near legs pushing backward, far legs extended forward.",
+          "Body segments elongated, legs mid-step, antennae trailing slightly during forward motion."
+        ]
+      },
+      "frames": {
+        "idle": [
+          {
+            "image": "centipede/idle_1.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, centipede, Standing straight, segments slightly aligned, antennae held high, minimal breathing motion., single centered object, contrasting solid background color, no text",
+            "motion": "Standing straight, segments slightly aligned, antennae held high, minimal breathing motion.",
+            "error": null
+          },
+          {
+            "image": "centipede/idle_2.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, centipede, Standing straight, segments shifted subtly, antennae slightly lowered, neutral posture., single centered object, contrasting solid background color, no text",
+            "motion": "Standing straight, segments shifted subtly, antennae slightly lowered, neutral posture.",
+            "error": null
+          },
+          {
+            "image": "centipede/idle_3.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, centipede, Standing straight, segments aligned, antennae held high, minimal breathing motion., single centered object, contrasting solid background color, no text",
+            "motion": "Standing straight, segments aligned, antennae held high, minimal breathing motion.",
+            "error": null
+          },
+          {
+            "image": "centipede/idle_4.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, centipede, Standing straight, segments shifted subtly, antennae slightly lowered, neutral posture., single centered object, contrasting solid background color, no text",
+            "motion": "Standing straight, segments shifted subtly, antennae slightly lowered, neutral posture.",
+            "error": null
+          }
+        ],
+        "walk": [
+          {
+            "image": "centipede/walk_1.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, centipede, Body in shallow S-curve, near legs planted forward, far legs trailing behind., single centered object, contrasting solid background color, no text",
+            "motion": "Body in shallow S-curve, near legs planted forward, far legs trailing behind.",
+            "error": null
+          },
+          {
+            "image": "centipede/walk_2.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, centipede, Body segments compressed, legs bunched beneath torso, mid-stride posture., single centered object, contrasting solid background color, no text",
+            "motion": "Body segments compressed, legs bunched beneath torso, mid-stride posture.",
+            "error": null
+          },
+          {
+            "image": "centipede/walk_3.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, centipede, Body in stretched S-curve, near legs pushing backward, far legs extended forward., single centered object, contrasting solid background color, no text",
+            "motion": "Body in stretched S-curve, near legs pushing backward, far legs extended forward.",
+            "error": null
+          },
+          {
+            "image": "centipede/walk_4.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, centipede, Body segments elongated, legs mid-step, antennae trailing slightly during forward motion., single centered object, contrasting solid background color, no text",
+            "motion": "Body segments elongated, legs mid-step, antennae trailing slightly during forward motion.",
+            "error": null
+          }
+        ]
+      },
+      "timing": {
+        "base_s": 9.28,
+        "prompts_s": 1.45,
+        "frames_s": 20.04
+      },
+      "error": null
+    },
+    {
+      "id": "orb",
+      "name": "crystal orb",
+      "description": "a glowing crystal orb with tendrils",
+      "base_prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, crystal orb, a glowing crystal orb with tendrils, single centered object, contrasting solid background color, no text",
+      "base_image": "orb/base.png",
+      "animation_prompts": {
+        "idle": [
+          "Glowing crystal orb floating mid-air, tendrils hanging perfectly still, soft light pulsing.",
+          "Glowing crystal orb floating slightly higher, tendrils dangling vertically, light intensity dimming.",
+          "Glowing crystal orb floating mid-air, tendrils motionless, light intensity increasing.",
+          "Glowing crystal orb floating slightly lower, tendrils hanging straight down, light pulsing softly."
+        ],
+        "walk": [
+          "Crystal orb tilted slightly forward, tendrils trailing backward, floating low toward right edge.",
+          "Crystal orb centered and upright, tendrils swaying forward, floating at mid-height.",
+          "Crystal orb tilted slightly forward, tendrils trailing backward, floating high toward right edge.",
+          "Crystal orb centered and upright, tendrils swaying forward, floating at mid-height."
+        ]
+      },
+      "frames": {
+        "idle": [
+          {
+            "image": "orb/idle_1.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, crystal orb, Glowing crystal orb floating mid-air, tendrils hanging perfectly still, soft light pulsing., single centered object, contrasting solid background color, no text",
+            "motion": "Glowing crystal orb floating mid-air, tendrils hanging perfectly still, soft light pulsing.",
+            "error": null
+          },
+          {
+            "image": "orb/idle_2.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, crystal orb, Glowing crystal orb floating slightly higher, tendrils dangling vertically, light intensity dimming., single centered object, contrasting solid background color, no text",
+            "motion": "Glowing crystal orb floating slightly higher, tendrils dangling vertically, light intensity dimming.",
+            "error": null
+          },
+          {
+            "image": "orb/idle_3.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, crystal orb, Glowing crystal orb floating mid-air, tendrils motionless, light intensity increasing., single centered object, contrasting solid background color, no text",
+            "motion": "Glowing crystal orb floating mid-air, tendrils motionless, light intensity increasing.",
+            "error": null
+          },
+          {
+            "image": "orb/idle_4.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, crystal orb, Glowing crystal orb floating slightly lower, tendrils hanging straight down, light pulsing softly., single centered object, contrasting solid background color, no text",
+            "motion": "Glowing crystal orb floating slightly lower, tendrils hanging straight down, light pulsing softly.",
+            "error": null
+          }
+        ],
+        "walk": [
+          {
+            "image": "orb/walk_1.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, crystal orb, Crystal orb tilted slightly forward, tendrils trailing backward, floating low toward right edge., single centered object, contrasting solid background color, no text",
+            "motion": "Crystal orb tilted slightly forward, tendrils trailing backward, floating low toward right edge.",
+            "error": null
+          },
+          {
+            "image": "orb/walk_2.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, crystal orb, Crystal orb centered and upright, tendrils swaying forward, floating at mid-height., single centered object, contrasting solid background color, no text",
+            "motion": "Crystal orb centered and upright, tendrils swaying forward, floating at mid-height.",
+            "error": null
+          },
+          {
+            "image": "orb/walk_3.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, crystal orb, Crystal orb tilted slightly forward, tendrils trailing backward, floating high toward right edge., single centered object, contrasting solid background color, no text",
+            "motion": "Crystal orb tilted slightly forward, tendrils trailing backward, floating high toward right edge.",
+            "error": null
+          },
+          {
+            "image": "orb/walk_4.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, crystal orb, Crystal orb centered and upright, tendrils swaying forward, floating at mid-height., single centered object, contrasting solid background color, no text",
+            "motion": "Crystal orb centered and upright, tendrils swaying forward, floating at mid-height.",
+            "error": null
+          }
+        ]
+      },
+      "timing": {
+        "base_s": 8.97,
+        "prompts_s": 1.78,
+        "frames_s": 23.27
+      },
+      "error": null
+    },
+    {
+      "id": "toysoldier",
+      "name": "toy soldier",
+      "description": "a wooden wind-up toy soldier",
+      "base_prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, toy soldier, a wooden wind-up toy soldier, single centered object, contrasting solid background color, no text",
+      "base_image": "toysoldier/base.png",
+      "animation_prompts": {
+        "idle": [
+          "Standing upright, chest neutral, key on back pointing vertically.",
+          "Standing upright, chest slightly expanded, key on back tilted forward.",
+          "Standing upright, chest neutral, key on back pointing vertically.",
+          "Standing upright, chest slightly contracted, key on back tilted backward."
+        ],
+        "walk": [
+          "Near leg forward, far leg back, key on back pointing forward.",
+          "Legs together beneath body, torso slightly compressed, key on back vertical.",
+          "Far leg forward, near leg back, key on back pointing backward.",
+          "Legs together beneath body, torso slightly stretched, key on back vertical."
+        ]
+      },
+      "frames": {
+        "idle": [
+          {
+            "image": "toysoldier/idle_1.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, toy soldier, Standing upright, chest neutral, key on back pointing vertically., single centered object, contrasting solid background color, no text",
+            "motion": "Standing upright, chest neutral, key on back pointing vertically.",
+            "error": null
+          },
+          {
+            "image": "toysoldier/idle_2.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, toy soldier, Standing upright, chest slightly expanded, key on back tilted forward., single centered object, contrasting solid background color, no text",
+            "motion": "Standing upright, chest slightly expanded, key on back tilted forward.",
+            "error": null
+          },
+          {
+            "image": "toysoldier/idle_3.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, toy soldier, Standing upright, chest neutral, key on back pointing vertically., single centered object, contrasting solid background color, no text",
+            "motion": "Standing upright, chest neutral, key on back pointing vertically.",
+            "error": null
+          },
+          {
+            "image": "toysoldier/idle_4.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, toy soldier, Standing upright, chest slightly contracted, key on back tilted backward., single centered object, contrasting solid background color, no text",
+            "motion": "Standing upright, chest slightly contracted, key on back tilted backward.",
+            "error": null
+          }
+        ],
+        "walk": [
+          {
+            "image": "toysoldier/walk_1.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, toy soldier, Near leg forward, far leg back, key on back pointing forward., single centered object, contrasting solid background color, no text",
+            "motion": "Near leg forward, far leg back, key on back pointing forward.",
+            "error": null
+          },
+          {
+            "image": "toysoldier/walk_2.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, toy soldier, Legs together beneath body, torso slightly compressed, key on back vertical., single centered object, contrasting solid background color, no text",
+            "motion": "Legs together beneath body, torso slightly compressed, key on back vertical.",
+            "error": null
+          },
+          {
+            "image": "toysoldier/walk_3.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, toy soldier, Far leg forward, near leg back, key on back pointing backward., single centered object, contrasting solid background color, no text",
+            "motion": "Far leg forward, near leg back, key on back pointing backward.",
+            "error": null
+          },
+          {
+            "image": "toysoldier/walk_4.png",
+            "prompt": "mixed media collage style paper cutout, side view facing right, flat lighting, clean edges, toy soldier, Legs together beneath body, torso slightly stretched, key on back vertical., single centered object, contrasting solid background color, no text",
+            "motion": "Legs together beneath body, torso slightly stretched, key on back vertical.",
+            "error": null
+          }
+        ]
+      },
+      "timing": {
+        "base_s": 8.08,
+        "prompts_s": 1.75,
+        "frames_s": 18.78
+      },
+      "error": null
+    }
+  ]
+};
+
+let globalFps = 4;
+const animStates = []; // track per-animation state
+
+document.getElementById('image-model').textContent = DATA.image_model;
+document.getElementById('text-model').textContent = DATA.text_model;
+document.getElementById('generated-at').textContent =
+  new Date(DATA.generated_at).toLocaleString();
+
+document.getElementById('fps-slider').addEventListener('input', e => {
+  globalFps = parseInt(e.target.value);
+  document.getElementById('fps-val').textContent = globalFps;
+});
+
+const container = document.getElementById('subjects-container');
+
+DATA.subjects.forEach((subject, si) => {
+  const card = document.createElement('div');
+  card.className = 'subject-card';
+
+  const timing = subject.timing || {};
+  const timingStr = Object.entries(timing)
+    .map(([k, v]) => `${k}: ${v}s`).join(' | ');
+
+  let bodyHtml = '';
+
+  if (subject.error) {
+    bodyHtml = `<div class="error-banner">${subject.error}</div>`;
+  } else {
+    // Base sprite
+    bodyHtml += `
+      <div class="subject-body">
+        <div class="base-section">
+          <h3>Base Sprite</h3>
+          <div class="checker-bg">
+            <img src="${subject.base_image}" alt="base">
+          </div>
+        </div>
+        <div class="anims-section">`;
+
+    // Animation rows
+    const animTypes = Object.keys(subject.frames || {});
+    animTypes.forEach((animType, ai) => {
+      const frames = subject.frames[animType] || [];
+      const animId = `anim-${si}-${ai}`;
+      const canvasSize = 128;
+
+      bodyHtml += `
+        <div class="anim-row">
+          <div class="anim-label">${animType}</div>
+          <div class="anim-preview" id="${animId}-preview">
+            <div class="checker-bg">
+              <canvas id="${animId}-canvas" width="${canvasSize}" height="${canvasSize}"></canvas>
+            </div>
+            <div class="pause-icon">||</div>
+          </div>
+          <div class="frame-strip" id="${animId}-strip">`;
+
+      frames.forEach((frame, fi) => {
+        const errorClass = frame.error ? ' error' : '';
+        bodyHtml += `
+          <div class="frame-thumb${errorClass}" data-anim="${animId}" data-frame="${fi}">
+            <div class="checker-bg">
+              <img src="${frame.error ? '' : frame.image}" alt="frame ${fi+1}"
+                   onerror="this.style.opacity=0.2">
+            </div>
+            <span class="frame-label">${fi+1}</span>
+          </div>`;
+      });
+
+      bodyHtml += `</div></div>`;
+
+      // Track animation state
+      animStates.push({
+        id: animId,
+        subjectIdx: si,
+        animType: animType,
+        frames: frames,
+        frameIndex: 0,
+        paused: false,
+        images: [],
+        loaded: false,
+      });
+    });
+
+    bodyHtml += `</div></div>`;
+
+    // Prompt panel
+    bodyHtml += `
+      <div class="prompt-panel">
+        <details>
+          <summary>Prompts & Details</summary>
+          <div class="prompt-content">
+            <div class="prompt-label">Base Image Prompt</div>
+            <div class="prompt-text">${subject.base_prompt}</div>`;
+
+    const prompts = subject.animation_prompts || {};
+    Object.entries(prompts).forEach(([animType, descs]) => {
+      bodyHtml += `<div class="prompt-label">${animType} Frame Descriptions (LLM)</div>`;
+      descs.forEach((d, i) => {
+        bodyHtml += `<div class="prompt-text">${i+1}. ${d}</div>`;
+      });
+    });
+
+    const allFrames = Object.values(subject.frames || {}).flat();
+    if (allFrames.length > 0) {
+      bodyHtml += `<div class="prompt-label">Full Image Prompts (per frame)</div>`;
+      allFrames.forEach(f => {
+        bodyHtml += `<div class="prompt-text">${f.prompt}</div>`;
+      });
+    }
+
+    bodyHtml += `</div></details></div>`;
+  }
+
+  card.innerHTML = `
+    <div class="subject-header">
+      <h2>${subject.name}</h2>
+      <span class="desc">${subject.description}</span>
+      <span class="timing">${timingStr}</span>
+    </div>
+    ${bodyHtml}
+  `;
+  container.appendChild(card);
+});
+
+// Load images for animation canvases
+animStates.forEach(state => {
+  const validFrames = state.frames.filter(f => !f.error);
+  state.images = validFrames.map(f => {
+    const img = new window.Image();
+    img.src = f.image;
+    return img;
+  });
+  // Consider loaded when first image loads (others will follow)
+  if (state.images.length > 0) {
+    state.images[0].onload = () => { state.loaded = true; };
+  }
+
+  // Pause/play on click
+  const preview = document.getElementById(`${state.id}-preview`);
+  if (preview) {
+    preview.addEventListener('click', () => {
+      state.paused = !state.paused;
+      preview.classList.toggle('paused', state.paused);
+    });
+  }
+});
+
+// Frame thumb click → highlight + show in canvas
+document.querySelectorAll('.frame-thumb').forEach(thumb => {
+  thumb.addEventListener('click', () => {
+    const animId = thumb.dataset.anim;
+    const frameIdx = parseInt(thumb.dataset.frame);
+    const state = animStates.find(s => s.id === animId);
+    if (state) {
+      state.frameIndex = frameIdx;
+      state.paused = true;
+      const preview = document.getElementById(`${animId}-preview`);
+      if (preview) preview.classList.add('paused');
+      drawFrame(state);
+      // Highlight active thumb
+      document.querySelectorAll(`[data-anim="${animId}"]`).forEach(t =>
+        t.classList.toggle('active', parseInt(t.dataset.frame) === frameIdx)
+      );
+    }
+  });
+});
+
+function drawFrame(state) {
+  const canvas = document.getElementById(`${state.id}-canvas`);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  // Checkerboard drawn by CSS on parent, just clear and draw
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const img = state.images[state.frameIndex % state.images.length];
+  if (img && img.complete && img.naturalWidth > 0) {
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  }
+  // Update thumb highlights
+  document.querySelectorAll(`[data-anim="${state.id}"]`).forEach((t, i) =>
+    t.classList.toggle('active', i === state.frameIndex % state.images.length)
+  );
+}
+
+let lastTick = 0;
+function animate(ts) {
+  const interval = 1000 / globalFps;
+  if (ts - lastTick >= interval) {
+    lastTick = ts;
+    animStates.forEach(state => {
+      if (!state.paused && state.loaded && state.images.length > 0) {
+        state.frameIndex = (state.frameIndex + 1) % state.images.length;
+        drawFrame(state);
+      }
+    });
+  }
+  requestAnimationFrame(animate);
+}
+requestAnimationFrame(animate);
+
+// Initial draw
+setTimeout(() => animStates.forEach(drawFrame), 500);
+</script>
+</body>
+</html>

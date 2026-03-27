@@ -1,0 +1,482 @@
+[
+  {
+    "char_id": "knight",
+    "char_desc": "a knight in plate armor with a sword and cape",
+    "strategy_id": "A_minimal",
+    "strategy_name": "Minimal",
+    "animation_type": "idle_breathe",
+    "animation_description": "The knight stands firmly with their sword planted in the ground, shifting weight slightly as their chest expands and contracts.",
+    "cells": {
+      "1": "Standing upright with both hands on the sword hilt, chest slightly sunken.",
+      "2": "Shoulders rise and chest expands as the knight takes a deep breath, cape pulling taut.",
+      "3": "Shoulders drop and chest relaxes, knees bending slightly to absorb the weight.",
+      "4": "Returning to the neutral stance with sword held steady, cape settling back into place."
+    },
+    "error": null
+  },
+  {
+    "char_id": "knight",
+    "char_desc": "a knight in plate armor with a sword and cape",
+    "strategy_id": "B_detailed",
+    "strategy_name": "Detailed with context",
+    "animation_type": "walk",
+    "animation_description": "A standard, rhythmic walk cycle for a knight, emphasizing the weight of the armor and the trailing motion of the cape to create a sense of steady, disciplined movement.",
+    "cells": {
+      "1": "The knight stands with the right leg forward and the left leg back in a wide stride. The right arm is bent at the elbow with the sword held vertically, while the cape hangs straight down behind the back.",
+      "2": "The knight shifts weight forward with both feet close together beneath the torso. The knees are slightly bent to suggest a downward motion, and the cape billows slightly outward toward the left edge.",
+      "3": "The knight strides with the left leg forward and the right leg back. The right arm swings back slightly, causing the sword to tilt toward the left edge, while the cape flows forward behind the knight's silhouette.",
+      "4": "The knight is at the peak of the stride with legs wide and knees straight. The upper body leans slightly forward, and the cape is fully extended toward the left edge to emphasize the momentum of the walk."
+    },
+    "error": null
+  },
+  {
+    "char_id": "knight",
+    "char_desc": "a knight in plate armor with a sword and cape",
+    "strategy_id": "C_taxonomy",
+    "strategy_name": "Movement taxonomy",
+    "animation_type": "BIPEDAL WALK",
+    "animation_description": "A knight in plate armor performs a steady walking cycle, with the sword held at the hip and the cape trailing slightly behind.",
+    "cells": {
+      "1": "The knight stands with legs spread, left foot planted forward and right foot trailing behind. The sword hilt is gripped firmly near the right hip while the cape hangs straight down.",
+      "2": "The knight leans forward with the right leg swinging through the center point. The sword arm pulls slightly back to counterbalance the step and the cape begins to sway toward the left edge.",
+      "3": "The knight plants the right foot forward with the left leg extended behind. The torso is upright and the cape is fully extended toward the left edge due to forward momentum.",
+      "4": "The knight brings the left leg forward to meet the right, bending the knees slightly in a passing position. The sword arm remains steady at the hip and the cape settles back toward the center of the body."
+    },
+    "error": null
+  },
+  {
+    "char_id": "knight",
+    "char_desc": "a knight in plate armor with a sword and cape",
+    "strategy_id": "D_img_aware",
+    "strategy_name": "Image-generation aware",
+    "animation_type": "walk",
+    "animation_description": "A knight in full plate armor performs a steady, rhythmic walk cycle moving toward the right.",
+    "cells": {
+      "1": "The knight stands facing right with a neutral pose, left leg forward and right leg back, weight balanced, sword held upright in the right hand, cape draped behind, full silhouette visible.",
+      "2": "The knight is in a passing position facing right, right leg lifting forward, left leg planted firmly, sword arm swinging slightly forward, cape billowing gently backward, silhouette slightly more compact.",
+      "3": "The knight is in the opposite neutral stance facing right, right leg forward and left leg back, sword held steady, cape hanging down, silhouette balanced and upright.",
+      "4": "The knight is in the second passing position facing right, left leg lifting forward, right leg planted, torso leaning slightly forward, sword arm swinging back, cape flowing behind, silhouette dynamic and forward-leaning."
+    },
+    "error": null
+  },
+  {
+    "char_id": "slime",
+    "char_desc": "a cheerful green slime blob with big eyes",
+    "strategy_id": "A_minimal",
+    "strategy_name": "Minimal",
+    "animation_type": "bounce",
+    "animation_description": "A rhythmic vertical squishing and stretching cycle that makes the blob appear to hop in place.",
+    "cells": {
+      "1": "The blob stands upright in a neutral, slightly rounded shape.",
+      "2": "The blob squashes downward, flattening its base against the ground while widening its body.",
+      "3": "The blob stretches vertically, launching upward into a tall, thin teardrop shape.",
+      "4": "The blob begins to descend, returning to its neutral rounded form before the cycle repeats."
+    },
+    "error": null
+  },
+  {
+    "char_id": "slime",
+    "char_desc": "a cheerful green slime blob with big eyes",
+    "strategy_id": "B_detailed",
+    "strategy_name": "Detailed with context",
+    "animation_type": "bounce",
+    "animation_description": "A cheerful slime blob moves by rhythmically compressing its body against the ground and launching itself forward in a low, fluid arc, creating a bouncy, energetic movement cycle.",
+    "cells": {
+      "1": "The slime is fully extended vertically, shaped like an elongated teardrop with its base touching the ground. The eyes are positioned at the top, looking slightly forward as the blob prepares to launch.",
+      "2": "The slime is compressed into a wide, flat oval shape against the ground. The top of the blob is flattened, and the eyes are squashed downward toward the center of the body.",
+      "3": "The slime is mid-air, elongated horizontally with a slight upward curve. The body is stretched thin in the middle, and the eyes are focused forward as it travels across the frame.",
+      "4": "The slime is beginning to land, with the lower half bulging forward and the top half drooping down. The body is slightly tilted toward the right edge, catching its momentum before the next leap."
+    },
+    "error": null
+  },
+  {
+    "char_id": "slime",
+    "char_desc": "a cheerful green slime blob with big eyes",
+    "strategy_id": "C_taxonomy",
+    "strategy_name": "Movement taxonomy",
+    "animation_type": "BOUNCE",
+    "animation_description": "A cheerful slime blob rhythmically compresses against the ground before launching itself upward and forward in a fluid arc.",
+    "cells": {
+      "1": "The slime is fully compressed against the ground, appearing as a flattened oval wide across the base. Its eyes are squeezed shut in a squint, and the body is pushed toward the right edge.",
+      "2": "The slime begins to stretch vertically, elongating into a tall teardrop shape as it starts to lift off the ground. The eyes are wide and round, positioned near the top of the rising mass.",
+      "3": "The slime is at the peak of its arc, fully extended and reaching its maximum height in a tall, narrow vertical pillar. It is positioned slightly further toward the right edge, with the eyes looking forward.",
+      "4": "The slime descends and begins to regain a rounded shape, preparing to impact the ground again. The body leans toward the right edge, with the bottom starting to flare out in anticipation of the next contact."
+    },
+    "error": null
+  },
+  {
+    "char_id": "slime",
+    "char_desc": "a cheerful green slime blob with big eyes",
+    "strategy_id": "D_img_aware",
+    "strategy_name": "Image-generation aware",
+    "animation_type": "bounce",
+    "animation_description": "A cheerful green slime blob performing a rhythmic vertical bounce cycle while traveling toward the right.",
+    "cells": {
+      "1": "The green slime blob is in a neutral resting state, rounded and compact, sitting low on the ground, facing right, with big eyes centered.",
+      "2": "The slime blob is beginning to stretch upward into a tall, vertical oval shape as it starts to leap, maintaining a right-facing orientation, with eyes positioned slightly higher.",
+      "3": "The slime blob is at the peak of its bounce, fully elongated and stretched vertically like a teardrop, facing right, with eyes near the top of the body.",
+      "4": "The slime blob is mid-descent, squashed horizontally into a wide, flat puddle shape as it prepares to land, facing right, with eyes wide and low to the ground."
+    },
+    "error": null
+  },
+  {
+    "char_id": "parrot",
+    "char_desc": "a colorful tropical parrot",
+    "strategy_id": "A_minimal",
+    "strategy_name": "Minimal",
+    "animation_type": "flap",
+    "animation_description": "A parrot performing a rhythmic wing-flapping motion while perched to simulate flight.",
+    "cells": {
+      "1": "The parrot stands upright with wings tucked tightly against its body.",
+      "2": "The parrot leans forward slightly as it begins to lift its wings outward.",
+      "3": "The parrot fully extends its wings upward and outward in a wide stretch.",
+      "4": "The parrot dips its head and begins to pull its wings back down toward its sides."
+    },
+    "error": null
+  },
+  {
+    "char_id": "parrot",
+    "char_desc": "a colorful tropical parrot",
+    "strategy_id": "B_detailed",
+    "strategy_name": "Detailed with context",
+    "animation_type": "fly",
+    "animation_description": "A continuous flapping cycle where the parrot generates lift through a rhythmic downstroke and upstroke of its wings while maintaining a steady forward trajectory.",
+    "cells": {
+      "1": "The parrot is in a neutral position with its wings fully extended horizontally at shoulder height. The body is tilted slightly forward, and the tail feathers are fanned out behind it.",
+      "2": "The wings are angled downward toward the bottom edge of the frame, creating a powerful downstroke. The chest is puffed out, and the neck is slightly retracted to emphasize the effort of the stroke.",
+      "3": "The wings are tucked close to the body, curving upward toward the top edge of the frame. The body is at its highest point in the cycle, and the head is tilted forward to maintain momentum.",
+      "4": "The wings are halfway through the recovery, positioned diagonally above the back. The legs are pulled tightly against the underside of the body, and the tail is angled downward to prepare for the next downstroke."
+    },
+    "error": null
+  },
+  {
+    "char_id": "parrot",
+    "char_desc": "a colorful tropical parrot",
+    "strategy_id": "C_taxonomy",
+    "strategy_name": "Movement taxonomy",
+    "animation_type": "BIPEDAL WALK",
+    "animation_description": "A parrot performs a rhythmic walking cycle by alternating leg strides while keeping its torso upright.",
+    "cells": {
+      "1": "The parrot stands with its left foot firmly planted near the center and its right foot lifted forward toward the right edge. The body is upright with wings tucked tightly against the sides.",
+      "2": "The parrot shifts its weight onto the right foot, which is now planted firmly on the ground. The left foot is pulled off the ground and tucked slightly behind the right leg.",
+      "3": "The parrot extends its left leg forward toward the right edge as the right leg remains planted in the center. The head leans slightly forward to maintain balance during the stride.",
+      "4": "The parrot completes the step by placing the left foot down ahead of the right. The right foot begins to lift off the ground, preparing to swing forward for the next cycle."
+    },
+    "error": null
+  },
+  {
+    "char_id": "parrot",
+    "char_desc": "a colorful tropical parrot",
+    "strategy_id": "D_img_aware",
+    "strategy_name": "Image-generation aware",
+    "animation_type": "flight cycle",
+    "animation_description": "A colorful tropical parrot performing a rhythmic flapping flight cycle while moving toward the right.",
+    "cells": {
+      "1": "The parrot is facing right with wings fully extended upward in a wide V-shape, chest puffed forward, tail feathers fanned out, creating a high-profile silhouette.",
+      "2": "The parrot is facing right with wings mid-downstroke, tucked closer to the body, head slightly lowered, creating a compact and streamlined silhouette.",
+      "3": "The parrot is facing right with wings fully extended downward toward the belly, legs tucked tightly against the body, tail feathers pointing diagonally upward, creating a narrow silhouette.",
+      "4": "The parrot is facing right with wings beginning the upstroke, positioned behind the back, head tilted slightly upward, creating a balanced and mid-width silhouette."
+    },
+    "error": null
+  },
+  {
+    "char_id": "snake",
+    "char_desc": "a long purple serpent with yellow markings",
+    "strategy_id": "A_minimal",
+    "strategy_name": "Minimal",
+    "animation_type": "slither",
+    "animation_description": "The serpent moves in a rhythmic S-curve pattern, oscillating its body to suggest forward movement.",
+    "cells": {
+      "1": "The serpent's body is coiled into a gentle 'S' shape with the head pointing forward and slightly raised.",
+      "2": "The body curves tighten, shifting the 'S' wave further down the torso while the head begins to tuck inward.",
+      "3": "The body straightens slightly as the wave travels to the tail, with the head arching back to the starting position.",
+      "4": "The serpent completes the cycle by arching its midsection, preparing to snap back into the initial 'S' pose."
+    },
+    "error": null
+  },
+  {
+    "char_id": "snake",
+    "char_desc": "a long purple serpent with yellow markings",
+    "strategy_id": "B_detailed",
+    "strategy_name": "Detailed with context",
+    "animation_type": "slither",
+    "animation_description": "A rhythmic horizontal wave motion that propels the serpent forward by undulating its body in a sinusoidal pattern, creating a continuous flowing movement.",
+    "cells": {
+      "1": "The serpent's body forms a wide, shallow 'S' curve. The head is positioned at the far right, while the tail coils slightly toward the left edge.",
+      "2": "The body flattens out, stretching horizontally across the center of the frame. The head reaches further right, and the midsection begins to lift upward in a gentle arc.",
+      "3": "The body forms an inverted 'S' curve, with the midsection arched toward the top edge. The head is tucked slightly downward and behind the leading curve of the torso.",
+      "4": "The serpent compresses horizontally, bunching its midsection into a tight ripple. The tail pushes forward from the left edge while the head remains extended at the right."
+    },
+    "error": null
+  },
+  {
+    "char_id": "snake",
+    "char_desc": "a long purple serpent with yellow markings",
+    "strategy_id": "C_taxonomy",
+    "strategy_name": "Movement taxonomy",
+    "animation_type": "SLITHER",
+    "animation_description": "The serpent creates a continuous wave motion that travels from its head to its tail, propelling it forward.",
+    "cells": {
+      "1": "The serpent's head is positioned toward the right edge with the body forming a shallow 'S' curve. The midsection arches toward the top of the frame while the tail remains low.",
+      "2": "The head remains toward the right edge but is slightly lower, while the 'S' curve shifts further back along the spine. The body forms a peak in the center of the frame as it pushes off the ground.",
+      "3": "The head is now stretched further toward the right edge, causing the body to flatten out along the bottom of the frame. The 'S' curve is now concentrated toward the tail end of the serpent.",
+      "4": "The head pulls back slightly while the tail whips forward toward the right edge to reset the curve. The body forms a deep 'U' shape, preparing to initiate the next forward surge."
+    },
+    "error": null
+  },
+  {
+    "char_id": "snake",
+    "char_desc": "a long purple serpent with yellow markings",
+    "strategy_id": "D_img_aware",
+    "strategy_name": "Image-generation aware",
+    "animation_type": "slither",
+    "animation_description": "A long purple serpent with yellow markings moves forward by undulating its body in a rhythmic wave pattern while facing right.",
+    "cells": {
+      "1": "The serpent faces right, body coiled in a wide 'S' shape, head raised high at the front, tail resting low on the ground, creating a balanced horizontal silhouette.",
+      "2": "The serpent faces right, body transitioning into a tight 'U' shape, head lowered toward the center, middle body arching upward, tail tucked slightly forward.",
+      "3": "The serpent faces right, body stretched into a long, low wave, head positioned at the far right, tail trailing behind at the far left, creating a long horizontal silhouette.",
+      "4": "The serpent faces right, body curling into a compressed loop, head tucked back near the mid-section, tail lifted off the ground, creating a compact and rounded silhouette."
+    },
+    "error": null
+  },
+  {
+    "char_id": "ghost",
+    "char_desc": "a glowing translucent ghost with a trailing wispy tail",
+    "strategy_id": "A_minimal",
+    "strategy_name": "Minimal",
+    "animation_type": "float",
+    "animation_description": "The ghost bobs gently up and down while its wispy tail curls and sways in a rhythmic, undulating motion.",
+    "cells": {
+      "1": "The ghost is centered, leaning slightly forward with its tail coiled tightly beneath it.",
+      "2": "The ghost rises upward, extending its torso slightly as the tail begins to unfurl downward.",
+      "3": "The ghost dips back down toward the center, with its tail trailing behind in a loose, curved wave.",
+      "4": "The ghost settles into its lowest point, with the tail whipping upward in a fluid arc to prepare for the next rise."
+    },
+    "error": null
+  },
+  {
+    "char_id": "ghost",
+    "char_desc": "a glowing translucent ghost with a trailing wispy tail",
+    "strategy_id": "B_detailed",
+    "strategy_name": "Detailed with context",
+    "animation_type": "float",
+    "animation_description": "A gentle, undulating floating motion where the ghost bobs up and down while its wispy tail trails in a wave-like pattern to suggest ethereal movement.",
+    "cells": {
+      "1": "The ghost is positioned at the vertical center with its torso upright and arms slightly extended. The tail curves gently toward the bottom-left corner, trailing behind the body.",
+      "2": "The torso shifts upward and leans slightly toward the right edge. The tail forms an S-curve that stretches horizontally toward the left edge.",
+      "3": "The ghost is at the peak of its height with the torso tilted forward. The tail curls tightly underneath the body, creating a compressed, rounded shape.",
+      "4": "The ghost descends back toward the center while the torso straightens. The tail extends fully toward the left edge in a long, flowing whip-like motion."
+    },
+    "error": null
+  },
+  {
+    "char_id": "ghost",
+    "char_desc": "a glowing translucent ghost with a trailing wispy tail",
+    "strategy_id": "C_taxonomy",
+    "strategy_name": "Movement taxonomy",
+    "animation_type": "FLOAT/BOB",
+    "animation_description": "The ghost drifts smoothly in a rhythmic vertical arc while its wispy tail flows behind it in a wave-like motion.",
+    "cells": {
+      "1": "The ghost is positioned at the highest point of its arc with its translucent body elongated vertically. The wispy tail curls slightly upward behind it toward the left edge.",
+      "2": "The ghost begins to descend, shifting its center of mass toward the right edge. Its tail stretches out horizontally, trailing behind the main body mass.",
+      "3": "The ghost reaches its lowest point in the cycle, compressing its form slightly as if touching a surface. The tail whips into a deep downward curve, dragging toward the left edge.",
+      "4": "The ghost begins to rise again, tilting its body forward toward the right edge to gain momentum. The tail ripples upward, preparing to return to the starting position."
+    },
+    "error": null
+  },
+  {
+    "char_id": "ghost",
+    "char_desc": "a glowing translucent ghost with a trailing wispy tail",
+    "strategy_id": "D_img_aware",
+    "strategy_name": "Image-generation aware",
+    "animation_type": "float",
+    "animation_description": "A ghost floating in a gentle rhythmic bobbing motion while drifting forward.",
+    "cells": {
+      "1": "The ghost is in a neutral upright floating pose, facing right, with its wispy tail coiled slightly beneath it, maintaining a compact vertical silhouette.",
+      "2": "The ghost is slightly elongated and stretched upward, facing right, with its tail trailing backward in a long smooth curve, creating a tall silhouette.",
+      "3": "The ghost is in a slumped, compressed pose, facing right, with its upper body leaning forward and the tail bunched underneath, creating a low and wide silhouette.",
+      "4": "The ghost is tilted diagonally forward, facing right, with its tail flowing behind it in a sweeping wave motion, creating a dynamic diagonal silhouette."
+    },
+    "error": null
+  },
+  {
+    "char_id": "spider",
+    "char_desc": "a large black spider with eight legs",
+    "strategy_id": "A_minimal",
+    "strategy_name": "Minimal",
+    "animation_type": "crawling",
+    "animation_description": "The spider shifts its weight and pulls its legs inward before extending them to push its body forward in a rhythmic gait.",
+    "cells": {
+      "1": "The spider stands with all eight legs spread wide and balanced in a neutral stance.",
+      "2": "The spider pulls its front four legs inward toward its body while arching its back slightly.",
+      "3": "The spider pushes off with its back legs, extending its front legs forward to prepare for a step.",
+      "4": "The spider completes the movement by shifting its center of gravity forward and settling back into a wide stance."
+    },
+    "error": null
+  },
+  {
+    "char_id": "spider",
+    "char_desc": "a large black spider with eight legs",
+    "strategy_id": "B_detailed",
+    "strategy_name": "Detailed with context",
+    "animation_type": "crawl",
+    "animation_description": "A rhythmic, low-profile crawling gait where the spider moves its legs in an alternating tripod pattern to maintain stability while shifting its heavy abdomen forward.",
+    "cells": {
+      "1": "The spider is low to the ground with its body centered. The front-left and back-right legs are extended forward and backward respectively, while the other legs are tucked tightly beneath the thorax.",
+      "2": "The spider shifts its weight forward, lifting the middle-left and middle-right legs off the ground. The front legs pull the body forward, causing the abdomen to rise slightly.",
+      "3": "The spider is at full extension with the front-right and back-left legs reaching forward and backward. The body is positioned higher off the ground, and the legs on the opposite side are bunched up near the center of the frame.",
+      "4": "The spider settles back down, pulling its limbs underneath its body to prepare for the next step. The body is compressed and close to the ground, with all legs tucked inward to initiate the next push."
+    },
+    "error": null
+  },
+  {
+    "char_id": "spider",
+    "char_desc": "a large black spider with eight legs",
+    "strategy_id": "C_taxonomy",
+    "strategy_name": "Movement taxonomy",
+    "animation_type": "CRAWL",
+    "animation_description": "The spider maintains a low profile while rippling its eight legs in two alternating sets to propel its body toward the right.",
+    "cells": {
+      "1": "The body is centered and low to the ground. Four legs on the left side are extended for a wide reach toward the right, while the opposite four legs are tucked tightly beneath the torso.",
+      "2": "The body shifts slightly toward the right edge. The legs that were tucked begin to extend forward to find new footing, while the extended legs pull the torso forward.",
+      "3": "The body has moved further toward the right edge and is slightly elevated. The four legs that were previously tucked are now fully extended forward, and the trailing legs are beginning to lift off the ground.",
+      "4": "The body is settled back into a low, crouched position. The rear legs have pulled forward to rejoin the cluster under the body, completing the cycle as the spider prepares to push off again."
+    },
+    "error": null
+  },
+  {
+    "char_id": "spider",
+    "char_desc": "a large black spider with eight legs",
+    "strategy_id": "D_img_aware",
+    "strategy_name": "Image-generation aware",
+    "animation_type": "walk",
+    "animation_description": "A large black spider walking toward the right with a rhythmic gait, alternating leg groups to maintain stability.",
+    "cells": {
+      "1": "The spider faces right with its body low to the ground; four legs are planted firmly on the floor, while four legs are lifted mid-stride in a compact silhouette.",
+      "2": "The spider faces right with its body slightly raised; the legs that were previously planted are now pushing off the ground, creating a wider, more dynamic stance.",
+      "3": "The spider faces right with its body low to the ground again, but the legs that were lifted in frame 1 are now touching down, creating an inverted leg-pattern silhouette compared to frame 1.",
+      "4": "The spider faces right with its body in a mid-height position; the remaining legs shift forward to complete the cycle, ensuring a balanced, symmetrical weight distribution across the frame."
+    },
+    "error": null
+  },
+  {
+    "char_id": "wolf",
+    "char_desc": "a grey wolf",
+    "strategy_id": "A_minimal",
+    "strategy_name": "Minimal",
+    "animation_type": "walk",
+    "animation_description": "A rhythmic four-frame gait cycle showing the wolf moving forward with alternating leg positions.",
+    "cells": {
+      "1": "Standing on all fours with front right and back left legs extended forward, body slightly crouched.",
+      "2": "Weight shifted to the center with all four paws close together, spine arched upward in a mid-stride transition.",
+      "3": "Standing on all fours with front left and back right legs extended forward, mimicking the first frame but with mirrored limbs.",
+      "4": "Body fully extended with legs pushing off the ground, preparing to return to the initial stance."
+    },
+    "error": null
+  },
+  {
+    "char_id": "wolf",
+    "char_desc": "a grey wolf",
+    "strategy_id": "B_detailed",
+    "strategy_name": "Detailed with context",
+    "animation_type": "walk",
+    "animation_description": "A rhythmic, low-to-the-ground wolf trot that emphasizes forward momentum through alternating limb extension and body compression, creating a steady, predatory gait.",
+    "cells": {
+      "1": "The wolf stands with its front left and rear right paws touching the ground while the front right and rear left legs are lifted and bent toward the chest. The spine is slightly arched and the head is held level with the shoulders.",
+      "2": "The wolf enters a transition phase where all four paws are close to the ground, with the body lowered and the spine elongated. The head is extended forward, and the legs are positioned directly beneath the torso to prepare for the next stride.",
+      "3": "The wolf stands with its front right and rear left paws pushing off the ground, while the front left and rear right legs reach forward in a wide stride. The back is slightly dipped, and the neck is stretched toward the right edge.",
+      "4": "The wolf is at the peak of its weight shift, with the body compressed and the rear legs coiled beneath the hips. The front legs are planted firmly ahead of the chest, preparing to pull the body forward into the next stride."
+    },
+    "error": null
+  },
+  {
+    "char_id": "wolf",
+    "char_desc": "a grey wolf",
+    "strategy_id": "C_taxonomy",
+    "strategy_name": "Movement taxonomy",
+    "animation_type": "QUADRUPED WALK",
+    "animation_description": "A wolf performing a steady, rhythmic walk cycle with diagonal limb movement.",
+    "cells": {
+      "1": "The wolf stands with its front-right and back-left legs planted firmly on the ground. Its body is level, and its head is held forward toward the right edge.",
+      "2": "The wolf lifts its front-left and back-right legs off the ground to begin a stride. The body tilts slightly as the weight shifts toward the right edge.",
+      "3": "The wolf reaches forward with its front-left leg and back-right leg while pushing off with the grounded limbs. The back is arched slightly as it propels itself toward the right edge.",
+      "4": "The wolf lands the front-left and back-right legs firmly, while the front-right and back-left legs begin to lift. The tail is held low and the body is centered, preparing to repeat the stride toward the right edge."
+    },
+    "error": null
+  },
+  {
+    "char_id": "wolf",
+    "char_desc": "a grey wolf",
+    "strategy_id": "D_img_aware",
+    "strategy_name": "Image-generation aware",
+    "animation_type": "walk",
+    "animation_description": "A grey wolf performing a steady, rhythmic quadrupedal walk cycle moving toward the right.",
+    "cells": {
+      "1": "The wolf is in a contact pose, facing right; front-right leg is extended forward, back-left leg is extended backward, body is balanced and low to the ground.",
+      "2": "The wolf is in a passing pose, facing right; the body is slightly higher as the front-left leg crosses underneath the torso, back-right leg is lifting off the ground.",
+      "3": "The wolf is in a secondary contact pose, facing right; front-left leg is fully extended forward, back-right leg is extended backward, mirroring the first frame.",
+      "4": "The wolf is in a second passing pose, facing right; the body is slightly higher again as the front-right leg passes under the torso, back-left leg is tucking forward to prepare for the next step."
+    },
+    "error": null
+  },
+  {
+    "char_id": "mushroom",
+    "char_desc": "a walking mushroom creature with stubby legs",
+    "strategy_id": "A_minimal",
+    "strategy_name": "Minimal",
+    "animation_type": "walk",
+    "animation_description": "A rhythmic walking cycle where the mushroom shifts weight and lifts its feet to create a bouncy forward momentum.",
+    "cells": {
+      "1": "Standing upright with both feet planted firmly on the ground, knees slightly bent.",
+      "2": "Leaning forward with the left leg lifting off the ground and the right leg supporting the weight.",
+      "3": "Landing on the left foot with the right leg swinging forward and the body centered.",
+      "4": "Leaning forward with the right leg lifting off the ground and the left leg supporting the weight."
+    },
+    "error": null
+  },
+  {
+    "char_id": "mushroom",
+    "char_desc": "a walking mushroom creature with stubby legs",
+    "strategy_id": "B_detailed",
+    "strategy_name": "Detailed with context",
+    "animation_type": "walk",
+    "animation_description": "A rhythmic, waddling walk cycle that emphasizes the mushroom's stout, top-heavy nature by shifting its weight side-to-side as it moves forward.",
+    "cells": {
+      "1": "The mushroom stands with legs firmly planted, one foot slightly ahead of the other. The cap is centered over the body, and the torso is held upright in a neutral position.",
+      "2": "The mushroom shifts its weight forward, leaning the cap toward the right edge. The back leg lifts off the ground, bending at the knee to prepare for a forward step.",
+      "3": "The mushroom is in a mid-stride position with the rear leg extended toward the right edge. The cap is tilted slightly back to maintain balance while the legs are spread wide.",
+      "4": "The mushroom plants the forward foot, pulling the back leg in to meet it. The body compresses vertically as the legs buckle slightly, preparing to return to the neutral standing pose."
+    },
+    "error": null
+  },
+  {
+    "char_id": "mushroom",
+    "char_desc": "a walking mushroom creature with stubby legs",
+    "strategy_id": "C_taxonomy",
+    "strategy_name": "Movement taxonomy",
+    "animation_type": "WADDLE",
+    "animation_description": "The mushroom creature rocks its cap side to side while taking short, deliberate steps forward.",
+    "cells": {
+      "1": "The mushroom stands with its weight centered, both stubby legs planted firmly on the ground. The cap is tilted slightly toward the right edge as the creature prepares to initiate a step.",
+      "2": "The creature shifts its weight onto the left leg while lifting the right leg off the ground. The cap tilts sharply toward the left edge to counterbalance the movement.",
+      "3": "The right leg is placed forward toward the right edge, landing flat on the ground. The mushroom leans its entire body weight forward, causing the cap to center and level out.",
+      "4": "The left leg lifts and begins to drag forward toward the right edge to catch up with the body. The cap tilts toward the right edge as the creature leans into the next stride."
+    },
+    "error": null
+  },
+  {
+    "char_id": "mushroom",
+    "char_desc": "a walking mushroom creature with stubby legs",
+    "strategy_id": "D_img_aware",
+    "strategy_name": "Image-generation aware",
+    "animation_type": "walk",
+    "animation_description": "a mushroom creature with a wide cap and stubby legs walking right, alternating which foot is planted forward",
+    "cells": {
+      "1": "The mushroom creature stands facing right with both stubby legs together, body upright, cap level, neutral standing pose.",
+      "2": "The mushroom creature faces right, left leg extended forward with foot touching the ground, right leg planted back, body tilted slightly forward, wide silhouette.",
+      "3": "The mushroom creature faces right, legs together again, body compressed and slightly lower in a bobbing motion, cap level.",
+      "4": "The mushroom creature faces right, right leg extended forward with foot touching the ground, left leg planted back, body tilted slightly forward, mirror image of frame two."
+    },
+    "error": null
+  }
+]

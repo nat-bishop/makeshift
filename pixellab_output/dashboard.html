@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PixelLab Animation Dashboard</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #111;
+    color: #ddd;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    padding: 32px;
+    min-height: 100vh;
+  }
+  h1 { font-size: 22px; color: #fff; margin-bottom: 8px; }
+  .subtitle { color: #666; font-size: 13px; margin-bottom: 32px; }
+
+  /* Comparison section */
+  .comparison {
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 32px;
+  }
+  .comparison h2 { font-size: 16px; color: #fff; margin-bottom: 16px; }
+  .comp-row {
+    display: flex;
+    gap: 48px;
+    align-items: flex-start;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .comp-panel {
+    text-align: center;
+  }
+  .comp-panel .label {
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 8px;
+  }
+  .comp-panel canvas {
+    image-rendering: pixelated;
+    background: #0a0a0a;
+    border: 1px solid #333;
+    border-radius: 8px;
+  }
+
+  /* Global controls */
+  .global-controls {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .control-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .control-group label { font-size: 12px; color: #888; }
+  .control-group input[type="range"] { width: 120px; accent-color: #4a8fe7; }
+  .control-group .val { font-size: 12px; color: #aaa; min-width: 36px; }
+
+  /* Animation selector tabs */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 24px;
+  }
+  .tab {
+    padding: 6px 16px;
+    background: #222;
+    border: 1px solid #333;
+    border-radius: 6px;
+    color: #888;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .tab:hover { background: #2a2a2a; color: #bbb; }
+  .tab.active { background: #1a3a5c; border-color: #4a8fe7; color: #fff; }
+
+  /* Directions grid */
+  .directions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .dir-card {
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .dir-card .dir-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .dir-card .dir-name {
+    font-size: 13px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .dir-card .frame-count {
+    font-size: 11px;
+    color: #555;
+  }
+  .dir-content {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .dir-content canvas {
+    image-rendering: pixelated;
+    background: #0a0a0a;
+    border: 1px solid #2a2a2a;
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+  .frame-strip {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .frame-strip canvas {
+    image-rendering: pixelated;
+    background: #0a0a0a;
+    border: 1px solid #222;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: border-color 0.1s;
+  }
+  .frame-strip canvas:hover { border-color: #4a8fe7; }
+  .frame-strip canvas.active { border-color: #4a8fe7; box-shadow: 0 0 4px rgba(74, 143, 231, 0.3); }
+
+  /* Rotations row */
+  .rotations-section {
+    margin-bottom: 32px;
+  }
+  .rotations-section h3 {
+    font-size: 13px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+  .rotations-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .rot-item {
+    text-align: center;
+  }
+  .rot-item canvas {
+    image-rendering: pixelated;
+    background: #0a0a0a;
+    border: 1px solid #2a2a2a;
+    border-radius: 4px;
+  }
+  .rot-item .rot-label {
+    font-size: 10px;
+    color: #555;
+    margin-top: 4px;
+  }
+
+  /* Original sprite section */
+  .original-section {
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 32px;
+  }
+  .original-section h2 { font-size: 16px; color: #fff; margin-bottom: 16px; }
+  .original-section canvas {
+    image-rendering: pixelated;
+    background: #0a0a0a;
+    border: 1px solid #333;
+    border-radius: 8px;
+  }
+  .original-anims {
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+  .original-anim-panel { text-align: center; }
+  .original-anim-panel .label { font-size: 12px; color: #888; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<h1>PixelLab Animation Dashboard</h1>
+<p class="subtitle">Explorer Kid v2 &mdash; 48x48px, side view, 4 directions</p>
+
+<!-- Comparison: Original vs PixelLab -->
+<div class="comparison">
+  <h2>Original vs PixelLab</h2>
+  <div class="comp-row" id="compRow"></div>
+</div>
+
+<!-- Global controls -->
+<div class="global-controls">
+  <div class="control-group">
+    <label>FPS</label>
+    <input type="range" id="fpsSlider" min="1" max="24" value="8" oninput="setGlobalFps(+this.value)">
+    <span class="val" id="fpsVal">8</span>
+  </div>
+  <div class="control-group">
+    <label>Scale</label>
+    <input type="range" id="scaleSlider" min="1" max="10" value="4" oninput="setGlobalScale(+this.value)">
+    <span class="val" id="scaleVal">4x</span>
+  </div>
+  <div class="control-group">
+    <label>BG</label>
+    <input type="color" id="bgColor" value="#0a0a0a" oninput="setBgColor(this.value)">
+  </div>
+</div>
+
+<!-- Animation tabs -->
+<div class="tabs" id="animTabs"></div>
+
+<!-- Rotations -->
+<div class="rotations-section">
+  <h3>Rotations</h3>
+  <div class="rotations-row" id="rotationsRow"></div>
+</div>
+
+<!-- Direction cards -->
+<div class="directions-grid" id="directionsGrid"></div>
+
+<!-- Original character reference -->
+<div class="original-section">
+  <h2>Original Character (player_sheet.png)</h2>
+  <div class="original-anims" id="originalAnims"></div>
+</div>
+
+<script>
+const BASE = 'explorer_kid_v2/';
+let globalFps = 8;
+let globalScale = 4;
+let bgColor = '#0a0a0a';
+let currentAnim = 'walk';
+const timers = {};
+const imageCache = {};
+
+// Data from extracted ZIP
+const ANIMATIONS = {
+  'breathing-idle': {
+    south: 4, east: 4, north: 4, west: 4
+  },
+  'walk': {
+    south: 6, east: 6, north: 6, west: 6
+  },
+  'jumping-1': {
+    south: 9, east: 9, north: 9, west: 9
+  }
+};
+
+const ROTATIONS = ['south', 'east', 'north', 'west'];
+const DIR_ORDER = ['east', 'south', 'west', 'north'];
+
+// Original sprite sheet: 992x992, 4x4 grid of 248x248 frames
+// Row 0: idle (4 frames), Row 1: walk (4), Row 2: jump (4), Row 3: fall (4)
+const ORIGINAL_SHEET = '../godot/assets/sprites/player/player_sheet.png';
+let originalImg = null;
+
+function loadImage(src) {
+  if (imageCache[src]) return Promise.resolve(imageCache[src]);
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => { imageCache[src] = img; resolve(img); };
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+function framePath(anim, dir, idx) {
+  return `${BASE}animations/${anim}/${dir}/frame_${String(idx).padStart(3, '0')}.png`;
+}
+
+function rotPath(dir) {
+  return `${BASE}rotations/${dir}.png`;
+}
+
+// Preload everything
+async function preloadAll() {
+  const promises = [];
+  for (const [anim, dirs] of Object.entries(ANIMATIONS)) {
+    for (const [dir, count] of Object.entries(dirs)) {
+      for (let i = 0; i < count; i++) {
+        promises.push(loadImage(framePath(anim, dir, i)));
+      }
+    }
+  }
+  for (const dir of ROTATIONS) {
+    promises.push(loadImage(rotPath(dir)));
+  }
+  promises.push(loadImage(ORIGINAL_SHEET).then(img => { originalImg = img; }));
+  await Promise.allSettled(promises);
+}
+
+function drawImageScaled(canvas, img, scale, bg) {
+  const w = img.naturalWidth * scale;
+  const h = img.naturalHeight * scale;
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  ctx.fillStyle = bg || bgColor;
+  ctx.fillRect(0, 0, w, h);
+  ctx.drawImage(img, 0, 0, w, h);
+}
+
+function drawSheetFrame(canvas, sheetImg, col, row, frameW, frameH, scale, bg) {
+  const w = frameW * scale;
+  const h = frameH * scale;
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  ctx.fillStyle = bg || bgColor;
+  ctx.fillRect(0, 0, w, h);
+  ctx.drawImage(sheetImg, col * frameW, row * frameH, frameW, frameH, 0, 0, w, h);
+}
+
+// Render rotations
+function renderRotations() {
+  const row = document.getElementById('rotationsRow');
+  row.innerHTML = '';
+  for (const dir of DIR_ORDER) {
+    const item = document.createElement('div');
+    item.className = 'rot-item';
+    const canvas = document.createElement('canvas');
+    const img = imageCache[rotPath(dir)];
+    if (img) drawImageScaled(canvas, img, globalScale);
+    const label = document.createElement('div');
+    label.className = 'rot-label';
+    label.textContent = dir;
+    item.appendChild(canvas);
+    item.appendChild(label);
+    row.appendChild(item);
+  }
+}
+
+// Render tabs
+function renderTabs() {
+  const tabs = document.getElementById('animTabs');
+  tabs.innerHTML = '';
+  const names = { 'breathing-idle': 'Idle', 'walk': 'Walk', 'jumping-1': 'Jump' };
+  for (const anim of Object.keys(ANIMATIONS)) {
+    const tab = document.createElement('div');
+    tab.className = `tab${anim === currentAnim ? ' active' : ''}`;
+    tab.textContent = names[anim] || anim;
+    tab.onclick = () => { currentAnim = anim; renderTabs(); renderDirections(); renderComparison(); };
+    tabs.appendChild(tab);
+  }
+}
+
+// Render direction cards
+function renderDirections() {
+  // Stop old timers
+  for (const key in timers) { clearInterval(timers[key]); delete timers[key]; }
+
+  const grid = document.getElementById('directionsGrid');
+  grid.innerHTML = '';
+  const dirs = ANIMATIONS[currentAnim];
+  if (!dirs) return;
+
+  for (const dir of DIR_ORDER) {
+    const count = dirs[dir];
+    if (!count) continue;
+
+    const card = document.createElement('div');
+    card.className = 'dir-card';
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'dir-header';
+    header.innerHTML = `<span class="dir-name">${dir}</span><span class="frame-count">${count} frames</span>`;
+    card.appendChild(header);
+
+    // Content: preview canvas + frame strip
+    const content = document.createElement('div');
+    content.className = 'dir-content';
+
+    const preview = document.createElement('canvas');
+    preview.id = `preview-${currentAnim}-${dir}`;
+    content.appendChild(preview);
+
+    const strip = document.createElement('div');
+    strip.className = 'frame-strip';
+    strip.id = `strip-${currentAnim}-${dir}`;
+
+    for (let i = 0; i < count; i++) {
+      const thumb = document.createElement('canvas');
+      thumb.id = `thumb-${currentAnim}-${dir}-${i}`;
+      const img = imageCache[framePath(currentAnim, dir, i)];
+      if (img) drawImageScaled(thumb, img, 2);
+      thumb.onclick = () => {
+        // Show this frame in preview
+        const pImg = imageCache[framePath(currentAnim, dir, i)];
+        if (pImg) drawImageScaled(preview, pImg, globalScale);
+      };
+      strip.appendChild(thumb);
+    }
+
+    content.appendChild(strip);
+    card.appendChild(content);
+    grid.appendChild(card);
+
+    // Start animation loop
+    startLoop(currentAnim, dir, count, preview, strip);
+  }
+}
+
+function startLoop(anim, dir, count, preview, strip) {
+  const key = `${anim}-${dir}`;
+  let idx = 0;
+  function tick() {
+    const img = imageCache[framePath(anim, dir, idx)];
+    if (img) drawImageScaled(preview, img, globalScale);
+    // Highlight thumb
+    const thumbs = strip.querySelectorAll('canvas');
+    thumbs.forEach((t, i) => t.classList.toggle('active', i === idx));
+    idx = (idx + 1) % count;
+  }
+  tick();
+  timers[key] = setInterval(tick, 1000 / globalFps);
+}
+
+// Render comparison row
+function renderComparison() {
+  const row = document.getElementById('compRow');
+  row.innerHTML = '';
+
+  // Map current anim to original sheet row
+  const sheetRowMap = { 'breathing-idle': 0, 'walk': 1, 'jumping-1': 2 };
+  const sheetRow = sheetRowMap[currentAnim];
+  const animNames = { 'breathing-idle': 'Idle', 'walk': 'Walk', 'jumping-1': 'Jump' };
+
+  // Original (east-facing = right-facing)
+  if (originalImg && sheetRow !== undefined) {
+    const panel = document.createElement('div');
+    panel.className = 'comp-panel';
+    const label = document.createElement('div');
+    label.className = 'label';
+    label.textContent = `Original - ${animNames[currentAnim]}`;
+    const canvas = document.createElement('canvas');
+    canvas.id = 'comp-original';
+    panel.appendChild(label);
+    panel.appendChild(canvas);
+    row.appendChild(panel);
+
+    let idx = 0;
+    function drawOriginal() {
+      drawSheetFrame(canvas, originalImg, idx, sheetRow, 248, 248, Math.max(1, Math.floor(globalScale * 0.5)));
+      idx = (idx + 1) % 4;
+    }
+    drawOriginal();
+    if (timers['comp-original']) clearInterval(timers['comp-original']);
+    timers['comp-original'] = setInterval(drawOriginal, 1000 / globalFps);
+  }
+
+  // PixelLab (east direction for side comparison)
+  const count = ANIMATIONS[currentAnim]?.east;
+  if (count) {
+    const panel = document.createElement('div');
+    panel.className = 'comp-panel';
+    const label = document.createElement('div');
+    label.className = 'label';
+    label.textContent = `PixelLab - ${animNames[currentAnim]} (east)`;
+    const canvas = document.createElement('canvas');
+    canvas.id = 'comp-pixellab';
+    panel.appendChild(label);
+    panel.appendChild(canvas);
+    row.appendChild(panel);
+
+    let idx = 0;
+    function drawPixellab() {
+      const img = imageCache[framePath(currentAnim, 'east', idx)];
+      if (img) drawImageScaled(canvas, img, globalScale);
+      idx = (idx + 1) % count;
+    }
+    drawPixellab();
+    if (timers['comp-pixellab']) clearInterval(timers['comp-pixellab']);
+    timers['comp-pixellab'] = setInterval(drawPixellab, 1000 / globalFps);
+  }
+}
+
+// Render original sprite sheet animations
+function renderOriginal() {
+  const container = document.getElementById('originalAnims');
+  container.innerHTML = '';
+  if (!originalImg) return;
+
+  const anims = [
+    { name: 'Idle', row: 0 },
+    { name: 'Walk', row: 1 },
+    { name: 'Jump', row: 2 },
+    { name: 'Fall', row: 3 }
+  ];
+
+  for (const anim of anims) {
+    const panel = document.createElement('div');
+    panel.className = 'original-anim-panel';
+    const label = document.createElement('div');
+    label.className = 'label';
+    label.textContent = anim.name;
+    const canvas = document.createElement('canvas');
+    panel.appendChild(label);
+    panel.appendChild(canvas);
+    container.appendChild(panel);
+
+    let idx = 0;
+    const key = `original-${anim.name}`;
+    function draw() {
+      drawSheetFrame(canvas, originalImg, idx, anim.row, 248, 248, Math.max(1, Math.floor(globalScale * 0.5)));
+      idx = (idx + 1) % 4;
+    }
+    draw();
+    if (timers[key]) clearInterval(timers[key]);
+    timers[key] = setInterval(draw, 1000 / globalFps);
+  }
+}
+
+// Control handlers
+function setGlobalFps(fps) {
+  globalFps = fps;
+  document.getElementById('fpsVal').textContent = fps;
+  renderDirections();
+  renderComparison();
+  renderOriginal();
+}
+
+function setGlobalScale(scale) {
+  globalScale = scale;
+  document.getElementById('scaleVal').textContent = scale + 'x';
+  renderRotations();
+  renderDirections();
+  renderComparison();
+  renderOriginal();
+}
+
+function setBgColor(color) {
+  bgColor = color;
+  renderRotations();
+  renderDirections();
+  renderComparison();
+  renderOriginal();
+}
+
+// Init
+preloadAll().then(() => {
+  renderRotations();
+  renderTabs();
+  renderDirections();
+  renderComparison();
+  renderOriginal();
+});
+</script>
+
+</body>
+</html>

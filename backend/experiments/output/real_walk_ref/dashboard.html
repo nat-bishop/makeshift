@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Real Walk Reference Test</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI', system-ui, sans-serif; padding: 24px; }
+  h1 { font-size: 22px; margin-bottom: 4px; color: #fff; }
+  h2 { font-size: 16px; color: #9ecfff; margin-bottom: 8px; }
+  h3 { font-size: 13px; color: #c0d0e0; margin-bottom: 4px; }
+  .meta { font-size: 12px; color: #888; margin-bottom: 20px; }
+  .controls { display: flex; gap: 16px; align-items: center; margin-bottom: 20px; padding: 10px 16px; background: #16213e; border: 1px solid #2a2a4a; border-radius: 8px; }
+  .controls label { font-size: 13px; color: #888; }
+  .controls input[type=range] { width: 120px; }
+  .controls .val { font-size: 13px; color: #fff; min-width: 30px; }
+  .char-section { background: #12192e; border: 1px solid #2a2a4a; border-radius: 12px; padding: 16px; margin-bottom: 20px; }
+  .variants { display: flex; gap: 16px; flex-wrap: wrap; }
+  .variant { background: #16213e; border: 1px solid #2a2a4a; border-radius: 10px; padding: 14px; flex: 1; min-width: 380px; }
+  .variant-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+  .variant-timing { font-size: 11px; color: #555; margin-left: auto; }
+  .variant-body { display: flex; gap: 12px; align-items: flex-start; }
+  .sheet-col { flex-shrink: 0; text-align: center; }
+  .sheet-col img { width: 180px; height: 180px; border: 1px solid #333; border-radius: 4px; cursor: pointer; }
+  .sheet-col .label { font-size: 9px; color: #555; margin-top: 2px; }
+  .anim-col { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+  .anim-preview { cursor: pointer; position: relative; }
+  .anim-preview canvas { border: 1px solid #333; border-radius: 4px; }
+  .anim-preview .po { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 20px; color: rgba(255,255,255,0.5); pointer-events: none; display: none; }
+  .anim-preview.paused .po { display: block; }
+  .checker { background-image: linear-gradient(45deg, #252535 25%, transparent 25%), linear-gradient(-45deg, #252535 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #252535 75%), linear-gradient(-45deg, transparent 75%, #252535 75%); background-size: 16px 16px; background-position: 0 0, 0 8px, 8px -8px, -8px 0; border: 1px solid #333; border-radius: 4px; display: inline-block; }
+  .frames-strip { display: flex; gap: 4px; flex-wrap: wrap; }
+  .frame-cell { cursor: pointer; }
+  .frame-cell img { width: 64px; height: 64px; border: 2px solid transparent; border-radius: 3px; }
+  .frame-cell.active img { border-color: #5588cc; }
+  .error-banner { background: #2a1520; border: 1px solid #4a2030; color: #f08080; padding: 8px; border-radius: 6px; font-size: 12px; }
+</style>
+</head>
+<body>
+<h1>Real Walk Reference Test</h1>
+<div class="meta">Model: <span id="m"></span> | <span id="t"></span></div>
+<div class="controls">
+  <label>FPS:</label><input type="range" id="fps" min="1" max="8" value="4">
+  <span class="val" id="fv">4</span>
+</div>
+<div id="sc"></div>
+<script>
+const D = {
+  "generated_at": "2026-03-27T06:34:59.117090+00:00",
+  "image_model": "gemini-3.1-flash-image-preview",
+  "ref_sheet": "pose_reference.png",
+  "ref_frames": [
+    "ref_frames/frame_1.png",
+    "ref_frames/frame_2.png",
+    "ref_frames/frame_3.png",
+    "ref_frames/frame_4.png"
+  ],
+  "results": [
+    {
+      "id": "knight",
+      "name": "knight",
+      "variant": "template_only",
+      "sheet": "knight_template_only/sheet.png",
+      "frames": [
+        "knight_template_only/frame_1.png",
+        "knight_template_only/frame_2.png",
+        "knight_template_only/frame_3.png",
+        "knight_template_only/frame_4.png"
+      ],
+      "timing_s": 64.9,
+      "error": null,
+      "prompt": "CHARACTER: A knight in full silver plate armor with a closed visor helmet, red cape flowing behind, brown leather belt with a sheathed sword, steel gauntlets and greaves. The character is shown in side view, facing right, walking toward the right edge of the image. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame walk cycle for this character. A walk cycle captures the repeating motion of walking \u2014 the character takes one full step with each leg across the 4 frames, then the animation loops. The key to a convincing walk is that the legs alternate between wide strides (contact poses) and legs-together (passing poses), while the body bobs up and down.\n\nTHE FOUR FRAMES:\nCell 1 (CONTACT): The character's legs are at their widest apart. The leading leg reaches forward toward the right edge of the image with the heel approaching the ground. The trailing leg extends behind toward the left edge, pushing off. The arms swing in opposition to the legs. The body is at its lowest height in the cycle.\n\nCell 2 (PASSING): The character's legs come together, close to each other, directly beneath the body. The body rises to its tallest height as the weight is carried over the planted leg. The arms are near the body's center. This is the most upright, compact pose.\n\nCell 3 (CONTACT \u2014 opposite leg): The legs are wide apart again, but now the OTHER leg leads forward toward the right edge of the image. This is the mirror of Cell 1 \u2014 same wide stride, but with opposite legs. The arms swap too. The body is low again.\n\nCell 4 (PASSING \u2014 opposite leg): The legs come together again beneath the body, just like Cell 2. The body is tall and upright. This pose completes the cycle \u2014 after Cell 4, the animation loops back to Cell 1 seamlessly.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. The character is walking to the right. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT leg position from the others. Cells 1 and 3 show wide strides (legs apart). Cells 2 and 4 show compact poses (legs together). If two cells look the same, the animation will not work.\n- The character's face, body shape, clothing, colors, and art style must be IDENTICAL in all four cells. The only thing that changes between cells is the position of the arms and legs.\n- The character's full body must be visible from head to feet in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
+      "sys_instr": "You are creating a sprite sheet for a 2D video game. A sprite sheet is a single image containing multiple frames of a character animation, arranged in a grid. Game engines display these frames in rapid sequence to create the illusion of movement \u2014 like a flipbook.\n\nYou are generating a WALK CYCLE. A walk cycle is a looping animation that shows a character walking. It repeats seamlessly \u2014 the last frame connects back to the first frame, creating continuous forward motion. The character walks toward the RIGHT side of the image in every frame.\n\nLAYOUT: The attached template image shows the exact grid layout to follow. It is a 2x2 grid with 4 equal cells separated by red lines, numbered 1-4. Cell 1 is top-left, Cell 2 is top-right, Cell 3 is bottom-left, Cell 4 is bottom-right. Replace each numbered cell with the corresponding animation frame as described in the prompt.\n\nRULES:\n- Keep the red grid lines in place to separate the cells\n- Center the character within each cell \u2014 do not let the character cross into adjacent cells\n- Fill all empty space around the character with a flat solid background color\n- The character must look identical across all 4 cells \u2014 same proportions, same outfit, same colors, same art style. Only the arm and leg positions change.\n- Do not draw the numbered circles from the template\n- Do not include any text, numbers, labels, or watermarks in the output"
+    },
+    {
+      "id": "knight",
+      "name": "knight",
+      "variant": "with_real_pose_ref",
+      "sheet": "knight_with_real_pose_ref/sheet.png",
+      "frames": [
+        "knight_with_real_pose_ref/frame_1.png",
+        "knight_with_real_pose_ref/frame_2.png",
+        "knight_with_real_pose_ref/frame_3.png",
+        "knight_with_real_pose_ref/frame_4.png"
+      ],
+      "timing_s": 18.47,
+      "error": null,
+      "prompt": "CHARACTER: A knight in full silver plate armor with a closed visor helmet, red cape flowing behind, brown leather belt with a sheathed sword, steel gauntlets and greaves. The character is shown in side view, facing right, walking toward the right edge of the image. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame walk cycle for this character. A walk cycle captures the repeating motion of walking \u2014 the character takes one full step with each leg across the 4 frames, then the animation loops. The key to a convincing walk is that the legs alternate between wide strides (contact poses) and legs-together (passing poses), while the body bobs up and down.\n\nTHE FOUR FRAMES:\nCell 1 (CONTACT): The character's legs are at their widest apart. The leading leg reaches forward toward the right edge of the image with the heel approaching the ground. The trailing leg extends behind toward the left edge, pushing off. The arms swing in opposition to the legs. The body is at its lowest height in the cycle.\n\nCell 2 (PASSING): The character's legs come together, close to each other, directly beneath the body. The body rises to its tallest height as the weight is carried over the planted leg. The arms are near the body's center. This is the most upright, compact pose.\n\nCell 3 (CONTACT \u2014 opposite leg): The legs are wide apart again, but now the OTHER leg leads forward toward the right edge of the image. This is the mirror of Cell 1 \u2014 same wide stride, but with opposite legs. The arms swap too. The body is low again.\n\nCell 4 (PASSING \u2014 opposite leg): The legs come together again beneath the body, just like Cell 2. The body is tall and upright. This pose completes the cycle \u2014 after Cell 4, the animation loops back to Cell 1 seamlessly.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. The character is walking to the right. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT leg position from the others. Cells 1 and 3 show wide strides (legs apart). Cells 2 and 4 show compact poses (legs together). If two cells look the same, the animation will not work.\n- The character's face, body shape, clothing, colors, and art style must be IDENTICAL in all four cells. The only thing that changes between cells is the position of the arms and legs.\n- The character's full body must be visible from head to feet in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
+      "sys_instr": "You are creating a sprite sheet for a 2D video game. A sprite sheet is a single image containing multiple frames of a character animation, arranged in a grid. Game engines display these frames in rapid sequence to create the illusion of movement \u2014 like a flipbook.\n\nYou are generating a WALK CYCLE. A walk cycle is a looping animation that shows a character walking. It repeats seamlessly \u2014 the last frame connects back to the first frame, creating continuous forward motion. The character walks toward the RIGHT side of the image in every frame.\n\nLAYOUT: The attached template image shows the exact grid layout to follow. It is a 2x2 grid with 4 equal cells separated by red lines, numbered 1-4. Cell 1 is top-left, Cell 2 is top-right, Cell 3 is bottom-left, Cell 4 is bottom-right. Replace each numbered cell with the corresponding animation frame as described in the prompt.\n\nRULES:\n- Keep the red grid lines in place to separate the cells\n- Center the character within each cell \u2014 do not let the character cross into adjacent cells\n- Fill all empty space around the character with a flat solid background color\n- The character must look identical across all 4 cells \u2014 same proportions, same outfit, same colors, same art style. Only the arm and leg positions change.\n- Do not draw the numbered circles from the template\n- Do not include any text, numbers, labels, or watermarks in the output\n\nPOSE REFERENCE: A second attached image shows a real person performing the 4 walk cycle poses in the same 2x2 grid layout. Use this as a guide for how the body should be positioned in each cell \u2014 match the stride width, leg positions, arm swing, and body height from each corresponding cell. Draw the character described in the prompt, not the person in the reference photo. The reference is only for the poses."
+    },
+    {
+      "id": "goblin",
+      "name": "goblin",
+      "variant": "template_only",
+      "sheet": "goblin_template_only/sheet.png",
+      "frames": [
+        "goblin_template_only/frame_1.png",
+        "goblin_template_only/frame_2.png",
+        "goblin_template_only/frame_3.png",
+        "goblin_template_only/frame_4.png"
+      ],
+      "timing_s": 20.77,
+      "error": null,
+      "prompt": "CHARACTER: A small green-skinned goblin with large pointed ears, wearing a tattered brown leather vest, ragged shorts, and no shoes. Carrying a small wooden club. Yellow eyes, sharp teeth. The character is shown in side view, facing right, walking toward the right edge of the image. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame walk cycle for this character. A walk cycle captures the repeating motion of walking \u2014 the character takes one full step with each leg across the 4 frames, then the animation loops. The key to a convincing walk is that the legs alternate between wide strides (contact poses) and legs-together (passing poses), while the body bobs up and down.\n\nTHE FOUR FRAMES:\nCell 1 (CONTACT): The character's legs are at their widest apart. The leading leg reaches forward toward the right edge of the image with the heel approaching the ground. The trailing leg extends behind toward the left edge, pushing off. The arms swing in opposition to the legs. The body is at its lowest height in the cycle.\n\nCell 2 (PASSING): The character's legs come together, close to each other, directly beneath the body. The body rises to its tallest height as the weight is carried over the planted leg. The arms are near the body's center. This is the most upright, compact pose.\n\nCell 3 (CONTACT \u2014 opposite leg): The legs are wide apart again, but now the OTHER leg leads forward toward the right edge of the image. This is the mirror of Cell 1 \u2014 same wide stride, but with opposite legs. The arms swap too. The body is low again.\n\nCell 4 (PASSING \u2014 opposite leg): The legs come together again beneath the body, just like Cell 2. The body is tall and upright. This pose completes the cycle \u2014 after Cell 4, the animation loops back to Cell 1 seamlessly.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. The character is walking to the right. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT leg position from the others. Cells 1 and 3 show wide strides (legs apart). Cells 2 and 4 show compact poses (legs together). If two cells look the same, the animation will not work.\n- The character's face, body shape, clothing, colors, and art style must be IDENTICAL in all four cells. The only thing that changes between cells is the position of the arms and legs.\n- The character's full body must be visible from head to feet in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
+      "sys_instr": "You are creating a sprite sheet for a 2D video game. A sprite sheet is a single image containing multiple frames of a character animation, arranged in a grid. Game engines display these frames in rapid sequence to create the illusion of movement \u2014 like a flipbook.\n\nYou are generating a WALK CYCLE. A walk cycle is a looping animation that shows a character walking. It repeats seamlessly \u2014 the last frame connects back to the first frame, creating continuous forward motion. The character walks toward the RIGHT side of the image in every frame.\n\nLAYOUT: The attached template image shows the exact grid layout to follow. It is a 2x2 grid with 4 equal cells separated by red lines, numbered 1-4. Cell 1 is top-left, Cell 2 is top-right, Cell 3 is bottom-left, Cell 4 is bottom-right. Replace each numbered cell with the corresponding animation frame as described in the prompt.\n\nRULES:\n- Keep the red grid lines in place to separate the cells\n- Center the character within each cell \u2014 do not let the character cross into adjacent cells\n- Fill all empty space around the character with a flat solid background color\n- The character must look identical across all 4 cells \u2014 same proportions, same outfit, same colors, same art style. Only the arm and leg positions change.\n- Do not draw the numbered circles from the template\n- Do not include any text, numbers, labels, or watermarks in the output"
+    },
+    {
+      "id": "goblin",
+      "name": "goblin",
+      "variant": "with_real_pose_ref",
+      "sheet": "goblin_with_real_pose_ref/sheet.png",
+      "frames": [
+        "goblin_with_real_pose_ref/frame_1.png",
+        "goblin_with_real_pose_ref/frame_2.png",
+        "goblin_with_real_pose_ref/frame_3.png",
+        "goblin_with_real_pose_ref/frame_4.png"
+      ],
+      "timing_s": 25.52,
+      "error": null,
+      "prompt": "CHARACTER: A small green-skinned goblin with large pointed ears, wearing a tattered brown leather vest, ragged shorts, and no shoes. Carrying a small wooden club. Yellow eyes, sharp teeth. The character is shown in side view, facing right, walking toward the right edge of the image. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame walk cycle for this character. A walk cycle captures the repeating motion of walking \u2014 the character takes one full step with each leg across the 4 frames, then the animation loops. The key to a convincing walk is that the legs alternate between wide strides (contact poses) and legs-together (passing poses), while the body bobs up and down.\n\nTHE FOUR FRAMES:\nCell 1 (CONTACT): The character's legs are at their widest apart. The leading leg reaches forward toward the right edge of the image with the heel approaching the ground. The trailing leg extends behind toward the left edge, pushing off. The arms swing in opposition to the legs. The body is at its lowest height in the cycle.\n\nCell 2 (PASSING): The character's legs come together, close to each other, directly beneath the body. The body rises to its tallest height as the weight is carried over the planted leg. The arms are near the body's center. This is the most upright, compact pose.\n\nCell 3 (CONTACT \u2014 opposite leg): The legs are wide apart again, but now the OTHER leg leads forward toward the right edge of the image. This is the mirror of Cell 1 \u2014 same wide stride, but with opposite legs. The arms swap too. The body is low again.\n\nCell 4 (PASSING \u2014 opposite leg): The legs come together again beneath the body, just like Cell 2. The body is tall and upright. This pose completes the cycle \u2014 after Cell 4, the animation loops back to Cell 1 seamlessly.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. The character is walking to the right. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT leg position from the others. Cells 1 and 3 show wide strides (legs apart). Cells 2 and 4 show compact poses (legs together). If two cells look the same, the animation will not work.\n- The character's face, body shape, clothing, colors, and art style must be IDENTICAL in all four cells. The only thing that changes between cells is the position of the arms and legs.\n- The character's full body must be visible from head to feet in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
+      "sys_instr": "You are creating a sprite sheet for a 2D video game. A sprite sheet is a single image containing multiple frames of a character animation, arranged in a grid. Game engines display these frames in rapid sequence to create the illusion of movement \u2014 like a flipbook.\n\nYou are generating a WALK CYCLE. A walk cycle is a looping animation that shows a character walking. It repeats seamlessly \u2014 the last frame connects back to the first frame, creating continuous forward motion. The character walks toward the RIGHT side of the image in every frame.\n\nLAYOUT: The attached template image shows the exact grid layout to follow. It is a 2x2 grid with 4 equal cells separated by red lines, numbered 1-4. Cell 1 is top-left, Cell 2 is top-right, Cell 3 is bottom-left, Cell 4 is bottom-right. Replace each numbered cell with the corresponding animation frame as described in the prompt.\n\nRULES:\n- Keep the red grid lines in place to separate the cells\n- Center the character within each cell \u2014 do not let the character cross into adjacent cells\n- Fill all empty space around the character with a flat solid background color\n- The character must look identical across all 4 cells \u2014 same proportions, same outfit, same colors, same art style. Only the arm and leg positions change.\n- Do not draw the numbered circles from the template\n- Do not include any text, numbers, labels, or watermarks in the output\n\nPOSE REFERENCE: A second attached image shows a real person performing the 4 walk cycle poses in the same 2x2 grid layout. Use this as a guide for how the body should be positioned in each cell \u2014 match the stride width, leg positions, arm swing, and body height from each corresponding cell. Draw the character described in the prompt, not the person in the reference photo. The reference is only for the poses."
+    },
+    {
+      "id": "wizard",
+      "name": "wizard",
+      "variant": "template_only",
+      "sheet": "wizard_template_only/sheet.png",
+      "frames": [
+        "wizard_template_only/frame_1.png",
+        "wizard_template_only/frame_2.png",
+        "wizard_template_only/frame_3.png",
+        "wizard_template_only/frame_4.png"
+      ],
+      "timing_s": 14.62,
+      "error": null,
+      "prompt": "CHARACTER: An old wizard with a long white beard, wearing a dark blue robe covered in silver star patterns, a tall pointed hat, and brown leather sandals. Carrying a gnarled wooden staff. The character is shown in side view, facing right, walking toward the right edge of the image. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame walk cycle for this character. A walk cycle captures the repeating motion of walking \u2014 the character takes one full step with each leg across the 4 frames, then the animation loops. The key to a convincing walk is that the legs alternate between wide strides (contact poses) and legs-together (passing poses), while the body bobs up and down.\n\nTHE FOUR FRAMES:\nCell 1 (CONTACT): The character's legs are at their widest apart. The leading leg reaches forward toward the right edge of the image with the heel approaching the ground. The trailing leg extends behind toward the left edge, pushing off. The arms swing in opposition to the legs. The body is at its lowest height in the cycle.\n\nCell 2 (PASSING): The character's legs come together, close to each other, directly beneath the body. The body rises to its tallest height as the weight is carried over the planted leg. The arms are near the body's center. This is the most upright, compact pose.\n\nCell 3 (CONTACT \u2014 opposite leg): The legs are wide apart again, but now the OTHER leg leads forward toward the right edge of the image. This is the mirror of Cell 1 \u2014 same wide stride, but with opposite legs. The arms swap too. The body is low again.\n\nCell 4 (PASSING \u2014 opposite leg): The legs come together again beneath the body, just like Cell 2. The body is tall and upright. This pose completes the cycle \u2014 after Cell 4, the animation loops back to Cell 1 seamlessly.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. The character is walking to the right. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT leg position from the others. Cells 1 and 3 show wide strides (legs apart). Cells 2 and 4 show compact poses (legs together). If two cells look the same, the animation will not work.\n- The character's face, body shape, clothing, colors, and art style must be IDENTICAL in all four cells. The only thing that changes between cells is the position of the arms and legs.\n- The character's full body must be visible from head to feet in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
+      "sys_instr": "You are creating a sprite sheet for a 2D video game. A sprite sheet is a single image containing multiple frames of a character animation, arranged in a grid. Game engines display these frames in rapid sequence to create the illusion of movement \u2014 like a flipbook.\n\nYou are generating a WALK CYCLE. A walk cycle is a looping animation that shows a character walking. It repeats seamlessly \u2014 the last frame connects back to the first frame, creating continuous forward motion. The character walks toward the RIGHT side of the image in every frame.\n\nLAYOUT: The attached template image shows the exact grid layout to follow. It is a 2x2 grid with 4 equal cells separated by red lines, numbered 1-4. Cell 1 is top-left, Cell 2 is top-right, Cell 3 is bottom-left, Cell 4 is bottom-right. Replace each numbered cell with the corresponding animation frame as described in the prompt.\n\nRULES:\n- Keep the red grid lines in place to separate the cells\n- Center the character within each cell \u2014 do not let the character cross into adjacent cells\n- Fill all empty space around the character with a flat solid background color\n- The character must look identical across all 4 cells \u2014 same proportions, same outfit, same colors, same art style. Only the arm and leg positions change.\n- Do not draw the numbered circles from the template\n- Do not include any text, numbers, labels, or watermarks in the output"
+    },
+    {
+      "id": "wizard",
+      "name": "wizard",
+      "variant": "with_real_pose_ref",
+      "sheet": "wizard_with_real_pose_ref/sheet.png",
+      "frames": [
+        "wizard_with_real_pose_ref/frame_1.png",
+        "wizard_with_real_pose_ref/frame_2.png",
+        "wizard_with_real_pose_ref/frame_3.png",
+        "wizard_with_real_pose_ref/frame_4.png"
+      ],
+      "timing_s": 20.3,
+      "error": null,
+      "prompt": "CHARACTER: An old wizard with a long white beard, wearing a dark blue robe covered in silver star patterns, a tall pointed hat, and brown leather sandals. Carrying a gnarled wooden staff. The character is shown in side view, facing right, walking toward the right edge of the image. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nANIMATION: Generate a 4-frame walk cycle for this character. A walk cycle captures the repeating motion of walking \u2014 the character takes one full step with each leg across the 4 frames, then the animation loops. The key to a convincing walk is that the legs alternate between wide strides (contact poses) and legs-together (passing poses), while the body bobs up and down.\n\nTHE FOUR FRAMES:\nCell 1 (CONTACT): The character's legs are at their widest apart. The leading leg reaches forward toward the right edge of the image with the heel approaching the ground. The trailing leg extends behind toward the left edge, pushing off. The arms swing in opposition to the legs. The body is at its lowest height in the cycle.\n\nCell 2 (PASSING): The character's legs come together, close to each other, directly beneath the body. The body rises to its tallest height as the weight is carried over the planted leg. The arms are near the body's center. This is the most upright, compact pose.\n\nCell 3 (CONTACT \u2014 opposite leg): The legs are wide apart again, but now the OTHER leg leads forward toward the right edge of the image. This is the mirror of Cell 1 \u2014 same wide stride, but with opposite legs. The arms swap too. The body is low again.\n\nCell 4 (PASSING \u2014 opposite leg): The legs come together again beneath the body, just like Cell 2. The body is tall and upright. This pose completes the cycle \u2014 after Cell 4, the animation loops back to Cell 1 seamlessly.\n\n\nCRITICAL CONSISTENCY RULES:\n- The character faces toward the RIGHT edge of the image in ALL FOUR cells. The character is walking to the right. No cell should show the character facing left or turning around.\n- Every cell must show a VISIBLY DIFFERENT leg position from the others. Cells 1 and 3 show wide strides (legs apart). Cells 2 and 4 show compact poses (legs together). If two cells look the same, the animation will not work.\n- The character's face, body shape, clothing, colors, and art style must be IDENTICAL in all four cells. The only thing that changes between cells is the position of the arms and legs.\n- The character's full body must be visible from head to feet in every cell, centered within the cell boundaries.\n\nFlat solid background color in every cell.",
+      "sys_instr": "You are creating a sprite sheet for a 2D video game. A sprite sheet is a single image containing multiple frames of a character animation, arranged in a grid. Game engines display these frames in rapid sequence to create the illusion of movement \u2014 like a flipbook.\n\nYou are generating a WALK CYCLE. A walk cycle is a looping animation that shows a character walking. It repeats seamlessly \u2014 the last frame connects back to the first frame, creating continuous forward motion. The character walks toward the RIGHT side of the image in every frame.\n\nLAYOUT: The attached template image shows the exact grid layout to follow. It is a 2x2 grid with 4 equal cells separated by red lines, numbered 1-4. Cell 1 is top-left, Cell 2 is top-right, Cell 3 is bottom-left, Cell 4 is bottom-right. Replace each numbered cell with the corresponding animation frame as described in the prompt.\n\nRULES:\n- Keep the red grid lines in place to separate the cells\n- Center the character within each cell \u2014 do not let the character cross into adjacent cells\n- Fill all empty space around the character with a flat solid background color\n- The character must look identical across all 4 cells \u2014 same proportions, same outfit, same colors, same art style. Only the arm and leg positions change.\n- Do not draw the numbered circles from the template\n- Do not include any text, numbers, labels, or watermarks in the output\n\nPOSE REFERENCE: A second attached image shows a real person performing the 4 walk cycle poses in the same 2x2 grid layout. Use this as a guide for how the body should be positioned in each cell \u2014 match the stride width, leg positions, arm swing, and body height from each corresponding cell. Draw the character described in the prompt, not the person in the reference photo. The reference is only for the poses."
+    }
+  ]
+};
+let fps = 4;
+const anims = [];
+document.getElementById('m').textContent = D.image_model;
+document.getElementById('t').textContent = new Date(D.generated_at).toLocaleString();
+document.getElementById('fps').addEventListener('input', e => { fps = parseInt(e.target.value); document.getElementById('fv').textContent = fps; });
+const sc = document.getElementById('sc');
+
+// Reference walk cycle section
+if (D.ref_frames && D.ref_frames.length > 0) {
+  const refDiv = document.createElement('div');
+  refDiv.className = 'char-section';
+  const refAid = 'ref';
+  let refFHtml = '';
+  D.ref_frames.forEach((f, fi) => {
+    refFHtml += `<div class="frame-cell" data-a="${refAid}" data-f="${fi}"><div class="checker"><img src="${f}"></div></div>`;
+  });
+  refDiv.innerHTML = `
+    <h2>Pose Reference (real walk cycle footage)</h2>
+    <div class="variants"><div class="variant" style="flex:none">
+      <div class="variant-body">
+        <div class="sheet-col">
+          <a href="${D.ref_sheet}" target="_blank"><img src="${D.ref_sheet}"></a>
+          <div class="label">2x2 reference sheet</div>
+        </div>
+        <div class="anim-col">
+          <div class="anim-preview" id="${refAid}-p">
+            <div class="checker"><canvas id="${refAid}-c" width="120" height="120"></canvas></div>
+            <div class="po">||</div>
+          </div>
+        </div>
+        <div class="frames-strip">${refFHtml}</div>
+      </div>
+    </div></div>`;
+  sc.appendChild(refDiv);
+  anims.push({ id: refAid, frames: D.ref_frames, fi: 0, paused: false, images: [], loaded: false });
+}
+
+const groups = {};
+D.results.forEach(r => { if (!groups[r.id]) groups[r.id] = []; groups[r.id].push(r); });
+Object.entries(groups).forEach(([charId, variants]) => {
+  const section = document.createElement('div');
+  section.className = 'char-section';
+  let varHtml = '';
+  variants.forEach((v, vi) => {
+    const aid = `${charId}-${vi}`;
+    if (v.error) { varHtml += `<div class="variant"><h3>${v.variant}</h3><div class="error-banner">${v.error}</div></div>`; return; }
+    let fHtml = '';
+    v.frames.forEach((f, fi) => { fHtml += `<div class="frame-cell" data-a="${aid}" data-f="${fi}"><div class="checker"><img src="${f}"></div></div>`; });
+    varHtml += `<div class="variant"><div class="variant-header"><h3>${v.variant}</h3><span class="variant-timing">${v.timing_s}s</span></div><div class="variant-body"><div class="sheet-col"><a href="${v.sheet}" target="_blank"><img src="${v.sheet}"></a><div class="label">Raw sheet</div></div><div class="anim-col"><div class="anim-preview" id="${aid}-p"><div class="checker"><canvas id="${aid}-c" width="120" height="120"></canvas></div><div class="po">||</div></div></div><div class="frames-strip">${fHtml}</div></div><details style="margin-top:8px"><summary style="font-size:11px;color:#666;cursor:pointer">System instruction</summary><pre style="font-size:9px;color:#666;margin:4px 0;white-space:pre-wrap;word-break:break-word;padding:6px;background:#0a0f1e;border-radius:4px;max-height:150px;overflow-y:auto">${v.sys_instr || ''}</pre></details><details style="margin-top:4px"><summary style="font-size:11px;color:#666;cursor:pointer">Content prompt</summary><pre style="font-size:9px;color:#666;margin:4px 0;white-space:pre-wrap;word-break:break-word;padding:6px;background:#0a0f1e;border-radius:4px;max-height:150px;overflow-y:auto">${v.prompt || ''}</pre></details></div>`;
+    anims.push({ id: aid, frames: v.frames, fi: 0, paused: false, images: [], loaded: false });
+  });
+  section.innerHTML = `<h2>${variants[0].name}</h2><div class="variants">${varHtml}</div>`;
+  sc.appendChild(section);
+});
+anims.forEach(st => {
+  st.images = st.frames.map(f => { const i = new window.Image(); i.src = f; return i; });
+  if (st.images.length > 0) st.images[0].onload = () => { st.loaded = true; };
+  const pp = document.getElementById(`${st.id}-p`);
+  if (pp) pp.addEventListener('click', () => { st.paused = !st.paused; pp.classList.toggle('paused', st.paused); });
+});
+document.querySelectorAll('.frame-cell').forEach(t => {
+  t.addEventListener('click', e => { e.stopPropagation(); const aid = t.dataset.a, fi = parseInt(t.dataset.f); const st = anims.find(a => a.id === aid); if (st) { st.fi = fi; st.paused = true; document.getElementById(`${aid}-p`).classList.add('paused'); draw(st); } });
+});
+function draw(st) { const c = document.getElementById(`${st.id}-c`); if (!c) return; const ctx = c.getContext('2d'); ctx.clearRect(0, 0, c.width, c.height); const img = st.images[st.fi % st.images.length]; if (img && img.complete && img.naturalWidth > 0) ctx.drawImage(img, 0, 0, c.width, c.height); document.querySelectorAll(`[data-a="${st.id}"]`).forEach((t, i) => t.classList.toggle('active', i === st.fi % st.images.length)); }
+let last = 0;
+function loop(ts) { if (ts - last >= 1000/fps) { last = ts; anims.forEach(st => { if (!st.paused && st.loaded && st.images.length > 0) { st.fi = (st.fi + 1) % st.images.length; draw(st); } }); } requestAnimationFrame(loop); }
+requestAnimationFrame(loop);
+setTimeout(() => anims.forEach(draw), 500);
+</script>
+</body>
+</html>

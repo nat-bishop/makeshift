@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Animation Advanced Comparison</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a1a2e; color: #e0e0e0;
+    font-family: 'Segoe UI', system-ui, sans-serif; padding: 24px;
+  }
+  h1 { font-size: 22px; margin-bottom: 4px; color: #fff; }
+  h2 { font-size: 15px; color: #9ecfff; margin-bottom: 2px; }
+  .meta { font-size: 12px; color: #888; margin-bottom: 20px; }
+  .meta span { color: #aaa; }
+  .controls {
+    display: flex; gap: 16px; align-items: center;
+    margin-bottom: 20px; padding: 10px 16px;
+    background: #16213e; border: 1px solid #2a2a4a; border-radius: 8px;
+  }
+  .controls label { font-size: 13px; color: #888; }
+  .controls input[type=range] { width: 120px; }
+  .controls .val { font-size: 13px; color: #fff; min-width: 30px; }
+  .strategy-card {
+    background: #16213e; border: 1px solid #2a2a4a; border-radius: 10px;
+    padding: 16px; margin-bottom: 16px;
+  }
+  .strategy-header {
+    display: flex; align-items: baseline; gap: 10px; margin-bottom: 2px;
+  }
+  .strategy-desc { font-size: 11px; color: #777; margin-bottom: 10px; }
+  .strategy-timing { font-size: 11px; color: #555; margin-left: auto; }
+  .strategy-body {
+    display: flex; gap: 16px; align-items: flex-start;
+  }
+  .sheet-col { flex-shrink: 0; text-align: center; }
+  .sheet-col img {
+    width: 200px; height: 200px;
+    border: 1px solid #333; border-radius: 4px; cursor: pointer;
+  }
+  .sheet-col .label { font-size: 10px; color: #555; margin-top: 4px; }
+  .anim-col {
+    display: flex; flex-direction: column; gap: 8px; align-items: center;
+  }
+  .anim-preview { cursor: pointer; position: relative; }
+  .anim-preview canvas { border: 1px solid #333; border-radius: 4px; }
+  .anim-preview .po {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 24px; color: rgba(255,255,255,0.5);
+    pointer-events: none; display: none;
+  }
+  .anim-preview.paused .po { display: block; }
+  .anim-label { font-size: 10px; color: #555; }
+  .checker {
+    background-image:
+      linear-gradient(45deg, #252535 25%, transparent 25%),
+      linear-gradient(-45deg, #252535 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #252535 75%),
+      linear-gradient(-45deg, transparent 75%, #252535 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+    border: 1px solid #333; border-radius: 4px; display: inline-block;
+  }
+  .frames-strip { display: flex; gap: 6px; flex-wrap: wrap; align-items: flex-end; }
+  .frame-cell { cursor: pointer; text-align: center; }
+  .frame-cell img {
+    width: 80px; height: 80px;
+    border: 2px solid transparent; border-radius: 3px;
+    transition: border-color 0.15s;
+  }
+  .frame-cell img:hover { border-color: #5588cc; }
+  .frame-cell.active img {
+    border-color: #5588cc;
+    box-shadow: 0 0 6px rgba(85,136,204,0.4);
+  }
+  .frame-cell .num { font-size: 10px; color: #555; }
+  .gen-order { font-size: 9px; color: #444; }
+  details { margin-top: 8px; }
+  summary { font-size: 11px; color: #666; cursor: pointer; }
+  .prompt-text {
+    font-size: 10px; color: #777; margin: 6px 0;
+    white-space: pre-wrap; word-break: break-word;
+    padding: 8px; background: #0a0f1e; border-radius: 4px;
+    max-height: 200px; overflow-y: auto;
+  }
+  .error-banner {
+    background: #2a1520; border: 1px solid #4a2030;
+    color: #f08080; padding: 8px 12px; border-radius: 6px; font-size: 12px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Animation Advanced Comparison (Round 3)</h1>
+<div class="meta">
+  Model: <span id="m"></span> | <span id="t"></span>
+</div>
+<div class="controls">
+  <label>FPS:</label>
+  <input type="range" id="fps" min="1" max="8" value="4">
+  <span class="val" id="fv">4</span>
+  <label style="margin-left:12px">Click animation to pause</label>
+</div>
+<div id="sc"></div>
+
+<script>
+const D = {
+  "generated_at": "2026-03-27T04:36:56.946196+00:00",
+  "image_model": "gemini-3.1-flash-image-preview",
+  "character": "A human adventurer in side view facing right. Medium build, wearing a forest-green tunic belted at the waist, a brown leather backpack with visible shoulder straps, sturdy brown leather boots reaching mid-calf, brown trousers, and a short brown cape. Short tousled brown hair. Mixed media collage style paper cutout art, flat lighting, clean edges.",
+  "strategies": [
+    {
+      "id": "A_defensive",
+      "name": "Defensive template 2x2",
+      "description": "Template-guided with hyper-specific character description and defensive constraints against known failures",
+      "sheet": "A_defensive/sheet.png",
+      "frames": [
+        "A_defensive/frame_1.png",
+        "A_defensive/frame_2.png",
+        "A_defensive/frame_3.png",
+        "A_defensive/frame_4.png"
+      ],
+      "generation_order": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "prompts": [
+        "A human adventurer in side view facing right. Medium build, wearing a forest-green tunic belted at the waist, a brown leather backpack with visible shoulder straps, sturdy brown leather boots reaching mid-calf, brown trousers, and a short brown cape. Short tousled brown hair. Mixed media collage style paper cutout art, flat lighting, clean edges. Walking in a 4-frame walk cycle loop.\n\nStep-by-step, the four cells show:\nCell 1: CONTACT RIGHT pose: Right leg extended forward with heel near ground, left leg extended behind pushing off. Arms counterbalanced \u2014 left arm swings forward, right arm back. Body at lowest point of stride.\nCell 2: PASSING RIGHT pose: Full weight on right leg directly under body, left leg swinging forward past the planted right leg. Both legs close together. Body at tallest point of stride. Arms relaxed at sides.\nCell 3: CONTACT LEFT pose: Left leg extended forward with heel near ground, right leg extended behind pushing off. Arms counterbalanced \u2014 right arm swings forward, left arm back. Body at lowest point. Mirror of contact right.\nCell 4: PASSING LEFT pose: Full weight on left leg directly under body, right leg swinging forward past the planted left leg. Both legs close together. Body at tallest point. Arms relaxed at sides. This pose transitions smoothly back to the contact right pose.\n\n\nANIMATION REQUIREMENTS:\n- The character faces right in ALL FOUR cells. Every cell shows the character in side view facing toward the right edge of the image.\n- Each cell shows a DISTINCTLY DIFFERENT leg position. No two cells have the same pose. The legs must visibly change position from cell to cell.\n- The four poses form a complete walk cycle: contact-right, passing-right, contact-left, passing-left. The cycle loops \u2014 cell 4 transitions seamlessly back to cell 1.\n- The character's body proportions, clothing, colors, and art style are IDENTICAL across all four cells. Only the limb positions change.\n- Full body visible from head to toe in every cell, centered in the cell.\n\nSolid #1a1a1a background in every cell."
+      ],
+      "timing_s": 20.89,
+      "error": null
+    },
+    {
+      "id": "B_pose_ref",
+      "name": "Pose reference sheet",
+      "description": "Template + stick-figure pose reference image showing target body positions for each cell",
+      "sheet": "B_pose_ref/sheet.png",
+      "frames": [
+        "B_pose_ref/frame_1.png",
+        "B_pose_ref/frame_2.png",
+        "B_pose_ref/frame_3.png",
+        "B_pose_ref/frame_4.png"
+      ],
+      "generation_order": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "prompts": [
+        "A human adventurer in side view facing right. Medium build, wearing a forest-green tunic belted at the waist, a brown leather backpack with visible shoulder straps, sturdy brown leather boots reaching mid-calf, brown trousers, and a short brown cape. Short tousled brown hair. Mixed media collage style paper cutout art, flat lighting, clean edges. Walking in a 4-frame walk cycle loop.\n\nThe pose reference image shows the target body positions as stick figures. Each cell in your output should match the corresponding stick figure's pose:\nCell 1: CONTACT RIGHT pose: Right leg extended forward with heel near ground, left leg extended behind pushing off. Arms counterbalanced \u2014 left arm swings forward, right arm back. Body at lowest point of stride.\nCell 2: PASSING RIGHT pose: Full weight on right leg directly under body, left leg swinging forward past the planted right leg. Both legs close together. Body at tallest point of stride. Arms relaxed at sides.\nCell 3: CONTACT LEFT pose: Left leg extended forward with heel near ground, right leg extended behind pushing off. Arms counterbalanced \u2014 right arm swings forward, left arm back. Body at lowest point. Mirror of contact right.\nCell 4: PASSING LEFT pose: Full weight on left leg directly under body, right leg swinging forward past the planted left leg. Both legs close together. Body at tallest point. Arms relaxed at sides. This pose transitions smoothly back to the contact right pose.\n\n\nANIMATION REQUIREMENTS:\n- The character faces right in ALL FOUR cells. Every cell shows the character in side view facing toward the right edge of the image.\n- Each cell shows a DISTINCTLY DIFFERENT leg position. No two cells have the same pose. The legs must visibly change position from cell to cell.\n- The four poses form a complete walk cycle: contact-right, passing-right, contact-left, passing-left. The cycle loops \u2014 cell 4 transitions seamlessly back to cell 1.\n- The character's body proportions, clothing, colors, and art style are IDENTICAL across all four cells. Only the limb positions change.\n- Full body visible from head to toe in every cell, centered in the cell.\n\nSolid #1a1a1a background in every cell."
+      ],
+      "timing_s": 19.36,
+      "error": null
+    },
+    {
+      "id": "C_iterative",
+      "name": "Iterative sequential (chat)",
+      "description": "Multi-turn chat: generate frames 1\u21922\u21923\u21924, each turn includes all prior frames",
+      "sheet": "",
+      "frames": [
+        "C_iterative/frame_1.png",
+        "C_iterative/frame_2.png",
+        "C_iterative/frame_3.png",
+        "C_iterative/frame_4.png"
+      ],
+      "generation_order": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "prompts": [
+        "Generate frame 1 of a 4-frame walk cycle animation.\n\nA human adventurer in side view facing right. Medium build, wearing a forest-green tunic belted at the waist, a brown leather backpack with visible shoulder straps, sturdy brown leather boots reaching mid-calf, brown trousers, and a short brown cape. Short tousled brown hair. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nCONTACT RIGHT pose: Right leg extended forward with heel near ground, left leg extended behind pushing off. Arms counterbalanced \u2014 left arm swings forward, right arm back. Body at lowest point of stride.\n\nThis is the first of 4 frames. The walk cycle goes: contact-right \u2192 passing-right \u2192 contact-left \u2192 passing-left \u2192 loops back.\nFull body, head to toe, centered. Solid #1a1a1a background, no text.",
+        "Generate frame 2 of the walk cycle. The previous 1 frame(s) are attached above.\n\nPASSING RIGHT pose: Full weight on right leg directly under body, left leg swinging forward past the planted right leg. Both legs close together. Body at tallest point of stride. Arms relaxed at sides.\n\nCRITICAL: Same character as previous frame(s) \u2014 same proportions, clothing, colors, art style. Only the limb positions change. Character faces right.\nFull body, head to toe, centered. Solid #1a1a1a background, no text.",
+        "Generate frame 3 of the walk cycle. The previous 2 frame(s) are attached above.\n\nCONTACT LEFT pose: Left leg extended forward with heel near ground, right leg extended behind pushing off. Arms counterbalanced \u2014 right arm swings forward, left arm back. Body at lowest point. Mirror of contact right.\n\nCRITICAL: Same character as previous frame(s) \u2014 same proportions, clothing, colors, art style. Only the limb positions change. Character faces right.\nFull body, head to toe, centered. Solid #1a1a1a background, no text.",
+        "Generate frame 4 of the walk cycle. The previous 3 frames are attached above.\n\nPASSING LEFT pose: Full weight on left leg directly under body, right leg swinging forward past the planted left leg. Both legs close together. Body at tallest point. Arms relaxed at sides. This pose transitions smoothly back to the contact right pose.\n\nCRITICAL: Same character as all previous frames \u2014 same proportions, clothing, colors, art style. Only the limb positions change. Character faces right. This frame completes the loop back to frame 1.\nFull body, head to toe, centered. Solid #1a1a1a background, no text."
+      ],
+      "timing_s": 39.45,
+      "error": null
+    },
+    {
+      "id": "D_inbetween",
+      "name": "Inbetween interpolation",
+      "description": "Generate extremes first (1,3), then fill inbetweens (2,4). Each call sees only its bracketing frames.",
+      "sheet": "",
+      "frames": [
+        "D_inbetween/frame_1.png",
+        "D_inbetween/frame_2.png",
+        "D_inbetween/frame_3.png",
+        "D_inbetween/frame_4.png"
+      ],
+      "generation_order": [
+        1,
+        3,
+        2,
+        4
+      ],
+      "prompts": [
+        "Generate a single character image.\n\nA human adventurer in side view facing right. Medium build, wearing a forest-green tunic belted at the waist, a brown leather backpack with visible shoulder straps, sturdy brown leather boots reaching mid-calf, brown trousers, and a short brown cape. Short tousled brown hair. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nCONTACT RIGHT pose: Right leg extended forward with heel near ground, left leg extended behind pushing off. Arms counterbalanced \u2014 left arm swings forward, right arm back. Body at lowest point of stride.\n\nFull body, head to toe, centered. Solid #1a1a1a background, no text.",
+        "The attached image shows a character in a walking contact pose with one leg forward. Generate the SAME character in the OPPOSITE contact pose \u2014 the other leg is now forward.\n\nCONTACT LEFT pose: Left leg extended forward with heel near ground, right leg extended behind pushing off. Arms counterbalanced \u2014 right arm swings forward, left arm back. Body at lowest point. Mirror of contact right.\n\nCRITICAL: Same character \u2014 identical proportions, clothing, colors, art style. Character faces right. Only the leg and arm positions swap.\nFull body, head to toe, centered. Solid #1a1a1a background, no text.",
+        "The two attached images show frames 1 and 3 of a 4-frame walk cycle. Generate the INBETWEEN frame that goes between them \u2014 frame 2.\n\nPASSING RIGHT pose: Full weight on right leg directly under body, left leg swinging forward past the planted right leg. Both legs close together. Body at tallest point of stride. Arms relaxed at sides.\n\nCRITICAL: Same character as both reference frames \u2014 identical proportions, clothing, colors, art style. This is the transitional pose between the two contact poses. Character faces right.\nFull body, head to toe, centered. Solid #1a1a1a background, no text.",
+        "The two attached images show frames 3 and 1 of a 4-frame walk cycle. Generate the INBETWEEN frame that transitions from frame 3 back to frame 1, completing the loop \u2014 frame 4.\n\nPASSING LEFT pose: Full weight on left leg directly under body, right leg swinging forward past the planted left leg. Both legs close together. Body at tallest point. Arms relaxed at sides. This pose transitions smoothly back to the contact right pose.\n\nCRITICAL: Same character as both reference frames \u2014 identical proportions, clothing, colors, art style. This is the transitional pose completing the walk cycle loop. Character faces right.\nFull body, head to toe, centered. Solid #1a1a1a background, no text."
+      ],
+      "timing_s": 32.29,
+      "error": null
+    },
+    {
+      "id": "E_inbetween_full",
+      "name": "Inbetween with full context",
+      "description": "Same generation order as D (1\u21923\u21922\u21924) but each call includes ALL frames generated so far.",
+      "sheet": "",
+      "frames": [
+        "E_inbetween_full/frame_1.png",
+        "E_inbetween_full/frame_2.png",
+        "E_inbetween_full/frame_3.png",
+        "E_inbetween_full/frame_4.png"
+      ],
+      "generation_order": [
+        1,
+        3,
+        2,
+        4
+      ],
+      "prompts": [
+        "Generate a single character image. This will be frame 1 of a 4-frame walk cycle animation.\n\nA human adventurer in side view facing right. Medium build, wearing a forest-green tunic belted at the waist, a brown leather backpack with visible shoulder straps, sturdy brown leather boots reaching mid-calf, brown trousers, and a short brown cape. Short tousled brown hair. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nCONTACT RIGHT pose: Right leg extended forward with heel near ground, left leg extended behind pushing off. Arms counterbalanced \u2014 left arm swings forward, right arm back. Body at lowest point of stride.\n\nFull body, head to toe, centered. Solid #1a1a1a background, no text.",
+        "The attached image is frame 1 of a 4-frame walk cycle. Generate frame 3 \u2014 the OPPOSITE contact pose.\n\nCONTACT LEFT pose: Left leg extended forward with heel near ground, right leg extended behind pushing off. Arms counterbalanced \u2014 right arm swings forward, left arm back. Body at lowest point. Mirror of contact right.\n\nCRITICAL: Same character, identical appearance. Only limb positions change. Character faces right.\nFull body, head to toe, centered. Solid #1a1a1a background, no text.",
+        "The attached images are frames 1 and 3 of a 4-frame walk cycle. Generate frame 2 \u2014 the passing pose between them.\n\nPASSING RIGHT pose: Full weight on right leg directly under body, left leg swinging forward past the planted right leg. Both legs close together. Body at tallest point of stride. Arms relaxed at sides.\n\nCRITICAL: Same character as both reference frames. This is the transitional pose halfway between frame 1 and frame 3. Character faces right.\nFull body, head to toe, centered. Solid #1a1a1a background, no text.",
+        "The attached images are frames 1, 3, and 2 of a 4-frame walk cycle (in generation order). Generate frame 4 \u2014 the final passing pose that loops back to frame 1.\n\nPASSING LEFT pose: Full weight on left leg directly under body, right leg swinging forward past the planted left leg. Both legs close together. Body at tallest point. Arms relaxed at sides. This pose transitions smoothly back to the contact right pose.\n\nCRITICAL: Same character as all reference frames. This completes the walk cycle loop. Character faces right.\nFull body, head to toe, centered. Solid #1a1a1a background, no text."
+      ],
+      "timing_s": 33.41,
+      "error": null
+    }
+  ]
+};
+let fps = 4;
+const anims = [];
+
+document.getElementById('m').textContent = D.image_model;
+document.getElementById('t').textContent = new Date(D.generated_at).toLocaleString();
+document.getElementById('fps').addEventListener('input', e => {
+  fps = parseInt(e.target.value);
+  document.getElementById('fv').textContent = fps;
+});
+
+const sc = document.getElementById('sc');
+
+D.strategies.forEach((strat, si) => {
+  const card = document.createElement('div');
+  card.className = 'strategy-card';
+  const aid = `a${si}`;
+
+  if (strat.error) {
+    card.innerHTML = `
+      <div class="strategy-header">
+        <h2>${strat.name}</h2>
+        <span class="strategy-timing">${strat.timing_s}s</span>
+      </div>
+      <div class="strategy-desc">${strat.description}</div>
+      <div class="error-banner">${strat.error}</div>`;
+    sc.appendChild(card);
+    return;
+  }
+
+  let sheetHtml = '';
+  if (strat.sheet) {
+    sheetHtml = `
+      <div class="sheet-col">
+        <a href="${strat.sheet}" target="_blank">
+          <img src="${strat.sheet}" alt="sheet">
+        </a>
+        <div class="label">Raw sheet</div>
+      </div>`;
+  }
+
+  let framesHtml = '';
+  strat.frames.forEach((f, fi) => {
+    const genIdx = strat.generation_order ? strat.generation_order.indexOf(fi + 1) + 1 : fi + 1;
+    framesHtml += `
+      <div class="frame-cell" data-a="${aid}" data-f="${fi}">
+        <div class="checker">
+          <img src="${f}" alt="f${fi+1}" onerror="this.style.opacity=0.2">
+        </div>
+        <div class="num">Frame ${fi+1}</div>
+        <div class="gen-order">gen #${genIdx}</div>
+      </div>`;
+  });
+
+  let promptsHtml = '';
+  strat.prompts.forEach((p, pi) => {
+    promptsHtml += `<div class="prompt-text">${p}</div>`;
+  });
+
+  card.innerHTML = `
+    <div class="strategy-header">
+      <h2>${strat.name}</h2>
+      <span class="strategy-timing">${strat.timing_s}s</span>
+    </div>
+    <div class="strategy-desc">${strat.description}</div>
+    <div class="strategy-body">
+      ${sheetHtml}
+      <div class="anim-col">
+        <div class="anim-preview" id="${aid}-p">
+          <div class="checker">
+            <canvas id="${aid}-c" width="128" height="128"></canvas>
+          </div>
+          <div class="po">||</div>
+        </div>
+        <div class="anim-label">Animated</div>
+      </div>
+      <div class="frames-strip">${framesHtml}</div>
+    </div>
+    <details><summary>Prompts (${strat.prompts.length})</summary>${promptsHtml}</details>`;
+  sc.appendChild(card);
+
+  const imgs = strat.frames.map(f => {
+    const img = new window.Image(); img.src = f; return img;
+  });
+  const st = { id: aid, fi: 0, paused: false, images: imgs, loaded: false };
+  if (imgs.length > 0) imgs[0].onload = () => { st.loaded = true; };
+  anims.push(st);
+
+  const pp = document.getElementById(`${aid}-p`);
+  if (pp) pp.addEventListener('click', () => {
+    st.paused = !st.paused;
+    pp.classList.toggle('paused', st.paused);
+  });
+});
+
+document.querySelectorAll('.frame-cell').forEach(t => {
+  t.addEventListener('click', e => {
+    e.stopPropagation();
+    const aid = t.dataset.a, fi = parseInt(t.dataset.f);
+    const st = anims.find(a => a.id === aid);
+    if (st) {
+      st.fi = fi; st.paused = true;
+      document.getElementById(`${aid}-p`).classList.add('paused');
+      draw(st);
+    }
+  });
+});
+
+function draw(st) {
+  const c = document.getElementById(`${st.id}-c`);
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, c.width, c.height);
+  const img = st.images[st.fi % st.images.length];
+  if (img && img.complete && img.naturalWidth > 0)
+    ctx.drawImage(img, 0, 0, c.width, c.height);
+  document.querySelectorAll(`[data-a="${st.id}"]`).forEach((t, i) =>
+    t.classList.toggle('active', i === st.fi % st.images.length));
+}
+
+let last = 0;
+function loop(ts) {
+  if (ts - last >= 1000/fps) {
+    last = ts;
+    anims.forEach(st => {
+      if (!st.paused && st.loaded && st.images.length > 0) {
+        st.fi = (st.fi + 1) % st.images.length;
+        draw(st);
+      }
+    });
+  }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+setTimeout(() => anims.forEach(draw), 500);
+</script>
+</body>
+</html>
