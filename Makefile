@@ -48,7 +48,7 @@ clear-sprites: ## Delete all cached sprites
 	rm -f backend/static/sprites/*.png
 
 stop: ## Stop all servers and clean up
-	@pkill -f "uvicorn backend.app.main:app" 2>/dev/null || true
+	@powershell -c 'Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $$_.OwningProcess -Force }' 2>/dev/null || true
 	@docker compose -f services/sglang/docker-compose.yml down 2>/dev/null || true
 	@echo "All servers stopped"
 

@@ -51,7 +51,17 @@ make dev-servers SERVICES=api      # just the backend
 | `make check` | Lint + typecheck + test |
 | `make fix` | Lint with autofix |
 | `make format` | Format code |
+| `make stop` | Stop all servers and clean up |
 | `make help` | Show all available targets |
+
+### CLI tools (no server needed)
+
+```bash
+make cli-create PROMPT="fire sword"   # run LLM creator, print JSON blueprint
+make cli-image PROMPT="a red sword"   # generate raw image (no bg removal)
+make cli-sprite PROMPT="fire sword"   # full pipeline: LLM → image → bg removal → crop
+make cli-status                       # check health of configured services
+```
 
 ## Documentation
 

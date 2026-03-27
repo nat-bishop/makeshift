@@ -5,7 +5,7 @@ Two SGLang instances run side-by-side on the same GPU:
 | Server | Model | Port | Purpose |
 |--------|-------|------|---------|
 | FLUX | FLUX.2-klein-9B (float8 via cache-dit) | 5100 | Image generation (Docker) |
-| LLM | Qwen/Qwen3.5-7B | 5200 | Object creation (PydanticAI agent) |
+| LLM | Qwen/Qwen3.5-9B | 5200 | Object creation (PydanticAI agent) |
 
 ## Prerequisites
 
@@ -43,7 +43,7 @@ make wait-llm                      # wait until LLM is ready
 
 Configure backend:
 ```env
-LLM_MODEL=Qwen/Qwen3.5-7B
+LLM_MODEL=Qwen/Qwen3.5-9B
 LOCAL_LLM_URL=http://127.0.0.1:5200/v1
 ```
 

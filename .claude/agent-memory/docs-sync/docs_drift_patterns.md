@@ -34,6 +34,23 @@ type: project
 **Why:** Drift between error threshold docs and code (3 vs 5) is a quick mislead. Always verify numeric constants from the actual GDScript file.
 **How to apply:** For any "disables after N errors" style gotcha, grep for the const before writing or reading the doc value.
 
+## CLI tools and Makefile targets (added commit 60b304a)
+
+- `make serve` does NOT exist — the correct target is `make dev-servers SERVICES=api`. CLAUDE.md had this wrong; now fixed.
+- CLI tools (`cli-create`, `cli-image`, `cli-sprite`, `cli-status`) call `backend/app/cli.py` via `python -m app.cli`. Entry point registered as `makeshift` in pyproject.toml.
+- `BG_REMOVAL_MODEL` env var was added (replaces the old `REMBG_MODEL`). Default: `briaai/RMBG-2.0`. Always check `.env.example` as the authoritative source for env var names and defaults.
+- `LOCAL_IMAGE_MODEL` in CLAUDE.md drifted from `.env.example` (4B vs 9B). `.env.example` is the canonical default for env vars; CLAUDE.md/README should match it.
+
+**Why:** Makefile targets are the ground truth for runnable commands. Any time commands change in the Makefile, CLAUDE.md Commands section and README.md Commands table both need updating.
+**How to apply:** When syncing docs after commits that touch the Makefile or `.env.example`, always read both files directly and cross-check every command and env var listed in CLAUDE.md and README.md.
+
+## Image pipeline multi-backend (commit 6e03ef7 onwards)
+
+- ARCHITECTURE.md step 3 said "Gemini generate" but there are now three backends: `gemini`, `local` (SGLang FLUX), `fal`. Step 3 must be backend-agnostic.
+- `services/sglang/README.md` tends to drift on model names (had 7B in table/config example, docker-compose uses 9B). Always verify model names from `docker-compose.yml`, not the README.
+
+**How to apply:** When image pipeline or sglang services change, check `docker-compose.yml` and `.env.example` together with `services/sglang/README.md` for model name consistency.
+
 ## Key structural decisions made during behavior system sync
 
 - BehaviorMaps is a RefCounted static class, NOT an autoload — noted in ARCHITECTURE.md to avoid confusion.

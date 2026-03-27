@@ -72,9 +72,12 @@ Full flow from player input to world-placed object with sprite:
                      "mixed media collage style paper cutout, side view, flat lighting,
                       clean edges, {name}, {visual_description},
                       single centered object, contrasting solid background color, no text"
-3. Gemini generate → gemini_client.generate_image(prompt) via IMAGE_MODEL
-4. Remove bg      → local rembg via gpu_bg.make_gpu_remover()
-                     or cloud fal.ai/birefnet (configured via BG_REMOVAL_BACKEND)
+3. Image generate → selected backend (IMAGE_BACKEND):
+                     gemini: Gemini image gen via IMAGE_MODEL
+                     local:  SGLang FLUX server (LOCAL_IMAGE_URL)
+                     fal:    fal.ai FLUX
+4. Remove bg      → local GPU PyTorch (BG_REMOVAL_MODEL, default briaai/RMBG-2.0)
+                     or cloud fal.ai/birefnet (BG_REMOVAL_BACKEND=cloud)
 5. Crop & fit     → LANCZOS resize to fill 90% of a 512×512 canvas (TEXTURE_RESOLUTION).
                      World display size is determined client-side by size_category.
 6. Cache write    → PNG saved to static/sprites/{hash}.png

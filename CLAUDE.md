@@ -9,7 +9,9 @@ Makeshift — "Scribblenauts meets Terraria." A 2D sandbox where players type de
 ## Commands
 
 ```bash
-make serve                     # run backend server
+make dev                       # start all servers + launch game
+make dev-servers               # start all servers (no game launch)
+make dev-servers SERVICES=api  # backend only (cloud LLM + cloud images)
 make test                      # run all tests
 make check                     # lint + typecheck + test
 make fix                       # autofix lint issues
@@ -82,9 +84,10 @@ Requires `.env` file (see `.env.example`):
 - `IMAGE_MODEL` — Gemini image model. Default: `gemini-3.1-flash-image-preview`
 - `IMAGE_BACKEND` — `gemini`, `local` (SGLang FLUX), or `fal`. Default: gemini
 - `LOCAL_IMAGE_URL` — SGLang FLUX server URL. Default: `http://127.0.0.1:5100`
-- `LOCAL_IMAGE_MODEL` — FLUX model name (cosmetic, server ignores it). Default: `black-forest-labs/FLUX.2-klein-9B`
+- `LOCAL_IMAGE_MODEL` — FLUX model name (cosmetic, server ignores it). Default: `black-forest-labs/FLUX.2-klein-4B`
 - `HF_TOKEN` — HuggingFace token for gated model downloads (FLUX.2-klein-9B)
-- `BG_REMOVAL_BACKEND` — `local` (rembg via `gpu_bg`) or `cloud` (fal.ai birefnet). Default: local
+- `BG_REMOVAL_BACKEND` — `local` (GPU via PyTorch) or `cloud` (fal.ai birefnet). Default: local
+- `BG_REMOVAL_MODEL` — HuggingFace BiRefNet model. Default: `briaai/RMBG-2.0`
 - `SPRITE_CACHE_ENABLED` — toggles sprite cache read/write. Default: true
 - Other settings have sensible defaults (budget $1.00, timeouts 15s/30s, max 3 concurrent images)
 
