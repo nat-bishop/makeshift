@@ -1,4 +1,4 @@
-"""GPU-accelerated background removal using BiRefNet via PyTorch + CUDA."""
+"""GPU-accelerated background removal using RMBG-2.0 (BiRefNet architecture) via PyTorch + CUDA."""
 
 from __future__ import annotations
 
@@ -36,10 +36,12 @@ def _load_model() -> tuple[Any, torch.device, transforms.Compose]:
         from transformers import AutoModelForImageSegmentation
 
         _device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        logger.info("birefnet_loading", device=str(_device))
+        logger.info("bg_model_loading", model=settings.bg_removal_model, device=str(_device))
+
+        from app.config import settings
 
         _model = AutoModelForImageSegmentation.from_pretrained(
-            "ZhengPeng7/BiRefNet",
+            settings.bg_removal_model,
             trust_remote_code=True,
         )
         _model.to(_device).eval()
@@ -53,7 +55,8 @@ def _load_model() -> tuple[Any, torch.device, transforms.Compose]:
         ])
 
         logger.info(
-            "birefnet_loaded",
+            "bg_model_loaded",
+            model=settings.bg_removal_model,
             device=str(_device),
             dtype="float16" if _device.type == "cuda" else "float32",
         )

@@ -5,7 +5,7 @@ services:
     ports:
       - "5100:5100"
     volumes:
-      - ${HF_CACHE:-hf-cache}:/root/.cache/huggingface
+      - ${HF_CACHE:-C:/Users/Nat/.cache/huggingface}:/root/.cache/huggingface
     environment:
       - HF_TOKEN=${HF_TOKEN:-}
       - SGLANG_ENABLE_JIT_DEEPGEMM=0
@@ -47,5 +47,3 @@ services:
               count: 1
               capabilities: [gpu]
 
-volumes:
-  hf-cache:

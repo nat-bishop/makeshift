@@ -4,7 +4,7 @@ Two SGLang instances run side-by-side on the same GPU:
 
 | Server | Model | Port | Purpose |
 |--------|-------|------|---------|
-| FLUX | FLUX.2-klein-4B (bf16) | 5100 | Image generation (Docker) |
+| FLUX | FLUX.2-klein-9B (float8 via cache-dit) | 5100 | Image generation (Docker) |
 | LLM | Qwen/Qwen3.5-7B | 5200 | Object creation (PydanticAI agent) |
 
 ## Prerequisites
@@ -22,13 +22,15 @@ make wait-gpu           # wait until ready
 make stop-gpu           # stop
 ```
 
-First run builds Docker image and downloads model (~24GB). Subsequent runs use cache.
+First run builds Docker image and downloads model (~45GB). Subsequent runs use cache.
+Uses `--backend diffusers` with cache-dit torchao float8 quantization (~0.45s/image at 512x512).
 
 Configure backend:
 ```env
 IMAGE_BACKEND=local
 LOCAL_IMAGE_URL=http://127.0.0.1:5100
-LOCAL_IMAGE_MODEL=black-forest-labs/FLUX.2-klein-4B
+LOCAL_IMAGE_MODEL=black-forest-labs/FLUX.2-klein-9B
+HF_TOKEN=hf_...  # required for gated 9B model
 ```
 
 ## LLM Server (Qwen 3.5)

@@ -46,6 +46,7 @@ Enforced by Pydantic validators on `CreatorOutput`. Violations trigger `ModelRet
 - Priority (higher fires first)
 - Whether bidirectional (A↔B or only A→B)
 - Whether cascade-eligible (can trigger chain reactions)
+- `trigger_mode`: CONTACT (default) or FIELD
 - Effects to apply
 
 ### Design Philosophy
@@ -54,23 +55,31 @@ Enforced by Pydantic validators on `CreatorOutput`. Violations trigger `ModelRet
 
 **Chain reactions**: Cascade-eligible rules create emergent gameplay. Igniting one flammable object spreads HEAT_SOURCE to neighbors, which may ignite more flammable objects. Depth-limited to 3 to prevent infinite loops.
 
+**Distance-based interactions**: 18 rules are annotated `trigger_mode=FIELD`. These fire both at range (via `TagField`) and on direct contact. The rule declares *whether* an interaction works at distance; `FieldConfig` declares *how far* and *how* for the emitting tag. Separating these concerns avoids duplicating range values across rules that share the same emitting tag.
+
 **Counters exist**: Every powerful interaction has a counter. INSULATING blocks ELECTRIC propagation. REFLECTIVE bounces HEAT_SOURCE. LIQUID extinguishes HEAT_SOURCE. This creates a rock-paper-scissors dynamic.
 
 ### Rule Categories
 
-| Category | Example rules | Cascade? |
-|----------|--------------|----------|
-| Fire/Heat | HEAT_SOURCE + FLAMMABLE → ignite, + FROZEN → melt, + EXPLOSIVE → detonate | Yes (ignite) |
-| Water/Cold | LIQUID + HEAT_SOURCE → extinguish, COLD + LIQUID → freeze | No |
-| Electricity | ELECTRIC + CONDUCTING → electrify + propagate, ELECTRIC + LIQUID → electrify, ELECTRIC + FLAMMABLE → spark ignition, ELECTRIC + GAS → ionize plasma | Yes (conduction, spark, ionize) |
-| Physical | SHARP + BREAKABLE → damage, HEAVY + BREAKABLE → damage, BOUNCY + anything → force | No |
-| Counter | INSULATING blocks ELECTRIC, REFLECTIVE reflects HEAT_SOURCE | No |
-| Magnetic | MAGNETIC + CONDUCTING → attract force | No |
-| Environmental | WIND_SOURCE + LIGHT → push, CORROSIVE + BREAKABLE → corrode, TOXIC + LIVING → damage | No |
+| Category | Example rules | Cascade? | Field? |
+|----------|--------------|----------|--------|
+| Fire/Heat | HEAT_SOURCE + FLAMMABLE → ignite, + FROZEN → melt, LIQUID + HEAT_SOURCE → extinguish | Yes (ignite) | Yes |
+| Temperature | COLD + LIQUID → freeze, COLD + MOLTEN → solidify, HOT + LIVING → burn | No | Yes |
+| Electricity | ELECTRIC + CONDUCTING → electrify + propagate, + LIQUID → electrify, + FLAMMABLE → spark ignition, + GAS → ionize plasma | Yes (conduction, spark, ionize) | Yes (conduction, liquid, gas) |
+| Physical | SHARP + BREAKABLE → damage, HEAVY + BREAKABLE → damage, BOUNCY + RIGID → bounce | No | No |
+| Counter | INSULATING blocks ELECTRIC, REFLECTIVE reflects HEAT_SOURCE/ELECTRIC | No | No |
+| Magnetic/Wind | MAGNETIC + CONDUCTING → attract, WIND_SOURCE + LIGHT/GAS/FLOATING → push | No | Yes |
+| Environmental | CORROSIVE + BREAKABLE → corrode, TOXIC + LIVING → damage | No | Yes (TOXIC) |
+
+### Field Modes
+
+Rules with `trigger_mode=FIELD` execute via two paths:
+- **Continuous** (WIND_SOURCE, MAGNETIC, GLOWING): `apply_central_force()` per physics frame via `TagField._physics_process`. Forces are tuned for per-frame application.
+- **Periodic** (HEAT_SOURCE, HOT, ELECTRIC, COLD, TOXIC, LIQUID): `resolve_collision()` on a 2s timer. Full rule engine evaluation, subject to the 0.5s pair cooldown.
 
 ### Wildcard Rules
 
-Rules with empty `tags_required_b` match any second object. Used for unconditional effects: STICKY + anything creates adhesion.
+Rules with empty `tags_required_b` match any second object. Used for unconditional effects.
 
 ## Behavior System
 

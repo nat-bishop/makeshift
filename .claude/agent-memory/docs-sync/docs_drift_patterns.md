@@ -23,6 +23,17 @@ type: project
 - ARCHITECTURE.md Object Creation Pipeline step 7: `placeholder_png_base64` was fully removed from `CreateObjectResponse` — no placeholder generated, no base64 sent. On `sprite_failed`, placement proceeds without a texture (ghost has no sprite). Any mention of "placeholder" in pipeline steps or signal tables is stale.
 - ARCHITECTURE.md Image pipeline step 5: previously described per-size LANCZOS resize to SIZE_PIXEL_MAP values (32-128px). Now saves at 512×512 (TEXTURE_RESOLUTION); client-side size_category determines world display size. Prompt style also changed from "pixel art" to "mixed media collage style paper cutout" — both the prompt text and the output size are drift-prone.
 
+## Key structural decisions made during field system sync
+
+- `trigger_mode` on `InteractionRule` is a backend data model field but its primary consumer is the Godot client (`TagField`, `CollisionResolver`). When new FIELD rules are added to `rules_data.py`, the only doc impact is the rule count in CLAUDE.md and GAME_DESIGN.md.
+- `FieldConfig` is a static class (like `BehaviorMaps`), not an autoload — listed in CLAUDE.md "Key systems" paragraph.
+- `TagField` is a per-object child node (like `BehaviorExecutor`), not an autoload — listed in "Key systems" paragraph. Both share the same lazy-instantiation pattern from `game_object.gd`.
+- The physics table in ARCHITECTURE.md added an "Extra" column for STICKY's PinJoint2D behavior. If more tags get non-physics side effects, extend that column rather than adding prose.
+- ARCHITECTURE.md Error fallback section for `BehaviorExecutor` said "3 errors" but code has `MAX_BEHAVIOR_ERRORS = 5`. Corrected. When checking error thresholds, read the const directly.
+
+**Why:** Drift between error threshold docs and code (3 vs 5) is a quick mislead. Always verify numeric constants from the actual GDScript file.
+**How to apply:** For any "disables after N errors" style gotcha, grep for the const before writing or reading the doc value.
+
 ## Key structural decisions made during behavior system sync
 
 - BehaviorMaps is a RefCounted static class, NOT an autoload — noted in ARCHITECTURE.md to avoid confusion.

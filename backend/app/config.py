@@ -27,9 +27,10 @@ class Settings(BaseSettings):
     image_model: str = "gemini-3.1-flash-image-preview"
     image_backend: Literal["gemini", "local", "fal"] = "gemini"
     local_image_url: str = "http://127.0.0.1:5100"
-    local_image_model: str = "black-forest-labs/FLUX.2-klein-4B"
+    local_image_model: str = "black-forest-labs/FLUX.2-klein-9B"
     fal_image_model: str = "fal-ai/flux/schnell"
     bg_removal_backend: Literal["local", "cloud"] = "local"
+    bg_removal_model: str = "briaai/RMBG-2.0"
     sprite_cache_enabled: bool = True
 
     # Logging

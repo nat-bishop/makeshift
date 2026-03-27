@@ -19,8 +19,10 @@ Godot 4 Client                          FastAPI Backend
 │   └─ EffectExecutor                  │                          │
 │                                      │                          │
 │ GameObject                           │                          │
-│   └─ BehaviorExecutor (child node)   │                          │
-│        └─ BehaviorMaps               │                          │
+│   ├─ BehaviorExecutor (child node)   │                          │
+│   │    └─ BehaviorMaps               │                          │
+│   └─ TagField (child node, optional) │                          │
+│        └─ FieldConfig                │                          │
 └──────────────────┘                   └──────────────────────────┘
 ```
 
@@ -102,9 +104,72 @@ Full flow from player input to world-placed object with sprite:
 2. Scan wildcard rules for subset matches
 3. Deduplicate by `rule_id`, sort by priority descending
 
+**`TriggerMode`** (`models/rules.py`): StrEnum — `CONTACT` (default) | `FIELD`. 18 of 45 rules are annotated `trigger_mode=TriggerMode.FIELD`. FIELD rules also fire on contact — `trigger_mode` is purely a filter used client-side by `TagField` and `CollisionResolver.resolve_collision(trigger_mode_filter=...)`.
+
 ### Godot: `autoloads/rule_engine.gd`
 
 Mirrors the backend resolver. Rules are loaded from session response JSON (`Backend.create_session()` or `Backend.restore_session()`). Same two-tier index, same matching logic. Exists so collision resolution doesn't require a server round-trip.
+
+## Field System
+
+Distance-based and continuous tag interactions. Objects with field-emitting tags affect nearby objects without requiring direct collision.
+
+### Design split: rules declare mode, tags declare range
+
+`InteractionRule.trigger_mode = FIELD` declares that an interaction works at distance. `FieldConfig` (per-tag) declares *how far* and *how* (continuous or periodic). This prevents duplicating range values across rules that share the same emitting tag.
+
+### FieldConfig (`godot/scripts/data/field_config.gd`)
+
+Static class. Maps field-emitting tags to range category and mode:
+
+| Tag | Range | Mode |
+|-----|-------|------|
+| WIND_SOURCE | FAR (192px) | continuous |
+| MAGNETIC | MEDIUM (96px) | continuous |
+| GLOWING | MEDIUM (96px) | continuous |
+| HEAT_SOURCE | CLOSE (64px) | periodic |
+| HOT | CLOSE (64px) | periodic |
+| ELECTRIC | CLOSE (64px) | periodic |
+| COLD | CLOSE (64px) | periodic |
+| TOXIC | MEDIUM (96px) | periodic |
+| LIQUID | CLOSE (64px) | periodic |
+
+`PERIODIC_INTERVAL = 2.0s`. Range categories: CLOSE=64px, MEDIUM=96px, FAR=192px.
+
+### TagField (`godot/scripts/systems/tag_field.gd`)
+
+Node child of `GameObject` (same lifecycle pattern as `BehaviorExecutor`). Created when field tags are present:
+
+```
+init_from_blueprint()
+  └─ FieldConfig.has_any_field_tag(tags)? → _create_tag_field()
+       └─ TagField.init_field(owner, tags) → _rebuild(tags)
+
+add_tag(tag)  [dynamic, e.g. fire spread adds HEAT_SOURCE]
+  └─ _tag_field != null → on_tags_changed(tags)
+     else → FieldConfig.has_any_field_tag(tags)? → _create_tag_field()
+```
+
+**`_rebuild(tags)`**:
+1. Collects current field tags; short-circuits if unchanged
+2. Pre-caches continuous FIELD rules via `RuleEngine.find_matching_rules()` → `_cached_continuous`
+3. Creates/resizes one Area2D (CircleShape2D) at max range across all field tags
+4. Manages periodic Timer (reuse if exists; first tick fires immediately via `call_deferred`)
+5. Toggles `_physics_process` and `can_sleep` based on whether continuous fields are present
+
+**Continuous mode** (`_physics_process`): For each body overlapping the Area2D, applies `APPLY_FORCE` effects from pre-cached continuous rules directly via `apply_central_force()`. Per-tag center-to-center distance check (1.5× range margin to account for shape overlap).
+
+**Periodic mode** (`_on_periodic_tick`): Every 2s, calls `CollisionResolver.resolve_collision(owner, body, 0, "FIELD")` for each overlapping body in range. The `"FIELD"` filter makes `CollisionResolver` skip CONTACT-only rules. Pair cooldown (0.5s) prevents the same rule firing twice in quick succession via both contact and field paths.
+
+**Detection geometry**: Shape-vs-shape Area2D overlap — accounts for object sizes automatically. One Area2D per field object at max range across all field tags (not one per tag).
+
+### Cascade interaction with field
+
+Field-ignited objects become new field sources. When a rule adds HEAT_SOURCE (e.g., ignition), `game_object.gd` lazy-creates a `TagField` on that object. Each field periodic tick starts at `cascade_depth=0`, allowing unbounded propagation over time. The depth-3 cap per tick prevents instant chain explosions — fire spreads one step per 2s period.
+
+### STICKY joint (`collision_resolver.gd`)
+
+On direct contact (`cascade_depth == 0`), if either body has STICKY tag, `CollisionResolver._check_sticky_joint()` creates a `PinJoint2D` (softness=0.1) pinning the two bodies together. Joint is added as a child of body_a. Auto-cleans when either body is destroyed via `tree_exiting` signal; `_on_sticky_body_freed` also disconnects the stale signal on the surviving body and erases the entry from `_sticky_joints`. STICKY is contact-only — no field range.
 
 ## Behavior System
 
@@ -162,7 +227,7 @@ on_tag_added(tag)  # called by GameObject.add_tag()
   └─ ON_TAG_ADDED → dispatch if trigger_tag matches
 ```
 
-**Error fallback**: `BehaviorExecutor` tracks consecutive action failures. After 3 consecutive errors it sets `_disabled = true` — the executor stops processing permanently.
+**Error fallback**: `BehaviorExecutor` tracks consecutive action failures per behavior index. After 5 errors on the same behavior (`MAX_BEHAVIOR_ERRORS`), that behavior is added to `_disabled_behaviors` and skipped permanently. Other behaviors on the same object continue running.
 
 **Movement uses `apply_central_force()`** with velocity clamping against `BehaviorMaps.SPEED_MAX`. This composes with existing `PhysicsApplicator` mass/friction/gravity settings.
 
@@ -215,13 +280,15 @@ Direct `DEAL_DAMAGE` from behaviors bypasses the rule engine — no double-dippi
 ```
 body_entered signal (from GameObject)
   └─ call_deferred("_resolve_deferred", body)   # deferred to avoid physics flush crash
-       └─ resolve_collision(body_a, body_b, cascade_depth=0)
+       └─ resolve_collision(body_a, body_b, cascade_depth=0, trigger_mode_filter="")
             ├─ Cooldown check: pair key "id_a:id_b" (sorted), skip if < 0.5s
             ├─ Extract tags: get_effective_tags() (player) or get_tags() (object)
             ├─ RuleEngine.find_matching_rules(tags_a, tags_b)
+            ├─ Filter by trigger_mode_filter if non-empty (e.g., "FIELD" from TagField)
             ├─ Record tags_before snapshot
             ├─ For each matched rule: EffectExecutor.execute(rule, body_a, body_b)
             ├─ Set cooldown timestamp
+            ├─ STICKY check (cascade_depth==0 only): _check_sticky_joint()
             └─ Cascade check (if any rule was cascade_eligible):
             ├─ Compare tags_before vs tags_after
             └─ If changed: _cascade_to_neighbors(body, depth + 1)
@@ -230,6 +297,8 @@ body_entered signal (from GameObject)
 ```
 
 **Constants**: `COOLDOWN_TIME = 0.5s`, `MAX_CASCADE_DEPTH = 3`, `CASCADE_RADIUS = 96px`. Cooldowns cleaned up every 5s.
+
+**`trigger_mode_filter`**: When `"FIELD"`, only rules with `trigger_mode == "FIELD"` are executed. Contact-originated calls pass `""` (no filter), so ALL rules (including FIELD) fire on contact. The pair cooldown prevents double-firing within 0.5s when the same pair interacts via both paths.
 
 ### Effect Executor & World Mutations
 
@@ -257,15 +326,15 @@ body_entered signal (from GameObject)
 
 `scenes/game_object/physics_applicator.gd` maps tags to RigidBody2D physics properties:
 
-| Tag | Mass | Gravity | Friction | Bounce |
-|-----|------|---------|----------|--------|
-| HEAVY | ×3.0 | — | — | — |
-| LIGHT | ×0.3 | — | — | — |
-| FLOATING | — | 0.2 | — | — |
-| SLIPPERY | — | — | 0.0 | — |
-| STICKY | — | — | 2.0 | — |
-| BOUNCY | — | — | — | 0.8 |
-| Default | 1.0 | 1.0 | 0.5 | 0.0 |
+| Tag | Mass | Gravity | Friction | Bounce | Extra |
+|-----|------|---------|----------|--------|-------|
+| HEAVY | ×3.0 | — | — | — | — |
+| LIGHT | ×0.3 | — | — | — | — |
+| FLOATING | — | 0.2 | — | — | — |
+| SLIPPERY | — | — | 0.0 | — | — |
+| STICKY | — | — | 2.0 | — | PinJoint2D on contact |
+| BOUNCY | — | — | — | 0.8 | — |
+| Default | 1.0 | 1.0 | 0.5 | 0.0 | — |
 
 Tag mutations (via `add_tag`/`remove_tag`) trigger `_reapply_physics()` to recalculate.
 

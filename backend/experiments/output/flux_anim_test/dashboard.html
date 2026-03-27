@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FLUX Animation Test</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI', system-ui, sans-serif; padding: 24px; }
+  h1 { font-size: 22px; margin-bottom: 4px; color: #fff; }
+  h2 { font-size: 16px; color: #9ecfff; margin-bottom: 8px; }
+  .meta { font-size: 12px; color: #888; margin-bottom: 20px; }
+  .controls { display: flex; gap: 16px; align-items: center; margin-bottom: 20px; padding: 10px 16px; background: #16213e; border: 1px solid #2a2a4a; border-radius: 8px; }
+  .controls label { font-size: 13px; color: #888; }
+  .controls input[type=range] { width: 120px; }
+  .controls .val { font-size: 13px; color: #fff; min-width: 30px; }
+  .card { background: #16213e; border: 1px solid #2a2a4a; border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  .card-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+  .card-timing { font-size: 11px; color: #555; margin-left: auto; }
+  .anim-tag { display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 3px; background: #1b3a2a; color: #8fc; margin-bottom: 6px; }
+  .card-body { display: flex; gap: 12px; align-items: flex-start; }
+  .sheet-col { flex-shrink: 0; text-align: center; }
+  .sheet-col img { width: 200px; height: 200px; border: 1px solid #333; border-radius: 4px; cursor: pointer; }
+  .sheet-col .label { font-size: 9px; color: #555; margin-top: 2px; }
+  .anim-col { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+  .anim-preview { cursor: pointer; position: relative; }
+  .anim-preview canvas { border: 1px solid #333; border-radius: 4px; }
+  .anim-preview .po { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 20px; color: rgba(255,255,255,0.5); pointer-events: none; display: none; }
+  .anim-preview.paused .po { display: block; }
+  .checker { background-image: linear-gradient(45deg, #252535 25%, transparent 25%), linear-gradient(-45deg, #252535 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #252535 75%), linear-gradient(-45deg, transparent 75%, #252535 75%); background-size: 16px 16px; background-position: 0 0, 0 8px, 8px -8px, -8px 0; border: 1px solid #333; border-radius: 4px; display: inline-block; }
+  .frames-strip { display: flex; gap: 6px; flex-wrap: wrap; }
+  .frame-cell { cursor: pointer; }
+  .frame-cell img { width: 80px; height: 80px; border: 2px solid transparent; border-radius: 3px; }
+  .frame-cell.active img { border-color: #5588cc; }
+  .cell-descs { margin-top: 8px; list-style: none; padding: 0; }
+  .cell-descs li { font-size: 10px; color: #999; margin-bottom: 4px; padding: 6px 8px; background: #0f1a2e; border-radius: 4px; line-height: 1.4; }
+  .cell-descs li strong { color: #7b8794; }
+  details { margin-top: 6px; }
+  summary { font-size: 11px; color: #666; cursor: pointer; }
+  .prompt-text { font-size: 9px; color: #666; margin: 4px 0; white-space: pre-wrap; word-break: break-word; padding: 6px; background: #0a0f1e; border-radius: 4px; max-height: 200px; overflow-y: auto; }
+  .error-banner { background: #2a1520; border: 1px solid #4a2030; color: #f08080; padding: 8px; border-radius: 6px; font-size: 12px; }
+</style>
+</head>
+<body>
+<h1>FLUX Animation Test</h1>
+<div class="meta">Image: FLUX.2 Klein 9B (local, /v1/images/edits with template) | Text: gemini-3.1-flash-lite-preview</div>
+<div class="controls">
+  <label>FPS:</label><input type="range" id="fps" min="1" max="8" value="4">
+  <span class="val" id="fv">4</span>
+</div>
+<div id="sc"></div>
+<script>
+const D = {
+  "generated_at": "2026-03-27T09:47:46.113138+00:00",
+  "image_model": "FLUX.2 Klein 9B (local)",
+  "text_model": "gemini-3.1-flash-lite-preview",
+  "results": [
+    {
+      "id": "knight",
+      "desc": "a knight in plate armor with a sword and red cape",
+      "animation_type": "walk",
+      "cells": {
+        "1": "The knight is at the lowest point of the stride, facing toward the right edge with legs in a wide stance. The leading leg is bent forward, the trailing leg is extended backward, and the cape is bunched slightly behind the torso.",
+        "2": "The knight is at the highest, most compressed passing position, facing toward the right edge with legs brought close together. The body is upright and tall, and the cape flows smoothly behind the back.",
+        "3": "The knight is at a low point again, facing toward the right edge, but with the OTHER leg leading in a wide stride. The leading leg is bent forward, the trailing leg is extended backward, and the cape trails further out behind.",
+        "4": "The knight returns to a tall, narrow passing position, facing toward the right edge with legs close together. The torso is vertical, the sword is held steady, and the cape is captured in a high-arched motion behind the figure."
+      },
+      "prompt": "A sprite sheet for a 2D video game. A 2x2 grid with 4 equal cells separated by thin red lines on a dark background. Each cell contains one frame of a walk cycle animation. The character is shown in side view facing right, moving toward the right edge. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nCHARACTER: A knight in full silver plate armor with a closed visor helmet, red cape flowing behind, brown leather belt with a sheathed sword, steel gauntlets and greaves.\n\nCell 1 (top-left): The knight is at the lowest point of the stride, facing toward the right edge with legs in a wide stance. The leading leg is bent forward, the trailing leg is extended backward, and the cape is bunched slightly behind the torso.\n\nCell 2 (top-right): The knight is at the highest, most compressed passing position, facing toward the right edge with legs brought close together. The body is upright and tall, and the cape flows smoothly behind the back.\n\nCell 3 (bottom-left): The knight is at a low point again, facing toward the right edge, but with the OTHER leg leading in a wide stride. The leading leg is bent forward, the trailing leg is extended backward, and the cape trails further out behind.\n\nCell 4 (bottom-right): The knight returns to a tall, narrow passing position, facing toward the right edge with legs close together. The torso is vertical, the sword is held steady, and the cape is captured in a high-arched motion behind the figure.\n\nCRITICAL RULES:\n- The character faces toward the RIGHT edge in ALL FOUR cells. No cell shows the character facing left.\n- Every cell shows a VISIBLY DIFFERENT pose. Cells 1 and 3 show wide, low strides with legs far apart. Cells 2 and 4 show narrow, tall passing poses with the legs close together. If two cells look the same, the animation fails.\n- The character looks IDENTICAL in all cells \u2014 same proportions, colors, art style. Only the pose changes.\n- Full body visible in every cell, centered. Flat solid dark background. No text, no labels, no watermarks.",
+      "sheet": "knight/sheet.png",
+      "frames": [
+        "knight/frame_1.png",
+        "knight/frame_2.png",
+        "knight/frame_3.png",
+        "knight/frame_4.png"
+      ],
+      "timing_s": 37.35,
+      "error": null
+    },
+    {
+      "id": "slime",
+      "desc": "a cheerful green slime blob with big eyes",
+      "animation_type": "bounce",
+      "cells": {
+        "1": "The slime is fully squashed against the ground, wide and low with a flat base. The top of the blob is rounded and the eyes are positioned low, facing toward the right edge.",
+        "2": "The slime is in mid-air, stretched vertically into a tall, narrow oval shape. It is reaching toward the right edge, with the eyes pulled upward and the base tapering to a point.",
+        "3": "The slime is landing, flattened out wide again but slightly different from cell 1, with the blob bulging toward the right edge. The silhouette is very wide and low, suggesting high impact.",
+        "4": "The slime is rising upward again, stretched into a tall, narrow teardrop shape leaning toward the right edge. It is thinner than cell 2, with eyes positioned near the top of the elongated body."
+      },
+      "prompt": "A sprite sheet for a 2D video game. A 2x2 grid with 4 equal cells separated by thin red lines on a dark background. Each cell contains one frame of a bounce cycle animation. The character is shown in side view facing right, moving toward the right edge. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nCHARACTER: A cheerful bright green slime blob with a rounded dome shape, two large oval white eyes with black pupils near the top, a small open smile, slightly translucent body with a subtle shine.\n\nCell 1 (top-left): The slime is fully squashed against the ground, wide and low with a flat base. The top of the blob is rounded and the eyes are positioned low, facing toward the right edge.\n\nCell 2 (top-right): The slime is in mid-air, stretched vertically into a tall, narrow oval shape. It is reaching toward the right edge, with the eyes pulled upward and the base tapering to a point.\n\nCell 3 (bottom-left): The slime is landing, flattened out wide again but slightly different from cell 1, with the blob bulging toward the right edge. The silhouette is very wide and low, suggesting high impact.\n\nCell 4 (bottom-right): The slime is rising upward again, stretched into a tall, narrow teardrop shape leaning toward the right edge. It is thinner than cell 2, with eyes positioned near the top of the elongated body.\n\nCRITICAL RULES:\n- The character faces toward the RIGHT edge in ALL FOUR cells. No cell shows the character facing left.\n- Every cell shows a VISIBLY DIFFERENT pose. Cells 1 and 3 show squashed flat shapes (wide, low). Cells 2 and 4 show stretched tall shapes (narrow, high). If two cells look the same, the animation fails.\n- The character looks IDENTICAL in all cells \u2014 same proportions, colors, art style. Only the pose changes.\n- Full body visible in every cell, centered. Flat solid dark background. No text, no labels, no watermarks.",
+      "sheet": "slime/sheet.png",
+      "frames": [
+        "slime/frame_1.png",
+        "slime/frame_2.png",
+        "slime/frame_3.png",
+        "slime/frame_4.png"
+      ],
+      "timing_s": 16.42,
+      "error": null
+    },
+    {
+      "id": "wolf",
+      "desc": "a grey wolf",
+      "animation_type": "walk",
+      "cells": {
+        "1": "The wolf is in a low, wide-stride position facing toward the right edge. The front leading leg is extended forward, the back trailing leg is pushing off, and the body is at its lowest point.",
+        "2": "The wolf is in a tall, narrow passing pose facing toward the right edge. The legs are gathered close together under the torso, and the back is arched slightly upward to show vertical height.",
+        "3": "The wolf is in a wide-stride position mirroring Cell 1 but with the other set of limbs leading. The wolf faces toward the right edge with a low profile and maximum horizontal stretch.",
+        "4": "The wolf is in a tall, narrow passing pose mirroring Cell 2. The legs are gathered beneath the body while the wolf continues moving toward the right edge, preparing to cycle back to the first frame."
+      },
+      "prompt": "A sprite sheet for a 2D video game. A 2x2 grid with 4 equal cells separated by thin red lines on a dark background. Each cell contains one frame of a walk cycle animation. The character is shown in side view facing right, moving toward the right edge. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nCHARACTER: A grey wolf with thick fur, pointed ears, a bushy tail, yellow eyes, dark grey back and lighter grey underbelly, four strong legs with dark paws.\n\nCell 1 (top-left): The wolf is in a low, wide-stride position facing toward the right edge. The front leading leg is extended forward, the back trailing leg is pushing off, and the body is at its lowest point.\n\nCell 2 (top-right): The wolf is in a tall, narrow passing pose facing toward the right edge. The legs are gathered close together under the torso, and the back is arched slightly upward to show vertical height.\n\nCell 3 (bottom-left): The wolf is in a wide-stride position mirroring Cell 1 but with the other set of limbs leading. The wolf faces toward the right edge with a low profile and maximum horizontal stretch.\n\nCell 4 (bottom-right): The wolf is in a tall, narrow passing pose mirroring Cell 2. The legs are gathered beneath the body while the wolf continues moving toward the right edge, preparing to cycle back to the first frame.\n\nCRITICAL RULES:\n- The character faces toward the RIGHT edge in ALL FOUR cells. No cell shows the character facing left.\n- Every cell shows a VISIBLY DIFFERENT pose. Cells 1 and 3 show wide, low-slung strides with limbs spread apart. Cells 2 and 4 show compact, taller passing poses where the legs are closer together. If two cells look the same, the animation fails.\n- The character looks IDENTICAL in all cells \u2014 same proportions, colors, art style. Only the pose changes.\n- Full body visible in every cell, centered. Flat solid dark background. No text, no labels, no watermarks.",
+      "sheet": "wolf/sheet.png",
+      "frames": [
+        "wolf/frame_1.png",
+        "wolf/frame_2.png",
+        "wolf/frame_3.png",
+        "wolf/frame_4.png"
+      ],
+      "timing_s": 15.62,
+      "error": null
+    },
+    {
+      "id": "jellyfish",
+      "desc": "a bioluminescent jellyfish floating in air",
+      "animation_type": "float",
+      "cells": {
+        "1": "The jellyfish bell is fully expanded and wide, positioned at a low point in the frame. The tentacles are spread out horizontally beneath the bell, trailing slightly toward the left edge as if drifting forward.",
+        "2": "The bell is pulled into a tall, narrow, and compressed shape, positioned higher in the frame. The tentacles are bunched together directly beneath the bell, hanging straight down in a compact cluster.",
+        "3": "The bell returns to its wide, flattened, and expanded state, positioned at the same low point as Cell 1. The tentacles are fanned out wide again, with the tips curling slightly upward due to the momentum of the descent.",
+        "4": "The bell is back to a tall, narrow, and vertical silhouette, positioned high in the frame like Cell 2. The tentacles are elongated and swaying toward the right edge, creating a sense of forward drifting motion."
+      },
+      "prompt": "A sprite sheet for a 2D video game. A 2x2 grid with 4 equal cells separated by thin red lines on a dark background. Each cell contains one frame of a float cycle animation. The character is shown in side view facing right, moving toward the right edge. Mixed media collage style paper cutout art, flat lighting, clean edges.\n\nCHARACTER: A translucent bioluminescent jellyfish with a smooth bell-shaped dome glowing soft blue-purple, long trailing tentacles that fade to transparent at the tips, small glowing dots along the tentacles.\n\nCell 1 (top-left): The jellyfish bell is fully expanded and wide, positioned at a low point in the frame. The tentacles are spread out horizontally beneath the bell, trailing slightly toward the left edge as if drifting forward.\n\nCell 2 (top-right): The bell is pulled into a tall, narrow, and compressed shape, positioned higher in the frame. The tentacles are bunched together directly beneath the bell, hanging straight down in a compact cluster.\n\nCell 3 (bottom-left): The bell returns to its wide, flattened, and expanded state, positioned at the same low point as Cell 1. The tentacles are fanned out wide again, with the tips curling slightly upward due to the momentum of the descent.\n\nCell 4 (bottom-right): The bell is back to a tall, narrow, and vertical silhouette, positioned high in the frame like Cell 2. The tentacles are elongated and swaying toward the right edge, creating a sense of forward drifting motion.\n\nCRITICAL RULES:\n- The character faces toward the RIGHT edge in ALL FOUR cells. No cell shows the character facing left.\n- Every cell shows a VISIBLY DIFFERENT pose. Cells 1 and 3 show the bell at maximum width and low height. Cells 2 and 4 show the bell in a narrow, tall, and contracted state. If two cells look the same, the animation fails.\n- The character looks IDENTICAL in all cells \u2014 same proportions, colors, art style. Only the pose changes.\n- Full body visible in every cell, centered. Flat solid dark background. No text, no labels, no watermarks.",
+      "sheet": "jellyfish/sheet.png",
+      "frames": [
+        "jellyfish/frame_1.png",
+        "jellyfish/frame_2.png",
+        "jellyfish/frame_3.png",
+        "jellyfish/frame_4.png"
+      ],
+      "timing_s": 15.78,
+      "error": null
+    }
+  ]
+};
+let fps = 4;
+const anims = [];
+document.getElementById('fps').addEventListener('input', e => {
+  fps = parseInt(e.target.value);
+  document.getElementById('fv').textContent = fps;
+});
+const sc = document.getElementById('sc');
+D.results.forEach((v, vi) => {
+  const aid = 'a' + vi;
+  const card = document.createElement('div');
+  card.className = 'card';
+  if (v.error) {
+    card.innerHTML = `<div class="card-header"><h2>${v.id} — ${v.desc}</h2></div><div class="error-banner">${v.error}</div>`;
+    sc.appendChild(card);
+    return;
+  }
+  let fH = '';
+  (v.frames || []).forEach((f, fi) => {
+    fH += `<div class="frame-cell" data-a="${aid}" data-f="${fi}"><div class="checker"><img src="${f}" onerror="this.style.opacity=0.2"></div></div>`;
+  });
+  let cH = '';
+  if (v.cells) Object.entries(v.cells).forEach(([k, d]) => {
+    cH += `<li><strong>Cell ${k}:</strong> ${d}</li>`;
+  });
+  card.innerHTML = `
+    <div class="card-header">
+      <h2>${v.id} <span style="color:#888;font-size:13px">— ${v.desc}</span></h2>
+      <span class="card-timing">${v.timing_s}s</span>
+    </div>
+    <span class="anim-tag">${v.animation_type}</span>
+    <div class="card-body">
+      <div class="sheet-col">
+        <a href="${v.sheet}" target="_blank"><img src="${v.sheet}"></a>
+        <div class="label">Raw sheet</div>
+      </div>
+      <div class="anim-col">
+        <div class="anim-preview" id="${aid}-p">
+          <div class="checker"><canvas id="${aid}-c" width="128" height="128"></canvas></div>
+          <div class="po">||</div>
+        </div>
+      </div>
+      <div class="frames-strip">${fH}</div>
+    </div>
+    <ul class="cell-descs">${cH}</ul>
+    <details><summary>Full prompt</summary><pre class="prompt-text">${v.prompt || ''}</pre></details>`;
+  sc.appendChild(card);
+  anims.push({ id: aid, frames: v.frames || [], fi: 0, paused: false, images: [], loaded: false });
+});
+anims.forEach(st => {
+  st.images = st.frames.map(f => { const i = new window.Image(); i.src = f; return i; });
+  if (st.images.length > 0) st.images[0].onload = () => { st.loaded = true; };
+  const pp = document.getElementById(st.id + '-p');
+  if (pp) pp.addEventListener('click', () => {
+    st.paused = !st.paused; pp.classList.toggle('paused', st.paused);
+  });
+});
+document.querySelectorAll('.frame-cell').forEach(t => {
+  t.addEventListener('click', e => {
+    e.stopPropagation();
+    const aid = t.dataset.a, fi = parseInt(t.dataset.f);
+    const st = anims.find(a => a.id === aid);
+    if (st) { st.fi = fi; st.paused = true;
+      document.getElementById(aid + '-p').classList.add('paused'); draw(st); }
+  });
+});
+function draw(st) {
+  const c = document.getElementById(st.id + '-c');
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, c.width, c.height);
+  const img = st.images[st.fi % st.images.length];
+  if (img && img.complete && img.naturalWidth > 0)
+    ctx.drawImage(img, 0, 0, c.width, c.height);
+  document.querySelectorAll(`[data-a="${st.id}"]`).forEach((t, i) =>
+    t.classList.toggle('active', i === st.fi % st.images.length));
+}
+let last = 0;
+function loop(ts) {
+  if (ts - last >= 1000 / fps) {
+    last = ts;
+    anims.forEach(st => {
+      if (!st.paused && st.loaded && st.images.length > 0) {
+        st.fi = (st.fi + 1) % st.images.length;
+        draw(st);
+      }
+    });
+  }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+setTimeout(() => anims.forEach(draw), 500);
+</script>
+</body>
+</html>

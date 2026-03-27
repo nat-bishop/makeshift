@@ -31,9 +31,9 @@ uv run pytest -k "test_name"              # single test by name
 
 - **Behavior system** (`models/behaviors.py`, `models/blueprint.py`): 0-3 behaviors per object. Each behavior: trigger (10 types) + action (12 types) + target (5 types) + optional condition + categorical params (intensity, range, speed, interval). Budget of 6, separate from tag budget. See [ARCHITECTURE.md](docs/ARCHITECTURE.md) and [GAME_DESIGN.md](docs/GAME_DESIGN.md) for full detail.
 
-- **Rule engine** (`engine/resolver.py`, `engine/rules_data.py`): `RuleResolver` — two-tier matching (O(1) pair index + O(n) wildcard scan). 45 rules. Mirrored client-side in Godot's `RuleEngine` autoload.
+- **Rule engine** (`engine/resolver.py`, `engine/rules_data.py`): `RuleResolver` — two-tier matching (O(1) pair index + O(n) wildcard scan). 45 rules, 18 annotated `trigger_mode=TriggerMode.FIELD`. `TriggerMode` StrEnum (CONTACT | FIELD) on `InteractionRule` — default CONTACT. Mirrored client-side in Godot's `RuleEngine` autoload.
 
-- **Image pipeline** (`images/pipeline.py`, `images/gemini_client.py`): Cache-first. Gemini image generation → bg removal (local rembg via `gpu_bg.make_gpu_remover()` or cloud fal.ai birefnet) → crop & fit to 512×512 → cache by SHA-256 hash of the prompt. Prompt template: `"mixed media collage style paper cutout, side view, flat lighting, clean edges, {name}, {visual_description}, single centered object, contrasting solid background color, no text"`. World display size determined client-side by `size_category`.
+- **Image pipeline** (`images/pipeline.py`, `images/gemini_client.py`, `images/local_image.py`): Cache-first. Three backends (`IMAGE_BACKEND`): `gemini` (Gemini image generation), `local` (SGLang FLUX server), `fal` (fal.ai). Local backend: FLUX.2-klein-9B with torchao float8 quantization via cache-dit, served by SGLang (`services/sglang/`), ~0.45s/image. All backends → bg removal (local rembg via `gpu_bg.make_gpu_remover()` or cloud fal.ai birefnet) → crop & fit to 512×512 → cache by SHA-256 hash of the prompt. Prompt template: `"mixed media collage style paper cutout, side view, flat lighting, clean edges, {name}, {visual_description}, single centered object, contrasting solid background color, no text"`. World display size determined client-side by `size_category`.
 
 - **Session persistence** (`sessions/manager.py`): aiosqlite, 2 tables (sessions, objects). Budget: $1.00 at $0.041/object.
 
@@ -47,10 +47,10 @@ uv run pytest -k "test_name"              # single test by name
 | `Backend` | HTTP + WebSocket client, session persistence, sprite cache, 10s sync timer |
 | `GameManager` | Game state (MENU/PLAYING/PAUSED), level management, scene transitions, `debug_mode` flag (toggled by `toggle_debug` input, emits `debug_toggled`) |
 | `RuleEngine` | Client-side rule matching (mirrors backend resolver) |
-| `CollisionResolver` | Per-frame collision resolution, cooldowns, cascade (depth 3, 96px radius) |
+| `CollisionResolver` | Per-frame collision resolution, cooldowns, cascade (depth 3, 96px radius), STICKY joint creation |
 | `Logger` | Structured logging |
 
-Key systems: `WorldMutations` (static class — all game-state mutations route through it; used by EffectExecutor, BehaviorExecutor, projectile.gd, and level scripts), `EffectExecutor` (5 primitive effect types: DAMAGE, HEAL, ADD_TAG, REMOVE_TAG, APPLY_FORCE; DAMAGE with `tick_interval`/`tick_duration` fields becomes DOT), `PhysicsApplicator` (tag-to-physics mapping), `BehaviorExecutor` (per-object autonomous behavior runtime, attached as child node when behaviors present), `BehaviorMaps` (categorical→numeric value mappings for behavior params), `DebugLabel` (floating per-object overlay showing name, durability, tags, and behaviors — visibility driven by `GameManager.debug_mode`). Player has two interaction modes: passive push (continuous impulse on slide collision, force 80) and kick (action input, 48px range, force 400, 0.5s cooldown).
+Key systems: `WorldMutations` (static class — all game-state mutations route through it; used by EffectExecutor, BehaviorExecutor, projectile.gd, and level scripts), `EffectExecutor` (5 primitive effect types: DAMAGE, HEAL, ADD_TAG, REMOVE_TAG, APPLY_FORCE; DAMAGE with `tick_interval`/`tick_duration` fields becomes DOT), `PhysicsApplicator` (tag-to-physics mapping), `BehaviorExecutor` (per-object autonomous behavior runtime, attached as child node when behaviors present), `BehaviorMaps` (categorical→numeric value mappings for behavior params), `TagField` (per-object Area2D field component, attached when object has field-emitting tags — handles continuous per-frame forces and periodic rule evaluation at range), `FieldConfig` (static class mapping field-emitting tags to range category and mode), `DebugLabel` (floating per-object overlay showing name, durability, tags, and behaviors — visibility driven by `GameManager.debug_mode`). Player has two interaction modes: passive push (continuous impulse on slide collision, force 80) and kick (action input, 48px range, force 400, 0.5s cooldown).
 
 ## API Endpoints
 
@@ -74,6 +74,10 @@ Requires `.env` file (see `.env.example`):
 - `GOOGLE_API_KEY` — Gemini LLM + image generation
 - `FAL_KEY` — fal.ai (only needed if `BG_REMOVAL_BACKEND=cloud`)
 - `IMAGE_MODEL` — Gemini image model. Default: `gemini-3.1-flash-image-preview`
+- `IMAGE_BACKEND` — `gemini`, `local` (SGLang FLUX), or `fal`. Default: gemini
+- `LOCAL_IMAGE_URL` — SGLang FLUX server URL. Default: `http://127.0.0.1:5100`
+- `LOCAL_IMAGE_MODEL` — FLUX model name (cosmetic, server ignores it). Default: `black-forest-labs/FLUX.2-klein-9B`
+- `HF_TOKEN` — HuggingFace token for gated model downloads (FLUX.2-klein-9B)
 - `BG_REMOVAL_BACKEND` — `local` (rembg via `gpu_bg`) or `cloud` (fal.ai birefnet). Default: local
 - `SPRITE_CACHE_ENABLED` — toggles sprite cache read/write. Default: true
 - Other settings have sensible defaults (budget $1.00, timeouts 15s/30s, max 3 concurrent images)
@@ -104,6 +108,11 @@ Requires `.env` file (see `.env.example`):
 - `body_entered` collision handling is deferred via `call_deferred("_resolve_deferred", body)` — resolving collisions directly in the signal callback crashes Godot with "Can't change state while flushing queries" because resolution can chain into `add_tag` → `_reapply_physics` → new shapes
 - Backend autoload uses `127.0.0.1` not `localhost` — avoids DNS resolution delays and IPv6 fallback issues on some systems
 - In Godot 4.3+, assigning an untyped `Array` (e.g. from JSON parsing) to a typed `Array[Dictionary]` or `Array[String]` silently fails — the typed array rejects the source and remains empty. Use untyped `Array` or iterate-and-append. Pattern: `game_object.gd` tags use manual iterate/append; `behavior_executor.gd` `_behaviors` uses untyped `Array`.
+- `TagField` is lazily created by `game_object.gd`: created at `init_from_blueprint()` if field tags are present, or on first `add_tag()` that introduces a field tag. This means fire-spread (rule adds HEAT_SOURCE) automatically promotes a non-field object into a field emitter.
+- `TagField._rebuild()` short-circuits when field tags haven't changed — safe to call on every `add_tag()`/`remove_tag()`.
+- Continuous field rules (`WIND_SOURCE`, `MAGNETIC`, `GLOWING`) use `apply_central_force()` per physics frame — `force_magnitude` in rule data is tuned for per-frame application, not impulse. Periodic rules fire on a 2s timer; first tick fires immediately via `call_deferred`.
+- `resolve_collision(trigger_mode_filter="FIELD")` from `TagField._on_periodic_tick()` skips CONTACT-only rules, so pair cooldowns gate field re-fires to 0.5s intervals regardless of which path (contact or field) last fired the rule.
+- STICKY joint (`PinJoint2D`) is only created on direct contact (`cascade_depth == 0`). Joint auto-frees via `tree_exiting` signal on either body; stale signal on the surviving body is explicitly disconnected in `_on_sticky_body_freed`.
 
 ## Documentation
 

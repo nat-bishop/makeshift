@@ -196,9 +196,58 @@ Iron Dust (CONDUCTING, HEAVY, SOLID) + Honey Moss (STICKY, FLEXIBLE, LIVING)
 1. Player walks to cauldron, interacts.
 2. Ingredient selection UI opens — shows available ingredients by name and appearance.
 3. Player selects 2 (or 3 at higher levels). Confirms.
-4. Brief crafting animation.
+4. Cauldron starts brewing — takes real time (see below).
 5. Result appears: name, description, appearance. Player picks it up.
 6. Player places it on a shelf, or holds it for a customer.
+
+### Cauldron Brew Time & 3D Model Quality
+
+The cauldron doesn't produce a potion instantly. Brewing takes real time — **15–45 seconds** depending on ingredient complexity. This isn't just flavor.
+
+**The insight:** Generation time is an asset. In Makeshift, sprite generation happens as fast as possible because the player is standing there waiting. In Apothecary, the cauldron's brew time is a natural window — the player walks away, serves a customer, organizes a shelf. We can use that window to run a much better generation pipeline than a fire-and-forget approach allows.
+
+**What happens during brew time:**
+
+```
+Player confirms ingredients → cauldron animation begins
+  ↓
+BACKGROUND (invisible to player):
+  → Tag engine resolves combination → final tag set
+  → LLM generates name + visual description from tag set
+  → 3D generation pipeline starts (Meshy / Tripo / Rodin)
+  → Tag validation pass: does the model look like what the tags say it is?
+      - Does a COLD potion look cold?
+      - Does STICKY read as viscous or gooey?
+      - Does HEAT_SOURCE have visual warmth (glow, color temperature)?
+  → If validation fails: refine prompt, regenerate (one retry)
+  ↓
+Brew timer expires → cauldron done animation
+  ↓
+Player picks up the result — name and appearance revealed at this moment
+```
+
+**Why validation during brew time produces better results:**
+
+| Approach | Quality | Player Experience |
+|----------|---------|------------------|
+| Instant (Makeshift pattern) | Average — first attempt, no validation | Player waits; any delay feels wrong |
+| Brew-time pipeline | High — validated, retry-eligible | Player is busy; wait is invisible |
+
+The brew timer is tuned to match the pipeline, not the other way around. A faster generation backend shortens the brew time. A slower one stretches it. The mechanic is honest — the cauldron is actually working.
+
+**Brew time by complexity:**
+
+| Potion Type | Brew Time | Pipeline |
+|-------------|-----------|----------|
+| 2 starter ingredients | ~15s | Single generation pass, light validation |
+| 2 exotic/unlocked ingredients | ~25s | Single pass, stricter validation |
+| 3-ingredient combination | ~40s | Two generation passes, full validation, one retry budget |
+
+**Brew time as a design lever:**
+
+- The wait is never punishment — the player should always have something to do while waiting (serve a customer, restock a shelf, chat). If there's nothing to do, the shop isn't busy enough yet, which is an early-game problem that naturally resolves.
+- A future "Quick Brew" upgrade trades quality for speed — reverts to the Makeshift pattern (first attempt, no retry). The tradeoff is explicit: faster stock, uglier bottles.
+- The reveal at pickup is intentional. The player doesn't watch a progress bar — they get a surprise when they come back. Discovery feels better than monitoring.
 
 ---
 
