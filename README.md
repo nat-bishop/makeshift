@@ -23,19 +23,11 @@ make install
 make dev
 ```
 
-If you're using cloud services (Gemini) instead of local GPU servers, start only what you need:
-
-```bash
-make dev SERVICES=api              # backend only (cloud LLM + cloud images)
-make dev SERVICES="api gpu"        # backend + local image server
-make dev SERVICES="api llm"        # backend + local LLM
-```
-
 You can also run servers without launching Godot:
 
 ```bash
-make dev-servers                   # all servers
-make dev-servers SERVICES=api      # just the backend
+make dev-servers                   # start Docker containers + API server (foreground, auto-reload)
+make stop                          # stop everything
 ```
 
 ## Commands
@@ -43,7 +35,7 @@ make dev-servers SERVICES=api      # just the backend
 | Command | Description |
 |---------|-------------|
 | `make dev` | Start all servers + launch game |
-| `make dev-servers` | Start all servers (no game) |
+| `make dev-servers` | Start containers + API (foreground, auto-reload) |
 | `make play` | Launch Godot game (servers must be running) |
 | `make godot` | Open Godot editor |
 | `make install` | Install all dependencies |

@@ -15,11 +15,10 @@ Two SGLang instances run side-by-side on the same GPU:
 
 ## FLUX Image Server (Docker)
 
-Both servers are managed via [honcho](https://honcho.readthedocs.io/) from the project root. See the root `Procfile.dev` for process definitions.
+Both servers run as Docker containers, managed via `docker compose` from the Makefile.
 
 ```bash
-make dev-servers                   # start all servers (gpu + llm + api)
-make dev-servers SERVICES="gpu api"  # start specific servers
+make dev-servers                   # start containers + API server (foreground)
 make wait-gpu                      # wait until FLUX is ready
 ```
 
@@ -37,7 +36,7 @@ HF_TOKEN=hf_...  # required for gated 9B model
 ## LLM Server (Qwen 3.5)
 
 ```bash
-make dev-servers SERVICES="llm api"  # start LLM + backend
+make dev-servers                   # start all containers + API
 make wait-llm                      # wait until LLM is ready
 ```
 
@@ -49,7 +48,7 @@ LOCAL_LLM_URL=http://127.0.0.1:5200/v1
 
 ### Alternative models
 
-Edit the `llm` entry in `Procfile.dev` at the project root, or run directly:
+Edit `--model-path` in `services/sglang/docker-compose.yml`, or run directly:
 
 ```bash
 wsl -d Ubuntu-24.04 -u root -- /bin/bash -c '\

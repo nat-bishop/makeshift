@@ -104,6 +104,4 @@ warn_required_dynamic_aliases = true
 warn_untyped_fields = true
 
 [dependency-groups]
-dev = [
-    "honcho>=2.0.0",
-]
+dev = []

@@ -2,17 +2,17 @@
 
 GODOT ?= godot
 VERBOSE ?= 0
+COMPOSE := docker compose -f services/sglang/docker-compose.yml
 
-SERVICES ?= gpu llm api
-
-dev: ## Start servers + launch game (SERVICES="gpu llm api")
-	uv run honcho start -f Procfile.dev $(SERVICES) &
-	@$(if $(findstring gpu,$(SERVICES)),$(MAKE) wait-gpu &&) $(if $(findstring llm,$(SERVICES)),$(MAKE) wait-llm &&) true
+dev: ## Start all servers + launch game
+	$(COMPOSE) up -d --build
+	@$(MAKE) wait-gpu && $(MAKE) wait-llm || true
 	$(GODOT) --path godot/
-	-kill %1 2>/dev/null
+	$(MAKE) stop
 
-dev-servers: ## Start servers (SERVICES="gpu llm api")
-	uv run honcho start -f Procfile.dev $(SERVICES)
+dev-servers: ## Start GPU/LLM containers + API server (foreground, auto-reload)
+	$(COMPOSE) up -d --build
+	uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir backend
 
 godot: ## Open Godot editor
 	$(GODOT) --editor --path godot/
@@ -48,8 +48,8 @@ clear-sprites: ## Delete all cached sprites
 	rm -f backend/static/sprites/*.png
 
 stop: ## Stop all servers and clean up
-	@powershell -c 'Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $$_.OwningProcess -Force }' 2>/dev/null || true
-	@docker compose -f services/sglang/docker-compose.yml down 2>/dev/null || true
+	@powershell -c 'Get-NetTCPConnection -LocalPort 8000 -EA SilentlyContinue | %%{ Stop-Process -Id $$_.OwningProcess -Force }' 2>/dev/null || true
+	@$(COMPOSE) down 2>/dev/null || true
 	@echo "All servers stopped"
 
 wait-gpu: ## Wait for SGLang to be ready
