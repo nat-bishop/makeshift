@@ -4,7 +4,7 @@ Two SGLang instances run side-by-side on the same GPU:
 
 | Server | Model | Port | Purpose |
 |--------|-------|------|---------|
-| FLUX | FLUX.2-klein-4b-fp8 | 5100 | Image generation (Docker) |
+| FLUX | FLUX.2-klein-4B (bf16) | 5100 | Image generation (Docker) |
 | LLM | Qwen/Qwen3.5-7B | 5200 | Object creation (PydanticAI agent) |
 
 ## Prerequisites
@@ -22,7 +22,7 @@ make wait-gpu           # wait until ready
 make stop-gpu           # stop
 ```
 
-First run builds Docker image (~15GB) and downloads model (~10GB). Subsequent runs use cache.
+First run builds Docker image and downloads model (~24GB). Subsequent runs use cache.
 
 Configure backend:
 ```env

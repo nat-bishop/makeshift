@@ -1,4 +1,4 @@
-model_path: black-forest-labs/FLUX.2-klein-4b-fp8
+model_path: black-forest-labs/FLUX.2-klein-4B
 port: 5100
 max_running_requests: 16
 mem_fraction_static: 0.40

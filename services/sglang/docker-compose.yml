@@ -11,11 +11,16 @@ services:
       - SGLANG_ENABLE_JIT_DEEPGEMM=0
       - SGLANG_ENABLE_DEEP_GEMM=0
       - SGLANG_DISABLE_DEEPGEMM=1
-      - SGLANG_CACHE_DIT_ENABLED=true
+      - NCCL_CUMEM_ENABLE=0
+      - NCCL_P2P_DISABLE=1
+      - NCCL_SHM_DISABLE=1
+      - NCCL_IB_DISABLE=1
     entrypoint: ["sglang", "serve"]
     command:
       - --model-path
-      - black-forest-labs/FLUX.2-klein-4b-fp8
+      - black-forest-labs/FLUX.2-klein-4B
+      - --backend
+      - diffusers
       - --host
       - "0.0.0.0"
       - --port
