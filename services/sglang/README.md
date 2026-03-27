@@ -65,11 +65,12 @@ SAFETENSORS_FAST_GPU=1            # Faster model loading
 
 ## Batching & concurrency
 
-SGLang automatically batches concurrent requests for GPU efficiency. The backend sends
-requests without client-side throttling -- SGLang's server-side scheduler handles queuing
-and batching.
+The two servers handle concurrency differently:
+
+- **LLM server** — SGLang continuously batches concurrent requests for GPU efficiency. The backend sends requests without client-side throttling; SGLang's scheduler handles queuing and batching. `max_running_requests` controls how many inferences run concurrently (default 8).
+- **FLUX server** — Diffusion requests are processed **serially**. A single image generation saturates the GPU (multi-step denoising loop), so concurrent requests queue and wait. Throughput scales by adding GPU replicas, not by batching.
 
 Key settings in config files:
 
-- `max_running_requests` -- max concurrent GPU inferences (default 8). Excess requests queue.
+- `max_running_requests` -- max concurrent GPU inferences. Meaningful for LLM; for FLUX it controls queue depth only.
 - `mem_fraction_static` -- fraction of VRAM to allocate. Set to 0.40 to leave room for both servers on one GPU.

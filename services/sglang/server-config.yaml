@@ -1,0 +1,2 @@
+dit_cpu_offload: false
+text_encoder_cpu_offload: false

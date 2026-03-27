@@ -19,12 +19,12 @@ services:
     command:
       - --model-path
       - black-forest-labs/FLUX.2-klein-9B
-      - --transformer-weights-path
-      - black-forest-labs/FLUX.2-klein-9b-fp8
-      - --dit-cpu-offload
-      - "false"
-      - --text-encoder-cpu-offload
-      - "false"
+      - --backend
+      - diffusers
+      - --cache-dit-config
+      - /app/cache-dit-config.yaml
+      - --config
+      - /app/server-config.yaml
       - --host
       - "0.0.0.0"
       - --port
