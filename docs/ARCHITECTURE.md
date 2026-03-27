@@ -91,7 +91,7 @@ Full flow from player input to world-placed object with sprite:
 
 ### Backend: `engine/resolver.py`
 
-`RuleResolver` builds a two-tier index at init from 43 `InteractionRule` definitions:
+`RuleResolver` builds a two-tier index at init from 45 `InteractionRule` definitions:
 
 **Pair index** (O(1) lookup): Nested dict `tag_a → tag_b → [rules]`. For bidirectional rules, both `(a,b)` and `(b,a)` entries are created.
 

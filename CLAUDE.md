@@ -31,7 +31,7 @@ uv run pytest -k "test_name"              # single test by name
 
 - **Behavior system** (`models/behaviors.py`, `models/blueprint.py`): 0-3 behaviors per object. Each behavior: trigger (10 types) + action (12 types) + target (5 types) + optional condition + categorical params (intensity, range, speed, interval). Budget of 6, separate from tag budget. See [ARCHITECTURE.md](docs/ARCHITECTURE.md) and [GAME_DESIGN.md](docs/GAME_DESIGN.md) for full detail.
 
-- **Rule engine** (`engine/resolver.py`, `engine/rules_data.py`): `RuleResolver` — two-tier matching (O(1) pair index + O(n) wildcard scan). 43 rules. Mirrored client-side in Godot's `RuleEngine` autoload.
+- **Rule engine** (`engine/resolver.py`, `engine/rules_data.py`): `RuleResolver` — two-tier matching (O(1) pair index + O(n) wildcard scan). 45 rules. Mirrored client-side in Godot's `RuleEngine` autoload.
 
 - **Image pipeline** (`images/pipeline.py`, `images/gemini_client.py`): Cache-first. Gemini image generation → bg removal (local rembg via `gpu_bg.make_gpu_remover()` or cloud fal.ai birefnet) → crop & fit to 512×512 → cache by SHA-256 hash of the prompt. Prompt template: `"mixed media collage style paper cutout, side view, flat lighting, clean edges, {name}, {visual_description}, single centered object, contrasting solid background color, no text"`. World display size determined client-side by `size_category`.
 

@@ -128,7 +128,7 @@ class TestRuleResolver:
 
 class TestAllRules:
     def test_all_rules_loaded(self):
-        assert len(ALL_RULES) == 43
+        assert len(ALL_RULES) == 45
 
     def test_all_rules_have_unique_ids(self):
         ids = [r.rule_id for r in ALL_RULES]
@@ -204,3 +204,64 @@ class TestAllRules:
         )
         rule_ids = [m.rule_id for m in matches]
         assert "corrosive_breakable_corrode" in rule_ids
+
+    def test_electric_flammable_spark(self):
+        resolver = RuleResolver(ALL_RULES)
+        matches = resolver.find_matching_rules({Tag.ELECTRIC}, {Tag.FLAMMABLE})
+        rule_ids = [m.rule_id for m in matches]
+        assert "electric_flammable_spark" in rule_ids
+
+    def test_electric_flammable_spark_bidirectional(self):
+        resolver = RuleResolver(ALL_RULES)
+        matches = resolver.find_matching_rules({Tag.FLAMMABLE}, {Tag.ELECTRIC})
+        rule_ids = [m.rule_id for m in matches]
+        assert "electric_flammable_spark" in rule_ids
+
+    def test_electric_flammable_spark_blocked_by_insulating(self):
+        resolver = RuleResolver(ALL_RULES)
+        matches = resolver.find_matching_rules(
+            {Tag.ELECTRIC}, {Tag.FLAMMABLE, Tag.INSULATING}
+        )
+        rule_ids = [m.rule_id for m in matches]
+        assert "electric_flammable_spark" not in rule_ids
+
+    def test_electric_gas_ionize(self):
+        resolver = RuleResolver(ALL_RULES)
+        matches = resolver.find_matching_rules({Tag.ELECTRIC}, {Tag.GAS})
+        rule_ids = [m.rule_id for m in matches]
+        assert "electric_gas_ionize" in rule_ids
+
+    def test_electric_gas_ionize_bidirectional(self):
+        resolver = RuleResolver(ALL_RULES)
+        matches = resolver.find_matching_rules({Tag.GAS}, {Tag.ELECTRIC})
+        rule_ids = [m.rule_id for m in matches]
+        assert "electric_gas_ionize" in rule_ids
+
+    def test_electric_gas_ionize_blocked_by_insulating(self):
+        resolver = RuleResolver(ALL_RULES)
+        matches = resolver.find_matching_rules(
+            {Tag.ELECTRIC}, {Tag.GAS, Tag.INSULATING}
+        )
+        rule_ids = [m.rule_id for m in matches]
+        assert "electric_gas_ionize" not in rule_ids
+
+    def test_electric_flammable_breakable_both_fire(self):
+        """ELECTRIC + FLAMMABLE+BREAKABLE target: both spark and damage rules fire."""
+        resolver = RuleResolver(ALL_RULES)
+        matches = resolver.find_matching_rules(
+            {Tag.ELECTRIC}, {Tag.FLAMMABLE, Tag.BREAKABLE}
+        )
+        rule_ids = [m.rule_id for m in matches]
+        assert "electric_flammable_spark" in rule_ids
+        assert "electric_breakable_damage" in rule_ids
+
+    def test_electric_flammable_spark_priority_below_ignition(self):
+        """Spark ignition (p9) should fire after main ignition (p10)."""
+        resolver = RuleResolver(ALL_RULES)
+        matches = resolver.find_matching_rules(
+            {Tag.ELECTRIC, Tag.HEAT_SOURCE}, {Tag.FLAMMABLE}
+        )
+        rule_ids = [m.rule_id for m in matches]
+        assert rule_ids.index("heat_flammable_ignite") < rule_ids.index(
+            "electric_flammable_spark"
+        )

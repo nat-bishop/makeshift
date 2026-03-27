@@ -907,4 +907,69 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
+    # 44. ELECTRIC + FLAMMABLE → spark ignition (cascade: fire spreads)
+    InteractionRule(
+        rule_id="electric_flammable_spark",
+        name="Spark Ignition",
+        tags_required_a={Tag.ELECTRIC},
+        tags_required_b={Tag.FLAMMABLE},
+        priority=9,
+        bidirectional=True,
+        cascade_eligible=True,
+        tags_blocked_by={Tag.INSULATING},
+        effects=[
+            Effect(
+                effect_type=EffectType.ADD_TAG,
+                target=EffectTarget.B,
+                tag=Tag.HEAT_SOURCE,
+            ),
+            Effect(
+                effect_type=EffectType.ADD_TAG,
+                target=EffectTarget.B,
+                tag=Tag.HOT,
+            ),
+            Effect(
+                effect_type=EffectType.DAMAGE,
+                target=EffectTarget.B,
+                damage_amount=8.0,
+                tick_interval=1.0,
+                tick_duration=3.0,
+                message="Electrical sparks ignite!",
+            ),
+        ],
+    ),
+    # 45. ELECTRIC + GAS → ionize into glowing plasma (cascade: chains through gas)
+    InteractionRule(
+        rule_id="electric_gas_ionize",
+        name="Gas Ionization",
+        tags_required_a={Tag.ELECTRIC},
+        tags_required_b={Tag.GAS},
+        priority=10,
+        bidirectional=True,
+        cascade_eligible=True,
+        tags_blocked_by={Tag.INSULATING},
+        effects=[
+            Effect(
+                effect_type=EffectType.ADD_TAG,
+                target=EffectTarget.B,
+                tag=Tag.ELECTRIC,
+            ),
+            Effect(
+                effect_type=EffectType.ADD_TAG,
+                target=EffectTarget.B,
+                tag=Tag.GLOWING,
+            ),
+            Effect(
+                effect_type=EffectType.ADD_TAG,
+                target=EffectTarget.B,
+                tag=Tag.HOT,
+            ),
+            Effect(
+                effect_type=EffectType.DAMAGE,
+                target=EffectTarget.B,
+                damage_amount=10.0,
+                message="The gas ionizes into glowing plasma!",
+            ),
+        ],
+    ),
 ]

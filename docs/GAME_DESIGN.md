@@ -41,7 +41,7 @@ Enforced by Pydantic validators on `CreatorOutput`. Violations trigger `ModelRet
 
 ## Rule System
 
-43 `InteractionRule` definitions in `engine/rules_data.py`. Each rule specifies:
+45 `InteractionRule` definitions in `engine/rules_data.py`. Each rule specifies:
 - Required tags on object A and/or B
 - Priority (higher fires first)
 - Whether bidirectional (A↔B or only A→B)
