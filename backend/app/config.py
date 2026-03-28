@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     google_api_key: str = ""
     fal_key: str = ""
     session_budget_usd: float = 1.00
-    llm_timeout_seconds: int = 15
+    llm_timeout_seconds: int = 30
     image_timeout_seconds: int = 30
     max_concurrent_image_requests: int = 3
     database_path: str = "data/game.db"
@@ -22,15 +22,18 @@ class Settings(BaseSettings):
 
     # Model configuration
     llm_model: str = "google-gla:gemini-3.1-flash-lite-preview"
-    llm_temperature: float = 0.0
+    llm_temperature: float = 0.7
+    llm_top_p: float = 0.8
+    llm_top_k: int = 20
+    llm_presence_penalty: float = 1.5
     local_llm_url: str | None = None
+    local_llm_thinking_disabled: bool = True
     image_model: str = "gemini-3.1-flash-image-preview"
     image_backend: Literal["gemini", "local", "fal"] = "gemini"
     local_image_url: str = "http://127.0.0.1:5100"
     local_image_model: str = "black-forest-labs/FLUX.2-klein-9B"
     fal_image_model: str = "fal-ai/flux/schnell"
     bg_removal_backend: Literal["local", "cloud"] = "local"
-    bg_removal_model: str = "briaai/RMBG-2.0"
     sprite_cache_enabled: bool = True
 
     # Logging

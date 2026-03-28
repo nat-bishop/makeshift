@@ -10,7 +10,6 @@ const TRIGGER_PHRASES: Dictionary = {
 	"ON_TAG_ADDED": "When %s added",
 	"ON_CREATE": "On create",
 	"ON_DESTROY": "On destroy",
-	"ON_USE": "When used",
 }
 
 const ACTION_PHRASES: Dictionary = {

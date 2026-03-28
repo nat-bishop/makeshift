@@ -66,7 +66,13 @@ services:
       - --port
       - "5200"
       - --mem-fraction-static
-      - "0.40"
+      - "0.80"
+      - --context-length
+      - "262144"
+      - --tool-call-parser
+      - qwen3_coder
+      - --reasoning-parser
+      - qwen3
     ipc: host
     pid: host
     shm_size: "32g"

@@ -46,6 +46,8 @@ class TestComputeBehaviorCost:
             extras: dict = {}
             if action in {BehaviorAction.ADD_TAGS, BehaviorAction.REMOVE_TAGS}:
                 extras["tags_to_apply"] = [Tag.HOT]
+            if action in {BehaviorAction.MOVE_TOWARD, BehaviorAction.MOVE_AWAY}:
+                extras["target"] = BehaviorTarget.NEAREST_PLAYER
             b = _make_behavior(action=action, intensity=Intensity.MEDIUM, **extras)
             assert compute_behavior_cost(b) == max(1, expected_base)
 
@@ -208,6 +210,105 @@ class TestBehaviorCondition:
         cond = BehaviorCondition(condition_type=BehaviorConditionType.HAS_TAG, tag=Tag.HOT)
         b_with_cond = _make_behavior(action=BehaviorAction.DEAL_DAMAGE, condition=cond)
         assert compute_behavior_cost(b_no_cond) == compute_behavior_cost(b_with_cond)
+
+
+class TestActionTargetValidation:
+    def test_self_destruct_rejects_non_self_target(self) -> None:
+        with pytest.raises(ModelRetry):
+            _make_behavior(
+                action=BehaviorAction.SELF_DESTRUCT, target=BehaviorTarget.NEAREST_PLAYER
+            )
+
+    def test_self_destruct_with_self_target_valid(self) -> None:
+        b = _make_behavior(action=BehaviorAction.SELF_DESTRUCT, target=BehaviorTarget.SELF)
+        assert b.action == BehaviorAction.SELF_DESTRUCT
+
+    def test_explode_rejects_non_self_target(self) -> None:
+        with pytest.raises(ModelRetry):
+            _make_behavior(
+                trigger=BehaviorTrigger.ON_TAG_ADDED,
+                trigger_tag=Tag.HOT,
+                action=BehaviorAction.EXPLODE,
+                target=BehaviorTarget.NEAREST_OBJECT,
+            )
+
+    def test_explode_with_self_target_valid(self) -> None:
+        b = _make_behavior(
+            trigger=BehaviorTrigger.ON_TAG_ADDED,
+            trigger_tag=Tag.HOT,
+            action=BehaviorAction.EXPLODE,
+            target=BehaviorTarget.SELF,
+        )
+        assert b.action == BehaviorAction.EXPLODE
+
+    def test_move_toward_rejects_self_target(self) -> None:
+        with pytest.raises(ModelRetry):
+            _make_behavior(
+                action=BehaviorAction.MOVE_TOWARD, target=BehaviorTarget.SELF
+            )
+
+    def test_move_away_rejects_self_target(self) -> None:
+        with pytest.raises(ModelRetry):
+            _make_behavior(
+                action=BehaviorAction.MOVE_AWAY, target=BehaviorTarget.SELF
+            )
+
+    def test_move_toward_with_nearest_player_valid(self) -> None:
+        b = _make_behavior(
+            action=BehaviorAction.MOVE_TOWARD, target=BehaviorTarget.NEAREST_PLAYER
+        )
+        assert b.target == BehaviorTarget.NEAREST_PLAYER
+
+    def test_move_away_with_nearest_living_valid(self) -> None:
+        b = _make_behavior(
+            action=BehaviorAction.MOVE_AWAY, target=BehaviorTarget.NEAREST_LIVING
+        )
+        assert b.target == BehaviorTarget.NEAREST_LIVING
+
+    def test_patrol_with_self_target_valid(self) -> None:
+        """PATROL ignores target, so SELF is fine."""
+        b = _make_behavior(action=BehaviorAction.PATROL, target=BehaviorTarget.SELF)
+        assert b.action == BehaviorAction.PATROL
+
+
+class TestActionTriggerValidation:
+    def test_on_destroy_rejects_move_toward(self) -> None:
+        with pytest.raises(ModelRetry):
+            _make_behavior(
+                trigger=BehaviorTrigger.ON_DESTROY,
+                action=BehaviorAction.MOVE_TOWARD,
+                target=BehaviorTarget.NEAREST_PLAYER,
+            )
+
+    def test_on_destroy_rejects_move_away(self) -> None:
+        with pytest.raises(ModelRetry):
+            _make_behavior(
+                trigger=BehaviorTrigger.ON_DESTROY,
+                action=BehaviorAction.MOVE_AWAY,
+                target=BehaviorTarget.NEAREST_PLAYER,
+            )
+
+    def test_on_destroy_rejects_patrol(self) -> None:
+        with pytest.raises(ModelRetry):
+            _make_behavior(
+                trigger=BehaviorTrigger.ON_DESTROY,
+                action=BehaviorAction.PATROL,
+            )
+
+    def test_on_destroy_allows_deal_damage(self) -> None:
+        b = _make_behavior(
+            trigger=BehaviorTrigger.ON_DESTROY,
+            action=BehaviorAction.DEAL_DAMAGE,
+            target=BehaviorTarget.NEAREST_OBJECT,
+        )
+        assert b.trigger == BehaviorTrigger.ON_DESTROY
+
+    def test_on_destroy_allows_explode(self) -> None:
+        b = _make_behavior(
+            trigger=BehaviorTrigger.ON_DESTROY,
+            action=BehaviorAction.EXPLODE,
+        )
+        assert b.action == BehaviorAction.EXPLODE
 
 
 class TestCreatorOutputBehaviors:

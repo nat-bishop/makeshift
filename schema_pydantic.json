@@ -1,0 +1,297 @@
+{
+  "$defs": {
+    "Behavior": {
+      "properties": {
+        "trigger": {
+          "$ref": "#/$defs/BehaviorTrigger"
+        },
+        "action": {
+          "$ref": "#/$defs/BehaviorAction"
+        },
+        "target": {
+          "$ref": "#/$defs/BehaviorTarget",
+          "default": "SELF"
+        },
+        "condition": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BehaviorCondition"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "intensity": {
+          "$ref": "#/$defs/Intensity",
+          "default": "MEDIUM"
+        },
+        "range": {
+          "$ref": "#/$defs/BehaviorRange",
+          "default": "MEDIUM"
+        },
+        "speed": {
+          "$ref": "#/$defs/Speed",
+          "default": "MEDIUM"
+        },
+        "interval": {
+          "$ref": "#/$defs/Interval",
+          "default": "MEDIUM"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "maxLength": 60,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        },
+        "tags_to_apply": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Tag"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tags To Apply"
+        },
+        "trigger_tag": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Tag"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "trigger",
+        "action"
+      ],
+      "title": "Behavior",
+      "type": "object"
+    },
+    "BehaviorAction": {
+      "enum": [
+        "MOVE_TOWARD",
+        "MOVE_AWAY",
+        "PATROL",
+        "DEAL_DAMAGE",
+        "APPLY_FORCE",
+        "ATTRACT",
+        "SPAWN_PROJECTILE",
+        "EXPLODE",
+        "HEAL",
+        "ADD_TAGS",
+        "REMOVE_TAGS",
+        "SELF_DESTRUCT"
+      ],
+      "title": "BehaviorAction",
+      "type": "string"
+    },
+    "BehaviorCondition": {
+      "properties": {
+        "condition_type": {
+          "$ref": "#/$defs/BehaviorConditionType"
+        },
+        "tag": {
+          "$ref": "#/$defs/Tag"
+        }
+      },
+      "required": [
+        "condition_type",
+        "tag"
+      ],
+      "title": "BehaviorCondition",
+      "type": "object"
+    },
+    "BehaviorConditionType": {
+      "enum": [
+        "has_tag",
+        "not_has_tag",
+        "target_has_tag"
+      ],
+      "title": "BehaviorConditionType",
+      "type": "string"
+    },
+    "BehaviorRange": {
+      "enum": [
+        "TOUCH",
+        "CLOSE",
+        "MEDIUM",
+        "FAR"
+      ],
+      "title": "BehaviorRange",
+      "type": "string"
+    },
+    "BehaviorTarget": {
+      "enum": [
+        "SELF",
+        "NEAREST_OBJECT",
+        "NEAREST_LIVING",
+        "NEAREST_PLAYER",
+        "CONTACT_BODY"
+      ],
+      "title": "BehaviorTarget",
+      "type": "string"
+    },
+    "BehaviorTrigger": {
+      "enum": [
+        "ALWAYS",
+        "ON_TIMER",
+        "ON_PROXIMITY",
+        "ON_CONTACT",
+        "ON_DAMAGED",
+        "ON_HEALTH_LOW",
+        "ON_TAG_ADDED",
+        "ON_CREATE",
+        "ON_DESTROY",
+        "ON_USE"
+      ],
+      "title": "BehaviorTrigger",
+      "type": "string"
+    },
+    "Intensity": {
+      "enum": [
+        "MINIMAL",
+        "LOW",
+        "MEDIUM",
+        "HIGH",
+        "EXTREME"
+      ],
+      "title": "Intensity",
+      "type": "string"
+    },
+    "Interval": {
+      "enum": [
+        "ONCE_SHORT",
+        "ONCE_MEDIUM",
+        "ONCE_LONG",
+        "SLOW",
+        "MEDIUM",
+        "FAST"
+      ],
+      "title": "Interval",
+      "type": "string"
+    },
+    "Speed": {
+      "enum": [
+        "SLOW",
+        "MEDIUM",
+        "FAST",
+        "VERY_FAST"
+      ],
+      "title": "Speed",
+      "type": "string"
+    },
+    "Tag": {
+      "enum": [
+        "SOLID",
+        "LIQUID",
+        "GAS",
+        "RIGID",
+        "FLEXIBLE",
+        "HEAVY",
+        "LIGHT",
+        "FROZEN",
+        "COLD",
+        "HOT",
+        "MOLTEN",
+        "FLAMMABLE",
+        "HEAT_SOURCE",
+        "ELECTRIC",
+        "MAGNETIC",
+        "EXPLOSIVE",
+        "SHARP",
+        "STICKY",
+        "SLIPPERY",
+        "REFLECTIVE",
+        "BOUNCY",
+        "BREAKABLE",
+        "FLOATING",
+        "WIND_SOURCE",
+        "CORROSIVE",
+        "TOXIC",
+        "LIVING",
+        "GLOWING",
+        "CONDUCTING",
+        "INSULATING"
+      ],
+      "title": "Tag",
+      "type": "string"
+    },
+    "VisualDescriptor": {
+      "properties": {
+        "visual_description": {
+          "title": "Visual Description",
+          "type": "string"
+        },
+        "size_category": {
+          "enum": [
+            "tiny",
+            "small",
+            "medium",
+            "large",
+            "huge"
+          ],
+          "title": "Size Category",
+          "type": "string"
+        }
+      },
+      "required": [
+        "visual_description",
+        "size_category"
+      ],
+      "title": "VisualDescriptor",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "tags": {
+      "items": {
+        "$ref": "#/$defs/Tag"
+      },
+      "maxItems": 6,
+      "minItems": 2,
+      "title": "Tags",
+      "type": "array"
+    },
+    "behaviors": {
+      "items": {
+        "$ref": "#/$defs/Behavior"
+      },
+      "maxItems": 3,
+      "title": "Behaviors",
+      "type": "array"
+    },
+    "visual_descriptor": {
+      "$ref": "#/$defs/VisualDescriptor"
+    }
+  },
+  "required": [
+    "name",
+    "tags",
+    "visual_descriptor"
+  ],
+  "title": "CreatorOutput",
+  "type": "object"
+}

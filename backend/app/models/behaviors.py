@@ -16,7 +16,6 @@ class BehaviorTrigger(StrEnum):
     ON_TAG_ADDED = "ON_TAG_ADDED"
     ON_CREATE = "ON_CREATE"
     ON_DESTROY = "ON_DESTROY"
-    ON_USE = "ON_USE"
 
 
 class BehaviorAction(StrEnum):
@@ -73,17 +72,6 @@ class Interval(StrEnum):
     FAST = "FAST"
 
 
-class BehaviorConditionType(StrEnum):
-    HAS_TAG = "has_tag"
-    NOT_HAS_TAG = "not_has_tag"
-    TARGET_HAS_TAG = "target_has_tag"
-
-
-class BehaviorCondition(BaseModel):
-    condition_type: BehaviorConditionType
-    tag: Tag
-
-
 # --- Cost tables ---
 
 BEHAVIOR_BUDGET: int = 8
@@ -126,6 +114,21 @@ def compute_behavior_cost(behavior: "Behavior") -> int:
     return max(floor, base + modifier)
 
 
+# Actions that always target SELF (client ignores the target field)
+_SELF_ONLY_ACTIONS: frozenset[BehaviorAction] = frozenset(
+    {BehaviorAction.SELF_DESTRUCT, BehaviorAction.EXPLODE}
+)
+
+# Movement actions that need a real target (target=SELF produces a zero vector)
+_DIRECTIONAL_MOVEMENT_ACTIONS: frozenset[BehaviorAction] = frozenset(
+    {BehaviorAction.MOVE_TOWARD, BehaviorAction.MOVE_AWAY}
+)
+
+# All movement actions (including PATROL which ignores target)
+_ALL_MOVEMENT_ACTIONS: frozenset[BehaviorAction] = frozenset(
+    {BehaviorAction.MOVE_TOWARD, BehaviorAction.MOVE_AWAY, BehaviorAction.PATROL}
+)
+
 # Triggers that support CONTACT_BODY target
 _CONTACT_BODY_TRIGGERS: frozenset[BehaviorTrigger] = frozenset(
     {
@@ -140,7 +143,6 @@ class Behavior(BaseModel):
     trigger: BehaviorTrigger
     action: BehaviorAction
     target: BehaviorTarget = BehaviorTarget.SELF
-    condition: BehaviorCondition | None = None
     intensity: Intensity = Intensity.MEDIUM
     range: BehaviorRange = BehaviorRange.MEDIUM
     speed: Speed = Speed.MEDIUM
@@ -186,5 +188,34 @@ class Behavior(BaseModel):
         if needs_tags and not self.tags_to_apply:
             raise ModelRetry(
                 f"{self.action} action requires tags_to_apply to specify which tags."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def check_action_target(self) -> Self:
+        from pydantic_ai import ModelRetry
+
+        if self.action in _SELF_ONLY_ACTIONS and self.target != BehaviorTarget.SELF:
+            raise ModelRetry(
+                f"{self.action} always affects this object. Set target to SELF."
+            )
+        if self.action in _DIRECTIONAL_MOVEMENT_ACTIONS and self.target == BehaviorTarget.SELF:
+            raise ModelRetry(
+                f"{self.action} needs something to move toward/away from. "
+                f"Use NEAREST_OBJECT, NEAREST_LIVING, NEAREST_PLAYER, or CONTACT_BODY."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def check_action_trigger(self) -> Self:
+        from pydantic_ai import ModelRetry
+
+        if (
+            self.trigger == BehaviorTrigger.ON_DESTROY
+            and self.action in _ALL_MOVEMENT_ACTIONS
+        ):
+            raise ModelRetry(
+                f"{self.action} is useless with ON_DESTROY — the object is being removed. "
+                f"Use a non-movement action like EXPLODE or DEAL_DAMAGE instead."
             )
         return self

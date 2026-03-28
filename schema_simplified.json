@@ -1,0 +1,53 @@
+{
+  "type": "object",
+  "required": ["name", "tags", "visual_description"],
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["SOLID", "LIQUID", "GAS", "RIGID", "FLEXIBLE", "HEAVY", "LIGHT", "FROZEN", "COLD", "HOT", "MOLTEN", "FLAMMABLE", "HEAT_SOURCE", "ELECTRIC", "MAGNETIC", "EXPLOSIVE", "SHARP", "STICKY", "SLIPPERY", "REFLECTIVE", "BOUNCY", "BREAKABLE", "FLOATING", "WIND_SOURCE", "CORROSIVE", "TOXIC", "LIVING", "GLOWING", "CONDUCTING", "INSULATING"]
+      },
+      "minItems": 2,
+      "maxItems": 6
+    },
+    "behaviors": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "required": ["trigger", "action"],
+        "properties": {
+          "trigger": { "type": "string", "enum": ["ALWAYS", "ON_TIMER", "ON_PROXIMITY", "ON_CONTACT", "ON_DAMAGED", "ON_HEALTH_LOW", "ON_TAG_ADDED", "ON_CREATE", "ON_DESTROY", "ON_USE"] },
+          "action": { "type": "string", "enum": ["MOVE_TOWARD", "MOVE_AWAY", "PATROL", "DEAL_DAMAGE", "APPLY_FORCE", "ATTRACT", "SPAWN_PROJECTILE", "EXPLODE", "HEAL", "ADD_TAGS", "REMOVE_TAGS", "SELF_DESTRUCT"] },
+          "target": { "type": "string", "enum": ["SELF", "NEAREST_OBJECT", "NEAREST_LIVING", "NEAREST_PLAYER", "CONTACT_BODY"] },
+          "condition": {
+            "type": "object",
+            "properties": {
+              "condition_type": { "type": "string", "enum": ["has_tag", "not_has_tag", "target_has_tag"] },
+              "tag": { "type": "string" }
+            }
+          },
+          "intensity": { "type": "string", "enum": ["MINIMAL", "LOW", "MEDIUM", "HIGH", "EXTREME"] },
+          "range": { "type": "string", "enum": ["TOUCH", "CLOSE", "MEDIUM", "FAR"] },
+          "speed": { "type": "string", "enum": ["SLOW", "MEDIUM", "FAST", "VERY_FAST"] },
+          "interval": { "type": "string", "enum": ["ONCE_SHORT", "ONCE_MEDIUM", "ONCE_LONG", "SLOW", "MEDIUM", "FAST"] },
+          "message": { "type": "string", "maxLength": 60 },
+          "tags_to_apply": { "type": "array", "items": { "type": "string" } },
+          "trigger_tag": { "type": "string" }
+        }
+      }
+    },
+    "visual_descriptor": {
+      "type": "object",
+      "required": ["visual_description", "size_category"],
+      "properties": {
+        "visual_description": { "type": "string" },
+        "size_category": { "type": "string", "enum": ["tiny", "small", "medium", "large", "huge"] }
+      }
+    }
+  }
+}

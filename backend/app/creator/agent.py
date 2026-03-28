@@ -230,15 +230,24 @@ def _get_agent() -> Agent[None, CreatorOutput]:
     if _agent is not None:
         logger.debug("agent_cached")
         return _agent
+    model_settings: dict = {
+        "timeout": settings.llm_timeout_seconds,
+        "temperature": settings.llm_temperature,
+        "top_p": settings.llm_top_p,
+        "presence_penalty": settings.llm_presence_penalty,
+    }
+    # Pass SGLang-specific params via extra_body (top_k, thinking mode)
+    if settings.local_llm_url:
+        model_settings["extra_body"] = {
+            "top_k": settings.llm_top_k,
+            "chat_template_kwargs": {"enable_thinking": not settings.local_llm_thinking_disabled},
+        }
     _agent = Agent(
         _build_model(),
         output_type=CreatorOutput,
         retries=3,
         system_prompt=SYSTEM_PROMPT,
-        model_settings={
-            "timeout": settings.llm_timeout_seconds,
-            "temperature": settings.llm_temperature,
-        },
+        model_settings=model_settings,
     )
     logger.info("agent_created", model=settings.llm_model)
     return _agent
