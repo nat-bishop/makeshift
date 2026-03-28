@@ -174,9 +174,6 @@ func _execute_behavior(behavior_index: int, pre_resolved_target: Node = null, ac
 		if target == null or not is_instance_valid(target):
 			return false
 
-	if not _check_condition(b, target):
-		return false
-
 	var success := true
 
 	match action:
@@ -239,39 +236,6 @@ func _check_disable_physics_process() -> void:
 	set_physics_process(false)
 
 
-func _check_condition(behavior: Dictionary, target: Node) -> bool:
-	var cond = behavior.get("condition")
-	if cond == null or not (cond is Dictionary):
-		return true
-
-	var cond_type: String = cond.get("condition_type", "")
-	var cond_tag: String = cond.get("tag", "")
-
-	var result := true
-	match cond_type:
-		"has_tag":
-			result = cond_tag in _owner_body.tags
-			if not result:
-				Log.debug("BehaviorExecutor: Condition failed %s tag=%s owner missing tag on '%s'" % [
-					cond_type, cond_tag, _owner_name()])
-		"not_has_tag":
-			result = cond_tag not in _owner_body.tags
-			if not result:
-				Log.debug("BehaviorExecutor: Condition failed %s tag=%s owner has tag on '%s'" % [
-					cond_type, cond_tag, _owner_name()])
-		"target_has_tag":
-			if target == null or not is_instance_valid(target):
-				Log.debug("BehaviorExecutor: Condition failed %s tag=%s target invalid on '%s'" % [
-					cond_type, cond_tag, _owner_name()])
-				result = false
-			elif target.has_method("get_tags"):
-				result = cond_tag in target.get_tags()
-				if not result:
-					Log.debug("BehaviorExecutor: Condition failed %s tag=%s target missing tag on '%s'" % [
-						cond_type, cond_tag, _owner_name()])
-			else:
-				result = false
-	return result
 
 
 func _resolve_target(behavior_index: int, event_body: Node) -> Node:

@@ -60,11 +60,7 @@ def test_fallback_object_structure():
 
 def test_system_prompt_mentions_all_triggers() -> None:
     """System prompt should document all behavior triggers."""
-    # ON_USE is defined in the enum but not yet surfaced in the system prompt
-    known_undocumented = {"ON_USE"}
     for trigger in BehaviorTrigger:
-        if trigger.value in known_undocumented:
-            continue
         assert trigger.value in SYSTEM_PROMPT, f"Missing trigger: {trigger.value}"
 
 

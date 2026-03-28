@@ -66,18 +66,6 @@ static func format_behavior(b: Dictionary) -> String:
 	if not param.is_empty():
 		action_text += " · %s" % param
 
-	# Append condition
-	var cond: Variant = b.get("condition", null)
-	if cond is Dictionary:
-		var cond_type: String = cond.get("condition_type", "")
-		var cond_tag: String = cond.get("tag", "?")
-		if cond_type == "has_tag":
-			action_text += " (if has %s)" % cond_tag
-		elif cond_type == "not_has_tag":
-			action_text += " (if no %s)" % cond_tag
-		elif cond_type == "target_has_tag":
-			action_text += " (if target has %s)" % cond_tag
-
 	return "%s · %s" % [trigger_text, action_text]
 
 

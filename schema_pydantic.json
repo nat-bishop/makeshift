@@ -1,91 +1,5 @@
 {
   "$defs": {
-    "Behavior": {
-      "properties": {
-        "trigger": {
-          "$ref": "#/$defs/BehaviorTrigger"
-        },
-        "action": {
-          "$ref": "#/$defs/BehaviorAction"
-        },
-        "target": {
-          "$ref": "#/$defs/BehaviorTarget",
-          "default": "SELF"
-        },
-        "condition": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/BehaviorCondition"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
-        "intensity": {
-          "$ref": "#/$defs/Intensity",
-          "default": "MEDIUM"
-        },
-        "range": {
-          "$ref": "#/$defs/BehaviorRange",
-          "default": "MEDIUM"
-        },
-        "speed": {
-          "$ref": "#/$defs/Speed",
-          "default": "MEDIUM"
-        },
-        "interval": {
-          "$ref": "#/$defs/Interval",
-          "default": "MEDIUM"
-        },
-        "message": {
-          "anyOf": [
-            {
-              "maxLength": 60,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Message"
-        },
-        "tags_to_apply": {
-          "anyOf": [
-            {
-              "items": {
-                "$ref": "#/$defs/Tag"
-              },
-              "type": "array"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Tags To Apply"
-        },
-        "trigger_tag": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Tag"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        }
-      },
-      "required": [
-        "trigger",
-        "action"
-      ],
-      "title": "Behavior",
-      "type": "object"
-    },
     "BehaviorAction": {
       "enum": [
         "MOVE_TOWARD",
@@ -104,40 +18,75 @@
       "title": "BehaviorAction",
       "type": "string"
     },
-    "BehaviorCondition": {
+    "BehaviorSpec": {
+      "description": "Simplified behavior model for LLM output. Expanded to full Behavior after.",
       "properties": {
-        "condition_type": {
-          "$ref": "#/$defs/BehaviorConditionType"
+        "trigger": {
+          "$ref": "#/$defs/BehaviorTrigger"
         },
-        "tag": {
-          "$ref": "#/$defs/Tag"
+        "action": {
+          "$ref": "#/$defs/BehaviorAction"
+        },
+        "target": {
+          "$ref": "#/$defs/BehaviorTarget",
+          "default": "NEAREST_OBJECT"
+        },
+        "power": {
+          "default": "medium",
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "title": "Power",
+          "type": "string"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "maxLength": 60,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        },
+        "trigger_tag": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Tag"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "tags_to_apply": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Tag"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tags To Apply"
         }
       },
       "required": [
-        "condition_type",
-        "tag"
+        "trigger",
+        "action"
       ],
-      "title": "BehaviorCondition",
+      "title": "BehaviorSpec",
       "type": "object"
-    },
-    "BehaviorConditionType": {
-      "enum": [
-        "has_tag",
-        "not_has_tag",
-        "target_has_tag"
-      ],
-      "title": "BehaviorConditionType",
-      "type": "string"
-    },
-    "BehaviorRange": {
-      "enum": [
-        "TOUCH",
-        "CLOSE",
-        "MEDIUM",
-        "FAR"
-      ],
-      "title": "BehaviorRange",
-      "type": "string"
     },
     "BehaviorTarget": {
       "enum": [
@@ -160,43 +109,9 @@
         "ON_HEALTH_LOW",
         "ON_TAG_ADDED",
         "ON_CREATE",
-        "ON_DESTROY",
-        "ON_USE"
+        "ON_DESTROY"
       ],
       "title": "BehaviorTrigger",
-      "type": "string"
-    },
-    "Intensity": {
-      "enum": [
-        "MINIMAL",
-        "LOW",
-        "MEDIUM",
-        "HIGH",
-        "EXTREME"
-      ],
-      "title": "Intensity",
-      "type": "string"
-    },
-    "Interval": {
-      "enum": [
-        "ONCE_SHORT",
-        "ONCE_MEDIUM",
-        "ONCE_LONG",
-        "SLOW",
-        "MEDIUM",
-        "FAST"
-      ],
-      "title": "Interval",
-      "type": "string"
-    },
-    "Speed": {
-      "enum": [
-        "SLOW",
-        "MEDIUM",
-        "FAST",
-        "VERY_FAST"
-      ],
-      "title": "Speed",
       "type": "string"
     },
     "Tag": {
@@ -261,6 +176,7 @@
       "type": "object"
     }
   },
+  "description": "Simplified LLM output model using BehaviorSpec instead of Behavior.",
   "properties": {
     "name": {
       "title": "Name",
@@ -277,7 +193,7 @@
     },
     "behaviors": {
       "items": {
-        "$ref": "#/$defs/Behavior"
+        "$ref": "#/$defs/BehaviorSpec"
       },
       "maxItems": 3,
       "title": "Behaviors",
@@ -292,6 +208,6 @@
     "tags",
     "visual_descriptor"
   ],
-  "title": "CreatorOutput",
+  "title": "CreatorOutputSpec",
   "type": "object"
 }

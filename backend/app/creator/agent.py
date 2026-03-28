@@ -11,7 +11,12 @@ from app.config import settings
 
 if TYPE_CHECKING:
     from pydantic_ai.models import Model
-from app.models.blueprint import CreatorOutput, GameObjectBlueprint, VisualDescriptor
+from app.models.behaviors import expand_behavior_spec
+from app.models.blueprint import (
+    CreatorOutputSpec,
+    GameObjectBlueprint,
+    VisualDescriptor,
+)
 from app.models.tags import Tag
 
 logger = structlog.get_logger()
@@ -107,8 +112,8 @@ have zero behaviors.
 
 ### Triggers (when the behavior fires)
 - ALWAYS: Every tick (use for movement — move_toward, move_away, patrol)
-- ON_TIMER: Fires periodically or once. Use interval param (ONCE_SHORT=1s, ONCE_MEDIUM=3s, ONCE_LONG=5s, SLOW=3s repeat, MEDIUM=1.5s, FAST=0.75s)
-- ON_PROXIMITY: Something enters detection range (set range param)
+- ON_TIMER: Fires periodically or once
+- ON_PROXIMITY: Something enters detection range
 - ON_CONTACT: Physical collision with another object
 - ON_DAMAGED: This object just took damage
 - ON_HEALTH_LOW: Durability dropped below 50%
@@ -138,20 +143,13 @@ have zero behaviors.
 - CONTACT_BODY: The thing that triggered the event (only with ON_CONTACT, ON_DAMAGED, ON_PROXIMITY)
 
 ### Behavior budget = 8, max 3 behaviors
-Cost per behavior = max(1, base_cost + intensity_modifier). SPAWN_PROJECTILE/EXPLODE floor at 2.
-Intensity modifiers: MINIMAL=-1, LOW=0, MEDIUM=0, HIGH=+1, EXTREME=+2.
+Cost = base cost, or base cost + 1 if power="high". SPAWN_PROJECTILE/EXPLODE minimum cost 2.
 
-### Parameters (all have smart defaults — only specify when overriding)
-- intensity: MINIMAL, LOW, MEDIUM (default), HIGH, EXTREME
-- range: TOUCH, CLOSE, MEDIUM (default), FAR
-- speed: SLOW, MEDIUM (default), FAST, VERY_FAST
-- interval: ONCE_SHORT, ONCE_MEDIUM, ONCE_LONG, SLOW, MEDIUM (default), FAST
-
-### Conditions (optional, free — no budget cost)
-Optional gate checked before firing. Types:
-- has_tag: Fire only if THIS object has the specified tag
-- not_has_tag: Fire only if THIS object does NOT have the specified tag
-- target_has_tag: Fire only if the TARGET has the specified tag
+### Power (optional, default "medium")
+Controls strength/speed/range of the behavior:
+- "low": weaker, slower, shorter range (same base cost)
+- "medium": balanced (default, same base cost)
+- "high": stronger, faster, longer range (+1 cost)
 
 ### Message (optional, max 60 chars)
 Short player-facing feedback when the behavior fires. E.g., "The dragon breathes fire!", "BOOM!"
@@ -159,53 +157,52 @@ Short player-facing feedback when the behavior fires. E.g., "The dragon breathes
 ## Examples
 
 "fire sword" → name="Fire Sword", tags=[SOLID, RIGID, SHARP, HEAT_SOURCE], \
-behaviors=[{trigger="ON_CONTACT", action="DEAL_DAMAGE", target="CONTACT_BODY", intensity="LOW", \
+behaviors=[{trigger="ON_CONTACT", action="DEAL_DAMAGE", target="CONTACT_BODY", \
 message="The blade sears!"}], \
 visual={visual_description="a curved steel sword with a fiery red blade and bright orange edge, wreathed in flames", \
 size_category="medium"}
 Budget: tags 1+1+2+3=7/10, behaviors 2/8.
 
 "ice wall" → name="Ice Wall", tags=[SOLID, RIGID, FROZEN, COLD, BREAKABLE], \
-behaviors=[{trigger="ON_DAMAGED", action="APPLY_FORCE", target="CONTACT_BODY", intensity="MEDIUM", \
+behaviors=[{trigger="ON_DAMAGED", action="APPLY_FORCE", target="CONTACT_BODY", \
 message="Ice shards push you back!"}], \
 visual={visual_description="a tall translucent ice wall with jagged frozen edges and frosty white surface", \
 size_category="large"}
 Budget: tags 1+1+2+1+1=6/10, behaviors 2/8.
 
 "fire-breathing dragon" → name="Fire Dragon", tags=[LIVING, HEAT_SOURCE, HOT], \
-behaviors=[{trigger="ALWAYS", action="MOVE_TOWARD", target="NEAREST_LIVING", speed="MEDIUM", \
-condition={condition_type="not_has_tag", tag="FROZEN"}, message="The dragon stalks its prey..."}, \
-{trigger="ON_PROXIMITY", action="SPAWN_PROJECTILE", target="NEAREST_LIVING", range="CLOSE", \
-intensity="HIGH", interval="SLOW", message="The dragon breathes fire!"}], \
+behaviors=[{trigger="ALWAYS", action="MOVE_TOWARD", target="NEAREST_LIVING", \
+message="The dragon stalks its prey..."}, \
+{trigger="ON_PROXIMITY", action="SPAWN_PROJECTILE", target="NEAREST_LIVING", power="high", \
+message="The dragon breathes fire!"}], \
 visual={visual_description="a large red dragon with orange underbelly, leathery wings, and smoke rising from its nostrils", \
 size_category="large"}
 Budget: tags 3+3+2=8/10, behaviors 2+4=6/8.
 
 "time bomb" → name="Time Bomb", tags=[EXPLOSIVE, SOLID, RIGID], \
-behaviors=[{trigger="ON_TIMER", action="EXPLODE", intensity="EXTREME", range="FAR", \
-interval="ONCE_MEDIUM", message="BOOM!"}], \
+behaviors=[{trigger="ON_TIMER", action="EXPLODE", power="high", message="BOOM!"}], \
 visual={visual_description="a small round black metal bomb with a glowing red fuse and warning markings", \
 size_category="small"}
-Budget: tags 5+1+1=7/10, behaviors 5/8.
+Budget: tags 5+1+1=7/10, behaviors 4/8.
 
 "guard dog" → name="Guard Dog", tags=[LIVING, SOLID, FLEXIBLE], \
-behaviors=[{trigger="ALWAYS", action="MOVE_TOWARD", target="NEAREST_PLAYER", speed="FAST", \
+behaviors=[{trigger="ALWAYS", action="MOVE_TOWARD", target="NEAREST_PLAYER", power="high", \
 message="Wags tail"}, \
-{trigger="ON_PROXIMITY", action="DEAL_DAMAGE", target="NEAREST_PLAYER", intensity="LOW", \
-range="TOUCH", interval="MEDIUM", message="The dog bites!"}], \
+{trigger="ON_PROXIMITY", action="DEAL_DAMAGE", target="NEAREST_PLAYER", power="low", \
+message="The dog bites!"}], \
 visual={visual_description="a stocky brown dog with tan paws, floppy ears, and a wagging tail", \
 size_category="medium"}
-Budget: tags 3+1+1=5/10, behaviors 2+2=4/8.
+Budget: tags 3+1+1=5/10, behaviors 3+2=5/8.
 
 "reactive bomb" → name="Reactive Bomb", tags=[EXPLOSIVE, SOLID, FLAMMABLE], \
-behaviors=[{trigger="ON_TAG_ADDED", trigger_tag="HOT", action="EXPLODE", intensity="EXTREME", \
-range="FAR", message="The bomb detonates!"}], \
+behaviors=[{trigger="ON_TAG_ADDED", trigger_tag="HOT", action="EXPLODE", power="high", \
+message="The bomb detonates!"}], \
 visual={visual_description="a rusty metal barrel painted red with a gold hazard symbol and sparking wires", \
 size_category="medium"}
-Budget: tags 5+1+1=7/10, behaviors 5/8. Sits inert until fire adds HOT tag → explodes.
+Budget: tags 5+1+1=7/10, behaviors 4/8. Sits inert until fire adds HOT tag → explodes.
 """
 
-_agent: Agent[None, CreatorOutput] | None = None
+_agent: Agent[None, CreatorOutputSpec] | None = None
 
 
 def _build_model() -> Model | str:
@@ -225,7 +222,7 @@ def _build_model() -> Model | str:
     return settings.llm_model
 
 
-def _get_agent() -> Agent[None, CreatorOutput]:
+def _get_agent() -> Agent[None, CreatorOutputSpec]:
     global _agent
     if _agent is not None:
         logger.debug("agent_cached")
@@ -244,7 +241,7 @@ def _get_agent() -> Agent[None, CreatorOutput]:
         }
     _agent = Agent(
         _build_model(),
-        output_type=CreatorOutput,
+        output_type=CreatorOutputSpec,
         retries=3,
         system_prompt=SYSTEM_PROMPT,
         model_settings=model_settings,
@@ -264,21 +261,22 @@ async def create_object(description: str) -> GameObjectBlueprint:
     try:
         agent = _get_agent()
         result = await agent.run(f"Create a game object for: {description}")
-        creator_output = result.output
+        spec = result.output
+        behaviors = [expand_behavior_spec(b) for b in spec.behaviors]
         elapsed = time.monotonic() - t0
         logger.info(
             "llm_create_success",
-            object_name=creator_output.name,
-            tag_count=len(creator_output.tags),
+            object_name=spec.name,
+            tag_count=len(spec.tags),
+            behavior_count=len(behaviors),
             elapsed=round(elapsed, 2),
         )
     except Exception as e:
         elapsed = time.monotonic() - t0
         logger.error("llm_create_failed", elapsed=round(elapsed, 2), error=str(e))
-        # Fallback: generic object with player's typed description as name
         words = description.strip().split()
         fallback_name = " ".join(w.capitalize() for w in words[:2]) if words else "Object"
-        creator_output = CreatorOutput(
+        spec = CreatorOutputSpec(
             name=f"Mysterious {fallback_name}",
             tags=[Tag.SOLID, Tag.RIGID],
             visual_descriptor=VisualDescriptor(
@@ -286,14 +284,15 @@ async def create_object(description: str) -> GameObjectBlueprint:
                 size_category="medium",
             ),
         )
+        behaviors = []
 
     blueprint = GameObjectBlueprint(
         id=str(uuid.uuid4()),
-        name=creator_output.name,
+        name=spec.name,
         description=description,
-        tags=creator_output.tags,
-        behaviors=creator_output.behaviors,
-        visual_descriptor=creator_output.visual_descriptor,
+        tags=spec.tags,
+        behaviors=behaviors,
+        visual_descriptor=spec.visual_descriptor,
     )
     logger.debug(
         "blueprint_created",

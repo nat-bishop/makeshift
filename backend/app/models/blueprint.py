@@ -6,7 +6,9 @@ from pydantic import BaseModel, Field, computed_field, field_validator
 from app.models.behaviors import (
     BEHAVIOR_BUDGET,
     Behavior,
+    BehaviorSpec,
     compute_behavior_cost,
+    compute_spec_cost,
 )
 from app.models.tags import (
     OBJECT_TAG_BUDGET,
@@ -93,6 +95,32 @@ class CreatorOutput(BaseModel):
             raise ModelRetry(
                 f"Behavior budget {cost}/{BEHAVIOR_BUDGET}. Behaviors: {breakdown}. "
                 f"Remove behaviors or lower intensity."
+            )
+        return behaviors
+
+
+class CreatorOutputSpec(CreatorOutput):
+    """Simplified LLM output model using BehaviorSpec instead of Behavior."""
+
+    behaviors: list[BehaviorSpec] = Field(default_factory=list, max_length=3)  # type: ignore[assignment]
+
+    @field_validator("behaviors")
+    @classmethod
+    def check_behavior_budget(cls, behaviors: list[BehaviorSpec]) -> list[BehaviorSpec]:  # type: ignore[override]
+        from pydantic_ai import ModelRetry
+
+        if not behaviors:
+            return behaviors
+        costs = [(b, compute_spec_cost(b)) for b in behaviors]
+        total = sum(c for _, c in costs)
+        if total > BEHAVIOR_BUDGET:
+            logger.debug("llm_retry_behavior_budget", cost=total, budget=BEHAVIOR_BUDGET)
+            breakdown = ", ".join(
+                f"{b.action.value}@{b.power.value}({c})" for b, c in costs
+            )
+            raise ModelRetry(
+                f"Behavior budget {total}/{BEHAVIOR_BUDGET}. Behaviors: {breakdown}. "
+                f"Remove behaviors or lower power."
             )
         return behaviors
 
