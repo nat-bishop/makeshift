@@ -13,6 +13,18 @@ const SIZE_TO_PHYSICS: Dictionary = {
 	"huge": {"sprite": 256, "collision": 224},
 }
 
+const SIZE_MASS_MULTIPLIER: Dictionary = {
+	"tiny": 0.25,
+	"small": 0.5,
+	"medium": 1.0,
+	"large": 4.0,
+	"huge": 10.0,
+}
+
+
+static func get_size_mass_multiplier(size_category: String) -> float:
+	return SIZE_MASS_MULTIPLIER.get(size_category, 1.0)
+
 
 static func compose_physics(tags: Array) -> Dictionary:
 	var mass_entries: Array = []

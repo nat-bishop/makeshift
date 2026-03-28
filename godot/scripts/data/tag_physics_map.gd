@@ -6,7 +6,7 @@ class_name TagPhysicsMap
 const TAG_PHYSICS: Dictionary = {
 	"HEAVY": {
 		"priority": 8,
-		"mass": 5.0,
+		"mass": 15.0,
 		"gravity": 1.2,
 		"friction": 0.7,
 		"bounce": 0.0,

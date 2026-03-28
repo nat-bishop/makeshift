@@ -6,6 +6,7 @@ extends Node
 ## Range and mode come from FieldConfig (tag-level), not from individual rules.
 
 const CL = preload("res://scripts/data/collision_layers.gd")
+const _GRAVITY: float = 980.0
 
 var _owner_body: RigidBody2D
 var _field_area: Area2D
@@ -140,8 +141,8 @@ func _physics_process(_delta: float) -> void:
 	if not is_instance_valid(_owner_body):
 		return
 
-	var owner_tags: Array = _owner_body.get_tags()
 	var owner_pos: Vector2 = _owner_body.global_position
+	var overlapping: Array = _field_area.get_overlapping_bodies()
 
 	for entry in _cached_continuous:
 		var range_px: float = entry["range_px"]
@@ -149,10 +150,10 @@ func _physics_process(_delta: float) -> void:
 		var blocked_by: Array = entry["blocked_by"]
 		var rule: Dictionary = entry["rule"]
 
-		for body in _field_area.get_overlapping_bodies():
+		for body in overlapping:
 			if body == _owner_body or not is_instance_valid(body):
 				continue
-			if body is not RigidBody2D:
+			if body is not RigidBody2D and body is not CharacterBody2D:
 				continue
 
 			# Per-tag range check (center-to-center approximation)
@@ -173,7 +174,7 @@ func _physics_process(_delta: float) -> void:
 			_apply_force_effects(rule, body)
 
 
-func _apply_force_effects(rule: Dictionary, body: Node) -> void:
+func _apply_force_effects(rule: Dictionary, body: Node2D) -> void:
 	for effect in rule.get("effects", []):
 		if effect is not Dictionary:
 			continue
@@ -181,7 +182,29 @@ func _apply_force_effects(rule: Dictionary, body: Node) -> void:
 			continue
 		var magnitude: float = effect.get("force_magnitude", 0.0)
 		var direction: Vector2 = (body.global_position - _owner_body.global_position).normalized()
-		body.apply_central_force(direction * magnitude)
+		if body is RigidBody2D:
+			var actual_force: float = _friction_compensated(body, magnitude)
+			body.apply_central_force(direction * actual_force)
+		elif body is CharacterBody2D and body.has_method("apply_external_impulse"):
+			var dt: float = get_physics_process_delta_time()
+			body.apply_external_impulse(direction * magnitude * dt)
+
+
+static func _friction_compensated(body: RigidBody2D, desired_magnitude: float) -> float:
+	# Scale force to overcome ground friction so field forces actually move objects.
+	# Treats desired_magnitude as a target acceleration (px/s²), then adds enough
+	# force on top to cancel out friction.
+	var grav_scale: float = absf(body.gravity_scale)
+	if grav_scale < 0.1:
+		# Airborne / FLOATING: no ground friction to overcome, just scale by mass
+		return desired_magnitude * body.mass
+	var friction: float = 1.0  # Assume ground default (MAX combine mode)
+	if body.physics_material_override:
+		friction = maxf(body.physics_material_override.friction, friction)
+	var weight: float = body.mass * _GRAVITY * grav_scale
+	var friction_force: float = friction * weight
+	var sign_f: float = signf(desired_magnitude)
+	return sign_f * (friction_force + absf(desired_magnitude) * body.mass)
 
 
 func _on_periodic_tick() -> void:

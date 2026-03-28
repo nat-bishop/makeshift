@@ -12,6 +12,8 @@ const KICK_COOLDOWN: float = 0.5
 const VOID_THRESHOLD: float = 1200.0
 const MAX_HEALTH: int = 100
 const DAMAGE_FLASH_DURATION: float = 0.15
+const MOVE_ACCEL: float = 3000.0  # px/s² — snappy controls, reach 300px/s in 0.1s
+const EFFECTIVE_MASS: float = 5.0  # resistance to external forces (impulse / mass = velocity change)
 
 enum State { IDLE, WALK, JUMP, FALL }
 
@@ -66,10 +68,8 @@ func _process_normal_movement(gravity: float, speed: float, delta: float) -> voi
 		velocity.y = JUMP_VELOCITY
 
 	_input_direction = Input.get_axis("move_left", "move_right")
-	if _input_direction:
-		velocity.x = _input_direction * speed
-	else:
-		velocity.x = move_toward(velocity.x, 0, speed)
+	var target_vx: float = _input_direction * speed
+	velocity.x = move_toward(velocity.x, target_vx, MOVE_ACCEL * delta)
 
 	if _input_direction > 0.0:
 		_facing = 1
@@ -81,7 +81,7 @@ func _push_rigid_bodies() -> void:
 	for i in get_slide_collision_count():
 		var collision := get_slide_collision(i)
 		var collider := collision.get_collider()
-		if collider is RigidBody2D:
+		if collider is RigidBody2D and collider.has_method("is_passively_pushable") and collider.is_passively_pushable():
 			var push_dir := -collision.get_normal()
 			collider.apply_central_impulse(push_dir * PUSH_FORCE)
 
@@ -107,7 +107,8 @@ func _perform_kick() -> void:
 	for result in results:
 		var collider = result["collider"]
 		if collider is RigidBody2D:
-			collider.apply_central_impulse(kick_dir * KICK_FORCE)
+			if not collider.has_method("is_heavy") or not collider.is_heavy():
+				collider.apply_central_impulse(kick_dir * KICK_FORCE)
 			WorldMutations.apply_damage(collider, KICK_DAMAGE)
 			if collider.has_method("fire_behavior_trigger"):
 				collider.fire_behavior_trigger("ON_CONTACT", self)
@@ -171,6 +172,12 @@ func _process_damage_flash(delta: float) -> void:
 		_anim_sprite.modulate = Color(1.0, 1.0 - 0.6 * t, 1.0 - 0.6 * t)
 		if _damage_flash_timer <= 0.0:
 			_anim_sprite.modulate = Color.WHITE
+
+
+func apply_external_impulse(impulse: Vector2) -> void:
+	if _dead:
+		return
+	velocity += impulse / EFFECTIVE_MASS
 
 
 func get_effective_tags() -> Array:

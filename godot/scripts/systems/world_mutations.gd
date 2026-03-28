@@ -39,11 +39,15 @@ static func apply_remove_tag(target: Node, tag: String) -> void:
 
 
 static func apply_impulse(target: Node, direction: Vector2, magnitude: float) -> void:
-	if target is not RigidBody2D:
-		Log.debug("WorldMutations: %s is not RigidBody2D, skipping impulse" % target.name)
+	var impulse: Vector2 = direction * magnitude
+	if target is RigidBody2D:
+		target.apply_central_impulse(impulse)
+	elif target.has_method("apply_external_impulse"):
+		target.apply_external_impulse(impulse)
+	else:
+		Log.debug("WorldMutations: %s cannot receive impulse, skipping" % target.name)
 		return
 	Log.debug("WorldMutations: apply_impulse to %s dir=%s mag=%.0f" % [target.name, direction, magnitude])
-	target.apply_central_impulse(direction * magnitude)
 
 
 static func apply_dot(target: Node, damage_per_tick: float, tick_interval: float, duration: float, element_color: Color = Color.WHITE) -> void:

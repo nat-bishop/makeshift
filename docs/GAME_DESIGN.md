@@ -167,11 +167,11 @@ This makes the two systems composable without tight coupling.
 
 ### Push
 
-Walking into any `RigidBody2D` applies a continuous impulse of **80 units** in the collision direction (`apply_central_impulse(push_dir * 80.0)`). No input required — contact is sufficient.
+Walking into a `RigidBody2D` applies a continuous impulse of **80 units** in the collision direction. Only applies to `is_passively_pushable()` objects: LIGHT-tagged or tiny-sized, excluding HEAVY. Most objects require a deliberate kick to move.
 
 ### Kick
 
-Pressing E performs a rectangular shape query **48px wide × 32px tall** centered in front of the player. All `RigidBody2D` objects in range receive an impulse of **400 units** in the direction `(facing, -0.3).normalized()` — forward and slightly upward. 0.5s cooldown between kicks.
+Pressing E performs a rectangular shape query **48px wide × 32px tall** centered in front of the player. Non-HEAVY objects in range receive an impulse of **400 units** in the direction `(facing, -0.3).normalized()` — forward and slightly upward. HEAVY objects receive damage but no impulse. 0.5s cooldown between kicks.
 
 ## Object Placement Workflow
 

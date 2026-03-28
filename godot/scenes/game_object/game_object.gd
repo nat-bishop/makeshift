@@ -76,6 +76,19 @@ func get_object_id() -> String:
 	return object_id
 
 
+func is_passively_pushable() -> bool:
+	if "HEAVY" in tags:
+		return false
+	if "LIGHT" in tags:
+		return true
+	var size: String = blueprint.get("visual_descriptor", {}).get("size_category", "medium")
+	return size == "tiny"
+
+
+func is_heavy() -> bool:
+	return "HEAVY" in tags
+
+
 func take_damage(amount: float, element_color: Color = Color.WHITE) -> void:
 	current_durability -= int(amount)
 	Log.debug("GameObject: '%s' took %.0f damage, durability=%d" % [blueprint.get("name", object_id), amount, current_durability])

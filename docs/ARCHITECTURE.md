@@ -327,16 +327,18 @@ body_entered signal (from GameObject)
 
 ## Physics Composition
 
-`scenes/game_object/physics_applicator.gd` maps tags to RigidBody2D physics properties:
+`scenes/game_object/physics_applicator.gd` maps tags to RigidBody2D physics properties. Final mass = `tag_mass × size_mass_multiplier` (from `PhysicsComposer.get_size_mass_multiplier()`).
+
+**Size mass multipliers** (`PhysicsComposer.SIZE_MASS_MULTIPLIER`): tiny=0.25×, small=0.5×, medium=1.0×, large=4.0×, huge=10.0×.
 
 | Tag | Mass | Gravity | Friction | Bounce | Extra |
 |-----|------|---------|----------|--------|-------|
-| HEAVY | ×3.0 | — | — | — | — |
-| LIGHT | ×0.3 | — | — | — | — |
-| FLOATING | — | 0.2 | — | — | — |
-| SLIPPERY | — | — | 0.0 | — | — |
+| HEAVY | 15.0 | 1.2 | 0.7 | 0.0 | — |
+| LIGHT | 0.2 | 0.8 | 0.3 | 0.0 | — |
+| FLOATING | — | -0.5 | — | — | — |
+| SLIPPERY | — | — | 0.05 | — | — |
 | STICKY | — | — | 2.0 | — | PinJoint2D on contact |
-| BOUNCY | — | — | — | 0.8 | — |
+| BOUNCY | — | — | 0.2 | 0.9 | — |
 | Default | 1.0 | 1.0 | 0.5 | 0.0 | — |
 
 Tag mutations (via `add_tag`/`remove_tag`) trigger `_reapply_physics()` to recalculate.

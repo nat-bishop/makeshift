@@ -12,9 +12,11 @@ func _ready() -> void:
 
 func apply(tags: Array, visual_descriptor: Dictionary) -> void:
 	var physics: Dictionary = PhysicsComposer.compose_physics(tags)
+	var size_category: String = visual_descriptor.get("size_category", "medium")
 
-	# Apply mass and gravity
-	_body.mass = physics["mass"]
+	# Apply mass (scaled by size) and gravity
+	var size_mass_mult: float = PhysicsComposer.get_size_mass_multiplier(size_category)
+	_body.mass = physics["mass"] * size_mass_mult
 	_body.gravity_scale = physics["gravity"]
 
 	# Apply physics material
@@ -23,8 +25,7 @@ func apply(tags: Array, visual_descriptor: Dictionary) -> void:
 	mat.bounce = physics["bounce"]
 	_body.physics_material_override = mat
 
-	var size_category: String = visual_descriptor.get("size_category", "medium")
-	Log.debug("PhysicsApplicator: Applied physics for '%s' — size=%s, mass=%.1f, friction=%.2f, bounce=%.2f, gravity=%.1f" % [_body.blueprint.get("name", ""), size_category, physics["mass"], physics["friction"], physics["bounce"], physics["gravity"]])
+	Log.debug("PhysicsApplicator: Applied physics for '%s' — size=%s, mass=%.1f, friction=%.2f, bounce=%.2f, gravity=%.1f" % [_body.blueprint.get("name", ""), size_category, _body.mass, physics["friction"], physics["bounce"], physics["gravity"]])
 
 	# Configure fallback collision shape from size_category
 	# Will be overridden by sprite-derived shape once sprite loads

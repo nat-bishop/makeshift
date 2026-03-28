@@ -68,7 +68,7 @@ func init_behaviors(behaviors: Array, owner: RigidBody2D) -> void:
 	if not has_tick_behaviors:
 		set_physics_process(false)
 	else:
-		# Forces (apply_central_force) are ignored on sleeping bodies —
+		# Sleeping bodies ignore velocity changes and forces —
 		# disable sleep so tick-driven behaviors can move the object.
 		_owner_body.can_sleep = false
 
@@ -140,7 +140,7 @@ func _try_execute(behavior_index: int, pre_resolved_target: Node = null) -> bool
 	var trigger: String = b.get("trigger", "")
 	var action: String = b.get("action", "")
 
-	# Movement actions skip cooldown — apply_central_force needs per-frame
+	# Movement actions skip cooldown — velocity-based movement needs per-frame
 	# application and is self-limiting via max_speed.
 	var skip_cooldown: bool = (
 		action in BehaviorMaps.MOVEMENT_ACTIONS
@@ -343,36 +343,48 @@ func _apply_movement(target: Node, speed_tier: String, toward: bool) -> bool:
 	if target == null or not is_instance_valid(target) or not (target is Node2D):
 		return false
 
-	var direction: Vector2 = (target.global_position - _owner_body.global_position).normalized()
+	var diff: Vector2 = target.global_position - _owner_body.global_position
+	if diff.length_squared() < 16.0:
+		return true  # Close enough — don't oscillate
+
+	var direction: Vector2 = diff.normalized()
 	if not toward:
 		direction = -direction
 
 	var max_speed: float = BehaviorMaps.SPEED_MAX.get(speed_tier, 120.0)
-	var force_mag: float = BehaviorMaps.SPEED_FORCE.get(speed_tier, 400.0)
+	var accel: float = max_speed * 5.0
+	var dt: float = get_physics_process_delta_time()
 
-	if _owner_body.linear_velocity.length() < max_speed:
-		_owner_body.apply_central_force(direction * force_mag)
+	# Set velocity directly — apply_central_force can't overcome ground friction.
+	var target_vx: float = direction.x * max_speed
+	_owner_body.linear_velocity.x = move_toward(
+		_owner_body.linear_velocity.x, target_vx, accel * dt)
+
+	# FLOATING objects: also move vertically
+	if _owner_body.gravity_scale <= 0.0:
+		var target_vy: float = direction.y * max_speed
+		_owner_body.linear_velocity.y = move_toward(
+			_owner_body.linear_velocity.y, target_vy, accel * dt)
 	return true
 
 
 func _apply_patrol(speed_tier: String) -> void:
-	var force_mag: float = BehaviorMaps.SPEED_FORCE.get(speed_tier, 400.0)
 	var max_speed: float = BehaviorMaps.SPEED_MAX.get(speed_tier, 120.0)
+	var dt: float = get_physics_process_delta_time()
 
-	_patrol_distance += abs(_owner_body.linear_velocity.x) * get_physics_process_delta_time()
+	_patrol_distance += abs(_owner_body.linear_velocity.x) * dt
 	if _patrol_distance >= PATROL_MAX_DISTANCE:
 		_patrol_direction *= -1.0
 		_patrol_distance = 0.0
 
-	var direction := Vector2(_patrol_direction, 0.0)
-	if _owner_body.linear_velocity.length() < max_speed:
-		_owner_body.apply_central_force(direction * force_mag)
+	var accel: float = max_speed * 5.0
+	var target_vx: float = _patrol_direction * max_speed
+	_owner_body.linear_velocity.x = move_toward(
+		_owner_body.linear_velocity.x, target_vx, accel * dt)
 
 
 func _apply_force(target: Node, intensity: String, attract: bool) -> bool:
-	if target == null or not is_instance_valid(target):
-		return false
-	if not (target is RigidBody2D):
+	if target == null or not is_instance_valid(target) or not (target is Node2D):
 		return false
 
 	var direction: Vector2 = (target.global_position - _owner_body.global_position).normalized()
