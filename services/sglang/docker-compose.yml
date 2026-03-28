@@ -91,3 +91,25 @@ services:
               count: 1
               capabilities: [gpu]
 
+  rembg:
+    build:
+      context: ../rembg
+    container_name: makeshift-rembg
+    ports:
+      - "5150:5150"
+    volumes:
+      - ${U2NET_HOME:-C:/Users/Nat/.u2net}:/root/.u2net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5150/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+

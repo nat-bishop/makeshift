@@ -1,59 +1,54 @@
-"""GPU-accelerated background removal using rembg with BiRefNet."""
+"""Background removal via local rembg Docker service."""
 
 from __future__ import annotations
 
 import asyncio
-import threading
 from collections.abc import Awaitable, Callable
-from typing import Any
 
+import httpx
 import structlog
+
+from app.config import settings
 
 logger = structlog.get_logger()
 
-_session: Any = None
-_load_lock = threading.Lock()
-
-# Serialize GPU inference — one call saturates the GPU; concurrent calls risk OOM.
-_inference_semaphore: asyncio.Semaphore | None = None
+_http_client: httpx.AsyncClient | None = None
 
 
-def _get_session() -> Any:
-    global _session
-    if _session is not None:
-        return _session
-
-    with _load_lock:
-        if _session is not None:
-            return _session
-
-        from rembg import new_session
-
-        logger.info("bg_model_loading", model="birefnet-general")
-        _session = new_session("birefnet-general")
-        logger.info("bg_model_loaded", model="birefnet-general")
-        return _session
+def _get_http_client() -> httpx.AsyncClient:
+    global _http_client
+    if _http_client is None:
+        _http_client = httpx.AsyncClient(
+            base_url=settings.bg_removal_url,
+            timeout=settings.image_timeout_seconds,
+        )
+        logger.info("gpu_bg_http_client_created", base_url=settings.bg_removal_url)
+    return _http_client
 
 
-def _remove_bg_sync(image_bytes: bytes) -> bytes:
-    """Run rembg background removal synchronously. Call from a thread."""
-    from rembg import remove
-
-    session = _get_session()
-    result: bytes = remove(image_bytes, session=session)
-    return result
+async def close_http_client() -> None:
+    global _http_client
+    if _http_client is not None:
+        await _http_client.aclose()
+        _http_client = None
 
 
 def make_gpu_remover() -> Callable[[bytes], Awaitable[bytes]]:
-    """Return an async callable that removes backgrounds via rembg on GPU."""
-    global _inference_semaphore
-    _inference_semaphore = asyncio.Semaphore(1)
+    """Return an async callable that removes backgrounds via the rembg Docker service."""
 
     async def remove_bg(image_bytes: bytes) -> bytes:
-        assert _inference_semaphore is not None
         logger.debug("gpu_bg_removal_start", input_size=len(image_bytes))
-        async with _inference_semaphore:
-            result = await asyncio.to_thread(_remove_bg_sync, image_bytes)
+        client = _get_http_client()
+        resp = await asyncio.wait_for(
+            client.post(
+                "/remove",
+                content=image_bytes,
+                headers={"Content-Type": "image/png"},
+            ),
+            timeout=settings.image_timeout_seconds,
+        )
+        resp.raise_for_status()
+        result = resp.content
         logger.debug("gpu_bg_removal_complete", output_size=len(result))
         return result
 

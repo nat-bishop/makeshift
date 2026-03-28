@@ -54,6 +54,7 @@ class Settings(BaseSettings):
     local_image_model: str = "black-forest-labs/FLUX.2-klein-9B"
     fal_image_model: str = "fal-ai/flux/schnell"
     bg_removal_backend: Literal["local", "cloud"] = "local"
+    bg_removal_url: str = "http://127.0.0.1:5150"
     sprite_cache_enabled: bool = True
 
     # Logging

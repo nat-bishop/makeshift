@@ -1,4 +1,4 @@
-.PHONY: dev dev-servers stop godot play godot-import install test lint fix format typecheck check clear-sprites wait-gpu wait-llm cli-create cli-image cli-sprite cli-status help
+.PHONY: dev dev-servers stop godot play godot-import install test lint fix format typecheck check clear-sprites wait-gpu wait-llm wait-rembg cli-create cli-image cli-sprite cli-status help
 
 GODOT ?= godot
 VERBOSE ?= 0
@@ -6,7 +6,7 @@ COMPOSE := docker compose --env-file .env -f services/sglang/docker-compose.yml
 
 dev: ## Start all servers + launch game
 	$(COMPOSE) up -d --build
-	@$(MAKE) wait-gpu && $(MAKE) wait-llm || true
+	@$(MAKE) wait-gpu && $(MAKE) wait-rembg && $(MAKE) wait-llm || true
 	$(GODOT) --path godot/
 	$(MAKE) stop
 
@@ -61,6 +61,11 @@ wait-llm: ## Wait for SGLang LLM to be ready
 	@echo "Waiting for SGLang LLM..."
 	@until curl -sf http://127.0.0.1:5200/health > /dev/null 2>&1; do sleep 2; done
 	@echo "SGLang LLM ready"
+
+wait-rembg: ## Wait for rembg bg removal to be ready
+	@echo "Waiting for rembg..."
+	@until curl -sf http://127.0.0.1:5150/health > /dev/null 2>&1; do sleep 2; done
+	@echo "rembg ready"
 
 PROMPT ?= fire sword
 OUT ?=
