@@ -100,7 +100,7 @@ class CreatorOutput(BaseModel):
 
 
 class CreatorOutputSpec(CreatorOutput):
-    """Simplified LLM output model using BehaviorSpec instead of Behavior."""
+    """A game object with a name, tags, optional behaviors, and visual description."""
 
     behaviors: list[BehaviorSpec] = Field(default_factory=list, max_length=3)  # type: ignore[assignment]
 
