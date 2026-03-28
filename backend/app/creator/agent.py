@@ -102,13 +102,14 @@ material, colors, and distinctive features. Describe the object's APPEARANCE, no
 "small" for swords, bottles, small animals, tools; "medium" for crates, dogs, chairs, shields; \
 "large" for doors, boulders, bears, large furniture; "huge" for walls, trees, dragons, buildings
 
-## Behaviors (Optional)
+## Behaviors
 
-Objects can have autonomous behaviors — actions they perform on their own. Give objects at least one \
-behavior when they have any implied action, reactivity, or natural ability. Living creatures should \
-almost always have behaviors. Even inanimate objects can have reactive behaviors (a barrel explodes \
-when damaged, a torch burns on contact). Only truly inert objects (walls, blocks, platforms) should \
-have zero behaviors.
+Every object MUST have at least 1 behavior. Behaviors make objects interactive and fun — without them, \
+objects are just static props. Even "simple" objects have reactions: a rock pushes back on contact, \
+a torch damages on touch, a balloon floats away when hit. The ONLY exception is purely static terrain \
+(a plain wall, a floor tile, a platform with no special properties).
+
+Reserve at least 2 points of behavior budget. A good tag/behavior split is tags 5-8, behaviors 2-6.
 
 ### Triggers (when the behavior fires)
 - ALWAYS: Every tick (use for movement — move_toward, move_away, patrol)
@@ -160,15 +161,17 @@ Short player-facing feedback when the behavior fires. E.g., "The dragon breathes
 behaviors=[{trigger="ON_CONTACT", action="DEAL_DAMAGE", target="CONTACT_BODY", \
 message="The blade sears!"}], \
 visual={visual_description="a curved steel sword with a fiery red blade and bright orange edge, wreathed in flames", \
-size_category="medium"}
-Budget: tags 1+1+2+3=7/10, behaviors 2/8.
+size_category="small"}
+Budget: tags 7/10, behaviors 2/8. Basic reactive — damages on touch.
 
-"ice wall" → name="Ice Wall", tags=[SOLID, RIGID, FROZEN, COLD, BREAKABLE], \
-behaviors=[{trigger="ON_DAMAGED", action="APPLY_FORCE", target="CONTACT_BODY", \
-message="Ice shards push you back!"}], \
-visual={visual_description="a tall translucent ice wall with jagged frozen edges and frosty white surface", \
-size_category="large"}
-Budget: tags 1+1+2+1+1=6/10, behaviors 2/8.
+"cursed well" → name="Cursed Well", tags=[SOLID, HEAVY, GLOWING, TOXIC], \
+behaviors=[{trigger="ON_PROXIMITY", action="ATTRACT", target="CONTACT_BODY", \
+message="Something pulls you closer..."}, \
+{trigger="ON_CONTACT", action="DEAL_DAMAGE", target="CONTACT_BODY", \
+message="The curse drains your life!"}], \
+visual={visual_description="a crumbling stone well with an eerie green glow rising from the depths and dark vines creeping over the rim", \
+size_category="medium"}
+Budget: tags 9/10, behaviors 4/8. Lures victims in with ATTRACT, then damages on touch.
 
 "fire-breathing dragon" → name="Fire Dragon", tags=[LIVING, HEAT_SOURCE, HOT], \
 behaviors=[{trigger="ALWAYS", action="MOVE_TOWARD", target="NEAREST_LIVING", \
@@ -177,29 +180,34 @@ message="The dragon stalks its prey..."}, \
 message="The dragon breathes fire!"}], \
 visual={visual_description="a large red dragon with orange underbelly, leathery wings, and smoke rising from its nostrils", \
 size_category="large"}
-Budget: tags 3+3+2=8/10, behaviors 2+4=6/8.
+Budget: tags 8/10, behaviors 6/8. Hunts and shoots — ALWAYS+MOVE makes creatures feel alive.
 
-"time bomb" → name="Time Bomb", tags=[EXPLOSIVE, SOLID, RIGID], \
-behaviors=[{trigger="ON_TIMER", action="EXPLODE", power="high", message="BOOM!"}], \
-visual={visual_description="a small round black metal bomb with a glowing red fuse and warning markings", \
-size_category="small"}
-Budget: tags 5+1+1=7/10, behaviors 4/8.
-
-"guard dog" → name="Guard Dog", tags=[LIVING, SOLID, FLEXIBLE], \
+"angry bee swarm" → name="Bee Swarm", tags=[LIVING, LIGHT, FLAMMABLE, TOXIC], \
 behaviors=[{trigger="ALWAYS", action="MOVE_TOWARD", target="NEAREST_PLAYER", power="high", \
-message="Wags tail"}, \
-{trigger="ON_PROXIMITY", action="DEAL_DAMAGE", target="NEAREST_PLAYER", power="low", \
-message="The dog bites!"}], \
-visual={visual_description="a stocky brown dog with tan paws, floppy ears, and a wagging tail", \
-size_category="medium"}
-Budget: tags 3+1+1=5/10, behaviors 3+2=5/8.
+message="The swarm buzzes angrily!"}, \
+{trigger="ON_TAG_ADDED", trigger_tag="HEAT_SOURCE", action="EXPLODE", \
+message="The swarm bursts into flames!"}], \
+visual={visual_description="a dense swirling cloud of yellow and black striped bees with vibrating wings", \
+size_category="small"}
+Budget: tags 9/10, behaviors 6/8. Chases aggressively; if fire hits, HEAT_SOURCE tag → triggers EXPLODE chain reaction.
 
-"reactive bomb" → name="Reactive Bomb", tags=[EXPLOSIVE, SOLID, FLAMMABLE], \
-behaviors=[{trigger="ON_TAG_ADDED", trigger_tag="HOT", action="EXPLODE", power="high", \
-message="The bomb detonates!"}], \
-visual={visual_description="a rusty metal barrel painted red with a gold hazard symbol and sparking wires", \
-size_category="medium"}
-Budget: tags 5+1+1=7/10, behaviors 4/8. Sits inert until fire adds HOT tag → explodes.
+"healing mushroom" → name="Healing Shroom", tags=[LIVING, SOLID, GLOWING], \
+behaviors=[{trigger="ON_CONTACT", action="HEAL", target="CONTACT_BODY", \
+message="Restorative spores!"}, \
+{trigger="ON_PROXIMITY", action="ADD_TAGS", target="CONTACT_BODY", \
+tags_to_apply=["GLOWING"], message="You begin to glow..."}], \
+visual={visual_description="a plump turquoise mushroom with a softly pulsing bioluminescent cap and white spots", \
+size_category="small"}
+Budget: tags 6/10, behaviors 4/8. Heals on touch and spreads GLOWING to nearby objects — not everything is combat.
+
+"clockwork spider" → name="Clockwork Spider", tags=[SOLID, RIGID, SHARP, CONDUCTING, LIVING], \
+behaviors=[{trigger="ALWAYS", action="PATROL", target="NEAREST_OBJECT", \
+message="Tick-tick-tick..."}, \
+{trigger="ON_DAMAGED", action="MOVE_AWAY", target="CONTACT_BODY", power="high", \
+message="It skitters away!"}], \
+visual={visual_description="a brass mechanical spider with visible gears, jointed steel legs, and glowing blue optical sensors", \
+size_category="small"}
+Budget: tags 9/10, behaviors 5/8. Patrols and flees when hurt — gives the object personality.
 """
 
 _agent: Agent[None, CreatorOutputSpec] | None = None
@@ -233,10 +241,12 @@ def _get_agent() -> Agent[None, CreatorOutputSpec]:
         "top_p": settings.llm_top_p,
         "presence_penalty": settings.llm_presence_penalty,
     }
-    # Pass SGLang-specific params via extra_body (top_k, thinking mode)
+    # Pass SGLang-specific params via extra_body (top_k, min_p, repetition_penalty, thinking)
     if settings.local_llm_url:
         model_settings["extra_body"] = {
             "top_k": settings.llm_top_k,
+            "min_p": settings.llm_min_p,
+            "repetition_penalty": settings.llm_repetition_penalty,
             "chat_template_kwargs": {"enable_thinking": not settings.local_llm_thinking_disabled},
         }
     _agent = Agent(

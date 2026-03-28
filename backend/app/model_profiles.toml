@@ -1,0 +1,21 @@
+# Per-model LLM sampling parameter presets.
+# The active profile is selected by LLM_MODEL in .env.
+# Any LLM_* env var explicitly set in .env overrides the profile value.
+
+[default]
+temperature = 0.7
+top_p = 1.0
+presence_penalty = 0.0
+thinking_disabled = true
+
+["Qwen/Qwen3.5-35B-A3B-FP8"]
+temperature = 1.0
+top_p = 0.95
+top_k = 20
+min_p = 0.0
+presence_penalty = 1.5
+repetition_penalty = 1.0
+thinking_disabled = true
+
+["google-gla:gemini-3.1-flash-lite-preview"]
+temperature = 1.0

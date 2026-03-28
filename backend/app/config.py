@@ -1,12 +1,30 @@
 from __future__ import annotations
 
-from typing import Literal
+import logging
+import tomllib
+from pathlib import Path
+from typing import Any, Literal
 
 from dotenv import load_dotenv
 from pydantic import model_validator
 from pydantic_settings import BaseSettings
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
+
+_PROFILES_PATH = Path(__file__).parent / "model_profiles.toml"
+
+# Maps TOML key → Settings field name
+_PROFILE_FIELD_MAP: dict[str, str] = {
+    "temperature": "llm_temperature",
+    "top_p": "llm_top_p",
+    "top_k": "llm_top_k",
+    "min_p": "llm_min_p",
+    "presence_penalty": "llm_presence_penalty",
+    "repetition_penalty": "llm_repetition_penalty",
+    "thinking_disabled": "local_llm_thinking_disabled",
+}
 
 
 class Settings(BaseSettings):
@@ -23,9 +41,11 @@ class Settings(BaseSettings):
     # Model configuration
     llm_model: str = "google-gla:gemini-3.1-flash-lite-preview"
     llm_temperature: float = 0.7
-    llm_top_p: float = 0.8
+    llm_top_p: float = 1.0
     llm_top_k: int = 20
-    llm_presence_penalty: float = 1.5
+    llm_min_p: float = 0.0
+    llm_presence_penalty: float = 0.0
+    llm_repetition_penalty: float = 1.0
     local_llm_url: str | None = None
     local_llm_thinking_disabled: bool = True
     image_model: str = "gemini-3.1-flash-image-preview"
@@ -56,4 +76,40 @@ class Settings(BaseSettings):
     model_config = {"env_file_encoding": "utf-8"}
 
 
+def _load_model_profile(model_name: str) -> dict[str, Any]:
+    """Load sampling parameters for *model_name* from model_profiles.toml."""
+    if not _PROFILES_PATH.exists():
+        logger.warning("model_profiles_missing", extra={"path": str(_PROFILES_PATH)})
+        return {}
+    with _PROFILES_PATH.open("rb") as f:
+        profiles = tomllib.load(f)
+    if model_name in profiles:
+        return dict(profiles[model_name])
+    if "default" in profiles:
+        logger.info(
+            "model_profile_fallback",
+            extra={"model": model_name, "profile": "default"},
+        )
+        return dict(profiles["default"])
+    return {}
+
+
+def _apply_profile(s: Settings) -> None:
+    """Apply model profile values from TOML. Always overwrites Settings defaults."""
+    profile = _load_model_profile(s.llm_model)
+    if not profile:
+        return
+    applied: dict[str, Any] = {}
+    for toml_key, field_name in _PROFILE_FIELD_MAP.items():
+        if toml_key in profile:
+            object.__setattr__(s, field_name, profile[toml_key])
+            applied[toml_key] = profile[toml_key]
+    if applied:
+        logger.info(
+            "model_profile_applied",
+            extra={"model": s.llm_model, "values": applied},
+        )
+
+
 settings = Settings()
+_apply_profile(settings)

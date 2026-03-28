@@ -2,7 +2,7 @@
 
 GODOT ?= godot
 VERBOSE ?= 0
-COMPOSE := docker compose -f services/sglang/docker-compose.yml
+COMPOSE := docker compose --env-file .env -f services/sglang/docker-compose.yml
 
 dev: ## Start all servers + launch game
 	$(COMPOSE) up -d --build
