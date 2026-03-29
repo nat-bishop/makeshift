@@ -71,6 +71,14 @@ region = Rect2(496, 248, 248, 248)
 atlas = ExtResource("2_gmlin")
 region = Rect2(744, 248, 248, 248)
 
+[sub_resource type="AtlasTexture" id="AtlasTexture_kick1"]
+atlas = ExtResource("2_gmlin")
+region = Rect2(0, 992, 248, 248)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_kick2"]
+atlas = ExtResource("2_gmlin")
+region = Rect2(248, 992, 248, 248)
+
 [sub_resource type="SpriteFrames" id="SpriteFrames_3j4b4"]
 animations = [{
 "frames": [{
@@ -140,6 +148,17 @@ animations = [{
 "loop": true,
 "name": &"walk",
 "speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_kick1")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_kick2")
+}],
+"loop": false,
+"name": &"kick",
+"speed": 12.0
 }]
 
 [node name="Player" type="CharacterBody2D" unique_id=1886788068]

@@ -15,7 +15,7 @@ const DAMAGE_FLASH_DURATION: float = 0.15
 const MOVE_ACCEL: float = 3000.0  # px/s² — snappy controls, reach 300px/s in 0.1s
 const EFFECTIVE_MASS: float = 5.0  # resistance to external forces (impulse / mass = velocity change)
 
-enum State { IDLE, WALK, JUMP, FALL }
+enum State { IDLE, WALK, JUMP, FALL, KICK }
 
 var _state: int = State.IDLE
 var _input_direction: float = 0.0
@@ -40,6 +40,7 @@ func _ready() -> void:
 	_kick_query.collision_mask = CollisionLayers.OBJECTS
 	_kick_query.collide_with_bodies = true
 
+	_anim_sprite.animation_finished.connect(_on_animation_finished)
 	Log.info("Player: Spawned with %d HP" % MAX_HEALTH)
 
 
@@ -96,11 +97,15 @@ func _process_kick(delta: float) -> void:
 
 
 func _perform_kick() -> void:
+	_state = State.KICK
+	_anim_sprite.play(&"kick")
+
 	var space_state := get_world_2d().direct_space_state
 	_kick_query.transform = Transform2D(0.0, global_position + Vector2(_facing * KICK_RANGE * 0.5, 0.0))
 
 	var results := space_state.intersect_shape(_kick_query, 8)
 	if results.is_empty():
+		Log.debug("Player: Kick whiffed — nothing in range")
 		return
 
 	var kick_dir := Vector2(_facing, -0.3).normalized()
@@ -115,11 +120,20 @@ func _perform_kick() -> void:
 			Log.debug("Player: Kicked '%s'" % collider.name)
 
 
+func _on_animation_finished() -> void:
+	if _state == State.KICK:
+		_state = -1  # force _update_animation to re-evaluate on next frame
+
+
 func _update_animation() -> void:
 	if _input_direction > 0.0:
 		_anim_sprite.flip_h = false
 	elif _input_direction < 0.0:
 		_anim_sprite.flip_h = true
+
+	# Let kick animation play through before resuming normal state
+	if _state == State.KICK:
+		return
 
 	var new_state: int = _state
 	if not is_on_floor():
