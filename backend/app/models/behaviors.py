@@ -1,7 +1,7 @@
 from enum import StrEnum
 from typing import Self
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, model_validator
 
 from app.models.tags import Tag
 
@@ -153,7 +153,6 @@ class Behavior(BaseModel):
     range: BehaviorRange = BehaviorRange.MEDIUM
     speed: Speed = Speed.MEDIUM
     interval: Interval = Interval.MEDIUM
-    message: str | None = Field(default=None, max_length=60)
     tags_to_apply: list[Tag] | None = None
     trigger_tag: Tag | None = None
 
@@ -253,7 +252,6 @@ class BehaviorSpec(BaseModel):
     action: BehaviorAction
     target: BehaviorTarget = BehaviorTarget.NEAREST_OBJECT
     power: Power = Power.MEDIUM
-    message: str | None = Field(default=None, max_length=60)
     trigger_tag: Tag | None = None
     tags_to_apply: list[Tag] | None = None
 
@@ -321,7 +319,6 @@ def expand_behavior_spec(spec: BehaviorSpec) -> Behavior:
         range=range_,
         speed=speed,
         interval=interval,
-        message=spec.message,
         tags_to_apply=spec.tags_to_apply,
         trigger_tag=spec.trigger_tag,
     )

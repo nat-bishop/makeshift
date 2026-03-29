@@ -107,7 +107,6 @@ class TestBehaviorValidation:
         assert b.range == BehaviorRange.MEDIUM
         assert b.speed == Speed.MEDIUM
         assert b.interval == Interval.MEDIUM
-        assert b.message is None
         assert b.tags_to_apply is None
         assert b.trigger_tag is None
 
@@ -150,25 +149,6 @@ class TestBehaviorValidation:
             action=BehaviorAction.ADD_TAGS, tags_to_apply=[Tag.HOT, Tag.HEAT_SOURCE]
         )
         assert b.tags_to_apply == [Tag.HOT, Tag.HEAT_SOURCE]
-
-
-class TestBehaviorMessage:
-    def test_message_none_valid(self) -> None:
-        b = _make_behavior(message=None)
-        assert b.message is None
-
-    def test_message_short_valid(self) -> None:
-        b = _make_behavior(message="BOOM!")
-        assert b.message == "BOOM!"
-
-    def test_message_60_chars_valid(self) -> None:
-        msg = "A" * 60
-        b = _make_behavior(message=msg)
-        assert b.message == msg
-
-    def test_message_over_60_chars_rejected(self) -> None:
-        with pytest.raises(ValidationError):
-            _make_behavior(message="A" * 61)
 
 
 class TestActionTargetValidation:
@@ -362,11 +342,6 @@ class TestExpandBehaviorSpec:
         b = expand_behavior_spec(s)
         assert b.action == BehaviorAction.DEAL_DAMAGE
 
-    def test_message_preserved(self) -> None:
-        s = _make_spec(message="BOOM!")
-        b = expand_behavior_spec(s)
-        assert b.message == "BOOM!"
-
     def test_tags_to_apply_preserved(self) -> None:
         s = _make_spec(
             action=BehaviorAction.ADD_TAGS, tags_to_apply=[Tag.HOT, Tag.HEAT_SOURCE]
@@ -434,7 +409,6 @@ class TestCreatorOutputBehaviors:
                     action=BehaviorAction.MOVE_TOWARD,
                     target=BehaviorTarget.NEAREST_PLAYER,
                     speed=Speed.FAST,
-                    message="Wags tail",
                 )
             ],
             visual_descriptor=_make_visual(),
@@ -451,7 +425,6 @@ class TestCreatorOutputBehaviors:
                     action=BehaviorAction.MOVE_TOWARD,
                     target=BehaviorTarget.NEAREST_LIVING,
                     speed=Speed.MEDIUM,
-                    message="The dragon stalks its prey...",
                 ),
                 Behavior(
                     trigger=BehaviorTrigger.ON_PROXIMITY,
@@ -460,7 +433,6 @@ class TestCreatorOutputBehaviors:
                     range=BehaviorRange.CLOSE,
                     intensity=Intensity.HIGH,
                     interval=Interval.SLOW,
-                    message="The dragon breathes fire!",
                 ),
             ],
             visual_descriptor=_make_visual(),
@@ -478,7 +450,6 @@ class TestCreatorOutputBehaviors:
                     action=BehaviorAction.EXPLODE,
                     intensity=Intensity.EXTREME,
                     range=BehaviorRange.FAR,
-                    message="The bomb detonates!",
                 )
             ],
             visual_descriptor=_make_visual(),
@@ -527,7 +498,6 @@ class TestGameObjectBlueprintBehaviors:
                     intensity=Intensity.EXTREME,
                     range=BehaviorRange.FAR,
                     interval=Interval.ONCE_MEDIUM,
-                    message="BOOM!",
                 )
             ],
             visual_descriptor=_make_visual(),
@@ -535,5 +505,4 @@ class TestGameObjectBlueprintBehaviors:
         data = bp.model_dump(mode="json")
         assert len(data["behaviors"]) == 1
         assert data["behaviors"][0]["trigger"] == "ON_TIMER"
-        assert data["behaviors"][0]["message"] == "BOOM!"
         assert data["behavior_cost"] == 5

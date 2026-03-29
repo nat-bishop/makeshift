@@ -152,59 +152,46 @@ Controls strength/speed/range of the behavior:
 - "medium": balanced (default, same base cost)
 - "high": stronger, faster, longer range (+1 cost)
 
-### Message (optional, max 60 chars)
-Short player-facing feedback when the behavior fires. E.g., "The dragon breathes fire!", "BOOM!"
-
 ## Examples
 
 "fire sword" → name="Fire Sword", tags=[SOLID, RIGID, SHARP, HEAT_SOURCE], \
-behaviors=[{trigger="ON_CONTACT", action="DEAL_DAMAGE", target="CONTACT_BODY", \
-message="The blade sears!"}], \
+behaviors=[{trigger="ON_CONTACT", action="DEAL_DAMAGE", target="CONTACT_BODY"}], \
 visual={visual_description="a curved steel sword with a fiery red blade and bright orange edge, wreathed in flames", \
 size_category="small"}
 Budget: tags 7/10, behaviors 2/8. Basic reactive — damages on touch.
 
 "cursed well" → name="Cursed Well", tags=[SOLID, HEAVY, GLOWING, TOXIC], \
-behaviors=[{trigger="ON_PROXIMITY", action="ATTRACT", target="CONTACT_BODY", \
-message="Something pulls you closer..."}, \
-{trigger="ON_CONTACT", action="DEAL_DAMAGE", target="CONTACT_BODY", \
-message="The curse drains your life!"}], \
+behaviors=[{trigger="ON_PROXIMITY", action="ATTRACT", target="CONTACT_BODY"}, \
+{trigger="ON_CONTACT", action="DEAL_DAMAGE", target="CONTACT_BODY"}], \
 visual={visual_description="a crumbling stone well with an eerie green glow rising from the depths and dark vines creeping over the rim", \
 size_category="medium"}
 Budget: tags 9/10, behaviors 4/8. Lures victims in with ATTRACT, then damages on touch.
 
 "fire-breathing dragon" → name="Fire Dragon", tags=[LIVING, HEAT_SOURCE, HOT], \
-behaviors=[{trigger="ALWAYS", action="MOVE_TOWARD", target="NEAREST_LIVING", \
-message="The dragon stalks its prey..."}, \
-{trigger="ON_PROXIMITY", action="SPAWN_PROJECTILE", target="NEAREST_LIVING", power="high", \
-message="The dragon breathes fire!"}], \
+behaviors=[{trigger="ALWAYS", action="MOVE_TOWARD", target="NEAREST_LIVING"}, \
+{trigger="ON_PROXIMITY", action="SPAWN_PROJECTILE", target="NEAREST_LIVING", power="high"}], \
 visual={visual_description="a large red dragon with orange underbelly, leathery wings, and smoke rising from its nostrils", \
 size_category="large"}
 Budget: tags 8/10, behaviors 6/8. Hunts and shoots — ALWAYS+MOVE makes creatures feel alive.
 
 "angry bee swarm" → name="Bee Swarm", tags=[LIVING, LIGHT, FLAMMABLE, TOXIC], \
-behaviors=[{trigger="ALWAYS", action="MOVE_TOWARD", target="NEAREST_PLAYER", power="high", \
-message="The swarm buzzes angrily!"}, \
-{trigger="ON_TAG_ADDED", trigger_tag="HEAT_SOURCE", action="EXPLODE", \
-message="The swarm bursts into flames!"}], \
+behaviors=[{trigger="ALWAYS", action="MOVE_TOWARD", target="NEAREST_PLAYER", power="high"}, \
+{trigger="ON_TAG_ADDED", trigger_tag="HEAT_SOURCE", action="EXPLODE"}], \
 visual={visual_description="a dense swirling cloud of yellow and black striped bees with vibrating wings", \
 size_category="small"}
 Budget: tags 9/10, behaviors 6/8. Chases aggressively; if fire hits, HEAT_SOURCE tag → triggers EXPLODE chain reaction.
 
 "healing mushroom" → name="Healing Shroom", tags=[LIVING, SOLID, GLOWING], \
-behaviors=[{trigger="ON_CONTACT", action="HEAL", target="CONTACT_BODY", \
-message="Restorative spores!"}, \
+behaviors=[{trigger="ON_CONTACT", action="HEAL", target="CONTACT_BODY"}, \
 {trigger="ON_PROXIMITY", action="ADD_TAGS", target="CONTACT_BODY", \
-tags_to_apply=["GLOWING"], message="You begin to glow..."}], \
+tags_to_apply=["GLOWING"]}], \
 visual={visual_description="a plump turquoise mushroom with a softly pulsing bioluminescent cap and white spots", \
 size_category="small"}
 Budget: tags 6/10, behaviors 4/8. Heals on touch and spreads GLOWING to nearby objects — not everything is combat.
 
 "clockwork spider" → name="Clockwork Spider", tags=[SOLID, RIGID, SHARP, CONDUCTING, LIVING], \
-behaviors=[{trigger="ALWAYS", action="PATROL", target="NEAREST_OBJECT", \
-message="Tick-tick-tick..."}, \
-{trigger="ON_DAMAGED", action="MOVE_AWAY", target="CONTACT_BODY", power="high", \
-message="It skitters away!"}], \
+behaviors=[{trigger="ALWAYS", action="PATROL", target="NEAREST_OBJECT"}, \
+{trigger="ON_DAMAGED", action="MOVE_AWAY", target="CONTACT_BODY", power="high"}], \
 visual={visual_description="a brass mechanical spider with visible gears, jointed steel legs, and glowing blue optical sensors", \
 size_category="small"}
 Budget: tags 9/10, behaviors 5/8. Patrols and flees when hurt — gives the object personality.

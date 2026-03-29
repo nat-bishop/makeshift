@@ -214,7 +214,6 @@ func _execute_behavior(behavior_index: int, pre_resolved_target: Node = null, ac
 				Log.debug("BehaviorExecutor: '%s' fired %s on '%s'" % [_owner_name(), action, target_name])
 			else:
 				Log.debug("BehaviorExecutor: '%s' fired %s" % [_owner_name(), action])
-		_emit_message(b)
 	else:
 		var count: int = _behavior_errors.get(behavior_index, 0) + 1
 		_behavior_errors[behavior_index] = count
@@ -293,20 +292,6 @@ func _update_target_cache() -> void:
 		var group := _group_for_target(_behaviors[i].get("target", "SELF"))
 		if not group.is_empty():
 			_target_cache[i] = _find_nearest_in_group(group)
-
-
-func _emit_message(behavior: Dictionary) -> void:
-	var msg: String = behavior.get("message", "")
-	if msg.is_empty():
-		return
-	EventBus.interaction_triggered.emit(
-		_owner_body.name,
-		_owner_body.tags,
-		"",
-		[],
-		msg,
-		_owner_body.global_position
-	)
 
 
 # --- Action implementations ---
