@@ -36,7 +36,7 @@ def test_system_prompt_mentions_budget():
 def test_system_prompt_mentions_contradictions():
     assert "FROZEN" in SYSTEM_PROMPT
     assert "MOLTEN" in SYSTEM_PROMPT
-    assert "contradict" in SYSTEM_PROMPT.lower() or "cannot coexist" in SYSTEM_PROMPT.lower()
+    assert "contradict" in SYSTEM_PROMPT.lower() or "Contradictions" in SYSTEM_PROMPT
 
 
 def test_fallback_object_structure():

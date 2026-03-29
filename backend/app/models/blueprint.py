@@ -26,8 +26,12 @@ logger = structlog.get_logger()
 
 
 class VisualDescriptor(BaseModel):
-    visual_description: str
-    size_category: Literal["tiny", "small", "medium", "large", "huge"]
+    visual_description: str = Field(
+        description="1-2 sentences: shape, material, colors, distinctive features"
+    )
+    size_category: Literal["tiny", "small", "medium", "large", "huge"] = Field(
+        description="Scale relative to the player character (small-to-medium sized)"
+    )
 
 
 class CreatorOutput(BaseModel):

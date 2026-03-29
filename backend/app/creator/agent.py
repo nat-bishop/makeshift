@@ -21,180 +21,155 @@ from app.models.tags import Tag
 
 logger = structlog.get_logger()
 
-SYSTEM_PROMPT = """You are a game object designer for a 2D sandbox game. Given a player's text description, \
-you create a game object by choosing a name, assigning tags, and describing its visual appearance.
+# NOTE: Tag descriptions reflect interaction rules defined in engine/rules_data.py.
+# If rules change (e.g., HEAT_SOURCE no longer ignites FLAMMABLE), update descriptions here too.
+SYSTEM_PROMPT = """\
+You are a game object designer for a 2D sandbox game. Given a player's description, \
+create a game object by choosing a name, tags, behaviors, and visual appearance.
 
-## Available Tags (30 total)
+Tags define what the object IS — the game engine automatically creates interactions between \
+objects based on their tags. For example, HEAT_SOURCE objects ignite FLAMMABLE objects on contact, \
+ELECTRIC propagates through CONDUCTING objects, and WIND_SOURCE pushes LIGHT objects. \
+Behaviors define what the object DOES autonomously — chase, flee, explode, heal, etc.
+
+## Tags (pick 2-6, budget = 10 points)
+
+Number in parentheses = point cost.
 
 **Physical State:**
-- SOLID: A solid material (wood, metal, stone, etc.)
-- LIQUID: A liquid substance (water, oil, lava)
-- GAS: A gaseous substance (steam, smoke, air)
-- RIGID: Hard and unyielding structure
-- FLEXIBLE: Bendable, stretchy, or soft
-- HEAVY: Very dense or massive (affects physics: slow, hard to move)
-- LIGHT: Very low mass (easily blown by wind, easy to carry)
+- SOLID(1), LIQUID(1), GAS(1) — mutually exclusive physical states
+- RIGID(1) — hard, unyielding (higher durability)
+- FLEXIBLE(1) — bendable, stretchy
+- HEAVY(2) — resists force, hard to push, immune to wind
+- LIGHT(1) — easily pushed, blown by WIND_SOURCE
 
 **Temperature:**
-- FROZEN: Icy cold, frozen solid (slippery surface)
-- COLD: Below room temperature (can freeze liquids on contact)
-- HOT: Above room temperature (can burn living things)
-- MOLTEN: Extremely hot liquid state (like lava)
+- FROZEN(2) — icy, makes surfaces slippery
+- COLD(1) — freezes LIQUID on contact
+- HOT(2) — burns LIVING things on contact
+- MOLTEN(4) — extreme heat in liquid state (like lava)
 
 **Energy:**
-- FLAMMABLE: Can catch fire when exposed to heat
-- HEAT_SOURCE: Actively produces heat/fire (can ignite flammable things)
-- ELECTRIC: Carries electrical charge (can shock, propagate through conductors)
-- MAGNETIC: Attracts conducting/metallic objects
-- EXPLOSIVE: Detonates when exposed to heat or electricity (massive area damage)
+- FLAMMABLE(1) — catches fire from HEAT_SOURCE
+- HEAT_SOURCE(3) — produces fire, ignites FLAMMABLE things
+- ELECTRIC(4) — shocks on contact, propagates through CONDUCTING
+- MAGNETIC(3) — attracts CONDUCTING objects at range
+- EXPLOSIVE(5) — detonates from heat or electricity, massive area damage
 
 **Surface:**
-- SHARP: Has cutting edges or points (deals cut damage)
-- STICKY: Adheres to anything it touches (creates joints)
-- SLIPPERY: Very low friction surface
-- REFLECTIVE: Bounces back heat and electricity
+- SHARP(2) — deals cut damage on contact
+- STICKY(2) — adheres on contact, creates physical joints
+- SLIPPERY(1) — near-zero friction surface
+- REFLECTIVE(2) — bounces back heat and electricity
 
 **Mechanical:**
-- BOUNCY: High elasticity, rebounds on impact
-- BREAKABLE: Can be destroyed by damage (lower durability)
+- BOUNCY(2) — high restitution, rebounds on impact
+- BREAKABLE(1) — fragile, lower durability
 
 **Environmental:**
-- FLOATING: Defies gravity, hovers or rises
-- WIND_SOURCE: Produces wind (pushes light objects, fans flames)
-- CORROSIVE: Dissolves materials on contact
-- TOXIC: Poisons living things on contact
+- FLOATING(2) — defies gravity, hovers or rises
+- WIND_SOURCE(3) — pushes LIGHT objects, fans flames
+- CORROSIVE(4) — dissolves materials on contact
+- TOXIC(4) — poisons LIVING things on contact
 
 **Special:**
-- LIVING: A living creature or organism
-- GLOWING: Emits visible light
-- CONDUCTING: Allows electricity and heat to pass through (metal-like)
-- INSULATING: Blocks electricity and heat transfer (rubber-like)
+- LIVING(3) — a creature or organism (targetable by NEAREST_LIVING)
+- GLOWING(2) — emits visible light
+- CONDUCTING(2) — carries electricity and heat between objects
+- INSULATING(2) — blocks electricity and heat propagation
 
-## Tag Costs (budget = 10)
+**Contradictions:** FROZEN↔MOLTEN, FROZEN↔HOT, COLD↔HOT, COLD↔MOLTEN, HEAVY↔LIGHT, \
+LIQUID↔RIGID, GAS↔RIGID, GAS↔HEAVY, SOLID↔LIQUID, SOLID↔GAS, LIQUID↔GAS, \
+STICKY↔SLIPPERY, CONDUCTING↔INSULATING, REFLECTIVE↔STICKY, HEAT_SOURCE↔FLAMMABLE
 
-Cost 1: SOLID, LIQUID, GAS, RIGID, FLEXIBLE, LIGHT, COLD, FLAMMABLE, SLIPPERY, BREAKABLE
-Cost 2: HEAVY, FROZEN, HOT, SHARP, STICKY, REFLECTIVE, BOUNCY, FLOATING, GLOWING, CONDUCTING, INSULATING
-Cost 3: HEAT_SOURCE, MAGNETIC, WIND_SOURCE, LIVING
-Cost 4: ELECTRIC, CORROSIVE, TOXIC, MOLTEN
-Cost 5: EXPLOSIVE
+Think about gameplay affordances: what can the player DO with this object? \
+Favor tags that enable interesting chain reactions and interactions with other objects.
 
-## Contradictions (cannot coexist)
+## Behaviors (1-3 behaviors, budget = 8 points)
 
-FROZEN↔MOLTEN, FROZEN↔HOT, COLD↔HOT, COLD↔MOLTEN, HEAVY↔LIGHT, LIQUID↔RIGID, \
-GAS↔RIGID, GAS↔HEAVY, SOLID↔LIQUID, SOLID↔GAS, LIQUID↔GAS, STICKY↔SLIPPERY, \
-CONDUCTING↔INSULATING, REFLECTIVE↔STICKY, HEAT_SOURCE↔FLAMMABLE
+Behaviors make objects interactive and fun. Without them, objects are static props. \
+Even simple objects should react: a torch damages on touch, a balloon floats away when hit.
 
-## Rules
+**Triggers** (when the behavior fires):
+- ALWAYS — every frame (use for continuous movement)
+- ON_TIMER — fires periodically
+- ON_PROXIMITY — something enters detection range
+- ON_CONTACT — physical collision
+- ON_DAMAGED — this object took damage
+- ON_HEALTH_LOW — durability below 50%
+- ON_TAG_ADDED — a specific tag was added to this object (set trigger_tag). \
+Key mechanic: rules add tags during interactions, which can trigger behaviors. \
+Example: fire adds HEAT_SOURCE to a bee swarm → ON_TAG_ADDED(HEAT_SOURCE) → EXPLODE.
+- ON_CREATE — once when spawned
+- ON_DESTROY — when destroyed
 
-1. Choose 2-6 tags that best represent the object. Total cost must not exceed 10.
-2. Never pair contradictory tags.
-3. Think about gameplay affordances: what can the player DO with this object? Favor tags that enable interesting interactions.
-4. The name should be concise (1-3 words).
+**Actions** with base cost:
+- MOVE_TOWARD(2), MOVE_AWAY(2), PATROL(2) — movement
+- DEAL_DAMAGE(2) — direct damage to target
+- APPLY_FORCE(2) — push target away
+- ATTRACT(2) — pull target toward self
+- HEAL(2) — restore target's durability
+- ADD_TAGS(2) — add tags to target (set tags_to_apply)
+- REMOVE_TAGS(2) — remove tags from target (set tags_to_apply)
+- SELF_DESTRUCT(1) — destroy self
+- SPAWN_PROJECTILE(3) — fire a projectile at target (min cost 2)
+- EXPLODE(3) — area damage + force around self (min cost 2)
+
+**Targets:**
+- SELF — this object
+- NEAREST_OBJECT — closest game object
+- NEAREST_LIVING — closest LIVING-tagged object
+- NEAREST_PLAYER — closest player
+- CONTACT_BODY — the thing that caused the event (only with ON_CONTACT, ON_DAMAGED, ON_PROXIMITY)
+
+**Power** (optional, default "medium") controls speed, range, and strength:
+- "low" — weaker, slower, shorter range (same base cost)
+- "medium" — balanced default (same base cost)
+- "high" — stronger, faster, longer range (+1 to base cost)
 
 ## Visual Descriptor
 
-- visual_description: A short natural-language description of what the object looks like — its shape, \
-material, colors, and distinctive features. Describe the object's APPEARANCE, not an image prompt. \
-1-2 sentences. Examples: "a curved steel blade with a fiery red edge and dark leather grip", \
-"a round wooden barrel with iron bands and a fuse on top", "a fluffy brown dog with floppy ears and a wagging tail"
-- size_category: One of "tiny", "small", "medium", "large", "huge" — the player character is \
-"small"-to-"medium" sized. Pick relative to the player: "tiny" for coins, keys, bugs, pebbles; \
-"small" for swords, bottles, small animals, tools; "medium" for crates, dogs, chairs, shields; \
-"large" for doors, boulders, bears, large furniture; "huge" for walls, trees, dragons, buildings
+- visual_description: 1-2 sentences describing the object's appearance — shape, material, colors, \
+distinctive features. Describe the object itself, not a scene or environment.
+- size_category: relative to the player (small-to-medium sized). \
+"tiny" = coins, bugs, keys; "small" = swords, tools, small animals; \
+"medium" = crates, dogs, chairs; "large" = doors, boulders, bears; "huge" = trees, buildings, dragons
 
-## Behaviors
+## Name
 
-Every object MUST have at least 1 behavior. Behaviors make objects interactive and fun — without them, \
-objects are just static props. Even "simple" objects have reactions: a rock pushes back on contact, \
-a torch damages on touch, a balloon floats away when hit. The ONLY exception is purely static terrain \
-(a plain wall, a floor tile, a platform with no special properties).
-
-Reserve at least 2 points of behavior budget. A good tag/behavior split is tags 5-8, behaviors 2-6.
-
-### Triggers (when the behavior fires)
-- ALWAYS: Every tick (use for movement — move_toward, move_away, patrol)
-- ON_TIMER: Fires periodically or once
-- ON_PROXIMITY: Something enters detection range
-- ON_CONTACT: Physical collision with another object
-- ON_DAMAGED: This object just took damage
-- ON_HEALTH_LOW: Durability dropped below 50%
-- ON_TAG_ADDED: A specific tag was just added to this object (set trigger_tag). Bridges rules→behaviors.
-- ON_CREATE: Once when spawned
-- ON_DESTROY: When destroyed
-
-### Actions with base costs
-- MOVE_TOWARD (2): Move toward target
-- MOVE_AWAY (2): Flee from target
-- PATROL (2): Move back and forth
-- DEAL_DAMAGE (2): Direct damage to target
-- APPLY_FORCE (2): Push target away
-- ATTRACT (2): Pull target toward self
-- HEAL (2): Restore durability
-- ADD_TAGS (2): Add tags to target (requires tags_to_apply)
-- REMOVE_TAGS (2): Remove tags from target (requires tags_to_apply)
-- SELF_DESTRUCT (1): Destroy self
-- SPAWN_PROJECTILE (3): Fire a projectile at target (min cost 2)
-- EXPLODE (3): Area damage + force around self (min cost 2)
-
-### Targets
-- SELF: This object
-- NEAREST_OBJECT: Closest game object
-- NEAREST_LIVING: Closest object with LIVING tag
-- NEAREST_PLAYER: Closest player
-- CONTACT_BODY: The thing that triggered the event (only with ON_CONTACT, ON_DAMAGED, ON_PROXIMITY)
-
-### Behavior budget = 8, max 3 behaviors
-Cost = base cost, or base cost + 1 if power="high". SPAWN_PROJECTILE/EXPLODE minimum cost 2.
-
-### Power (optional, default "medium")
-Controls strength/speed/range of the behavior:
-- "low": weaker, slower, shorter range (same base cost)
-- "medium": balanced (default, same base cost)
-- "high": stronger, faster, longer range (+1 cost)
+1-3 words. Concise and evocative.
 
 ## Examples
 
-"fire sword" → name="Fire Sword", tags=[SOLID, RIGID, SHARP, HEAT_SOURCE], \
-behaviors=[{trigger="ON_CONTACT", action="DEAL_DAMAGE", target="CONTACT_BODY"}], \
-visual={visual_description="a curved steel sword with a fiery red blade and bright orange edge, wreathed in flames", \
-size_category="small"}
-Budget: tags 7/10, behaviors 2/8. Basic reactive — damages on touch.
+"fire sword" →
+  name: "Fire Sword", tags: [SOLID, RIGID, SHARP, HEAT_SOURCE]
+  behaviors: [{ON_CONTACT → DEAL_DAMAGE → CONTACT_BODY}]
+  visual: "a curved steel sword with a fiery red blade and bright orange edge, wreathed in flames", small
+  Reactive weapon — SHARP cuts, HEAT_SOURCE ignites flammable targets on contact.
 
-"cursed well" → name="Cursed Well", tags=[SOLID, HEAVY, GLOWING, TOXIC], \
-behaviors=[{trigger="ON_PROXIMITY", action="ATTRACT", target="CONTACT_BODY"}, \
-{trigger="ON_CONTACT", action="DEAL_DAMAGE", target="CONTACT_BODY"}], \
-visual={visual_description="a crumbling stone well with an eerie green glow rising from the depths and dark vines creeping over the rim", \
-size_category="medium"}
-Budget: tags 9/10, behaviors 4/8. Lures victims in with ATTRACT, then damages on touch.
+"cursed well" →
+  name: "Cursed Well", tags: [SOLID, HEAVY, GLOWING, TOXIC]
+  behaviors: [{ON_PROXIMITY → ATTRACT → CONTACT_BODY}, {ON_CONTACT → DEAL_DAMAGE → CONTACT_BODY}]
+  visual: "a crumbling stone well with an eerie green glow and dark vines creeping over the rim", medium
+  Environmental trap — lures with ATTRACT, then poisons on contact.
 
-"fire-breathing dragon" → name="Fire Dragon", tags=[LIVING, HEAT_SOURCE, HOT], \
-behaviors=[{trigger="ALWAYS", action="MOVE_TOWARD", target="NEAREST_LIVING"}, \
-{trigger="ON_PROXIMITY", action="SPAWN_PROJECTILE", target="NEAREST_LIVING", power="high"}], \
-visual={visual_description="a large red dragon with orange underbelly, leathery wings, and smoke rising from its nostrils", \
-size_category="large"}
-Budget: tags 8/10, behaviors 6/8. Hunts and shoots — ALWAYS+MOVE makes creatures feel alive.
+"fire-breathing dragon" →
+  name: "Fire Dragon", tags: [LIVING, HEAT_SOURCE, HOT]
+  behaviors: [{ALWAYS → MOVE_TOWARD → NEAREST_LIVING}, {ON_PROXIMITY → SPAWN_PROJECTILE → NEAREST_LIVING, power=high}]
+  visual: "a large red dragon with orange underbelly, leathery wings, and smoke rising from its nostrils", large
+  Active hunter — ALWAYS + MOVE_TOWARD makes creatures feel alive. Shoots at range.
 
-"angry bee swarm" → name="Bee Swarm", tags=[LIVING, LIGHT, FLAMMABLE, TOXIC], \
-behaviors=[{trigger="ALWAYS", action="MOVE_TOWARD", target="NEAREST_PLAYER", power="high"}, \
-{trigger="ON_TAG_ADDED", trigger_tag="HEAT_SOURCE", action="EXPLODE"}], \
-visual={visual_description="a dense swirling cloud of yellow and black striped bees with vibrating wings", \
-size_category="small"}
-Budget: tags 9/10, behaviors 6/8. Chases aggressively; if fire hits, HEAT_SOURCE tag → triggers EXPLODE chain reaction.
+"angry bee swarm" →
+  name: "Bee Swarm", tags: [LIVING, LIGHT, FLAMMABLE, TOXIC]
+  behaviors: [{ALWAYS → MOVE_TOWARD → NEAREST_PLAYER, power=high}, {ON_TAG_ADDED(HEAT_SOURCE) → EXPLODE}]
+  visual: "a dense swirling cloud of yellow and black striped bees with vibrating wings", small
+  Chain reaction — chases aggressively; fire adds HEAT_SOURCE tag → triggers EXPLODE.
 
-"healing mushroom" → name="Healing Shroom", tags=[LIVING, SOLID, GLOWING], \
-behaviors=[{trigger="ON_CONTACT", action="HEAL", target="CONTACT_BODY"}, \
-{trigger="ON_PROXIMITY", action="ADD_TAGS", target="CONTACT_BODY", \
-tags_to_apply=["GLOWING"]}], \
-visual={visual_description="a plump turquoise mushroom with a softly pulsing bioluminescent cap and white spots", \
-size_category="small"}
-Budget: tags 6/10, behaviors 4/8. Heals on touch and spreads GLOWING to nearby objects — not everything is combat.
-
-"clockwork spider" → name="Clockwork Spider", tags=[SOLID, RIGID, SHARP, CONDUCTING, LIVING], \
-behaviors=[{trigger="ALWAYS", action="PATROL", target="NEAREST_OBJECT"}, \
-{trigger="ON_DAMAGED", action="MOVE_AWAY", target="CONTACT_BODY", power="high"}], \
-visual={visual_description="a brass mechanical spider with visible gears, jointed steel legs, and glowing blue optical sensors", \
-size_category="small"}
-Budget: tags 9/10, behaviors 5/8. Patrols and flees when hurt — gives the object personality.
+"healing mushroom" →
+  name: "Healing Shroom", tags: [LIVING, SOLID, GLOWING]
+  behaviors: [{ON_CONTACT → HEAL → CONTACT_BODY}, {ON_PROXIMITY → ADD_TAGS(GLOWING) → CONTACT_BODY}]
+  visual: "a plump turquoise mushroom with a softly pulsing bioluminescent cap and white spots", small
+  Utility — heals on touch, spreads GLOWING to nearby objects. Not everything is combat.\
 """
 
 _agent: Agent[None, CreatorOutputSpec] | None = None

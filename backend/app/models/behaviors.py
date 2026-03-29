@@ -1,7 +1,7 @@
 from enum import StrEnum
 from typing import Self
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 from app.models.tags import Tag
 
@@ -145,6 +145,63 @@ _CONTACT_BODY_TRIGGERS: frozenset[BehaviorTrigger] = frozenset(
 )
 
 
+# ---------------------------------------------------------------------------
+# Shared validation helpers — used by both Behavior (ValueError) and
+# BehaviorSpec (ModelRetry) so the constraint logic lives in one place.
+# ---------------------------------------------------------------------------
+
+
+def _check_trigger_tag(trigger: BehaviorTrigger, trigger_tag: Tag | None) -> str | None:
+    if trigger == BehaviorTrigger.ON_TAG_ADDED:
+        if trigger_tag is None:
+            return "ON_TAG_ADDED trigger requires trigger_tag to specify which tag to watch."
+    elif trigger_tag is not None:
+        return f"trigger_tag is only valid with ON_TAG_ADDED trigger, not {trigger}."
+    return None
+
+
+def _check_tags_to_apply(action: BehaviorAction, tags_to_apply: list[Tag] | None) -> str | None:
+    if action in {BehaviorAction.ADD_TAGS, BehaviorAction.REMOVE_TAGS} and not tags_to_apply:
+        return f"{action} action requires tags_to_apply to specify which tags."
+    return None
+
+
+def _check_self_only_action(action: BehaviorAction, target: BehaviorTarget) -> str | None:
+    if action in _SELF_ONLY_ACTIONS and target != BehaviorTarget.SELF:
+        return f"{action} always affects this object. target must be SELF."
+    return None
+
+
+def _check_movement_target(action: BehaviorAction, target: BehaviorTarget) -> str | None:
+    if action in _DIRECTIONAL_MOVEMENT_ACTIONS and target == BehaviorTarget.SELF:
+        return (
+            f"{action} needs a target to move toward/away from. "
+            f"SELF is not valid. "
+            f"Use NEAREST_OBJECT, NEAREST_LIVING, NEAREST_PLAYER, or CONTACT_BODY."
+        )
+    return None
+
+
+def _check_contact_body_trigger(
+    trigger: BehaviorTrigger, target: BehaviorTarget
+) -> str | None:
+    if target == BehaviorTarget.CONTACT_BODY and trigger not in _CONTACT_BODY_TRIGGERS:
+        return (
+            f"CONTACT_BODY target requires ON_CONTACT, ON_DAMAGED, or ON_PROXIMITY "
+            f"trigger, not {trigger}."
+        )
+    return None
+
+
+def _check_destroy_movement(trigger: BehaviorTrigger, action: BehaviorAction) -> str | None:
+    if trigger == BehaviorTrigger.ON_DESTROY and action in _ALL_MOVEMENT_ACTIONS:
+        return (
+            f"ON_DESTROY cannot use movement actions ({action}). "
+            f"The object is being removed from the game."
+        )
+    return None
+
+
 class Behavior(BaseModel):
     trigger: BehaviorTrigger
     action: BehaviorAction
@@ -158,61 +215,34 @@ class Behavior(BaseModel):
 
     @model_validator(mode="after")
     def check_trigger_tag(self) -> Self:
-        if self.trigger == BehaviorTrigger.ON_TAG_ADDED:
-            if self.trigger_tag is None:
-                raise ValueError(
-                    "ON_TAG_ADDED trigger requires trigger_tag to specify which tag to watch."
-                )
-        elif self.trigger_tag is not None:
-            raise ValueError(
-                f"trigger_tag is only valid with ON_TAG_ADDED trigger, not {self.trigger}."
-            )
+        if msg := _check_trigger_tag(self.trigger, self.trigger_tag):
+            raise ValueError(msg)
         return self
 
     @model_validator(mode="after")
     def check_target_compatibility(self) -> Self:
-        if (
-            self.target == BehaviorTarget.CONTACT_BODY
-            and self.trigger not in _CONTACT_BODY_TRIGGERS
-        ):
-            raise ValueError(
-                f"CONTACT_BODY target requires ON_CONTACT, ON_DAMAGED, or ON_PROXIMITY trigger, "
-                f"not {self.trigger}."
-            )
+        if msg := _check_contact_body_trigger(self.trigger, self.target):
+            raise ValueError(msg)
         return self
 
     @model_validator(mode="after")
     def check_tags_to_apply(self) -> Self:
-        needs_tags = self.action in {BehaviorAction.ADD_TAGS, BehaviorAction.REMOVE_TAGS}
-        if needs_tags and not self.tags_to_apply:
-            raise ValueError(
-                f"{self.action} action requires tags_to_apply to specify which tags."
-            )
+        if msg := _check_tags_to_apply(self.action, self.tags_to_apply):
+            raise ValueError(msg)
         return self
 
     @model_validator(mode="after")
     def check_action_target(self) -> Self:
-        if self.action in _SELF_ONLY_ACTIONS and self.target != BehaviorTarget.SELF:
-            raise ValueError(
-                f"{self.action} always affects this object. Set target to SELF."
-            )
-        if self.action in _DIRECTIONAL_MOVEMENT_ACTIONS and self.target == BehaviorTarget.SELF:
-            raise ValueError(
-                f"{self.action} needs something to move toward/away from. "
-                f"Use NEAREST_OBJECT, NEAREST_LIVING, NEAREST_PLAYER, or CONTACT_BODY."
-            )
+        if msg := _check_self_only_action(self.action, self.target):
+            raise ValueError(msg)
+        if msg := _check_movement_target(self.action, self.target):
+            raise ValueError(msg)
         return self
 
     @model_validator(mode="after")
     def check_action_trigger(self) -> Self:
-        if (
-            self.trigger == BehaviorTrigger.ON_DESTROY
-            and self.action in _ALL_MOVEMENT_ACTIONS
-        ):
-            raise ValueError(
-                f"{self.action} is useless with ON_DESTROY — the object is being removed. "
-                f"Use a non-movement action like EXPLODE or DEAL_DAMAGE instead."
-            )
+        if msg := _check_destroy_movement(self.trigger, self.action):
+            raise ValueError(msg)
         return self
 
 
@@ -248,37 +278,71 @@ _POWER_TO_INTERVAL: dict[Power, Interval] = {
 class BehaviorSpec(BaseModel):
     """Simplified behavior model for LLM output. Expanded to full Behavior after."""
 
-    trigger: BehaviorTrigger
-    action: BehaviorAction
-    target: BehaviorTarget = BehaviorTarget.NEAREST_OBJECT
-    power: Power = Power.MEDIUM
-    trigger_tag: Tag | None = None
-    tags_to_apply: list[Tag] | None = None
+    trigger: BehaviorTrigger = Field(description="When this behavior fires")
+    action: BehaviorAction = Field(description="What this behavior does")
+    target: BehaviorTarget = Field(
+        default=BehaviorTarget.NEAREST_OBJECT,
+        description="What the action affects",
+    )
+    power: Power = Field(
+        default=Power.MEDIUM,
+        description="Strength/speed/range. 'high' adds +1 to action cost",
+    )
+    trigger_tag: Tag | None = Field(
+        default=None,
+        description="Required with ON_TAG_ADDED trigger: which tag to watch for",
+    )
+    tags_to_apply: list[Tag] | None = Field(
+        default=None,
+        description="Required with ADD_TAGS/REMOVE_TAGS actions: which tags to add/remove",
+    )
 
     @model_validator(mode="after")
     def check_trigger_tag(self) -> Self:
         from pydantic_ai import ModelRetry
 
-        if self.trigger == BehaviorTrigger.ON_TAG_ADDED:
-            if self.trigger_tag is None:
-                raise ModelRetry(
-                    "ON_TAG_ADDED trigger requires trigger_tag to specify which tag to watch."
-                )
-        elif self.trigger_tag is not None:
-            raise ModelRetry(
-                f"trigger_tag is only valid with ON_TAG_ADDED trigger, not {self.trigger}."
-            )
+        if msg := _check_trigger_tag(self.trigger, self.trigger_tag):
+            raise ModelRetry(msg)
         return self
 
     @model_validator(mode="after")
     def check_tags_to_apply(self) -> Self:
         from pydantic_ai import ModelRetry
 
-        needs_tags = self.action in {BehaviorAction.ADD_TAGS, BehaviorAction.REMOVE_TAGS}
-        if needs_tags and not self.tags_to_apply:
-            raise ModelRetry(
-                f"{self.action} action requires tags_to_apply to specify which tags."
-            )
+        if msg := _check_tags_to_apply(self.action, self.tags_to_apply):
+            raise ModelRetry(msg)
+        return self
+
+    @model_validator(mode="after")
+    def check_self_only_actions(self) -> Self:
+        from pydantic_ai import ModelRetry
+
+        if msg := _check_self_only_action(self.action, self.target):
+            raise ModelRetry(msg)
+        return self
+
+    @model_validator(mode="after")
+    def check_movement_target(self) -> Self:
+        from pydantic_ai import ModelRetry
+
+        if msg := _check_movement_target(self.action, self.target):
+            raise ModelRetry(msg)
+        return self
+
+    @model_validator(mode="after")
+    def check_contact_body_trigger(self) -> Self:
+        from pydantic_ai import ModelRetry
+
+        if msg := _check_contact_body_trigger(self.trigger, self.target):
+            raise ModelRetry(msg)
+        return self
+
+    @model_validator(mode="after")
+    def check_destroy_movement(self) -> Self:
+        from pydantic_ai import ModelRetry
+
+        if msg := _check_destroy_movement(self.trigger, self.action):
+            raise ModelRetry(msg)
         return self
 
 
@@ -291,34 +355,20 @@ def compute_spec_cost(spec: BehaviorSpec) -> int:
 
 
 def expand_behavior_spec(spec: BehaviorSpec) -> Behavior:
-    """Expand a simplified BehaviorSpec into a full Behavior with deterministic mappings."""
-    target = spec.target
-    action = spec.action
+    """Expand a simplified BehaviorSpec into a full Behavior with deterministic mappings.
 
-    # Deterministic fixes
-    if action in _SELF_ONLY_ACTIONS:
-        target = BehaviorTarget.SELF
-    elif action in _DIRECTIONAL_MOVEMENT_ACTIONS and target == BehaviorTarget.SELF:
-        target = BehaviorTarget.NEAREST_OBJECT
-    if target == BehaviorTarget.CONTACT_BODY and spec.trigger not in _CONTACT_BODY_TRIGGERS:
-        target = BehaviorTarget.NEAREST_OBJECT
-    if spec.trigger == BehaviorTrigger.ON_DESTROY and action in _ALL_MOVEMENT_ACTIONS:
-        action = BehaviorAction.DEAL_DAMAGE
-
-    # Map power to per-action parameters
-    intensity = _POWER_TO_INTENSITY[spec.power]
-    speed = _POWER_TO_SPEED[spec.power]
-    range_ = _POWER_TO_RANGE[spec.power]
-    interval = _POWER_TO_INTERVAL[spec.power]
-
+    BehaviorSpec validators (ModelRetry) enforce action/target/trigger compatibility
+    before this function is called. This function only maps power to granular parameters.
+    The Behavior model validators (ValueError) serve as a safety net.
+    """
     return Behavior(
         trigger=spec.trigger,
-        action=action,
-        target=target,
-        intensity=intensity,
-        range=range_,
-        speed=speed,
-        interval=interval,
+        action=spec.action,
+        target=spec.target,
+        intensity=_POWER_TO_INTENSITY[spec.power],
+        range=_POWER_TO_RANGE[spec.power],
+        speed=_POWER_TO_SPEED[spec.power],
+        interval=_POWER_TO_INTERVAL[spec.power],
         tags_to_apply=spec.tags_to_apply,
         trigger_tag=spec.trigger_tag,
     )

@@ -243,8 +243,48 @@ class TestBehaviorSpec:
             trigger=BehaviorTrigger.ON_TAG_ADDED,
             trigger_tag=Tag.HOT,
             action=BehaviorAction.EXPLODE,
+            target=BehaviorTarget.SELF,
         )
         assert s.trigger_tag == Tag.HOT
+
+    def test_explode_rejects_non_self_target(self) -> None:
+        with pytest.raises(ModelRetry):
+            _make_spec(
+                trigger=BehaviorTrigger.ON_TAG_ADDED,
+                trigger_tag=Tag.HOT,
+                action=BehaviorAction.EXPLODE,
+                target=BehaviorTarget.NEAREST_OBJECT,
+            )
+
+    def test_self_destruct_rejects_non_self_target(self) -> None:
+        with pytest.raises(ModelRetry):
+            _make_spec(
+                action=BehaviorAction.SELF_DESTRUCT,
+                target=BehaviorTarget.NEAREST_PLAYER,
+            )
+
+    def test_move_toward_rejects_self_target(self) -> None:
+        with pytest.raises(ModelRetry):
+            _make_spec(
+                action=BehaviorAction.MOVE_TOWARD,
+                target=BehaviorTarget.SELF,
+            )
+
+    def test_contact_body_rejects_wrong_trigger(self) -> None:
+        with pytest.raises(ModelRetry):
+            _make_spec(
+                trigger=BehaviorTrigger.ALWAYS,
+                action=BehaviorAction.DEAL_DAMAGE,
+                target=BehaviorTarget.CONTACT_BODY,
+            )
+
+    def test_on_destroy_rejects_movement(self) -> None:
+        with pytest.raises(ModelRetry):
+            _make_spec(
+                trigger=BehaviorTrigger.ON_DESTROY,
+                action=BehaviorAction.MOVE_TOWARD,
+                target=BehaviorTarget.NEAREST_PLAYER,
+            )
 
 
 class TestComputeSpecCost:
@@ -268,7 +308,11 @@ class TestComputeSpecCost:
 
     def test_self_destruct_always_1(self) -> None:
         for power in ("low", "medium", "high"):
-            s = _make_spec(action=BehaviorAction.SELF_DESTRUCT, power=power)
+            s = _make_spec(
+                action=BehaviorAction.SELF_DESTRUCT,
+                target=BehaviorTarget.SELF,
+                power=power,
+            )
             # base 1, high adds 1 → max(1, 2) = 2 for high; otherwise 1
             if power == "high":
                 assert compute_spec_cost(s) == 2
@@ -299,7 +343,7 @@ class TestExpandBehaviorSpec:
             assert b.intensity == expected
 
     def test_explode_maps_intensity_and_range(self) -> None:
-        s = _make_spec(action=BehaviorAction.EXPLODE, power="high")
+        s = _make_spec(action=BehaviorAction.EXPLODE, target=BehaviorTarget.SELF, power="high")
         b = expand_behavior_spec(s)
         assert b.intensity == Intensity.HIGH
         assert b.range == BehaviorRange.FAR
@@ -308,39 +352,6 @@ class TestExpandBehaviorSpec:
         s = _make_spec(power="high")
         b = expand_behavior_spec(s)
         assert b.interval == Interval.FAST
-
-    def test_explode_forces_self_target(self) -> None:
-        s = _make_spec(action=BehaviorAction.EXPLODE, target=BehaviorTarget.NEAREST_OBJECT)
-        b = expand_behavior_spec(s)
-        assert b.target == BehaviorTarget.SELF
-
-    def test_self_destruct_forces_self_target(self) -> None:
-        s = _make_spec(action=BehaviorAction.SELF_DESTRUCT, target=BehaviorTarget.NEAREST_PLAYER)
-        b = expand_behavior_spec(s)
-        assert b.target == BehaviorTarget.SELF
-
-    def test_move_toward_self_fixed_to_nearest_object(self) -> None:
-        s = _make_spec(action=BehaviorAction.MOVE_TOWARD, target=BehaviorTarget.SELF)
-        b = expand_behavior_spec(s)
-        assert b.target == BehaviorTarget.NEAREST_OBJECT
-
-    def test_contact_body_with_wrong_trigger_fixed(self) -> None:
-        s = _make_spec(
-            trigger=BehaviorTrigger.ALWAYS,
-            action=BehaviorAction.DEAL_DAMAGE,
-            target=BehaviorTarget.CONTACT_BODY,
-        )
-        b = expand_behavior_spec(s)
-        assert b.target == BehaviorTarget.NEAREST_OBJECT
-
-    def test_on_destroy_movement_fixed_to_deal_damage(self) -> None:
-        s = _make_spec(
-            trigger=BehaviorTrigger.ON_DESTROY,
-            action=BehaviorAction.MOVE_TOWARD,
-            target=BehaviorTarget.NEAREST_PLAYER,
-        )
-        b = expand_behavior_spec(s)
-        assert b.action == BehaviorAction.DEAL_DAMAGE
 
     def test_tags_to_apply_preserved(self) -> None:
         s = _make_spec(
@@ -354,6 +365,7 @@ class TestExpandBehaviorSpec:
             trigger=BehaviorTrigger.ON_TAG_ADDED,
             trigger_tag=Tag.HOT,
             action=BehaviorAction.EXPLODE,
+            target=BehaviorTarget.SELF,
         )
         b = expand_behavior_spec(s)
         assert b.trigger_tag == Tag.HOT
