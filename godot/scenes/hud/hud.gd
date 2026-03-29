@@ -17,7 +17,7 @@ func _ready() -> void:
 	layer = 10
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	object_creation_panel.visible = false
-	_action_hint.visible = false
+	_update_action_hint()
 
 	EventBus.placement_started.connect(_on_placement_started)
 	EventBus.placement_ended.connect(_on_placement_ended)
@@ -226,10 +226,8 @@ func _on_placement_ended() -> void:
 	_update_action_hint()
 
 
-func _on_debug_toggled(enabled: bool) -> void:
-	_action_hint.visible = enabled
-	if enabled:
-		_update_action_hint()
+func _on_debug_toggled(_enabled: bool) -> void:
+	pass
 
 
 func _on_player_died() -> void:
