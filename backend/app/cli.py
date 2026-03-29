@@ -242,13 +242,6 @@ async def cmd_sprite(description: str, out_path: str | None, skip_llm: bool) -> 
 
     timer = Timer()
 
-    # Kick off bg-removal model load in background while LLM runs
-    import concurrent.futures
-
-    _bg_warmup = concurrent.futures.ThreadPoolExecutor(1).submit(
-        lambda: __import__("app.images.pipeline", fromlist=["get_remove_bg"]).get_remove_bg()
-    )
-
     if skip_llm:
         name = description
         visual = VisualDescriptor(visual_description=description, size_category="medium")
@@ -259,7 +252,6 @@ async def cmd_sprite(description: str, out_path: str | None, skip_llm: bool) -> 
         name = blueprint.name
 
     raw_bytes = await _run_image(prompt, timer)
-    _bg_warmup.result()  # Ensure model is loaded before timing bg removal
     sprite_bytes = await _run_bg_removal(raw_bytes, timer)
 
     if out_path is None:
