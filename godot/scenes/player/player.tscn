@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" path="res://scenes/player/player.gd" id="1_dovo2"]
 [ext_resource type="Texture2D" path="res://assets/sprites/player/player_sheet.png" id="2_gmlin"]
+[ext_resource type="Script" path="res://scenes/player/player_camera.gd" id="3_cam"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_lvxji"]
 size = Vector2(24, 48)
@@ -159,3 +160,4 @@ autoplay = "idle"
 offset = Vector2(0, -80)
 zoom = Vector2(1.7, 1.7)
 position_smoothing_enabled = true
+script = ExtResource("3_cam")
