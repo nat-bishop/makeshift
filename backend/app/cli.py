@@ -49,6 +49,14 @@ async def _dispatch(args: argparse.Namespace) -> None:
 
     setup_logging()
 
+    from app.config import settings
+
+    if settings.logfire_enabled:
+        import logfire
+
+        logfire.configure(service_name="makeshift-cli")
+        logfire.instrument_pydantic_ai()
+
     if args.command == "create":
         await cmd_create(args.description)
     elif args.command == "image":
@@ -93,35 +101,54 @@ class Timer:
 
 
 async def _run_llm(description: str, timer: Timer) -> Any:
-    """Run the LLM creator agent with streaming. Adds steps to timer."""
+    """Run the LLM creator agent with streaming. Adds steps to timer.
+
+    run_stream() doesn't retry on output validation errors (ModelRetry is re-raised
+    because wrap_validation_errors=False in the streaming path). We retry manually.
+    """
     import uuid
+
+    from pydantic import ValidationError
+    from pydantic_ai import ModelRetry
 
     from app.creator.agent import _get_agent
     from app.models.behaviors import expand_behavior_spec
     from app.models.blueprint import GameObjectBlueprint
 
     agent = _get_agent()
-    t0 = time.monotonic()
-    ttft = None
-    async with agent.run_stream(f"Create a game object for: {description}") as stream:
-        async for _chunk, _is_last in stream.stream_responses(debounce_by=None):
-            if ttft is None:
-                ttft = time.monotonic() - t0
-        spec = await stream.get_output()
+    prompt = f"Create a game object for: {description}"
+    max_attempts = 3
+
+    retry_time = 0.0
+    for attempt in range(1, max_attempts + 1):
+        t0 = time.monotonic()
+        ttft = None
+        try:
+            async with agent.run_stream(prompt) as stream:
+                async for _chunk, _is_last in stream.stream_responses(debounce_by=None):
+                    if ttft is None:
+                        ttft = time.monotonic() - t0
+                spec = await stream.get_output()
+            break
+        except (ModelRetry, ValidationError) as e:
+            retry_time += time.monotonic() - t0
+            print(f"  retry {attempt}/{max_attempts}: {e}", file=sys.stderr)
+            if attempt == max_attempts:
+                raise
     elapsed = time.monotonic() - t0
 
     usage = stream.usage()
     gen_time = elapsed - (ttft or 0)
     tok_s = round(usage.output_tokens / gen_time, 1) if gen_time > 0 else 0
 
+    if retry_time > 0:
+        timer.add("llm retries", retry_time, f"{attempt} attempts")
     timer.add("llm prefill", ttft or 0, f"{usage.input_tokens} input tokens")
     timer.add(
         "llm generate",
         gen_time,
         f"{usage.output_tokens} output tokens, {tok_s} tok/s",
     )
-    if usage.requests > 1:
-        timer.add("llm retries", 0, f"{usage.requests} requests")
 
     behaviors = [expand_behavior_spec(b) for b in spec.behaviors]
     return GameObjectBlueprint(
@@ -138,7 +165,11 @@ async def _run_image(prompt: str, timer: Timer) -> bytes:
     """Run image generation. Adds step to timer."""
     from app.images.pipeline import get_generate_image
 
+    t0 = time.monotonic()
     generate_image = get_generate_image()
+    init_time = time.monotonic() - t0
+    if init_time > 0.01:
+        timer.add("image init", init_time)
     t0 = time.monotonic()
     image_bytes = await generate_image(prompt)
     timer.add("image gen", time.monotonic() - t0, f"{len(image_bytes):,} bytes")
@@ -153,7 +184,11 @@ async def _run_bg_removal(raw_bytes: bytes, timer: Timer) -> bytes:
 
     from app.images.pipeline import TEXTURE_RESOLUTION, _crop_and_fit, get_remove_bg
 
+    t0 = time.monotonic()
     remove_bg = get_remove_bg()
+    init_time = time.monotonic() - t0
+    if init_time > 0.01:
+        timer.add("bg init", init_time)
     t0 = time.monotonic()
     output_bytes = await remove_bg(raw_bytes)
     timer.add("bg removal", time.monotonic() - t0, f"{len(output_bytes):,} bytes")
@@ -207,6 +242,13 @@ async def cmd_sprite(description: str, out_path: str | None, skip_llm: bool) -> 
 
     timer = Timer()
 
+    # Kick off bg-removal model load in background while LLM runs
+    import concurrent.futures
+
+    _bg_warmup = concurrent.futures.ThreadPoolExecutor(1).submit(
+        lambda: __import__("app.images.pipeline", fromlist=["get_remove_bg"]).get_remove_bg()
+    )
+
     if skip_llm:
         name = description
         visual = VisualDescriptor(visual_description=description, size_category="medium")
@@ -217,6 +259,7 @@ async def cmd_sprite(description: str, out_path: str | None, skip_llm: bool) -> 
         name = blueprint.name
 
     raw_bytes = await _run_image(prompt, timer)
+    _bg_warmup.result()  # Ensure model is loaded before timing bg removal
     sprite_bytes = await _run_bg_removal(raw_bytes, timer)
 
     if out_path is None:
