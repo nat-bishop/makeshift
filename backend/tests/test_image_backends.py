@@ -3,13 +3,22 @@
 from __future__ import annotations
 
 import base64
+import sys
+import types
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-import app.images.fal_helpers as fal_helpers
-import app.images.local_image as local_image
-from app.images.cloud_bg import make_cloud_remover
+# fal_helpers imports fal_client at module level, which may not be installed.
+# Inject a stub so we can import the module without the real dependency.
+if "fal_client" not in sys.modules:
+    _fal_stub = types.ModuleType("fal_client")
+    _fal_stub.submit_async = AsyncMock()  # type: ignore[attr-defined]
+    sys.modules["fal_client"] = _fal_stub
+
+import app.images.fal_helpers as fal_helpers  # noqa: E402
+import app.images.local_image as local_image  # noqa: E402
+from app.images.cloud_bg import make_cloud_remover  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
