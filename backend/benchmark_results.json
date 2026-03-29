@@ -1,0 +1,982 @@
+[
+  {
+    "model": "birefnet-general",
+    "provider": "GPU",
+    "image": "00_fire_sword",
+    "time_ms": 5002.4,
+    "error": null
+  },
+  {
+    "model": "birefnet-general",
+    "provider": "GPU",
+    "image": "01_ice_shield",
+    "time_ms": 3260.4,
+    "error": null
+  },
+  {
+    "model": "birefnet-general",
+    "provider": "GPU",
+    "image": "02_healing_mushroom",
+    "time_ms": 3227.1,
+    "error": null
+  },
+  {
+    "model": "birefnet-general",
+    "provider": "GPU",
+    "image": "03_tnt_barrel",
+    "time_ms": 3236.4,
+    "error": null
+  },
+  {
+    "model": "birefnet-general",
+    "provider": "GPU",
+    "image": "04_golden_key",
+    "time_ms": 3234.0,
+    "error": null
+  },
+  {
+    "model": "birefnet-general",
+    "provider": "GPU",
+    "image": "05_clockwork_spider",
+    "time_ms": 3247.1,
+    "error": null
+  },
+  {
+    "model": "birefnet-general",
+    "provider": "GPU",
+    "image": "06_lava_boulder",
+    "time_ms": 3212.3,
+    "error": null
+  },
+  {
+    "model": "birefnet-general",
+    "provider": "GPU",
+    "image": "07_wind_fan",
+    "time_ms": 3241.3,
+    "error": null
+  },
+  {
+    "model": "birefnet-general",
+    "provider": "GPU",
+    "image": "08_toxic_frog",
+    "time_ms": 3248.1,
+    "error": null
+  },
+  {
+    "model": "birefnet-general",
+    "provider": "GPU",
+    "image": "09_crystal_lantern",
+    "time_ms": 3217.4,
+    "error": null
+  },
+  {
+    "model": "birefnet-general",
+    "provider": "CPU",
+    "image": "00_fire_sword",
+    "time_ms": 3723.2,
+    "error": null
+  },
+  {
+    "model": "birefnet-general",
+    "provider": "CPU",
+    "image": "01_ice_shield",
+    "time_ms": 3408.3,
+    "error": null
+  },
+  {
+    "model": "birefnet-general",
+    "provider": "CPU",
+    "image": "02_healing_mushroom",
+    "time_ms": 3194.7,
+    "error": null
+  },
+  {
+    "model": "birefnet-general",
+    "provider": "CPU",
+    "image": "03_tnt_barrel",
+    "time_ms": 3185.8,
+    "error": null
+  },
+  {
+    "model": "birefnet-general",
+    "provider": "CPU",
+    "image": "04_golden_key",
+    "time_ms": 3223.9,
+    "error": null
+  },
+  {
+    "model": "birefnet-general",
+    "provider": "CPU",
+    "image": "05_clockwork_spider",
+    "time_ms": 3207.5,
+    "error": null
+  },
+  {
+    "model": "birefnet-general",
+    "provider": "CPU",
+    "image": "06_lava_boulder",
+    "time_ms": 3202.6,
+    "error": null
+  },
+  {
+    "model": "birefnet-general",
+    "provider": "CPU",
+    "image": "07_wind_fan",
+    "time_ms": 3237.1,
+    "error": null
+  },
+  {
+    "model": "birefnet-general",
+    "provider": "CPU",
+    "image": "08_toxic_frog",
+    "time_ms": 3203.7,
+    "error": null
+  },
+  {
+    "model": "birefnet-general",
+    "provider": "CPU",
+    "image": "09_crystal_lantern",
+    "time_ms": 3216.8,
+    "error": null
+  },
+  {
+    "model": "birefnet-general-lite",
+    "provider": "GPU",
+    "image": "00_fire_sword",
+    "time_ms": 2225.1,
+    "error": null
+  },
+  {
+    "model": "birefnet-general-lite",
+    "provider": "GPU",
+    "image": "01_ice_shield",
+    "time_ms": 2235.4,
+    "error": null
+  },
+  {
+    "model": "birefnet-general-lite",
+    "provider": "GPU",
+    "image": "02_healing_mushroom",
+    "time_ms": 2045.3,
+    "error": null
+  },
+  {
+    "model": "birefnet-general-lite",
+    "provider": "GPU",
+    "image": "03_tnt_barrel",
+    "time_ms": 2037.4,
+    "error": null
+  },
+  {
+    "model": "birefnet-general-lite",
+    "provider": "GPU",
+    "image": "04_golden_key",
+    "time_ms": 2044.1,
+    "error": null
+  },
+  {
+    "model": "birefnet-general-lite",
+    "provider": "GPU",
+    "image": "05_clockwork_spider",
+    "time_ms": 2017.4,
+    "error": null
+  },
+  {
+    "model": "birefnet-general-lite",
+    "provider": "GPU",
+    "image": "06_lava_boulder",
+    "time_ms": 2050.2,
+    "error": null
+  },
+  {
+    "model": "birefnet-general-lite",
+    "provider": "GPU",
+    "image": "07_wind_fan",
+    "time_ms": 2015.5,
+    "error": null
+  },
+  {
+    "model": "birefnet-general-lite",
+    "provider": "GPU",
+    "image": "08_toxic_frog",
+    "time_ms": 2041.3,
+    "error": null
+  },
+  {
+    "model": "birefnet-general-lite",
+    "provider": "GPU",
+    "image": "09_crystal_lantern",
+    "time_ms": 2029.9,
+    "error": null
+  },
+  {
+    "model": "birefnet-general-lite",
+    "provider": "CPU",
+    "image": "00_fire_sword",
+    "time_ms": 2137.8,
+    "error": null
+  },
+  {
+    "model": "birefnet-general-lite",
+    "provider": "CPU",
+    "image": "01_ice_shield",
+    "time_ms": 2188.8,
+    "error": null
+  },
+  {
+    "model": "birefnet-general-lite",
+    "provider": "CPU",
+    "image": "02_healing_mushroom",
+    "time_ms": 2052.4,
+    "error": null
+  },
+  {
+    "model": "birefnet-general-lite",
+    "provider": "CPU",
+    "image": "03_tnt_barrel",
+    "time_ms": 2036.8,
+    "error": null
+  },
+  {
+    "model": "birefnet-general-lite",
+    "provider": "CPU",
+    "image": "04_golden_key",
+    "time_ms": 2021.6,
+    "error": null
+  },
+  {
+    "model": "birefnet-general-lite",
+    "provider": "CPU",
+    "image": "05_clockwork_spider",
+    "time_ms": 2003.8,
+    "error": null
+  },
+  {
+    "model": "birefnet-general-lite",
+    "provider": "CPU",
+    "image": "06_lava_boulder",
+    "time_ms": 2036.9,
+    "error": null
+  },
+  {
+    "model": "birefnet-general-lite",
+    "provider": "CPU",
+    "image": "07_wind_fan",
+    "time_ms": 2062.5,
+    "error": null
+  },
+  {
+    "model": "birefnet-general-lite",
+    "provider": "CPU",
+    "image": "08_toxic_frog",
+    "time_ms": 2064.6,
+    "error": null
+  },
+  {
+    "model": "birefnet-general-lite",
+    "provider": "CPU",
+    "image": "09_crystal_lantern",
+    "time_ms": 2041.3,
+    "error": null
+  },
+  {
+    "model": "isnet-general-use",
+    "provider": "GPU",
+    "image": "00_fire_sword",
+    "time_ms": 212.6,
+    "error": null
+  },
+  {
+    "model": "isnet-general-use",
+    "provider": "GPU",
+    "image": "01_ice_shield",
+    "time_ms": 185.7,
+    "error": null
+  },
+  {
+    "model": "isnet-general-use",
+    "provider": "GPU",
+    "image": "02_healing_mushroom",
+    "time_ms": 183.8,
+    "error": null
+  },
+  {
+    "model": "isnet-general-use",
+    "provider": "GPU",
+    "image": "03_tnt_barrel",
+    "time_ms": 185.8,
+    "error": null
+  },
+  {
+    "model": "isnet-general-use",
+    "provider": "GPU",
+    "image": "04_golden_key",
+    "time_ms": 182.2,
+    "error": null
+  },
+  {
+    "model": "isnet-general-use",
+    "provider": "GPU",
+    "image": "05_clockwork_spider",
+    "time_ms": 188.4,
+    "error": null
+  },
+  {
+    "model": "isnet-general-use",
+    "provider": "GPU",
+    "image": "06_lava_boulder",
+    "time_ms": 188.2,
+    "error": null
+  },
+  {
+    "model": "isnet-general-use",
+    "provider": "GPU",
+    "image": "07_wind_fan",
+    "time_ms": 194.2,
+    "error": null
+  },
+  {
+    "model": "isnet-general-use",
+    "provider": "GPU",
+    "image": "08_toxic_frog",
+    "time_ms": 188.8,
+    "error": null
+  },
+  {
+    "model": "isnet-general-use",
+    "provider": "GPU",
+    "image": "09_crystal_lantern",
+    "time_ms": 180.4,
+    "error": null
+  },
+  {
+    "model": "isnet-general-use",
+    "provider": "CPU",
+    "image": "00_fire_sword",
+    "time_ms": 216.7,
+    "error": null
+  },
+  {
+    "model": "isnet-general-use",
+    "provider": "CPU",
+    "image": "01_ice_shield",
+    "time_ms": 185.2,
+    "error": null
+  },
+  {
+    "model": "isnet-general-use",
+    "provider": "CPU",
+    "image": "02_healing_mushroom",
+    "time_ms": 191.8,
+    "error": null
+  },
+  {
+    "model": "isnet-general-use",
+    "provider": "CPU",
+    "image": "03_tnt_barrel",
+    "time_ms": 188.8,
+    "error": null
+  },
+  {
+    "model": "isnet-general-use",
+    "provider": "CPU",
+    "image": "04_golden_key",
+    "time_ms": 182.9,
+    "error": null
+  },
+  {
+    "model": "isnet-general-use",
+    "provider": "CPU",
+    "image": "05_clockwork_spider",
+    "time_ms": 185.4,
+    "error": null
+  },
+  {
+    "model": "isnet-general-use",
+    "provider": "CPU",
+    "image": "06_lava_boulder",
+    "time_ms": 204.6,
+    "error": null
+  },
+  {
+    "model": "isnet-general-use",
+    "provider": "CPU",
+    "image": "07_wind_fan",
+    "time_ms": 189.0,
+    "error": null
+  },
+  {
+    "model": "isnet-general-use",
+    "provider": "CPU",
+    "image": "08_toxic_frog",
+    "time_ms": 191.2,
+    "error": null
+  },
+  {
+    "model": "isnet-general-use",
+    "provider": "CPU",
+    "image": "09_crystal_lantern",
+    "time_ms": 185.7,
+    "error": null
+  },
+  {
+    "model": "u2net",
+    "provider": "GPU",
+    "image": "00_fire_sword",
+    "time_ms": 106.3,
+    "error": null
+  },
+  {
+    "model": "u2net",
+    "provider": "GPU",
+    "image": "01_ice_shield",
+    "time_ms": 86.1,
+    "error": null
+  },
+  {
+    "model": "u2net",
+    "provider": "GPU",
+    "image": "02_healing_mushroom",
+    "time_ms": 87.3,
+    "error": null
+  },
+  {
+    "model": "u2net",
+    "provider": "GPU",
+    "image": "03_tnt_barrel",
+    "time_ms": 88.1,
+    "error": null
+  },
+  {
+    "model": "u2net",
+    "provider": "GPU",
+    "image": "04_golden_key",
+    "time_ms": 81.0,
+    "error": null
+  },
+  {
+    "model": "u2net",
+    "provider": "GPU",
+    "image": "05_clockwork_spider",
+    "time_ms": 82.2,
+    "error": null
+  },
+  {
+    "model": "u2net",
+    "provider": "GPU",
+    "image": "06_lava_boulder",
+    "time_ms": 85.6,
+    "error": null
+  },
+  {
+    "model": "u2net",
+    "provider": "GPU",
+    "image": "07_wind_fan",
+    "time_ms": 85.1,
+    "error": null
+  },
+  {
+    "model": "u2net",
+    "provider": "GPU",
+    "image": "08_toxic_frog",
+    "time_ms": 88.7,
+    "error": null
+  },
+  {
+    "model": "u2net",
+    "provider": "GPU",
+    "image": "09_crystal_lantern",
+    "time_ms": 89.4,
+    "error": null
+  },
+  {
+    "model": "u2net",
+    "provider": "CPU",
+    "image": "00_fire_sword",
+    "time_ms": 106.2,
+    "error": null
+  },
+  {
+    "model": "u2net",
+    "provider": "CPU",
+    "image": "01_ice_shield",
+    "time_ms": 85.1,
+    "error": null
+  },
+  {
+    "model": "u2net",
+    "provider": "CPU",
+    "image": "02_healing_mushroom",
+    "time_ms": 83.2,
+    "error": null
+  },
+  {
+    "model": "u2net",
+    "provider": "CPU",
+    "image": "03_tnt_barrel",
+    "time_ms": 84.1,
+    "error": null
+  },
+  {
+    "model": "u2net",
+    "provider": "CPU",
+    "image": "04_golden_key",
+    "time_ms": 80.7,
+    "error": null
+  },
+  {
+    "model": "u2net",
+    "provider": "CPU",
+    "image": "05_clockwork_spider",
+    "time_ms": 81.8,
+    "error": null
+  },
+  {
+    "model": "u2net",
+    "provider": "CPU",
+    "image": "06_lava_boulder",
+    "time_ms": 90.2,
+    "error": null
+  },
+  {
+    "model": "u2net",
+    "provider": "CPU",
+    "image": "07_wind_fan",
+    "time_ms": 85.4,
+    "error": null
+  },
+  {
+    "model": "u2net",
+    "provider": "CPU",
+    "image": "08_toxic_frog",
+    "time_ms": 87.2,
+    "error": null
+  },
+  {
+    "model": "u2net",
+    "provider": "CPU",
+    "image": "09_crystal_lantern",
+    "time_ms": 85.9,
+    "error": null
+  },
+  {
+    "model": "u2netp",
+    "provider": "GPU",
+    "image": "00_fire_sword",
+    "time_ms": 67.0,
+    "error": null
+  },
+  {
+    "model": "u2netp",
+    "provider": "GPU",
+    "image": "01_ice_shield",
+    "time_ms": 58.2,
+    "error": null
+  },
+  {
+    "model": "u2netp",
+    "provider": "GPU",
+    "image": "02_healing_mushroom",
+    "time_ms": 52.6,
+    "error": null
+  },
+  {
+    "model": "u2netp",
+    "provider": "GPU",
+    "image": "03_tnt_barrel",
+    "time_ms": 57.3,
+    "error": null
+  },
+  {
+    "model": "u2netp",
+    "provider": "GPU",
+    "image": "04_golden_key",
+    "time_ms": 53.6,
+    "error": null
+  },
+  {
+    "model": "u2netp",
+    "provider": "GPU",
+    "image": "05_clockwork_spider",
+    "time_ms": 57.2,
+    "error": null
+  },
+  {
+    "model": "u2netp",
+    "provider": "GPU",
+    "image": "06_lava_boulder",
+    "time_ms": 59.4,
+    "error": null
+  },
+  {
+    "model": "u2netp",
+    "provider": "GPU",
+    "image": "07_wind_fan",
+    "time_ms": 59.1,
+    "error": null
+  },
+  {
+    "model": "u2netp",
+    "provider": "GPU",
+    "image": "08_toxic_frog",
+    "time_ms": 60.2,
+    "error": null
+  },
+  {
+    "model": "u2netp",
+    "provider": "GPU",
+    "image": "09_crystal_lantern",
+    "time_ms": 56.4,
+    "error": null
+  },
+  {
+    "model": "u2netp",
+    "provider": "CPU",
+    "image": "00_fire_sword",
+    "time_ms": 67.0,
+    "error": null
+  },
+  {
+    "model": "u2netp",
+    "provider": "CPU",
+    "image": "01_ice_shield",
+    "time_ms": 58.9,
+    "error": null
+  },
+  {
+    "model": "u2netp",
+    "provider": "CPU",
+    "image": "02_healing_mushroom",
+    "time_ms": 53.1,
+    "error": null
+  },
+  {
+    "model": "u2netp",
+    "provider": "CPU",
+    "image": "03_tnt_barrel",
+    "time_ms": 60.7,
+    "error": null
+  },
+  {
+    "model": "u2netp",
+    "provider": "CPU",
+    "image": "04_golden_key",
+    "time_ms": 50.9,
+    "error": null
+  },
+  {
+    "model": "u2netp",
+    "provider": "CPU",
+    "image": "05_clockwork_spider",
+    "time_ms": 54.8,
+    "error": null
+  },
+  {
+    "model": "u2netp",
+    "provider": "CPU",
+    "image": "06_lava_boulder",
+    "time_ms": 57.8,
+    "error": null
+  },
+  {
+    "model": "u2netp",
+    "provider": "CPU",
+    "image": "07_wind_fan",
+    "time_ms": 57.1,
+    "error": null
+  },
+  {
+    "model": "u2netp",
+    "provider": "CPU",
+    "image": "08_toxic_frog",
+    "time_ms": 56.8,
+    "error": null
+  },
+  {
+    "model": "u2netp",
+    "provider": "CPU",
+    "image": "09_crystal_lantern",
+    "time_ms": 54.6,
+    "error": null
+  },
+  {
+    "model": "silueta",
+    "provider": "GPU",
+    "image": "00_fire_sword",
+    "time_ms": 189.6,
+    "error": null
+  },
+  {
+    "model": "silueta",
+    "provider": "GPU",
+    "image": "01_ice_shield",
+    "time_ms": 197.1,
+    "error": null
+  },
+  {
+    "model": "silueta",
+    "provider": "GPU",
+    "image": "02_healing_mushroom",
+    "time_ms": 186.8,
+    "error": null
+  },
+  {
+    "model": "silueta",
+    "provider": "GPU",
+    "image": "03_tnt_barrel",
+    "time_ms": 182.1,
+    "error": null
+  },
+  {
+    "model": "silueta",
+    "provider": "GPU",
+    "image": "04_golden_key",
+    "time_ms": 189.1,
+    "error": null
+  },
+  {
+    "model": "silueta",
+    "provider": "GPU",
+    "image": "05_clockwork_spider",
+    "time_ms": 175.7,
+    "error": null
+  },
+  {
+    "model": "silueta",
+    "provider": "GPU",
+    "image": "06_lava_boulder",
+    "time_ms": 186.0,
+    "error": null
+  },
+  {
+    "model": "silueta",
+    "provider": "GPU",
+    "image": "07_wind_fan",
+    "time_ms": 187.4,
+    "error": null
+  },
+  {
+    "model": "silueta",
+    "provider": "GPU",
+    "image": "08_toxic_frog",
+    "time_ms": 179.9,
+    "error": null
+  },
+  {
+    "model": "silueta",
+    "provider": "GPU",
+    "image": "09_crystal_lantern",
+    "time_ms": 188.2,
+    "error": null
+  },
+  {
+    "model": "silueta",
+    "provider": "CPU",
+    "image": "00_fire_sword",
+    "time_ms": 191.3,
+    "error": null
+  },
+  {
+    "model": "silueta",
+    "provider": "CPU",
+    "image": "01_ice_shield",
+    "time_ms": 182.6,
+    "error": null
+  },
+  {
+    "model": "silueta",
+    "provider": "CPU",
+    "image": "02_healing_mushroom",
+    "time_ms": 182.9,
+    "error": null
+  },
+  {
+    "model": "silueta",
+    "provider": "CPU",
+    "image": "03_tnt_barrel",
+    "time_ms": 183.3,
+    "error": null
+  },
+  {
+    "model": "silueta",
+    "provider": "CPU",
+    "image": "04_golden_key",
+    "time_ms": 180.6,
+    "error": null
+  },
+  {
+    "model": "silueta",
+    "provider": "CPU",
+    "image": "05_clockwork_spider",
+    "time_ms": 186.6,
+    "error": null
+  },
+  {
+    "model": "silueta",
+    "provider": "CPU",
+    "image": "06_lava_boulder",
+    "time_ms": 180.1,
+    "error": null
+  },
+  {
+    "model": "silueta",
+    "provider": "CPU",
+    "image": "07_wind_fan",
+    "time_ms": 177.9,
+    "error": null
+  },
+  {
+    "model": "silueta",
+    "provider": "CPU",
+    "image": "08_toxic_frog",
+    "time_ms": 180.4,
+    "error": null
+  },
+  {
+    "model": "silueta",
+    "provider": "CPU",
+    "image": "09_crystal_lantern",
+    "time_ms": 183.1,
+    "error": null
+  },
+  {
+    "model": "bria-rmbg",
+    "provider": "GPU",
+    "image": "00_fire_sword",
+    "time_ms": 3562.2,
+    "error": null
+  },
+  {
+    "model": "bria-rmbg",
+    "provider": "GPU",
+    "image": "01_ice_shield",
+    "time_ms": 3126.6,
+    "error": null
+  },
+  {
+    "model": "bria-rmbg",
+    "provider": "GPU",
+    "image": "02_healing_mushroom",
+    "time_ms": 3098.6,
+    "error": null
+  },
+  {
+    "model": "bria-rmbg",
+    "provider": "GPU",
+    "image": "03_tnt_barrel",
+    "time_ms": 3127.9,
+    "error": null
+  },
+  {
+    "model": "bria-rmbg",
+    "provider": "GPU",
+    "image": "04_golden_key",
+    "time_ms": 3162.7,
+    "error": null
+  },
+  {
+    "model": "bria-rmbg",
+    "provider": "GPU",
+    "image": "05_clockwork_spider",
+    "time_ms": 3126.2,
+    "error": null
+  },
+  {
+    "model": "bria-rmbg",
+    "provider": "GPU",
+    "image": "06_lava_boulder",
+    "time_ms": 3123.3,
+    "error": null
+  },
+  {
+    "model": "bria-rmbg",
+    "provider": "GPU",
+    "image": "07_wind_fan",
+    "time_ms": 3130.2,
+    "error": null
+  },
+  {
+    "model": "bria-rmbg",
+    "provider": "GPU",
+    "image": "08_toxic_frog",
+    "time_ms": 3101.2,
+    "error": null
+  },
+  {
+    "model": "bria-rmbg",
+    "provider": "GPU",
+    "image": "09_crystal_lantern",
+    "time_ms": 3108.0,
+    "error": null
+  },
+  {
+    "model": "bria-rmbg",
+    "provider": "CPU",
+    "image": "00_fire_sword",
+    "time_ms": 3263.7,
+    "error": null
+  },
+  {
+    "model": "bria-rmbg",
+    "provider": "CPU",
+    "image": "01_ice_shield",
+    "time_ms": 3148.1,
+    "error": null
+  },
+  {
+    "model": "bria-rmbg",
+    "provider": "CPU",
+    "image": "02_healing_mushroom",
+    "time_ms": 3112.7,
+    "error": null
+  },
+  {
+    "model": "bria-rmbg",
+    "provider": "CPU",
+    "image": "03_tnt_barrel",
+    "time_ms": 3102.3,
+    "error": null
+  },
+  {
+    "model": "bria-rmbg",
+    "provider": "CPU",
+    "image": "04_golden_key",
+    "time_ms": 3103.0,
+    "error": null
+  },
+  {
+    "model": "bria-rmbg",
+    "provider": "CPU",
+    "image": "05_clockwork_spider",
+    "time_ms": 3138.0,
+    "error": null
+  },
+  {
+    "model": "bria-rmbg",
+    "provider": "CPU",
+    "image": "06_lava_boulder",
+    "time_ms": 3120.8,
+    "error": null
+  },
+  {
+    "model": "bria-rmbg",
+    "provider": "CPU",
+    "image": "07_wind_fan",
+    "time_ms": 3149.9,
+    "error": null
+  },
+  {
+    "model": "bria-rmbg",
+    "provider": "CPU",
+    "image": "08_toxic_frog",
+    "time_ms": 3132.4,
+    "error": null
+  },
+  {
+    "model": "bria-rmbg",
+    "provider": "CPU",
+    "image": "09_crystal_lantern",
+    "time_ms": 3119.9,
+    "error": null
+  }
+]

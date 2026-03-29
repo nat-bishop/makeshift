@@ -328,6 +328,41 @@ body_entered signal (from GameObject)
 
 `scripts/systems/world_mutations.gd` — static `RefCounted` class. All game-state mutations (damage, heal, tag add/remove, impulse, DOT) route through it. Single codepath shared by `EffectExecutor`, `BehaviorExecutor`, `projectile.gd`, and level scripts. Guards against invalid targets with `has_method`/`is RigidBody2D` checks before acting.
 
+## EnvironmentBody
+
+`scenes/environment_body/environment_body.gd` — `StaticBody2D`-based tagged environment hazard (acid pools, fire pits, electric fences, etc.).
+
+**Duck-typed interface** (participates in the rule engine without modification to CollisionResolver or WorldMutations):
+
+| Method | Present | Effect |
+|--------|---------|--------|
+| `get_tags()` | Yes | Rule engine reads tags |
+| `get_object_id()` | Yes | Pair cooldown keying |
+| `add_tag(tag, duration)` | Yes | Tag mutations (freeze, ignite, etc.) |
+| `remove_tag(tag)` | Yes | Tag removal |
+| `take_damage()` | **No** | Indestructible — WorldMutations skips damage |
+| `heal()` | **No** | Same |
+
+**Solidity parameter** (`solid: bool`):
+
+| Mode | `collision_layer` | Periodic tick filter | Use case |
+|------|-------------------|----------------------|----------|
+| `solid=false` | 0 (passthrough) | `""` — ALL rules fire | Acid pools, lava, toxic gas |
+| `solid=true` | OBJECTS layer | `"FIELD"` — FIELD-only | Electric fences, walls |
+
+Non-solid uses no filter because being inside the substance is semantically equivalent to contact — CONTACT rules must fire. Solid already receives CONTACT rules via `body_entered` on colliding RigidBody2D objects, so periodic ticks add only FIELD rules.
+
+**Field detection**: Owns a rectangular `Area2D` (`FieldArea`) sized to body dimensions + 32px margin. This replaces `TagField` because `TagField`'s circular shape is too small for large env bodies. Handles its own periodic timer (2s interval, first tick deferred) — only created/active when `FieldConfig.has_any_field_tag(tags)` is true, same lifecycle as `TagField`.
+
+**Tag reactivity**:
+- FROZEN → `collision_layer` promoted to OBJECTS (non-solid becomes walkable frozen surface); visual tinted blue-white. Reverts when FROZEN removed.
+- Periodic timer created/destroyed dynamically as field tags are added/removed (same as `TagField._rebuild()`).
+- Temporary tags: same decay timer pattern as `game_object.gd` — `_decay_timers` dict, `_cancel_decay_timer()` on re-add.
+
+**Level creation**: `BaseLevel._create_env_body(pos, size, tags, color, id, solid)` — pos is top-left corner, body positioned at `pos + size/2` (same convention as `_create_platform`).
+
+**Player detection**: Player is `CharacterBody2D` using `move_and_slide()`, which doesn't trigger `body_entered` on other bodies. The env body's own `FieldArea` (mask includes PLAYER layer) handles player detection and routes through `CollisionResolver.resolve_collision()`.
+
 ## Physics Composition
 
 `scenes/game_object/physics_applicator.gd` maps tags to RigidBody2D physics properties. Final mass = `tag_mass × size_mass_multiplier` (from `PhysicsComposer.get_size_mass_multiplier()`).

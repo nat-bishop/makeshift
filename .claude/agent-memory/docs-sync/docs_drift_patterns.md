@@ -60,6 +60,14 @@ type: project
 **Why:** Stale "planned feature" docs actively mislead. If it's not in the code, it's not in the docs.
 **How to apply:** When reviewing docs for completeness, cross-check enum values against BehaviorExecutor match statements to find unimplemented cases before documenting them.
 
+## EnvironmentBody pattern (2026-03-29)
+
+- New node types that are "almost like GameObject but not quite" belong in the CLAUDE.md Key systems paragraph (non-autoload systems) with a dense summary, and get a full section in ARCHITECTURE.md. The LEVEL_DESIGN.md checklist had prerequisite items that needed marking done.
+- The solidity/filter duality (`solid=false` → no filter, `solid=true` → FIELD filter) is non-obvious and belongs as a CLAUDE.md gotcha, not just in ARCHITECTURE.md prose.
+- EnvironmentBody intentionally does NOT use `TagField` — uses a rectangular Area2D inline because `TagField` is circular and undersized for large bodies. This is a design decision worth preserving so future devs don't "fix" it.
+
+**How to apply:** When a new node type is added that partially overlaps an existing system (TagField, GameObject), document why it diverges rather than just describing what it does.
+
 ## Signal count drift (2026-03-29)
 
 - EventBus signal count drifted again: went from 11 to 14 with addition of `player_damaged`, `player_healed`, `effect_applied`. CLAUDE.md autoload table listed the count explicitly ("11 signals") which becomes stale immediately. ARCHITECTURE.md signal table is the authoritative list; CLAUDE.md just names them.

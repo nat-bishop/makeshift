@@ -8,7 +8,6 @@ COMPOSE := docker compose --env-file .env -f services/sglang/docker-compose.yml
 define wait-services
 	@echo "Waiting for GPU services..."
 	@until curl -sf http://127.0.0.1:5100/health > /dev/null 2>&1; do sleep 2; done; echo "SGLang ready"
-	@until curl -sf http://127.0.0.1:5150/health > /dev/null 2>&1; do sleep 2; done; echo "rembg ready"
 	@until curl -sf http://127.0.0.1:5200/health > /dev/null 2>&1; do sleep 2; done; echo "LLM ready"
 endef
 

@@ -723,10 +723,10 @@ const LEVELS: Array[Dictionary] = [
 ## Implementation Checklist
 
 ### Prerequisites
-- [ ] Implement `EnvironmentBody` node type (StaticBody2D with tags, no durability)
-- [ ] Verify EnvironmentBody works with CollisionResolver (duck-typed `get_tags()`)
-- [ ] Add Area2D player detection to EnvironmentBody (routes through CollisionResolver)
-- [ ] Add `_create_env_body()` helper to BaseLevel
+- [x] Implement `EnvironmentBody` node type (StaticBody2D with tags, no durability)
+- [x] Verify EnvironmentBody works with CollisionResolver (duck-typed `get_tags()`)
+- [x] Add Area2D player detection to EnvironmentBody (routes through CollisionResolver)
+- [x] Add `_create_env_body()` helper to BaseLevel
 
 ### Per level
 - [ ] Update level `.gd` script with new terrain, seed objects, and objective text

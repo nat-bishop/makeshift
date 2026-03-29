@@ -96,12 +96,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     logger.info("server_stopping")
 
     from app.images.fal_helpers import close_http_client as close_fal_client
-    from app.images.gpu_bg import close_http_client as close_bg_client
     from app.images.local_image import close_http_client as close_local_client
 
     await close_fal_client()
     await close_local_client()
-    await close_bg_client()
     await db.close()
 
 

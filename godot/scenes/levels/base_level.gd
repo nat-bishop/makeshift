@@ -37,6 +37,7 @@ func _respawn_player(body: Node2D) -> void:
 	body.global_position = spawn_point.global_position
 	body.velocity = Vector2.ZERO
 
+const ENV_BODY_SCRIPT: GDScript = preload("res://scenes/environment_body/environment_body.gd")
 const PLATFORM_TEX: Texture2D = preload("res://assets/tilesets/cardboard_platform.png")
 
 func _create_platform(pos: Vector2, size: Vector2, texture: Texture2D = PLATFORM_TEX) -> void:
@@ -60,3 +61,12 @@ func _create_platform(pos: Vector2, size: Vector2, texture: Texture2D = PLATFORM
 	body.add_child(visual)
 
 	add_child(body)
+
+
+func _create_env_body(pos: Vector2, size: Vector2, env_tags: Array, color: Color, env_id: String = "", solid: bool = true) -> StaticBody2D:
+	var body := StaticBody2D.new()
+	body.set_script(ENV_BODY_SCRIPT)
+	body.position = pos + size / 2
+	add_child(body)
+	body.init_env(env_id if env_id != "" else "env_%d" % body.get_instance_id(), env_tags, size, color, solid)
+	return body

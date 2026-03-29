@@ -258,9 +258,7 @@ async def cmd_status() -> None:
                 client, f"{settings.local_image_url}/health"
             )
         if settings.bg_removal_backend == "local":
-            checks["services"]["local_rembg"] = await _check_health(
-                client, f"{settings.bg_removal_url}/health"
-            )
+            checks["services"]["birefnet"] = "in-process (GPU)"
         if settings.local_llm_url:
             base = settings.local_llm_url.rstrip("/").removesuffix("/v1")
             checks["services"]["local_llm"] = await _check_health(

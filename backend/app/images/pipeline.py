@@ -48,9 +48,9 @@ def get_remove_bg() -> RemoveBg:
     from app.config import settings
 
     if settings.bg_removal_backend == "local":
-        from app.images.gpu_bg import make_gpu_remover
+        from app.images.birefnet_bg import make_birefnet_remover
 
-        _remove_bg = make_gpu_remover()
+        _remove_bg = make_birefnet_remover()
     else:
         from app.images.cloud_bg import make_cloud_remover
 

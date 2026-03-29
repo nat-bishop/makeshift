@@ -13,7 +13,10 @@ const VOID_THRESHOLD: float = 1200.0
 const MAX_HEALTH: int = 100
 const DAMAGE_FLASH_DURATION: float = 0.15
 const MOVE_ACCEL: float = 3000.0  # px/s² — snappy controls, reach 300px/s in 0.1s
-const EFFECTIVE_MASS: float = 5.0  # resistance to external forces (impulse / mass = velocity change)
+const EFFECTIVE_MASS: float = 0.4  # resistance to external forces — EXTREME (800) = 5x jump
+const KNOCKBACK_DECAY: float = 800.0  # px/s² — 1000px/s knockback lasts ~1.2s
+const KNOCKBACK_FULL_SUPPRESSION: float = 1000.0  # knockback magnitude for maximum control loss
+const KNOCKBACK_MIN_CONTROL: float = 0.15  # minimum player authority during knockback (15%)
 
 enum State { IDLE, WALK, JUMP, FALL, KICK }
 
@@ -25,6 +28,7 @@ var _kick_query: PhysicsShapeQueryParameters2D
 var current_health: int = MAX_HEALTH
 var _damage_flash_timer: float = 0.0
 var _dead: bool = false
+var _knockback: Vector2 = Vector2.ZERO
 
 @onready var _anim_sprite: AnimatedSprite2D = $AnimatedSprite2D
 
@@ -47,6 +51,7 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	_process_normal_movement(GRAVITY, SPEED, delta)
 	move_and_slide()
+	_decay_knockback(delta)
 	if global_position.y > VOID_THRESHOLD and not _dead:
 		_dead = true
 		current_health = 0
@@ -70,7 +75,8 @@ func _process_normal_movement(gravity: float, speed: float, delta: float) -> voi
 
 	_input_direction = Input.get_axis("move_left", "move_right")
 	var target_vx: float = _input_direction * speed
-	velocity.x = move_toward(velocity.x, target_vx, MOVE_ACCEL * delta)
+	var control: float = clampf(1.0 - _knockback.length() / KNOCKBACK_FULL_SUPPRESSION, KNOCKBACK_MIN_CONTROL, 1.0)
+	velocity.x = move_toward(velocity.x, target_vx, MOVE_ACCEL * control * delta)
 
 	if _input_direction > 0.0:
 		_facing = 1
@@ -191,7 +197,15 @@ func _process_damage_flash(delta: float) -> void:
 func apply_external_impulse(impulse: Vector2) -> void:
 	if _dead:
 		return
-	velocity += impulse / EFFECTIVE_MASS
+	var vel_change: Vector2 = impulse / EFFECTIVE_MASS
+	velocity += vel_change
+	_knockback += vel_change
+
+
+func _decay_knockback(delta: float) -> void:
+	_knockback = _knockback.move_toward(Vector2.ZERO, KNOCKBACK_DECAY * delta)
+	if is_on_floor() and _knockback.y > 0.0:
+		_knockback.y = 0.0
 
 
 func get_effective_tags() -> Array:
