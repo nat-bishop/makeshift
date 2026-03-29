@@ -4,6 +4,7 @@ const DEFAULT_MASS: float = 1.0
 const DEFAULT_GRAVITY: float = 1.0
 const DEFAULT_FRICTION: float = 0.5
 const DEFAULT_BOUNCE: float = 0.0
+const DEFAULT_DAMPING: float = 0.5
 
 const SIZE_TO_PHYSICS: Dictionary = {
 	"tiny": {"sprite": 64, "collision": 32},
@@ -31,6 +32,7 @@ static func compose_physics(tags: Array) -> Dictionary:
 	var gravity_entries: Array = []
 	var friction_entries: Array = []
 	var bounce_entries: Array = []
+	var damping_entries: Array = []
 
 	for tag in tags:
 		var tag_str: String = str(tag)
@@ -47,12 +49,15 @@ static func compose_physics(tags: Array) -> Dictionary:
 			friction_entries.append({"priority": priority, "value": props["friction"]})
 		if props["bounce"] >= 0.0:
 			bounce_entries.append({"priority": priority, "value": props["bounce"]})
+		if props.get("damping", -1.0) >= 0.0:
+			damping_entries.append({"priority": priority, "value": props["damping"]})
 
 	return {
 		"mass": _resolve_property(mass_entries, DEFAULT_MASS),
 		"gravity": _resolve_property(gravity_entries, DEFAULT_GRAVITY),
 		"friction": _resolve_property(friction_entries, DEFAULT_FRICTION),
 		"bounce": _resolve_property(bounce_entries, DEFAULT_BOUNCE),
+		"damping": _resolve_property(damping_entries, DEFAULT_DAMPING),
 	}
 
 

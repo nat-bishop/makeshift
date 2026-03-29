@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -58,27 +59,131 @@ async def _dispatch(args: argparse.Namespace) -> None:
         await cmd_status()
 
 
-async def cmd_create(description: str) -> None:
-    from app.creator.agent import create_object
+# ---------------------------------------------------------------------------
+# Timing helpers
+# ---------------------------------------------------------------------------
 
+class Timer:
+    """Accumulates named steps for a final summary."""
+
+    def __init__(self) -> None:
+        self.steps: list[tuple[str, float, str]] = []  # (label, seconds, detail)
+        self.t0 = time.monotonic()
+
+    def add(self, label: str, seconds: float, detail: str = "") -> None:
+        self.steps.append((label, seconds, detail))
+
+    @property
+    def total(self) -> float:
+        return time.monotonic() - self.t0
+
+    def print_summary(self) -> None:
+        total = self.total
+        w = max(len(s[0]) for s in self.steps) if self.steps else 0
+        print("\n--- timing ---", file=sys.stderr)
+        for label, secs, detail in self.steps:
+            bar_len = int(40 * secs / total) if total > 0 else 0
+            bar = "#" * bar_len
+            pct = secs / total * 100 if total > 0 else 0
+            line = f"  {label:<{w}}  {secs:6.2f}s  {pct:5.1f}%  {bar}"
+            if detail:
+                line += f"  {detail}"
+            print(line, file=sys.stderr)
+        print(f"  {'total':<{w}}  {total:6.2f}s", file=sys.stderr)
+
+
+async def _run_llm(description: str, timer: Timer) -> Any:
+    """Run the LLM creator agent with streaming. Adds steps to timer."""
+    import uuid
+
+    from app.creator.agent import _get_agent
+    from app.models.behaviors import expand_behavior_spec
+    from app.models.blueprint import GameObjectBlueprint
+
+    agent = _get_agent()
     t0 = time.monotonic()
-    blueprint = await create_object(description)
+    ttft = None
+    async with agent.run_stream(f"Create a game object for: {description}") as stream:
+        async for _chunk, _is_last in stream.stream_responses(debounce_by=None):
+            if ttft is None:
+                ttft = time.monotonic() - t0
+        spec = await stream.get_output()
     elapsed = time.monotonic() - t0
 
-    output = blueprint.model_dump(mode="json")
-    output["_meta"] = {"elapsed_seconds": round(elapsed, 2)}
-    print(json.dumps(output, indent=2))
+    usage = stream.usage()
+    gen_time = elapsed - (ttft or 0)
+    tok_s = round(usage.output_tokens / gen_time, 1) if gen_time > 0 else 0
+
+    timer.add("llm prefill", ttft or 0, f"{usage.input_tokens} input tokens")
+    timer.add(
+        "llm generate",
+        gen_time,
+        f"{usage.output_tokens} output tokens, {tok_s} tok/s",
+    )
+    if usage.requests > 1:
+        timer.add("llm retries", 0, f"{usage.requests} requests")
+
+    behaviors = [expand_behavior_spec(b) for b in spec.behaviors]
+    return GameObjectBlueprint(
+        id=str(uuid.uuid4()),
+        name=spec.name,
+        description=description,
+        tags=spec.tags,
+        behaviors=behaviors,
+        visual_descriptor=spec.visual_descriptor,
+    )
+
+
+async def _run_image(prompt: str, timer: Timer) -> bytes:
+    """Run image generation. Adds step to timer."""
+    from app.images.pipeline import get_generate_image
+
+    generate_image = get_generate_image()
+    t0 = time.monotonic()
+    image_bytes = await generate_image(prompt)
+    timer.add("image gen", time.monotonic() - t0, f"{len(image_bytes):,} bytes")
+    return image_bytes
+
+
+async def _run_bg_removal(raw_bytes: bytes, timer: Timer) -> bytes:
+    """Run bg removal + crop. Adds step to timer."""
+    import io
+
+    from PIL import Image
+
+    from app.images.pipeline import TEXTURE_RESOLUTION, _crop_and_fit, get_remove_bg
+
+    remove_bg = get_remove_bg()
+    t0 = time.monotonic()
+    output_bytes = await remove_bg(raw_bytes)
+    timer.add("bg removal", time.monotonic() - t0, f"{len(output_bytes):,} bytes")
+
+    t0 = time.monotonic()
+    output_img = Image.open(io.BytesIO(output_bytes)).convert("RGBA")
+    output_img = _crop_and_fit(output_img, TEXTURE_RESOLUTION)
+    buf = io.BytesIO()
+    output_img.save(buf, format="PNG")
+    timer.add("crop & fit", time.monotonic() - t0)
+    return buf.getvalue()
+
+
+# ---------------------------------------------------------------------------
+# Commands
+# ---------------------------------------------------------------------------
+
+
+async def cmd_create(description: str) -> None:
+    timer = Timer()
+    blueprint = await _run_llm(description, timer)
+    print(json.dumps(blueprint.model_dump(mode="json"), indent=2))
+    timer.print_summary()
 
 
 async def cmd_image(prompt: str, out_path: Path) -> None:
     from app.config import settings
-    from app.images.pipeline import get_generate_image
 
-    generate_image = get_generate_image()
-
-    t0 = time.monotonic()
-    image_bytes = await generate_image(prompt)
-    elapsed = time.monotonic() - t0
+    timer = Timer()
+    image_bytes = await _run_image(prompt, timer)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_bytes(image_bytes)
@@ -87,35 +192,32 @@ async def cmd_image(prompt: str, out_path: Path) -> None:
             {
                 "path": str(out_path),
                 "size_bytes": len(image_bytes),
-                "elapsed_seconds": round(elapsed, 2),
                 "backend": settings.image_backend,
             },
             indent=2,
         )
     )
+    timer.print_summary()
 
 
 async def cmd_sprite(description: str, out_path: str | None, skip_llm: bool) -> None:
     from app.config import settings
-    from app.images.pipeline import build_prompt, generate_static_sprite
+    from app.images.pipeline import build_prompt
     from app.models.blueprint import VisualDescriptor
 
-    blueprint_json = None
+    timer = Timer()
+
     if skip_llm:
         name = description
         visual = VisualDescriptor(visual_description=description, size_category="medium")
         prompt = build_prompt(name, visual)
     else:
-        from app.creator.agent import create_object
-
-        blueprint = await create_object(description)
-        blueprint_json = blueprint.model_dump(mode="json")
+        blueprint = await _run_llm(description, timer)
         prompt = build_prompt(blueprint.name, blueprint.visual_descriptor)
         name = blueprint.name
 
-    t0 = time.monotonic()
-    sprite_bytes = await generate_static_sprite(prompt)
-    elapsed = time.monotonic() - t0
+    raw_bytes = await _run_image(prompt, timer)
+    sprite_bytes = await _run_bg_removal(raw_bytes, timer)
 
     if out_path is None:
         safe_name = name.lower().replace(" ", "_")
@@ -126,14 +228,12 @@ async def cmd_sprite(description: str, out_path: str | None, skip_llm: bool) -> 
     result: dict = {
         "path": out_path,
         "size_bytes": len(sprite_bytes),
-        "elapsed_seconds": round(elapsed, 2),
         "prompt": prompt,
         "backend": settings.image_backend,
         "bg_removal": settings.bg_removal_backend,
     }
-    if blueprint_json:
-        result["blueprint"] = blueprint_json
     print(json.dumps(result, indent=2))
+    timer.print_summary()
 
 
 async def cmd_status() -> None:

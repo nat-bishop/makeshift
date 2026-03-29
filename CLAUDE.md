@@ -9,9 +9,12 @@ Makeshift — "Scribblenauts meets Terraria." A 2D sandbox where players type de
 ## Commands
 
 ```bash
+make gpu                       # start Docker containers (detached, run once)
+make api                       # start FastAPI dev server (foreground, Ctrl-C to restart)
 make dev                       # start all servers + launch game
-make dev-servers               # start all servers (no game launch)
-make dev-servers SERVICES=api  # backend only (cloud LLM + cloud images)
+make gpu-restart               # restart Docker containers
+make gpu-logs                  # tail Docker container logs
+make stop                      # stop everything (API + containers)
 make test                      # run all tests
 make check                     # lint + typecheck + test
 make fix                       # autofix lint issues
@@ -51,14 +54,14 @@ uv run pytest -k "test_name"              # single test by name
 
 | Autoload | Purpose |
 |----------|---------|
-| `EventBus` | Central signal bus (11 signals: interaction_triggered, object_created, sprite_ready, sprite_failed, level_completed, creation_requested, creation_failed, placement_started, placement_ended, debug_toggled, player_died) |
+| `EventBus` | Central signal bus (14 signals: interaction_triggered, object_created, sprite_ready, sprite_failed, level_completed, creation_requested, creation_failed, placement_started, placement_ended, debug_toggled, player_died, player_damaged, player_healed, effect_applied) |
 | `Backend` | HTTP + WebSocket client, session persistence, sprite cache, 10s sync timer |
 | `GameManager` | Game state (MENU/PLAYING/PAUSED), level management, scene transitions, `debug_mode` flag (toggled by `toggle_debug` input, emits `debug_toggled`) |
 | `RuleEngine` | Client-side rule matching (mirrors backend resolver) |
 | `CollisionResolver` | Per-frame collision resolution, cooldowns, cascade (depth 3, 96px radius), STICKY joint creation |
 | `Logger` | Structured logging |
 
-Key systems: `WorldMutations` (static class — all game-state mutations route through it; used by EffectExecutor, BehaviorExecutor, projectile.gd, and level scripts), `EffectExecutor` (5 primitive effect types: DAMAGE, HEAL, ADD_TAG, REMOVE_TAG, APPLY_FORCE; DAMAGE with `tick_interval`/`tick_duration` fields becomes DOT), `PhysicsApplicator` (tag-to-physics mapping; final mass = `tag_mass × size_mass_multiplier`), `PhysicsComposer` (`SIZE_MASS_MULTIPLIER`: tiny=0.25×, small=0.5×, medium=1.0×, large=4.0×, huge=10.0×), `BehaviorExecutor` (per-object autonomous behavior runtime, attached as child node when behaviors present), `BehaviorMaps` (categorical→numeric value mappings for behavior params), `TagField` (per-object Area2D field component, attached when object has field-emitting tags — handles continuous per-frame forces and periodic rule evaluation at range), `FieldConfig` (static class mapping field-emitting tags to range category and mode), `DebugLabel` (floating per-object overlay showing name, durability, tags, and behaviors — visibility driven by `GameManager.debug_mode`). Player has two interaction modes: passive push (continuous impulse on slide collision, force 80 — only on `is_passively_pushable()` objects: LIGHT-tagged or tiny-sized, but not HEAVY) and kick (action input, 48px range, force 400, 0.5s cooldown — impulse skipped on HEAVY objects, damage still applies).
+Key systems: `WorldMutations` (static class — all game-state mutations route through it; used by EffectExecutor, BehaviorExecutor, projectile.gd, and level scripts), `EffectExecutor` (5 primitive effect types: DAMAGE, HEAL, ADD_TAG, REMOVE_TAG, APPLY_FORCE; DAMAGE with `tick_interval`/`tick_duration` fields becomes DOT), `PhysicsApplicator` (tag-to-physics mapping; final mass = `tag_mass × size_mass_multiplier`; also sets `linear_damp` from tag physics map), `PhysicsComposer` (`SIZE_MASS_MULTIPLIER`: tiny=0.25×, small=0.5×, medium=1.0×, large=4.0×, huge=10.0×; `DEFAULT_DAMPING=0.5`; damping resolved from `TagPhysicsMap` same priority system as mass/friction/bounce), `BehaviorExecutor` (per-object autonomous behavior runtime, attached as child node when behaviors present), `BehaviorMaps` (categorical→numeric value mappings for behavior params), `TagField` (per-object Area2D field component, attached when object has field-emitting tags — handles continuous per-frame forces and periodic rule evaluation at range), `FieldConfig` (static class mapping field-emitting tags to range category and mode), `DebugLabel` (floating per-object overlay showing name, durability, tags, and behaviors — visibility driven by `GameManager.debug_mode`). Player has two interaction modes: passive push (continuous impulse on slide collision, force 80 — only on `is_passively_pushable()` objects: LIGHT-tagged or tiny-sized, but not HEAVY) and kick (action input, 48px range, force 400, 0.5s cooldown — impulse skipped on HEAVY objects, damage still applies). Player knockback: `EFFECTIVE_MASS=0.4` (very low — EXTREME force = ~5× jump velocity), `_knockback` vector decays at `KNOCKBACK_DECAY=800 px/s²`, control authority reduced to `KNOCKBACK_MIN_CONTROL=15%` at `KNOCKBACK_FULL_SUPPRESSION=1000 px/s` magnitude.
 
 ## API Endpoints
 
@@ -122,6 +125,8 @@ Requires `.env` file (see `.env.example`):
 - Continuous field rules (`WIND_SOURCE`, `MAGNETIC`, `GLOWING`) use `apply_central_force()` per physics frame — `force_magnitude` in rule data is tuned for per-frame application, not impulse. Periodic rules fire on a 2s timer; first tick fires immediately via `call_deferred`.
 - `resolve_collision(trigger_mode_filter="FIELD")` from `TagField._on_periodic_tick()` skips CONTACT-only rules, so pair cooldowns gate field re-fires to 0.5s intervals regardless of which path (contact or field) last fired the rule.
 - STICKY joint (`PinJoint2D`) is only created on direct contact (`cascade_depth == 0`). Joint auto-frees via `tree_exiting` signal on either body; stale signal on the surviving body is explicitly disconnected in `_on_sticky_body_freed`.
+- DOT timer replacement (`WorldMutations.apply_dot`): must call `stop()` + `remove_child()` before `queue_free()` on the existing timer. `queue_free()` alone leaves the node in the tree until end-of-frame, causing Godot to auto-rename the replacement `_dot_timer` node (appending `@2` etc.), breaking the `get_node_or_null("_dot_timer")` lookup on subsequent DOT applications.
+- `Backend` autoload has `process_mode = PROCESS_MODE_ALWAYS` — it must process during pause (creation panel pauses the game, but WebSocket keepalive and sprite delivery must continue).
 
 ## Documentation
 

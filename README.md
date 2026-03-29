@@ -26,7 +26,9 @@ make dev
 You can also run servers without launching Godot:
 
 ```bash
-make dev-servers                   # start Docker containers + API server (foreground, auto-reload)
+# Typical workflow: start containers once, restart API freely
+make gpu                           # start Docker GPU containers (detached, run once)
+make api                           # start FastAPI dev server (foreground, Ctrl-C to restart)
 make stop                          # stop everything
 ```
 
@@ -34,8 +36,12 @@ make stop                          # stop everything
 
 | Command | Description |
 |---------|-------------|
+| `make gpu` | Start Docker GPU containers (detached) |
+| `make api` | Start FastAPI dev server (foreground, auto-reload) |
 | `make dev` | Start all servers + launch game |
-| `make dev-servers` | Start containers + API (foreground, auto-reload) |
+| `make gpu-restart` | Restart Docker containers |
+| `make gpu-logs` | Tail Docker container logs |
+| `make stop` | Stop all servers and clean up |
 | `make play` | Launch Godot game (servers must be running) |
 | `make godot` | Open Godot editor |
 | `make install` | Install all dependencies |
@@ -43,7 +49,6 @@ make stop                          # stop everything
 | `make check` | Lint + typecheck + test |
 | `make fix` | Lint with autofix |
 | `make format` | Format code |
-| `make stop` | Stop all servers and clean up |
 | `make help` | Show all available targets |
 
 ### CLI tools (no server needed)

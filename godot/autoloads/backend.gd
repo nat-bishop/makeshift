@@ -20,6 +20,7 @@ const MAX_RECONNECT_DELAY: float = 30.0
 
 
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	_load_session_id()
 
 

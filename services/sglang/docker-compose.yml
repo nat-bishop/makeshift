@@ -25,6 +25,12 @@ services:
       - /app/cache-dit-config.yaml
       - --config
       - /app/server-config.yaml
+      - --enable-torch-compile
+      - --warmup
+      - --warmup-resolutions
+      - 512x512
+      - --warmup-steps
+      - "1"
       - --host
       - "0.0.0.0"
       - --port
@@ -66,7 +72,11 @@ services:
       - --port
       - "5200"
       - --mem-fraction-static
-      - "0.80"
+      - "0.65"
+      - --kv-cache-dtype
+      - fp8_e4m3
+      - --mamba-ssm-dtype
+      - bfloat16
       - --context-length
       - "262144"
       - --tool-call-parser

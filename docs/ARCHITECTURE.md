@@ -43,6 +43,9 @@ Godot 4 Client                          FastAPI Backend
 | `placement_ended` | — | Placement confirmed or cancelled |
 | `debug_toggled` | enabled: bool | Debug overlay visibility changed |
 | `player_died` | — | Player death event |
+| `player_damaged` | amount: float, current: int, maximum: int | Player took damage (drives HUD health bar) |
+| `player_healed` | amount: float, current: int, maximum: int | Player healed |
+| `effect_applied` | effect_type: String, amount: float, element_color: Color, world_pos: Vector2 | Visual effect feedback (floating numbers, etc.) |
 
 ## Object Creation Pipeline
 
@@ -315,7 +318,7 @@ body_entered signal (from GameObject)
 | REMOVE_TAG | `tag` | Remove tag |
 | APPLY_FORCE | `force_magnitude` | Impulse away from source body |
 
-**DOT**: DAMAGE with `tick_interval`/`tick_duration` fields routes to `WorldMutations.apply_dot()`. Replaces any existing DOT on the target (named node `_dot_timer`) — no stacking.
+**DOT**: DAMAGE with `tick_interval`/`tick_duration` fields routes to `WorldMutations.apply_dot()`. Replaces any existing DOT on the target (named node `_dot_timer`) — no stacking. Replacement sequence: `stop()` → `remove_child()` → `queue_free()` — skipping `remove_child()` leaves the node in the tree until end-of-frame and causes Godot to auto-rename the new timer, breaking subsequent `get_node_or_null("_dot_timer")` lookups.
 
 **Target resolution**: Effects specify `target: "a" | "b" | "both"`. Default is `"b"`.
 
@@ -331,15 +334,21 @@ body_entered signal (from GameObject)
 
 **Size mass multipliers** (`PhysicsComposer.SIZE_MASS_MULTIPLIER`): tiny=0.25×, small=0.5×, medium=1.0×, large=4.0×, huge=10.0×.
 
-| Tag | Mass | Gravity | Friction | Bounce | Extra |
-|-----|------|---------|----------|--------|-------|
-| HEAVY | 15.0 | 1.2 | 0.7 | 0.0 | — |
-| LIGHT | 0.2 | 0.8 | 0.3 | 0.0 | — |
-| FLOATING | — | -0.5 | — | — | — |
+`PhysicsApplicator` now also sets `RigidBody2D.linear_damp` from the composed physics. Default damping: 0.5. Tag overrides resolved by same priority system as mass/friction/bounce.
+
+| Tag | Mass | Gravity | Friction | Bounce | Damping |
+|-----|------|---------|----------|--------|---------|
+| HEAVY | 15.0 | 1.2 | 0.7 | 0.0 | 0.1 |
+| LIGHT | 0.2 | 0.8 | 0.3 | 0.0 | 1.5 |
+| FLOATING | — | -0.5 | — | — | 1.5 |
+| GAS | — | — | 0.0 | 0.0 | 4.0 |
+| LIQUID | — | 1.0 | 0.0 | 0.0 | 2.0 |
 | SLIPPERY | — | — | 0.05 | — | — |
-| STICKY | — | — | 2.0 | — | PinJoint2D on contact |
+| STICKY | — | — | 2.0 | — | — |
 | BOUNCY | — | — | 0.2 | 0.9 | — |
-| Default | 1.0 | 1.0 | 0.5 | 0.0 | — |
+| Default | 1.0 | 1.0 | 0.5 | 0.0 | 0.5 |
+
+(-1.0 in `TagPhysicsMap` means "not set" — falls through to default.)
 
 Tag mutations (via `add_tag`/`remove_tag`) trigger `_reapply_physics()` to recalculate.
 

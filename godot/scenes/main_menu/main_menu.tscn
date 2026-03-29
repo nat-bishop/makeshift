@@ -1,8 +1,8 @@
-[gd_scene load_steps=2 format=3 uid="uid://main_menu"]
+[gd_scene format=3 uid="uid://cbrs87ajeohm4"]
 
-[ext_resource type="Script" path="res://scenes/main_menu/main_menu.gd" id="1_main"]
+[ext_resource type="Script" uid="uid://bdunphoksdjpl" path="res://scenes/main_menu/main_menu.gd" id="1_main"]
 
-[node name="MainMenu" type="Control"]
+[node name="MainMenu" type="Control" unique_id=1456760662]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -11,7 +11,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_main")
 
-[node name="ColorRect" type="ColorRect" parent="."]
+[node name="ColorRect" type="ColorRect" parent="." unique_id=1111819483]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -20,7 +20,7 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.08, 0.08, 0.12, 1)
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1484962980]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -35,30 +35,30 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 20
 
-[node name="TitleLabel" type="Label" parent="VBoxContainer"]
+[node name="TitleLabel" type="Label" parent="VBoxContainer" unique_id=1211807005]
 layout_mode = 2
+theme_override_font_sizes/font_size = 48
 text = "Makeshift"
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 48
 
-[node name="Spacer" type="Control" parent="VBoxContainer"]
-layout_mode = 2
+[node name="Spacer" type="Control" parent="VBoxContainer" unique_id=962892809]
 custom_minimum_size = Vector2(0, 20)
-
-[node name="NewGameButton" type="Button" parent="VBoxContainer"]
-unique_name_in_owner = true
 layout_mode = 2
+
+[node name="NewGameButton" type="Button" parent="VBoxContainer" unique_id=1456260585]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
 text = "New Game"
 
-[node name="ContinueButton" type="Button" parent="VBoxContainer"]
+[node name="ContinueButton" type="Button" parent="VBoxContainer" unique_id=108656836]
 unique_name_in_owner = true
-layout_mode = 2
 custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
 text = "Continue"
 
-[node name="QuitButton" type="Button" parent="VBoxContainer"]
+[node name="QuitButton" type="Button" parent="VBoxContainer" unique_id=1203945576]
 unique_name_in_owner = true
-layout_mode = 2
 custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
 text = "Quit"

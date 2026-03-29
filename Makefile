@@ -1,27 +1,47 @@
-.PHONY: dev dev-servers stop godot play godot-import install test lint fix format typecheck check clear-sprites wait-gpu wait-llm wait-rembg cli-create cli-image cli-sprite cli-status help
+.PHONY: dev gpu api stop gpu-restart gpu-logs godot play install test lint fix format typecheck check clear-sprites cli-create cli-image cli-sprite cli-status help
 
 GODOT ?= godot
 VERBOSE ?= 0
 COMPOSE := docker compose --env-file .env -f services/sglang/docker-compose.yml
 
-dev: ## Start all servers + launch game
-	$(COMPOSE) up -d --build
-	@$(MAKE) wait-gpu && $(MAKE) wait-rembg && $(MAKE) wait-llm || true
+# Internal helper: block until all GPU services are healthy
+define wait-services
+	@echo "Waiting for GPU services..."
+	@until curl -sf http://127.0.0.1:5100/health > /dev/null 2>&1; do sleep 2; done; echo "SGLang ready"
+	@until curl -sf http://127.0.0.1:5150/health > /dev/null 2>&1; do sleep 2; done; echo "rembg ready"
+	@until curl -sf http://127.0.0.1:5200/health > /dev/null 2>&1; do sleep 2; done; echo "LLM ready"
+endef
+
+dev: gpu ## Start all servers + launch game
+	$(wait-services)
+	uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir backend &
+	@sleep 2
 	$(GODOT) --path godot/
 	$(MAKE) stop
 
-dev-servers: ## Start GPU/LLM containers + API server (foreground, auto-reload)
+gpu: ## Start GPU/LLM Docker containers (detached)
 	$(COMPOSE) up -d --build
+
+api: ## Start FastAPI dev server (foreground, auto-reload)
 	uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir backend
+
+gpu-restart: ## Restart GPU/LLM Docker containers
+	$(COMPOSE) restart
+
+gpu-logs: ## Tail GPU/LLM container logs
+	$(COMPOSE) logs -f
+
+stop: ## Stop all servers and clean up
+	@powershell -c 'Get-NetTCPConnection -LocalPort 8000 -EA SilentlyContinue | %%{ Stop-Process -Id $$_.OwningProcess -Force }' 2>/dev/null || true
+	@$(COMPOSE) down 2>/dev/null || true
+	@echo "All servers stopped"
 
 godot: ## Open Godot editor
 	$(GODOT) --editor --path godot/
 
-play: godot-import ## Run the game (VERBOSE=0 to suppress engine output)
-	$(GODOT) $(if $(filter 1,$(VERBOSE)),--verbose) --path godot/ 2>&1
-
-godot-import: ## Import Godot resources (runs automatically before play)
+play: ## Run the game (VERBOSE=0 to suppress engine output)
 	$(GODOT) --headless --import --path godot/
+	$(GODOT) $(if $(filter 1,$(VERBOSE)),--verbose) --path godot/ 2>&1
 
 install: ## Install all dependencies
 	uv sync
@@ -46,26 +66,6 @@ check: lint typecheck test ## Run all checks
 
 clear-sprites: ## Delete all cached sprites
 	rm -f backend/static/sprites/*.png
-
-stop: ## Stop all servers and clean up
-	@powershell -c 'Get-NetTCPConnection -LocalPort 8000 -EA SilentlyContinue | %%{ Stop-Process -Id $$_.OwningProcess -Force }' 2>/dev/null || true
-	@$(COMPOSE) down 2>/dev/null || true
-	@echo "All servers stopped"
-
-wait-gpu: ## Wait for SGLang to be ready
-	@echo "Waiting for SGLang..."
-	@until curl -sf http://127.0.0.1:5100/health > /dev/null 2>&1; do sleep 2; done
-	@echo "SGLang ready"
-
-wait-llm: ## Wait for SGLang LLM to be ready
-	@echo "Waiting for SGLang LLM..."
-	@until curl -sf http://127.0.0.1:5200/health > /dev/null 2>&1; do sleep 2; done
-	@echo "SGLang LLM ready"
-
-wait-rembg: ## Wait for rembg bg removal to be ready
-	@echo "Waiting for rembg..."
-	@until curl -sf http://127.0.0.1:5150/health > /dev/null 2>&1; do sleep 2; done
-	@echo "rembg ready"
 
 PROMPT ?= fire sword
 OUT ?=

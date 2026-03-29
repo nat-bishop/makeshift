@@ -209,7 +209,9 @@ func _execute_behavior(behavior_index: int, pre_resolved_target: Node = null, ac
 		_behavior_errors.erase(behavior_index)
 		# Skip per-frame movement logs to avoid spam
 		if action not in BehaviorMaps.MOVEMENT_ACTIONS:
-			var target_name: String = target.name if target != null and is_instance_valid(target) else ""
+			var target_name: String = ""
+			if target != null and is_instance_valid(target):
+				target_name = target.blueprint.get("name", target.name) if "blueprint" in target else target.name
 			if target_name != "":
 				Log.debug("BehaviorExecutor: '%s' fired %s on '%s'" % [_owner_name(), action, target_name])
 			else:

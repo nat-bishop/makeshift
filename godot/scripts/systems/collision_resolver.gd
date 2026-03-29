@@ -64,8 +64,6 @@ func resolve_collision(body_a: Node, body_b: Node, cascade_depth: int = 0, trigg
 		rules = filtered
 
 	if rules.is_empty():
-		if trigger_mode_filter == "" and not tags_a.is_empty() and not tags_b.is_empty():
-			Log.debug("CollisionResolver: No rules matched for %s %s vs %s %s" % [body_a.name, tags_a, body_b.name, tags_b])
 		return
 
 	Log.debug("CollisionResolver: %d rules matched for %s vs %s" % [rules.size(), body_a.name, body_b.name])

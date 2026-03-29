@@ -173,6 +173,10 @@ Walking into a `RigidBody2D` applies a continuous impulse of **80 units** in the
 
 Pressing E performs a rectangular shape query **48px wide × 32px tall** centered in front of the player. Non-HEAVY objects in range receive an impulse of **400 units** in the direction `(facing, -0.3).normalized()` — forward and slightly upward. HEAVY objects receive damage but no impulse. 0.5s cooldown between kicks.
 
+### Knockback
+
+External forces (from rule engine effects, behavior APPLY_FORCE, etc.) are applied via `apply_external_impulse()`. The player's `EFFECTIVE_MASS` is intentionally very low (0.4) so impacts feel dramatic — an EXTREME force (800 units) produces roughly 5× jump velocity. A separate `_knockback` vector tracks accumulated impulse and decays at 800 px/s². During active knockback, player control authority is reduced proportionally — at 1000 px/s magnitude, control drops to the minimum 15%. This lets players fight back against knockback without making them fully helpless.
+
 ## Object Placement Workflow
 
 After submitting a creation request:

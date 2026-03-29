@@ -1,6 +1,6 @@
 class_name TagPhysicsMap
 
-# Each tag maps to {priority, mass, gravity, friction, bounce}
+# Each tag maps to {priority, mass, gravity, friction, bounce, damping}
 # -1.0 means "not set" (will not override default)
 
 const TAG_PHYSICS: Dictionary = {
@@ -10,6 +10,7 @@ const TAG_PHYSICS: Dictionary = {
 		"gravity": 1.2,
 		"friction": 0.7,
 		"bounce": 0.0,
+		"damping": 0.1,
 	},
 	"LIGHT": {
 		"priority": 7,
@@ -17,6 +18,7 @@ const TAG_PHYSICS: Dictionary = {
 		"gravity": 0.8,
 		"friction": 0.3,
 		"bounce": 0.0,
+		"damping": 1.5,
 	},
 	"BOUNCY": {
 		"priority": 6,
@@ -24,6 +26,7 @@ const TAG_PHYSICS: Dictionary = {
 		"gravity": -1.0,
 		"friction": 0.2,
 		"bounce": 0.9,
+		"damping": -1.0,
 	},
 	"STICKY": {
 		"priority": 6,
@@ -31,6 +34,7 @@ const TAG_PHYSICS: Dictionary = {
 		"gravity": -1.0,
 		"friction": 2.0,
 		"bounce": 0.0,
+		"damping": -1.0,
 	},
 	"FLOATING": {
 		"priority": 9,
@@ -38,6 +42,7 @@ const TAG_PHYSICS: Dictionary = {
 		"gravity": -0.5,
 		"friction": -1.0,
 		"bounce": -1.0,
+		"damping": 1.5,
 	},
 	"FROZEN": {
 		"priority": 6,
@@ -45,6 +50,7 @@ const TAG_PHYSICS: Dictionary = {
 		"gravity": -1.0,
 		"friction": 0.05,
 		"bounce": 0.3,
+		"damping": -1.0,
 	},
 	"MOLTEN": {
 		"priority": 6,
@@ -52,6 +58,7 @@ const TAG_PHYSICS: Dictionary = {
 		"gravity": -1.0,
 		"friction": 0.9,
 		"bounce": 0.0,
+		"damping": -1.0,
 	},
 	"GAS": {
 		"priority": 8,
@@ -59,6 +66,7 @@ const TAG_PHYSICS: Dictionary = {
 		"gravity": -1.0,
 		"friction": 0.0,
 		"bounce": 0.0,
+		"damping": 4.0,
 	},
 	"LIQUID": {
 		"priority": 7,
@@ -66,6 +74,7 @@ const TAG_PHYSICS: Dictionary = {
 		"gravity": 1.0,
 		"friction": 0.0,
 		"bounce": 0.0,
+		"damping": 2.0,
 	},
 	"SLIPPERY": {
 		"priority": 5,
@@ -73,6 +82,7 @@ const TAG_PHYSICS: Dictionary = {
 		"gravity": -1.0,
 		"friction": 0.05,
 		"bounce": -1.0,
+		"damping": -1.0,
 	},
 	"FLEXIBLE": {
 		"priority": 4,
@@ -80,6 +90,7 @@ const TAG_PHYSICS: Dictionary = {
 		"gravity": -1.0,
 		"friction": 0.3,
 		"bounce": 0.4,
+		"damping": -1.0,
 	},
 	"RIGID": {
 		"priority": 4,
@@ -87,5 +98,6 @@ const TAG_PHYSICS: Dictionary = {
 		"gravity": -1.0,
 		"friction": 0.6,
 		"bounce": 0.1,
+		"damping": -1.0,
 	},
 }

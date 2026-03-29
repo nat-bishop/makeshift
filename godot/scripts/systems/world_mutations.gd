@@ -56,9 +56,13 @@ static func apply_dot(target: Node, damage_per_tick: float, tick_interval: float
 		return
 	Log.debug("WorldMutations: DOT on %s (%.1f dmg every %.1fs for %.1fs)" % [target.name, damage_per_tick, tick_interval, duration])
 
-	# Replace existing DOT timer instead of stacking
+	# Replace existing DOT timer instead of stacking.
+	# Must remove_child() before queue_free() — queue_free() leaves the node in the
+	# tree until end of frame, causing Godot to auto-rename the replacement timer.
 	var existing := target.get_node_or_null("_dot_timer")
 	if existing != null:
+		existing.stop()
+		target.remove_child(existing)
 		existing.queue_free()
 
 	var timer := Timer.new()

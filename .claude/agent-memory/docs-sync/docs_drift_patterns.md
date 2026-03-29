@@ -59,3 +59,11 @@ type: project
 
 **Why:** Stale "planned feature" docs actively mislead. If it's not in the code, it's not in the docs.
 **How to apply:** When reviewing docs for completeness, cross-check enum values against BehaviorExecutor match statements to find unimplemented cases before documenting them.
+
+## Signal count drift (2026-03-29)
+
+- EventBus signal count drifted again: went from 11 to 14 with addition of `player_damaged`, `player_healed`, `effect_applied`. CLAUDE.md autoload table listed the count explicitly ("11 signals") which becomes stale immediately. ARCHITECTURE.md signal table is the authoritative list; CLAUDE.md just names them.
+- Physics table in ARCHITECTURE.md had an "Extra" column for STICKY side effects but no `damping` column — the column was missing entirely. When `PhysicsApplicator` gains a new property from `TagPhysicsMap`, the table in ARCHITECTURE.md needs a new column.
+- Player physics constants are documented as gotchas in CLAUDE.md only (not ARCHITECTURE.md) — `EFFECTIVE_MASS` changed from 5.0 to 0.4 without any doc update. These values are in `player.gd` constants at top of file; always verify before citing them.
+- `Backend` autoload `process_mode = PROCESS_MODE_ALWAYS` is the kind of silent fix that's easy to miss — no new class, no new signal, just a property assignment in `_ready()`. Worth a gotcha entry because forgetting it breaks sprite delivery during pause.
+- DOT timer node lifecycle: `queue_free()` alone is insufficient to replace a named child node within the same frame — must `stop()` + `remove_child()` first. This is a Godot-specific pattern worth preserving as a gotcha.
