@@ -13,6 +13,7 @@ from app.models.behaviors import (
     BehaviorTrigger,
     Intensity,
     Interval,
+    Power,
     Speed,
     compute_behavior_cost,
     compute_spec_cost,
@@ -387,17 +388,17 @@ class TestCreatorOutputSpec:
                     BehaviorSpec(
                         trigger=BehaviorTrigger.ALWAYS,
                         action=BehaviorAction.SPAWN_PROJECTILE,
-                        power="high",
+                        power=Power.HIGH,
                     ),
                     BehaviorSpec(
                         trigger=BehaviorTrigger.ON_PROXIMITY,
                         action=BehaviorAction.SPAWN_PROJECTILE,
-                        power="high",
+                        power=Power.HIGH,
                     ),
                     BehaviorSpec(
                         trigger=BehaviorTrigger.ON_TIMER,
                         action=BehaviorAction.EXPLODE,
-                        power="high",
+                        power=Power.HIGH,
                     ),
                 ],
                 visual_descriptor=_make_visual(),

@@ -211,7 +211,7 @@ def _get_agent() -> Agent[None, CreatorOutputSpec]:
             "repetition_penalty": settings.llm_repetition_penalty,
             "chat_template_kwargs": {"enable_thinking": not settings.local_llm_thinking_disabled},
         }
-    _agent = Agent(
+    _agent = Agent(  # type: ignore[call-overload]
         _build_model(),
         output_type=CreatorOutputSpec,
         retries=3,

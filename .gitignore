@@ -42,8 +42,16 @@ backend/static/sprites/
 backend/experiments/output/
 backend/experiments/*.png
 
-# One-off benchmark output
+# CLI-generated images and test outputs
+backend/*.png
+backend/backend/*.png
+backend/scripts/*.png
+
+# Benchmark outputs
 bench_output/
+benchmark_*.html
+benchmark_*.json
+backend/benchmark_images/
 
 # Art test/wip assets
 art/test/
