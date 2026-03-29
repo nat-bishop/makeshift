@@ -729,8 +729,11 @@ const LEVELS: Array[Dictionary] = [
 - [x] Add `_create_env_body()` helper to BaseLevel
 
 ### Per level
-- [ ] Update level `.gd` script with new terrain, seed objects, and objective text
-- [ ] Update level `.tscn` if scene structure changes (spawn point, goal position)
+- [x] Level 1 "The Acid Moat" — `.gd` rewritten (acid pool env body, wooden crate seed, kill zone)
+- [x] Level 1 — `.tscn` updated (spawn/goal positions, objective text)
+- [x] Level 2 "The Sentry" — `.gd` rewritten (sentry turret with PATROL+SPAWN_PROJECTILE, frozen barricade, kickable shield)
+- [x] Level 2 — `.tscn` updated (spawn/goal positions, objective text)
+- [ ] Level 3 "The Chain Reaction" — `.gd` not yet rewritten
 - [ ] Playtest each solution path
 - [ ] Verify seed object durability values (BREAKABLE=50, RIGID=200, FLEXIBLE=100, default=150)
 - [ ] Verify behavior budgets are within limits (max 6)

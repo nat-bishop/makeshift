@@ -359,7 +359,10 @@ Non-solid uses no filter because being inside the substance is semantically equi
 - Periodic timer created/destroyed dynamically as field tags are added/removed (same as `TagField._rebuild()`).
 - Temporary tags: same decay timer pattern as `game_object.gd` — `_decay_timers` dict, `_cancel_decay_timer()` on re-add.
 
-**Level creation**: `BaseLevel._create_env_body(pos, size, tags, color, id, solid)` — pos is top-left corner, body positioned at `pos + size/2` (same convention as `_create_platform`).
+**Level creation helpers** (all on `BaseLevel`):
+- `_create_env_body(pos, size, tags, color, id, solid)` — pos is top-left corner, body positioned at `pos + size/2` (same convention as `_create_platform`)
+- `_spawn_game_object(blueprint, pos) -> Node` — instantiate `game_object.tscn`, add_child, position, `init_from_blueprint`
+- `_create_kill_zone(pos, size)` — `Area2D` on HAZARDS layer; respawns player, deals 999 dmg to objects
 
 **Player detection**: Player is `CharacterBody2D` using `move_and_slide()`, which doesn't trigger `body_entered` on other bodies. The env body's own `FieldArea` (mask includes PLAYER layer) handles player detection and routes through `CollisionResolver.resolve_collision()`.
 

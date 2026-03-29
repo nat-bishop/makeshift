@@ -39,6 +39,7 @@ func _respawn_player(body: Node2D) -> void:
 
 const ENV_BODY_SCRIPT: GDScript = preload("res://scenes/environment_body/environment_body.gd")
 const PLATFORM_TEX: Texture2D = preload("res://assets/tilesets/cardboard_platform.png")
+const GAME_OBJECT_SCENE: PackedScene = preload("res://scenes/game_object/game_object.tscn")
 
 func _create_platform(pos: Vector2, size: Vector2, texture: Texture2D = PLATFORM_TEX) -> void:
 	var body := StaticBody2D.new()
@@ -61,6 +62,35 @@ func _create_platform(pos: Vector2, size: Vector2, texture: Texture2D = PLATFORM
 	body.add_child(visual)
 
 	add_child(body)
+
+
+func _spawn_game_object(blueprint: Dictionary, pos: Vector2) -> Node:
+	var obj = GAME_OBJECT_SCENE.instantiate()
+	add_child(obj)
+	obj.global_position = pos
+	obj.init_from_blueprint(blueprint.duplicate(true))
+	return obj
+
+
+func _create_kill_zone(pos: Vector2, size: Vector2) -> void:
+	var area := Area2D.new()
+	area.position = pos + size / 2
+	area.collision_layer = CollisionLayers.HAZARDS
+	area.collision_mask = CollisionLayers.PLAYER | CollisionLayers.OBJECTS
+	var shape := CollisionShape2D.new()
+	var rect := RectangleShape2D.new()
+	rect.size = size
+	shape.shape = rect
+	area.add_child(shape)
+	area.body_entered.connect(_on_kill_zone_entered)
+	add_child(area)
+
+
+func _on_kill_zone_entered(body: Node2D) -> void:
+	if _is_player(body):
+		_respawn_player(body)
+	else:
+		WorldMutations.apply_damage(body, 999.0)
 
 
 func _create_env_body(pos: Vector2, size: Vector2, env_tags: Array, color: Color, env_id: String = "", solid: bool = true) -> StaticBody2D:

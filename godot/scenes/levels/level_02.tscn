@@ -8,14 +8,14 @@ size = Vector2(64, 128)
 [node name="Level02" type="Node2D"]
 script = ExtResource("1_level02")
 level_id = 1
-objective_text = "Cross the burning bridge!"
+objective_text = "Get past the sentry!"
 next_level_path = "res://scenes/levels/level_03.tscn"
 
 [node name="SpawnPoint" type="Marker2D" parent="."]
 position = Vector2(128, 336)
 
 [node name="Goal" type="Area2D" parent="."]
-position = Vector2(1152, 336)
+position = Vector2(1100, 336)
 collision_layer = 16
 collision_mask = 2
 

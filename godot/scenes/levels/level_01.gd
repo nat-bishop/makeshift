@@ -1,42 +1,39 @@
 extends BaseLevel
-## Level 1: Cross the Gap
-## Two platforms separated by a gap (~384px). Spawn left, goal right.
+## Level 1: The Acid Moat
+## Two platforms separated by a 480px acid-filled pit. Wooden crate seed object
+## demonstrates corrosion rules. Player must create a durable bridge to cross.
+
+const CRATE_BLUEPRINT := {
+	"id": "crate_level01",
+	"name": "Wooden Crate",
+	"tags": ["SOLID", "RIGID", "FLAMMABLE", "BREAKABLE"],
+	"starting_durability": 50,
+	"visual_descriptor": {
+		"visual_description": "a small wooden shipping crate with planks and nails",
+		"size_category": "small",
+	},
+}
 
 
 func _ready() -> void:
 	level_id = 0
-	objective_text = "Cross the gap!"
+	objective_text = "Cross the acid moat!"
 	next_level_path = "res://scenes/levels/level_02.tscn"
 	super._ready()
 	_build_terrain()
-	Log.debug("Level: Terrain built for level_01 (Cross the Gap)")
+	_spawn_game_object(CRATE_BLUEPRINT, Vector2(280, 536))
+	Log.debug("Level: Terrain built for level_01 (The Acid Moat)")
 
 
 func _build_terrain() -> void:
-	# Left platform: 8 tiles wide (512px)
-	_create_platform(Vector2(0, 400), Vector2(512, 64))
-	# Right platform: 8 tiles wide, after 384px gap
-	_create_platform(Vector2(896, 400), Vector2(512, 64))
-	# Bottom kill zone (so player respawns if they fall)
-	_create_kill_zone(Vector2(512, 700), Vector2(384, 64))
-
-
-func _create_kill_zone(pos: Vector2, size: Vector2) -> void:
-	var area := Area2D.new()
-	area.position = pos + size / 2
-	area.collision_layer = CollisionLayers.HAZARDS
-	area.collision_mask = CollisionLayers.PLAYER
-
-	var shape := CollisionShape2D.new()
-	var rect := RectangleShape2D.new()
-	rect.size = size
-	shape.shape = rect
-	area.add_child(shape)
-
-	area.body_entered.connect(_on_kill_zone_entered)
-	add_child(area)
-
-
-func _on_kill_zone_entered(body: Node2D) -> void:
-	if _is_player(body):
-		_respawn_player(body)
+	_create_platform(Vector2(0, 568), Vector2(384, 64))
+	_create_platform(Vector2(896, 568), Vector2(384, 64))
+	# Pit walls contain acid and prevent edge shortcuts
+	_create_platform(Vector2(384, 568), Vector2(16, 128))
+	_create_platform(Vector2(880, 568), Vector2(16, 128))
+	_create_env_body(
+		Vector2(400, 632), Vector2(480, 48),
+		["CORROSIVE", "TOXIC", "LIQUID"],
+		Color(0.2, 0.9, 0.1, 0.8), "acid_pool", false
+	)
+	_create_kill_zone(Vector2(400, 700), Vector2(480, 64))

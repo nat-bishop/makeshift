@@ -7,8 +7,8 @@ var current_level: int = 0
 var debug_mode: bool = false
 
 const LEVELS: Array[Dictionary] = [
-	{"scene": "res://scenes/levels/level_01.tscn", "name": "Level 1: Cross the Gap"},
-	{"scene": "res://scenes/levels/level_02.tscn", "name": "Level 2: The Burning Bridge"},
+	{"scene": "res://scenes/levels/level_01.tscn", "name": "Level 1: The Acid Moat"},
+	{"scene": "res://scenes/levels/level_02.tscn", "name": "Level 2: The Sentry"},
 	{"scene": "res://scenes/levels/level_03.tscn", "name": "Level 3: Reach the Top"},
 ]
 

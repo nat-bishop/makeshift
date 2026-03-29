@@ -79,6 +79,7 @@ def _remove_sync(image_bytes: bytes) -> bytes:
 
 def make_birefnet_remover() -> Callable[[bytes], Awaitable[bytes]]:
     """Return an async callable that removes backgrounds via in-process BiRefNet-lite."""
+    _get_model()  # Eagerly load so first call isn't slow
 
     async def remove_bg(image_bytes: bytes) -> bytes:
         logger.debug("birefnet_bg_removal_start", input_size=len(image_bytes))
