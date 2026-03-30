@@ -13,11 +13,22 @@ var _field_area: Area2D
 var _periodic_timer: Timer
 var _has_periodic: bool = false
 var _has_continuous: bool = false
+var _has_sticky: bool = false
 var _prev_field_tags: Array = []
 
 # Pre-cached at _rebuild() time so _physics_process avoids per-frame rule lookups
 var _cached_continuous: Array = []  # [{rule, range_px, req_b, blocked_by}]
 var _max_periodic_range: float = 0.0  # for per-tag distance filtering in periodic tick
+
+# STICKY damping: tracks bodies we've slowed so we can restore on exit
+const STICKY_DAMP: float = 12.0  # high linear_damp → ~75% speed reduction
+const STICKY_SPEED_FACTOR: float = 0.25  # player moves at 25% speed in sticky field
+var _sticky_damped: Dictionary = {}  # body instance_id -> original linear_damp
+var _sticky_range_px: float = 0.0  # cached in _rebuild()
+
+
+func _exit_tree() -> void:
+	_restore_all_sticky()
 
 
 func init_field(owner: RigidBody2D, tags: Array) -> void:
@@ -45,7 +56,13 @@ func _rebuild(tags: Array) -> void:
 	_cached_continuous.clear()
 	_has_periodic = false
 	_has_continuous = false
+	_has_sticky = "STICKY" in current_field_tags
+	_sticky_range_px = FieldConfig.get_range_px("STICKY") if _has_sticky else 0.0
 	_max_periodic_range = 0.0
+
+	# If STICKY was removed, restore all damped bodies
+	if not _has_sticky:
+		_restore_all_sticky()
 
 	var max_range: float = 0.0
 	var periodic_tags: Array = []
@@ -109,10 +126,11 @@ func _rebuild(tags: Array) -> void:
 		_periodic_timer.queue_free()
 		_periodic_timer = null
 
-	# Toggle physics process for continuous fields
-	set_physics_process(_has_continuous)
+	# Toggle physics process for continuous fields or sticky
+	var needs_physics: bool = _has_continuous or _has_sticky
+	set_physics_process(needs_physics)
 	if _owner_body != null:
-		_owner_body.can_sleep = not _has_continuous
+		_owner_body.can_sleep = not needs_physics
 
 
 func _ensure_area(radius: float) -> void:
@@ -136,13 +154,20 @@ func _ensure_area(radius: float) -> void:
 
 
 func _physics_process(_delta: float) -> void:
-	if _field_area == null or _cached_continuous.is_empty():
+	if _field_area == null:
 		return
 	if not is_instance_valid(_owner_body):
 		return
 
 	var owner_pos: Vector2 = _owner_body.global_position
 	var overlapping: Array = _field_area.get_overlapping_bodies()
+
+	# --- STICKY area slow ---
+	if _has_sticky:
+		_apply_sticky_slow(owner_pos, overlapping)
+
+	if _cached_continuous.is_empty():
+		return
 
 	for entry in _cached_continuous:
 		var range_px: float = entry["range_px"]
@@ -243,3 +268,72 @@ func _has_any(tags: Array, check: Array) -> bool:
 		if tag in tags:
 			return true
 	return false
+
+
+# --- STICKY area slow ---
+
+func _apply_sticky_slow(owner_pos: Vector2, overlapping: Array) -> void:
+	var currently_in_range: Dictionary = {}  # instance_id -> body
+	var player_in_range: bool = false
+
+	for body in overlapping:
+		if body == _owner_body or not is_instance_valid(body):
+			continue
+		var dist: float = owner_pos.distance_to(body.global_position)
+		if dist > _sticky_range_px * 1.5:
+			continue
+		var bid: int = body.get_instance_id()
+		currently_in_range[bid] = body
+
+		if body is RigidBody2D and bid not in _sticky_damped:
+			_sticky_damped[bid] = body.linear_damp
+			body.linear_damp = STICKY_DAMP
+			body.tree_exiting.connect(_on_sticky_body_exiting.bind(bid), CONNECT_ONE_SHOT)
+
+		if body is CharacterBody2D and body.has_method("apply_speed_modifier"):
+			player_in_range = true
+			body.apply_speed_modifier(STICKY_SPEED_FACTOR)
+
+	# Restore bodies that left the sticky field
+	var to_restore: Array = []
+	for bid in _sticky_damped:
+		if bid not in currently_in_range:
+			to_restore.append(bid)
+	for bid in to_restore:
+		_restore_sticky_body(bid)
+
+	# Restore player if they left
+	if not player_in_range:
+		_clear_sticky_player(overlapping)
+
+
+func _restore_sticky_body(bid: int) -> void:
+	if bid not in _sticky_damped:
+		return
+	var original_damp: float = _sticky_damped[bid]
+	_sticky_damped.erase(bid)
+	# Find the body by instance id — it may have been freed
+	var body: Object = instance_from_id(bid)
+	if body != null and is_instance_valid(body) and body is RigidBody2D:
+		body.linear_damp = original_damp
+
+
+func _on_sticky_body_exiting(bid: int) -> void:
+	_restore_sticky_body(bid)
+
+
+func _clear_sticky_player(overlapping: Array = []) -> void:
+	# Use provided list or fall back to querying (needed for _restore_all_sticky)
+	var bodies: Array = overlapping if not overlapping.is_empty() else (
+		_field_area.get_overlapping_bodies() if _field_area != null else [])
+	for body in bodies:
+		if body is CharacterBody2D and body.has_method("clear_speed_modifier"):
+			body.clear_speed_modifier()
+			break
+
+
+func _restore_all_sticky() -> void:
+	for bid in _sticky_damped.keys():
+		_restore_sticky_body(bid)
+	_sticky_damped.clear()
+	_clear_sticky_player()

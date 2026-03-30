@@ -128,7 +128,7 @@ class TestRuleResolver:
 
 class TestAllRules:
     def test_all_rules_loaded(self):
-        assert len(ALL_RULES) == 47
+        assert len(ALL_RULES) == 53
 
     def test_all_rules_have_unique_ids(self):
         ids = [r.rule_id for r in ALL_RULES]
@@ -265,3 +265,65 @@ class TestAllRules:
         assert rule_ids.index("heat_flammable_ignite") < rule_ids.index(
             "electric_flammable_spark"
         )
+
+    def test_hostile_hostile_clash(self):
+        resolver = RuleResolver(ALL_RULES)
+        matches = resolver.find_matching_rules({Tag.HOSTILE}, {Tag.HOSTILE})
+        rule_ids = [m.rule_id for m in matches]
+        assert "hostile_hostile_clash" in rule_ids
+
+    def test_hostile_has_knockback(self):
+        resolver = RuleResolver(ALL_RULES)
+        matches = resolver.find_matching_rules({Tag.HOSTILE}, {Tag.LIVING})
+        rule = next(m for m in matches if m.rule_id == "hostile_living_damage")
+        effect_types = [e.effect_type for e in rule.effects]
+        assert EffectType.APPLY_FORCE in effect_types
+
+    def test_reflective_corrosive_resist(self):
+        resolver = RuleResolver(ALL_RULES)
+        matches = resolver.find_matching_rules({Tag.REFLECTIVE}, {Tag.CORROSIVE})
+        rule_ids = [m.rule_id for m in matches]
+        assert "reflective_corrosive_resist" in rule_ids
+
+    def test_liquid_wet_spread(self):
+        """LIQUID wildcard rule should match against any tags_b."""
+        resolver = RuleResolver(ALL_RULES)
+        matches = resolver.find_matching_rules({Tag.LIQUID}, {Tag.SOLID, Tag.RIGID})
+        rule_ids = [m.rule_id for m in matches]
+        assert "liquid_wet_spread" in rule_ids
+
+    def test_wet_electric_amplify(self):
+        resolver = RuleResolver(ALL_RULES)
+        matches = resolver.find_matching_rules({Tag.WET}, {Tag.ELECTRIC})
+        rule_ids = [m.rule_id for m in matches]
+        assert "wet_electric_amplify" in rule_ids
+
+    def test_wet_electric_blocked_by_insulating(self):
+        resolver = RuleResolver(ALL_RULES)
+        # INSULATING on the ELECTRIC side (B) blocks the wet_electric_amplify rule
+        matches = resolver.find_matching_rules(
+            {Tag.WET}, {Tag.ELECTRIC, Tag.INSULATING}
+        )
+        rule_ids = [m.rule_id for m in matches]
+        assert "wet_electric_amplify" not in rule_ids
+
+    def test_wet_cold_freeze(self):
+        resolver = RuleResolver(ALL_RULES)
+        matches = resolver.find_matching_rules({Tag.WET}, {Tag.COLD})
+        rule_ids = [m.rule_id for m in matches]
+        assert "wet_cold_freeze" in rule_ids
+
+    def test_heat_wet_dry(self):
+        resolver = RuleResolver(ALL_RULES)
+        matches = resolver.find_matching_rules({Tag.HEAT_SOURCE}, {Tag.WET})
+        rule_ids = [m.rule_id for m in matches]
+        assert "heat_wet_dry" in rule_ids
+
+    def test_wet_blocks_ignition(self):
+        """WET should block heat_flammable_ignite (wet things resist fire)."""
+        resolver = RuleResolver(ALL_RULES)
+        matches = resolver.find_matching_rules(
+            {Tag.HEAT_SOURCE}, {Tag.FLAMMABLE, Tag.WET}
+        )
+        rule_ids = [m.rule_id for m in matches]
+        assert "heat_flammable_ignite" not in rule_ids

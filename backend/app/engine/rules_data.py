@@ -15,7 +15,7 @@ ALL_RULES: list[InteractionRule] = [
         priority=10,
         bidirectional=True,
         cascade_eligible=True,
-        tags_blocked_by={Tag.INSULATING},
+        tags_blocked_by={Tag.INSULATING, Tag.WET},
         trigger_mode=TriggerMode.FIELD,
         effects=[
             Effect(
@@ -626,7 +626,7 @@ ALL_RULES: list[InteractionRule] = [
             Effect(
                 effect_type=EffectType.APPLY_FORCE,
                 target=EffectTarget.B,
-                force_magnitude=-8.0,
+                force_magnitude=-15.0,
                 message="Drawn to the light...",
             ),
         ],
@@ -770,7 +770,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 35b. HOSTILE + BREAKABLE → blunt damage
+    # 35b. HOSTILE + BREAKABLE → blunt damage + knockback
     InteractionRule(
         rule_id="hostile_breakable_damage",
         name="Strike",
@@ -779,6 +779,7 @@ ALL_RULES: list[InteractionRule] = [
         priority=7,
         bidirectional=False,
         cascade_eligible=False,
+        trigger_mode=TriggerMode.FIELD,
         effects=[
             Effect(
                 effect_type=EffectType.DAMAGE,
@@ -786,9 +787,14 @@ ALL_RULES: list[InteractionRule] = [
                 damage_amount=20.0,
                 message="Struck! 20 damage.",
             ),
+            Effect(
+                effect_type=EffectType.APPLY_FORCE,
+                target=EffectTarget.B,
+                force_magnitude=100.0,
+            ),
         ],
     ),
-    # 35c. HOSTILE + LIVING → blunt damage
+    # 35c. HOSTILE + LIVING → blunt damage + knockback
     InteractionRule(
         rule_id="hostile_living_damage",
         name="Attack",
@@ -797,12 +803,18 @@ ALL_RULES: list[InteractionRule] = [
         priority=7,
         bidirectional=False,
         cascade_eligible=False,
+        trigger_mode=TriggerMode.FIELD,
         effects=[
             Effect(
                 effect_type=EffectType.DAMAGE,
                 target=EffectTarget.B,
                 damage_amount=20.0,
                 message="Attacked! 20 damage.",
+            ),
+            Effect(
+                effect_type=EffectType.APPLY_FORCE,
+                target=EffectTarget.B,
+                force_magnitude=150.0,
             ),
         ],
     ),
@@ -1023,6 +1035,149 @@ ALL_RULES: list[InteractionRule] = [
                 target=EffectTarget.B,
                 damage_amount=10.0,
                 message="The gas ionizes into glowing plasma!",
+            ),
+        ],
+    ),
+    # =========================================================================
+    # HOSTILE clash
+    # =========================================================================
+    # 46. HOSTILE + HOSTILE → mutual damage + knockback
+    InteractionRule(
+        rule_id="hostile_hostile_clash",
+        name="Clash",
+        tags_required_a={Tag.HOSTILE},
+        tags_required_b={Tag.HOSTILE},
+        priority=6,
+        bidirectional=False,
+        cascade_eligible=False,
+        trigger_mode=TriggerMode.FIELD,
+        effects=[
+            Effect(
+                effect_type=EffectType.DAMAGE,
+                target=EffectTarget.BOTH,
+                damage_amount=15.0,
+                message="Hostile creatures clash! 15 damage each.",
+            ),
+            Effect(
+                effect_type=EffectType.APPLY_FORCE,
+                target=EffectTarget.BOTH,
+                force_magnitude=120.0,
+            ),
+        ],
+    ),
+    # =========================================================================
+    # REFLECTIVE expansion
+    # =========================================================================
+    # 47. REFLECTIVE + CORROSIVE → resist acid
+    InteractionRule(
+        rule_id="reflective_corrosive_resist",
+        name="Acid Resistance",
+        tags_required_a={Tag.REFLECTIVE},
+        tags_required_b={Tag.CORROSIVE},
+        priority=12,
+        bidirectional=True,
+        cascade_eligible=False,
+        effects=[
+            Effect(
+                effect_type=EffectType.REMOVE_TAG,
+                target=EffectTarget.B,
+                tag=Tag.CORROSIVE,
+                message="Acid slides off the reflective surface!",
+            ),
+        ],
+    ),
+    # =========================================================================
+    # WET rules
+    # =========================================================================
+    # 48. LIQUID + any → spread WET (wildcard rule)
+    InteractionRule(
+        rule_id="liquid_wet_spread",
+        name="Soak",
+        tags_required_a={Tag.LIQUID},
+        tags_required_b=set(),
+        priority=3,
+        bidirectional=False,
+        cascade_eligible=False,
+        trigger_mode=TriggerMode.FIELD,
+        effects=[
+            Effect(
+                effect_type=EffectType.ADD_TAG,
+                target=EffectTarget.B,
+                tag=Tag.WET,
+                tag_duration=15.0,
+                message="Soaked by liquid!",
+            ),
+        ],
+    ),
+    # 49. WET + ELECTRIC → amplified shock
+    InteractionRule(
+        rule_id="wet_electric_amplify",
+        name="Wet Shock",
+        tags_required_a={Tag.WET},
+        tags_required_b={Tag.ELECTRIC},
+        priority=11,
+        bidirectional=True,
+        cascade_eligible=False,
+        tags_blocked_by={Tag.INSULATING},
+        effects=[
+            Effect(
+                effect_type=EffectType.DAMAGE,
+                target=EffectTarget.A,
+                damage_amount=45.0,
+                message="Water amplifies the shock! 45 damage.",
+            ),
+        ],
+    ),
+    # 50. WET + COLD → freeze
+    InteractionRule(
+        rule_id="wet_cold_freeze",
+        name="Wet Freeze",
+        tags_required_a={Tag.WET},
+        tags_required_b={Tag.COLD},
+        priority=9,
+        bidirectional=True,
+        cascade_eligible=False,
+        trigger_mode=TriggerMode.FIELD,
+        effects=[
+            Effect(
+                effect_type=EffectType.ADD_TAG,
+                target=EffectTarget.A,
+                tag=Tag.FROZEN,
+            ),
+            Effect(
+                effect_type=EffectType.ADD_TAG,
+                target=EffectTarget.A,
+                tag=Tag.SOLID,
+            ),
+            Effect(
+                effect_type=EffectType.ADD_TAG,
+                target=EffectTarget.A,
+                tag=Tag.RIGID,
+            ),
+            Effect(
+                effect_type=EffectType.REMOVE_TAG,
+                target=EffectTarget.A,
+                tag=Tag.WET,
+                message="The wet surface freezes solid!",
+            ),
+        ],
+    ),
+    # 51. HEAT_SOURCE + WET → dry out
+    InteractionRule(
+        rule_id="heat_wet_dry",
+        name="Dry Out",
+        tags_required_a={Tag.HEAT_SOURCE},
+        tags_required_b={Tag.WET},
+        priority=8,
+        bidirectional=True,
+        cascade_eligible=False,
+        trigger_mode=TriggerMode.FIELD,
+        effects=[
+            Effect(
+                effect_type=EffectType.REMOVE_TAG,
+                target=EffectTarget.B,
+                tag=Tag.WET,
+                message="Dried out by the heat!",
             ),
         ],
     ),

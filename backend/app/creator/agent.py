@@ -61,9 +61,9 @@ Number in parentheses = point cost.
 
 **Surface:**
 - SHARP(2) — deals cut damage on contact
-- STICKY(2) — adheres on contact, creates physical joints
+- STICKY(2) — slows everything nearby to 25% speed, area denial trap
 - SLIPPERY(1) — near-zero friction surface
-- REFLECTIVE(2) — bounces back heat and electricity
+- REFLECTIVE(2) — bounces back heat, electricity, and resists acid
 
 **Mechanical:**
 - BOUNCY(2) — high restitution, rebounds on impact
@@ -74,17 +74,21 @@ Number in parentheses = point cost.
 - WIND_SOURCE(3) — pushes LIGHT objects, fans flames
 - CORROSIVE(4) — dissolves materials on contact
 - TOXIC(4) — poisons LIVING things on contact
+- WET(1) — damp/soaked. Freezes easier near COLD, amplifies ELECTRIC shock, resists fire. \
+Dries out near HEAT_SOURCE. Applied automatically by nearby LIQUID objects.
 
 **Special:**
 - LIVING(3) — a creature or organism (targetable by NEAREST_LIVING)
 - GLOWING(2) — emits visible light
 - CONDUCTING(2) — carries electricity and heat between objects
 - INSULATING(2) — blocks electricity and heat propagation
-- HOSTILE(2) — aggressive, deals physical damage on contact
+- HOSTILE(2) — aggressive, deals physical damage + knockback at close range (danger aura). \
+Two HOSTILE objects clash and fight each other.
 
 **Contradictions:** FROZEN↔MOLTEN, FROZEN↔HOT, COLD↔HOT, COLD↔MOLTEN, HEAVY↔LIGHT, \
 LIQUID↔RIGID, GAS↔RIGID, GAS↔HEAVY, SOLID↔LIQUID, SOLID↔GAS, LIQUID↔GAS, \
-STICKY↔SLIPPERY, CONDUCTING↔INSULATING, REFLECTIVE↔STICKY, HEAT_SOURCE↔FLAMMABLE
+STICKY↔SLIPPERY, CONDUCTING↔INSULATING, REFLECTIVE↔STICKY, HEAT_SOURCE↔FLAMMABLE, \
+WET↔MOLTEN, WET↔HEAT_SOURCE
 
 Think about gameplay affordances: what can the player DO with this object? \
 Favor tags that enable interesting chain reactions and interactions with other objects.
@@ -114,7 +118,8 @@ Example: fire adds HEAT_SOURCE to a bee swarm -> ON_TAG_ADDED(HEAT_SOURCE) -> EX
 - ATTRACT(2) — pull target toward self
 - HEAL(2) — restore target's durability
 - ADD_TAGS(2) — add tags to target (write tags in parens: ADD_TAGS(TAG1, TAG2)). \
-Powerful: feeds back into the rule engine — adding HEAT_SOURCE makes the target ignite flammable things.
+Powerful: feeds back into the rule engine — adding HEAT_SOURCE makes the target ignite flammable things. \
+Can also protect: adding INSULATING blocks electricity, adding REFLECTIVE bounces heat.
 - REMOVE_TAGS(2) — remove tags from target (write tags in parens: REMOVE_TAGS(TAG1, TAG2)). \
 Cleanser/purifier mechanic.
 - SELF_DESTRUCT(1) — destroy self

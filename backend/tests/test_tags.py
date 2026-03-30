@@ -10,8 +10,8 @@ from app.models.tags import (
 
 
 def test_tag_count():
-    """There should be exactly 31 tags."""
-    assert len(Tag) == 31
+    """There should be exactly 32 tags."""
+    assert len(Tag) == 32
 
 
 def test_every_tag_has_a_cost():
@@ -35,8 +35,8 @@ def test_contradiction_pairs_are_frozensets_of_two():
 
 
 def test_contradiction_count():
-    """There should be exactly 15 contradiction pairs."""
-    assert len(TAG_CONTRADICTIONS) == 15
+    """There should be exactly 17 contradiction pairs."""
+    assert len(TAG_CONTRADICTIONS) == 17
 
 
 def test_no_self_contradictions():
@@ -52,10 +52,21 @@ def test_object_tag_budget():
 
 @pytest.mark.parametrize(
     ("cost", "expected_count"),
-    [(1, 10), (2, 12), (3, 4), (4, 4), (5, 1)],
+    [(1, 11), (2, 12), (3, 4), (4, 4), (5, 1)],
 )
 def test_cost_distribution(cost: int, expected_count: int) -> None:
     actual = [t for t, c in TAG_POWER_COSTS.items() if c == cost]
     assert len(actual) == expected_count, (
         f"Cost {cost}: expected {expected_count}, got {len(actual)}"
     )
+
+
+def test_wet_tag_exists():
+    assert Tag.WET in Tag
+    assert TAG_POWER_COSTS[Tag.WET] == 1
+
+
+def test_wet_contradictions():
+    pairs = {frozenset(p) for p in TAG_CONTRADICTIONS}
+    assert frozenset({Tag.WET, Tag.MOLTEN}) in pairs
+    assert frozenset({Tag.WET, Tag.HEAT_SOURCE}) in pairs

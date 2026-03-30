@@ -29,6 +29,8 @@ var current_health: int = MAX_HEALTH
 var _damage_flash_timer: float = 0.0
 var _dead: bool = false
 var _knockback: Vector2 = Vector2.ZERO
+var _speed_modifier: float = 1.0
+var _sticky_slow_count: int = 0
 
 @onready var _anim_sprite: AnimatedSprite2D = $AnimatedSprite2D
 
@@ -74,7 +76,7 @@ func _process_normal_movement(gravity: float, speed: float, delta: float) -> voi
 		velocity.y = JUMP_VELOCITY
 
 	_input_direction = Input.get_axis("move_left", "move_right")
-	var target_vx: float = _input_direction * speed
+	var target_vx: float = _input_direction * speed * _speed_modifier
 	var control: float = clampf(1.0 - _knockback.length() / KNOCKBACK_FULL_SUPPRESSION, KNOCKBACK_MIN_CONTROL, 1.0)
 	velocity.x = move_toward(velocity.x, target_vx, MOVE_ACCEL * control * delta)
 
@@ -206,6 +208,17 @@ func _decay_knockback(delta: float) -> void:
 	_knockback = _knockback.move_toward(Vector2.ZERO, KNOCKBACK_DECAY * delta)
 	if is_on_floor() and _knockback.y > 0.0:
 		_knockback.y = 0.0
+
+
+func apply_speed_modifier(factor: float) -> void:
+	_sticky_slow_count += 1
+	_speed_modifier = factor
+
+
+func clear_speed_modifier() -> void:
+	_sticky_slow_count = max(0, _sticky_slow_count - 1)
+	if _sticky_slow_count == 0:
+		_speed_modifier = 1.0
 
 
 func get_effective_tags() -> Array:

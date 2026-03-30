@@ -100,4 +100,12 @@ const TAG_PHYSICS: Dictionary = {
 		"bounce": 0.1,
 		"damping": -1.0,
 	},
+	"WET": {
+		"priority": 3,
+		"mass": -1.0,
+		"gravity": -1.0,
+		"friction": 0.1,
+		"bounce": -1.0,
+		"damping": -1.0,
+	},
 }

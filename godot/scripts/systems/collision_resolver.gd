@@ -10,7 +10,6 @@ const COOLDOWN_CLEANUP_INTERVAL: float = 5.0
 
 var _effect_executor: Node
 var _cleanup_timer: float = 0.0
-var _sticky_joints: Dictionary = {}  # pair_key -> PinJoint2D
 
 
 func _ready() -> void:
@@ -82,10 +81,6 @@ func resolve_collision(body_a: Node, body_b: Node, cascade_depth: int = 0, trigg
 	# Set cooldown
 	_cooldowns[pair_key] = now
 
-	# Create sticky joint if applicable (only on direct contact, not cascade)
-	if cascade_depth == 0:
-		_check_sticky_joint(body_a, body_b, tags_a, tags_b, pair_key)
-
 	# Check for cascade
 	if any_cascade_eligible and cascade_depth < MAX_CASCADE_DEPTH:
 		var tags_a_after: Array = _get_body_tags(body_a)
@@ -99,42 +94,6 @@ func resolve_collision(body_a: Node, body_b: Node, cascade_depth: int = 0, trigg
 		if b_changed:
 			Log.debug("CollisionResolver: Tags changed on %s, cascading at depth %d" % [body_b.name, cascade_depth + 1])
 			_cascade_to_neighbors(body_b, cascade_depth + 1)
-
-
-func _check_sticky_joint(body_a: Node, body_b: Node, tags_a: Array, tags_b: Array, pair_key: String) -> void:
-	if pair_key in _sticky_joints:
-		return
-	if "STICKY" not in tags_a and "STICKY" not in tags_b:
-		return
-	if body_a is not RigidBody2D or body_b is not RigidBody2D:
-		return
-	var joint := PinJoint2D.new()
-	joint.node_a = body_a.get_path()
-	joint.node_b = body_b.get_path()
-	joint.softness = 0.1
-	body_a.add_child(joint)
-	_sticky_joints[pair_key] = {"joint": joint, "body_a": body_a, "body_b": body_b}
-	body_a.tree_exiting.connect(_on_sticky_body_freed.bind(pair_key))
-	body_b.tree_exiting.connect(_on_sticky_body_freed.bind(pair_key))
-	Log.debug("CollisionResolver: Created sticky joint between %s and %s" % [body_a.name, body_b.name])
-
-
-func _on_sticky_body_freed(pair_key: String) -> void:
-	if pair_key not in _sticky_joints:
-		return
-	var entry: Dictionary = _sticky_joints[pair_key]
-	var joint: PinJoint2D = entry["joint"]
-	if is_instance_valid(joint):
-		joint.queue_free()
-	# Disconnect stale signal on surviving body
-	var body_a: Node = entry["body_a"]
-	var body_b: Node = entry["body_b"]
-	var cb: Callable = _on_sticky_body_freed.bind(pair_key)
-	if is_instance_valid(body_a) and body_a.tree_exiting.is_connected(cb):
-		body_a.tree_exiting.disconnect(cb)
-	if is_instance_valid(body_b) and body_b.tree_exiting.is_connected(cb):
-		body_b.tree_exiting.disconnect(cb)
-	_sticky_joints.erase(pair_key)
 
 
 func _cascade_to_neighbors(body: Node, cascade_depth: int) -> void:

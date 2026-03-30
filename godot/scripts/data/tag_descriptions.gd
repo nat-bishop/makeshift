@@ -22,7 +22,7 @@ const DESCRIPTIONS: Dictionary = {
 	"EXPLOSIVE": "Detonates under the right conditions.",
 	# Surface
 	"SHARP": "Cuts on contact. Deals extra damage.",
-	"STICKY": "Adheres to surfaces. High friction.",
+	"STICKY": "Slows everything nearby. High friction, strong drag.",
 	"SLIPPERY": "Nearly frictionless. Hard to grip.",
 	"REFLECTIVE": "Bounces light and some effects.",
 	# Mechanical
@@ -33,8 +33,10 @@ const DESCRIPTIONS: Dictionary = {
 	"WIND_SOURCE": "Generates air currents.",
 	"CORROSIVE": "Dissolves materials over time.",
 	"TOXIC": "Poisons living things on contact.",
+	"WET": "Damp. Freezes easier, conducts electricity better, resists fire. Dries near heat.",
 	# Special
 	"LIVING": "Alive. Can be targeted by behaviors.",
+	"HOSTILE": "Aggressive. Danger aura deals damage and knockback at close range.",
 	"GLOWING": "Emits soft light.",
 	"CONDUCTING": "Transfers electricity between objects.",
 	"INSULATING": "Blocks electrical transfer.",

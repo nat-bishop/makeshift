@@ -34,6 +34,7 @@ class Tag(StrEnum):
     WIND_SOURCE = "WIND_SOURCE"
     CORROSIVE = "CORROSIVE"
     TOXIC = "TOXIC"
+    WET = "WET"
     # Special (5)
     LIVING = "LIVING"
     GLOWING = "GLOWING"
@@ -54,6 +55,7 @@ TAG_POWER_COSTS: dict[Tag, int] = {
     Tag.FLAMMABLE: 1,
     Tag.SLIPPERY: 1,
     Tag.BREAKABLE: 1,
+    Tag.WET: 1,
     # Cost 2
     Tag.HEAVY: 2,
     Tag.FROZEN: 2,
@@ -97,6 +99,8 @@ TAG_CONTRADICTIONS: list[frozenset[Tag]] = [
     frozenset({Tag.CONDUCTING, Tag.INSULATING}),
     frozenset({Tag.REFLECTIVE, Tag.STICKY}),
     frozenset({Tag.HEAT_SOURCE, Tag.FLAMMABLE}),
+    frozenset({Tag.WET, Tag.MOLTEN}),
+    frozenset({Tag.WET, Tag.HEAT_SOURCE}),
 ]
 
 OBJECT_TAG_BUDGET: int = 10

@@ -30,6 +30,9 @@ const FIELD_TAGS := {
 	"COLD":         {"range": "CLOSE",  "mode": "periodic"},
 	"TOXIC":        {"range": "MEDIUM", "mode": "periodic"},
 	"LIQUID":       {"range": "CLOSE",  "mode": "periodic"},
+	"HOSTILE":      {"range": "CLOSE",  "mode": "periodic"},
+	"WET":          {"range": "CLOSE",  "mode": "periodic"},
+	"STICKY":       {"range": "CLOSE",  "mode": "continuous"},
 }
 
 static func is_field_tag(tag: String) -> bool:
