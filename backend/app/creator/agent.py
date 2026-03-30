@@ -11,7 +11,7 @@ from app.config import settings
 
 if TYPE_CHECKING:
     from pydantic_ai.models import Model
-from app.models.behaviors import expand_behavior_spec
+from app.models.behaviors import expand_behavior_spec, parse_behavior_string
 from app.models.blueprint import (
     CreatorOutputSpec,
     GameObjectBlueprint,
@@ -97,9 +97,9 @@ Even simple objects should react: a torch damages on touch, a balloon floats awa
 - ON_CONTACT — physical collision
 - ON_DAMAGED — this object took damage
 - ON_HEALTH_LOW — durability below 50%
-- ON_TAG_ADDED — a specific tag was added to this object (set trigger_tag). \
+- ON_TAG_ADDED(TAG) — a specific tag was added to this object (write tag in parens). \
 Key mechanic: rules add tags during interactions, which can trigger behaviors. \
-Example: fire adds HEAT_SOURCE to a bee swarm → ON_TAG_ADDED(HEAT_SOURCE) → EXPLODE.
+Example: fire adds HEAT_SOURCE to a bee swarm -> ON_TAG_ADDED(HEAT_SOURCE) -> EXPLODE.
 - ON_CREATE — once when spawned
 - ON_DESTROY — when destroyed
 
@@ -109,8 +109,8 @@ Example: fire adds HEAT_SOURCE to a bee swarm → ON_TAG_ADDED(HEAT_SOURCE) → 
 - APPLY_FORCE(2) — push target away
 - ATTRACT(2) — pull target toward self
 - HEAL(2) — restore target's durability
-- ADD_TAGS(2) — add tags to target (set tags_to_apply)
-- REMOVE_TAGS(2) — remove tags from target (set tags_to_apply)
+- ADD_TAGS(2) — add tags to target (write tags in parens: ADD_TAGS(TAG1, TAG2))
+- REMOVE_TAGS(2) — remove tags from target (write tags in parens: REMOVE_TAGS(TAG1, TAG2))
 - SELF_DESTRUCT(1) — destroy self
 - SPAWN_PROJECTILE(3) — fire a projectile at target (min cost 2)
 - EXPLODE(3) — area damage + force around self (min cost 2)
@@ -127,6 +127,16 @@ Example: fire adds HEAT_SOURCE to a bee swarm → ON_TAG_ADDED(HEAT_SOURCE) → 
 - "medium" — balanced default (same base cost)
 - "high" — stronger, faster, longer range (+1 to base cost)
 
+## Behavior Output Format
+
+Write each behavior as a string: TRIGGER -> ACTION -> TARGET
+
+Attach parameters in parentheses where needed:
+- ON_TAG_ADDED(TAG_NAME) — which tag triggers it
+- ADD_TAGS(TAG1, TAG2) / REMOVE_TAGS(TAG1, TAG2) — which tags to add/remove
+
+Append power after a comma (default medium): ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING, power=high
+
 ## Visual Descriptor
 
 - visual_description: 1-2 sentences describing the object's appearance — shape, material, colors, \
@@ -141,33 +151,33 @@ distinctive features. Describe the object itself, not a scene or environment.
 
 ## Examples
 
-"fire sword" →
+"fire sword" ->
   name: "Fire Sword", tags: [SOLID, RIGID, SHARP, HEAT_SOURCE]
-  behaviors: [{ON_CONTACT → DEAL_DAMAGE → CONTACT_BODY}]
+  behaviors: ["ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"]
   visual: "a curved steel sword with a fiery red blade and bright orange edge, wreathed in flames", small
   Reactive weapon — SHARP cuts, HEAT_SOURCE ignites flammable targets on contact.
 
-"cursed well" →
+"cursed well" ->
   name: "Cursed Well", tags: [SOLID, HEAVY, GLOWING, TOXIC]
-  behaviors: [{ON_PROXIMITY → ATTRACT → CONTACT_BODY}, {ON_CONTACT → DEAL_DAMAGE → CONTACT_BODY}]
+  behaviors: ["ON_PROXIMITY -> ATTRACT -> CONTACT_BODY", "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"]
   visual: "a crumbling stone well with an eerie green glow and dark vines creeping over the rim", medium
   Environmental trap — lures with ATTRACT, then poisons on contact.
 
-"fire-breathing dragon" →
+"fire-breathing dragon" ->
   name: "Fire Dragon", tags: [LIVING, HEAT_SOURCE, HOT]
-  behaviors: [{ALWAYS → MOVE_TOWARD → NEAREST_LIVING}, {ON_PROXIMITY → SPAWN_PROJECTILE → NEAREST_LIVING, power=high}]
+  behaviors: ["ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING", "ON_PROXIMITY -> SPAWN_PROJECTILE -> NEAREST_LIVING, power=high"]
   visual: "a large red dragon with orange underbelly, leathery wings, and smoke rising from its nostrils", large
   Active hunter — ALWAYS + MOVE_TOWARD makes creatures feel alive. Shoots at range.
 
-"angry bee swarm" →
+"angry bee swarm" ->
   name: "Bee Swarm", tags: [LIVING, LIGHT, FLAMMABLE, TOXIC]
-  behaviors: [{ALWAYS → MOVE_TOWARD → NEAREST_PLAYER, power=high}, {ON_TAG_ADDED(HEAT_SOURCE) → EXPLODE}]
+  behaviors: ["ALWAYS -> MOVE_TOWARD -> NEAREST_PLAYER, power=high", "ON_TAG_ADDED(HEAT_SOURCE) -> EXPLODE -> SELF"]
   visual: "a dense swirling cloud of yellow and black striped bees with vibrating wings", small
-  Chain reaction — chases aggressively; fire adds HEAT_SOURCE tag → triggers EXPLODE.
+  Chain reaction — chases aggressively; fire adds HEAT_SOURCE tag -> triggers EXPLODE.
 
-"healing mushroom" →
+"healing mushroom" ->
   name: "Healing Shroom", tags: [LIVING, SOLID, GLOWING]
-  behaviors: [{ON_CONTACT → HEAL → CONTACT_BODY}, {ON_PROXIMITY → ADD_TAGS(GLOWING) → CONTACT_BODY}]
+  behaviors: ["ON_CONTACT -> HEAL -> CONTACT_BODY", "ON_PROXIMITY -> ADD_TAGS(GLOWING) -> CONTACT_BODY"]
   visual: "a plump turquoise mushroom with a softly pulsing bioluminescent cap and white spots", small
   Utility — heals on touch, spreads GLOWING to nearby objects. Not everything is combat.\
 """
@@ -234,7 +244,7 @@ async def create_object(description: str) -> GameObjectBlueprint:
         agent = _get_agent()
         result = await agent.run(f"Create a game object for: {description}")
         spec = result.output
-        behaviors = [expand_behavior_spec(b) for b in spec.behaviors]
+        behaviors = [expand_behavior_spec(parse_behavior_string(b)) for b in spec.behaviors]
         elapsed = time.monotonic() - t0
         logger.info(
             "llm_create_success",
@@ -251,6 +261,7 @@ async def create_object(description: str) -> GameObjectBlueprint:
         spec = CreatorOutputSpec(
             name=f"Mysterious {fallback_name}",
             tags=[Tag.SOLID, Tag.RIGID],
+            behaviors=[],
             visual_descriptor=VisualDescriptor(
                 visual_description="a mysterious glowing gray stone cube with sparkling flecks",
                 size_category="medium",

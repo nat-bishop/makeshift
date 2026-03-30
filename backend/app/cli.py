@@ -101,56 +101,32 @@ class Timer:
 
 
 async def _run_llm(description: str, timer: Timer) -> Any:
-    """Run the LLM creator agent with streaming. Adds steps to timer.
-
-    run_stream() doesn't retry on output validation errors (ModelRetry is re-raised
-    because wrap_validation_errors=False in the streaming path). We retry manually.
+    """Run the LLM creator agent. Uses agent.run() so PydanticAI retries ModelRetry
+    internally (sends error feedback back to the LLM for correction).
     """
     import uuid
 
-    from pydantic import ValidationError
-    from pydantic_ai import ModelRetry
-
     from app.creator.agent import _get_agent
-    from app.models.behaviors import expand_behavior_spec
+    from app.models.behaviors import expand_behavior_spec, parse_behavior_string
     from app.models.blueprint import GameObjectBlueprint
 
     agent = _get_agent()
     prompt = f"Create a game object for: {description}"
-    max_attempts = 3
 
-    retry_time = 0.0
-    for attempt in range(1, max_attempts + 1):
-        t0 = time.monotonic()
-        ttft = None
-        try:
-            async with agent.run_stream(prompt) as stream:
-                async for _chunk, _is_last in stream.stream_responses(debounce_by=None):
-                    if ttft is None:
-                        ttft = time.monotonic() - t0
-                spec = await stream.get_output()
-            break
-        except (ModelRetry, ValidationError) as e:
-            retry_time += time.monotonic() - t0
-            print(f"  retry {attempt}/{max_attempts}: {e}", file=sys.stderr)
-            if attempt == max_attempts:
-                raise
+    t0 = time.monotonic()
+    result = await agent.run(prompt)
     elapsed = time.monotonic() - t0
+    spec = result.output
 
-    usage = stream.usage()
-    gen_time = elapsed - (ttft or 0)
-    tok_s = round(usage.output_tokens / gen_time, 1) if gen_time > 0 else 0
-
-    if retry_time > 0:
-        timer.add("llm retries", retry_time, f"{attempt} attempts")
-    timer.add("llm prefill", ttft or 0, f"{usage.input_tokens} input tokens")
+    usage = result.usage()
+    tok_s = round(usage.output_tokens / elapsed, 1) if elapsed > 0 else 0
     timer.add(
         "llm generate",
-        gen_time,
-        f"{usage.output_tokens} output tokens, {tok_s} tok/s",
+        elapsed,
+        f"{usage.input_tokens} input, {usage.output_tokens} output tokens, {tok_s} tok/s",
     )
 
-    behaviors = [expand_behavior_spec(b) for b in spec.behaviors]
+    behaviors = [expand_behavior_spec(parse_behavior_string(b)) for b in spec.behaviors]
     return GameObjectBlueprint(
         id=str(uuid.uuid4()),
         name=spec.name,

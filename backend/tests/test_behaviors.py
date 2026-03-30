@@ -7,6 +7,7 @@ from app.models.behaviors import (
     SPAWN_EXPLODE_FLOOR,
     Behavior,
     BehaviorAction,
+    BehaviorParseError,
     BehaviorRange,
     BehaviorSpec,
     BehaviorTarget,
@@ -18,6 +19,7 @@ from app.models.behaviors import (
     compute_behavior_cost,
     compute_spec_cost,
     expand_behavior_spec,
+    parse_behavior_string,
 )
 from app.models.blueprint import (
     CreatorOutput,
@@ -220,19 +222,19 @@ class TestBehaviorSpec:
         assert s.power == "medium"
 
     def test_trigger_tag_required_for_on_tag_added(self) -> None:
-        with pytest.raises(ModelRetry):
+        with pytest.raises(ValidationError):
             _make_spec(trigger=BehaviorTrigger.ON_TAG_ADDED)
 
     def test_trigger_tag_rejected_for_other_triggers(self) -> None:
-        with pytest.raises(ModelRetry):
+        with pytest.raises(ValidationError):
             _make_spec(trigger=BehaviorTrigger.ALWAYS, trigger_tag=Tag.HOT)
 
     def test_tags_to_apply_required_for_add_tags(self) -> None:
-        with pytest.raises(ModelRetry):
+        with pytest.raises(ValidationError):
             _make_spec(action=BehaviorAction.ADD_TAGS)
 
     def test_tags_to_apply_required_for_remove_tags(self) -> None:
-        with pytest.raises(ModelRetry):
+        with pytest.raises(ValidationError):
             _make_spec(action=BehaviorAction.REMOVE_TAGS)
 
     def test_valid_add_tags(self) -> None:
@@ -249,7 +251,7 @@ class TestBehaviorSpec:
         assert s.trigger_tag == Tag.HOT
 
     def test_explode_rejects_non_self_target(self) -> None:
-        with pytest.raises(ModelRetry):
+        with pytest.raises(ValidationError):
             _make_spec(
                 trigger=BehaviorTrigger.ON_TAG_ADDED,
                 trigger_tag=Tag.HOT,
@@ -258,21 +260,21 @@ class TestBehaviorSpec:
             )
 
     def test_self_destruct_rejects_non_self_target(self) -> None:
-        with pytest.raises(ModelRetry):
+        with pytest.raises(ValidationError):
             _make_spec(
                 action=BehaviorAction.SELF_DESTRUCT,
                 target=BehaviorTarget.NEAREST_PLAYER,
             )
 
     def test_move_toward_rejects_self_target(self) -> None:
-        with pytest.raises(ModelRetry):
+        with pytest.raises(ValidationError):
             _make_spec(
                 action=BehaviorAction.MOVE_TOWARD,
                 target=BehaviorTarget.SELF,
             )
 
     def test_contact_body_rejects_wrong_trigger(self) -> None:
-        with pytest.raises(ModelRetry):
+        with pytest.raises(ValidationError):
             _make_spec(
                 trigger=BehaviorTrigger.ALWAYS,
                 action=BehaviorAction.DEAL_DAMAGE,
@@ -280,7 +282,7 @@ class TestBehaviorSpec:
             )
 
     def test_on_destroy_rejects_movement(self) -> None:
-        with pytest.raises(ModelRetry):
+        with pytest.raises(ValidationError):
             _make_spec(
                 trigger=BehaviorTrigger.ON_DESTROY,
                 action=BehaviorAction.MOVE_TOWARD,
@@ -372,12 +374,158 @@ class TestExpandBehaviorSpec:
         assert b.trigger_tag == Tag.HOT
 
 
+# ---------------------------------------------------------------------------
+# parse_behavior_string tests
+# ---------------------------------------------------------------------------
+
+
+class TestParseBehaviorString:
+    def test_basic_3_part(self) -> None:
+        s = parse_behavior_string("ON_CONTACT → DEAL_DAMAGE → CONTACT_BODY")
+        assert s.trigger == BehaviorTrigger.ON_CONTACT
+        assert s.action == BehaviorAction.DEAL_DAMAGE
+        assert s.target == BehaviorTarget.CONTACT_BODY
+        assert s.power == Power.MEDIUM
+
+    def test_with_power(self) -> None:
+        s = parse_behavior_string("ALWAYS → MOVE_TOWARD → NEAREST_LIVING, power=high")
+        assert s.action == BehaviorAction.MOVE_TOWARD
+        assert s.target == BehaviorTarget.NEAREST_LIVING
+        assert s.power == Power.HIGH
+
+    def test_parametric_trigger(self) -> None:
+        s = parse_behavior_string("ON_TAG_ADDED(HEAT_SOURCE) → EXPLODE → SELF")
+        assert s.trigger == BehaviorTrigger.ON_TAG_ADDED
+        assert s.trigger_tag == Tag.HEAT_SOURCE
+        assert s.action == BehaviorAction.EXPLODE
+
+    def test_parametric_action_single(self) -> None:
+        s = parse_behavior_string("ON_PROXIMITY → ADD_TAGS(GLOWING) → CONTACT_BODY")
+        assert s.action == BehaviorAction.ADD_TAGS
+        assert s.tags_to_apply == [Tag.GLOWING]
+
+    def test_parametric_action_multi(self) -> None:
+        s = parse_behavior_string("ON_CONTACT → ADD_TAGS(HOT, HEAT_SOURCE) → CONTACT_BODY")
+        assert s.tags_to_apply == [Tag.HOT, Tag.HEAT_SOURCE]
+
+    def test_ascii_arrow(self) -> None:
+        s = parse_behavior_string("ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY")
+        assert s.trigger == BehaviorTrigger.ON_CONTACT
+        assert s.action == BehaviorAction.DEAL_DAMAGE
+
+    def test_case_insensitive(self) -> None:
+        s = parse_behavior_string("on_contact → deal_damage → contact_body")
+        assert s.trigger == BehaviorTrigger.ON_CONTACT
+        assert s.action == BehaviorAction.DEAL_DAMAGE
+        assert s.target == BehaviorTarget.CONTACT_BODY
+
+    def test_extra_whitespace(self) -> None:
+        s = parse_behavior_string("  ON_CONTACT  →  DEAL_DAMAGE  →  SELF  ")
+        assert s.trigger == BehaviorTrigger.ON_CONTACT
+
+    def test_2_part_explode_defaults_to_self(self) -> None:
+        s = parse_behavior_string("ON_TAG_ADDED(HEAT_SOURCE) → EXPLODE")
+        assert s.trigger == BehaviorTrigger.ON_TAG_ADDED
+        assert s.trigger_tag == Tag.HEAT_SOURCE
+        assert s.action == BehaviorAction.EXPLODE
+        assert s.target == BehaviorTarget.SELF
+
+    def test_2_part_non_self_defaults_to_nearest_object(self) -> None:
+        s = parse_behavior_string("ALWAYS → PATROL")
+        assert s.target == BehaviorTarget.NEAREST_OBJECT
+
+    def test_curly_brace_stripping(self) -> None:
+        s = parse_behavior_string("{ON_CONTACT → DEAL_DAMAGE → CONTACT_BODY}")
+        assert s.trigger == BehaviorTrigger.ON_CONTACT
+
+    def test_spaces_around_equals(self) -> None:
+        s = parse_behavior_string("ALWAYS → PATROL → SELF, power = high")
+        assert s.power == Power.HIGH
+
+    def test_unknown_kwargs_ignored(self) -> None:
+        s = parse_behavior_string(
+            "ON_CONTACT → DEAL_DAMAGE → CONTACT_BODY, power=high, flavor=fire"
+        )
+        assert s.power == Power.HIGH
+
+    def test_empty_string_raises(self) -> None:
+        with pytest.raises(BehaviorParseError):
+            parse_behavior_string("")
+
+    def test_single_part_raises(self) -> None:
+        with pytest.raises(BehaviorParseError):
+            parse_behavior_string("ON_CONTACT")
+
+    def test_four_parts_raises(self) -> None:
+        with pytest.raises(BehaviorParseError):
+            parse_behavior_string("A → B → C → D")
+
+    def test_invalid_trigger_raises(self) -> None:
+        with pytest.raises(BehaviorParseError, match="Unknown trigger"):
+            parse_behavior_string("ON_FIRE → DEAL_DAMAGE → SELF")
+
+    def test_invalid_action_raises(self) -> None:
+        with pytest.raises(BehaviorParseError, match="Unknown action"):
+            parse_behavior_string("ON_CONTACT → FIRE_BLAST → SELF")
+
+    def test_invalid_target_raises(self) -> None:
+        with pytest.raises(BehaviorParseError, match="Unknown target"):
+            parse_behavior_string("ON_CONTACT → DEAL_DAMAGE → EVERYONE")
+
+    def test_invalid_tag_in_trigger_raises(self) -> None:
+        with pytest.raises(BehaviorParseError, match="Unknown tag"):
+            parse_behavior_string("ON_TAG_ADDED(INVALID_TAG) → EXPLODE → SELF")
+
+    def test_invalid_tag_in_action_raises(self) -> None:
+        with pytest.raises(BehaviorParseError, match="Unknown tag"):
+            parse_behavior_string("ON_CONTACT → ADD_TAGS(INVALID_TAG) → SELF")
+
+    def test_empty_parens_raises(self) -> None:
+        with pytest.raises(BehaviorParseError):
+            parse_behavior_string("ON_TAG_ADDED() → EXPLODE → SELF")
+
+    # Semantic errors caught by BehaviorSpec validators
+    def test_explode_non_self_target_raises_validation(self) -> None:
+        with pytest.raises(ValidationError):
+            parse_behavior_string("ON_TAG_ADDED(HOT) → EXPLODE → NEAREST_OBJECT")
+
+    def test_on_destroy_movement_raises_validation(self) -> None:
+        with pytest.raises(ValidationError):
+            parse_behavior_string("ON_DESTROY → MOVE_TOWARD → NEAREST_PLAYER")
+
+    def test_move_toward_self_raises_validation(self) -> None:
+        with pytest.raises(ValidationError):
+            parse_behavior_string("ALWAYS → MOVE_TOWARD → SELF")
+
+    def test_on_tag_added_without_tag_raises_validation(self) -> None:
+        with pytest.raises(ValidationError):
+            parse_behavior_string("ON_TAG_ADDED → EXPLODE → SELF")
+
+    def test_add_tags_without_tags_raises_validation(self) -> None:
+        with pytest.raises(ValidationError):
+            parse_behavior_string("ON_CONTACT → ADD_TAGS → CONTACT_BODY")
+
+
+# ---------------------------------------------------------------------------
+# CreatorOutputSpec tests
+# ---------------------------------------------------------------------------
+
+
 class TestCreatorOutputSpec:
     def test_no_behaviors_valid(self) -> None:
         out = CreatorOutputSpec(
-            name="Rock", tags=[Tag.SOLID, Tag.RIGID], visual_descriptor=_make_visual()
+            name="Rock", tags=[Tag.SOLID, Tag.RIGID], behaviors=[], visual_descriptor=_make_visual()
         )
         assert out.behaviors == []
+
+    def test_valid_behavior_strings(self) -> None:
+        out = CreatorOutputSpec(
+            name="Fire Sword",
+            tags=[Tag.SOLID, Tag.RIGID, Tag.SHARP, Tag.HEAT_SOURCE],
+            behaviors=["ON_CONTACT → DEAL_DAMAGE → CONTACT_BODY"],
+            visual_descriptor=_make_visual(),
+        )
+        assert out.behaviors == ["ON_CONTACT → DEAL_DAMAGE → CONTACT_BODY"]
 
     def test_behavior_budget_exceeded_raises(self) -> None:
         with pytest.raises(ModelRetry):
@@ -385,24 +533,30 @@ class TestCreatorOutputSpec:
                 name="Overpowered",
                 tags=[Tag.SOLID, Tag.RIGID],
                 behaviors=[
-                    BehaviorSpec(
-                        trigger=BehaviorTrigger.ALWAYS,
-                        action=BehaviorAction.SPAWN_PROJECTILE,
-                        power=Power.HIGH,
-                    ),
-                    BehaviorSpec(
-                        trigger=BehaviorTrigger.ON_PROXIMITY,
-                        action=BehaviorAction.SPAWN_PROJECTILE,
-                        power=Power.HIGH,
-                    ),
-                    BehaviorSpec(
-                        trigger=BehaviorTrigger.ON_TIMER,
-                        action=BehaviorAction.EXPLODE,
-                        power=Power.HIGH,
-                    ),
+                    "ALWAYS → SPAWN_PROJECTILE → NEAREST_OBJECT, power=high",
+                    "ON_PROXIMITY → SPAWN_PROJECTILE → NEAREST_OBJECT, power=high",
+                    "ON_TIMER → EXPLODE → SELF, power=high",
                 ],
                 visual_descriptor=_make_visual(),
             )  # 4 + 4 + 4 = 12 > 8
+
+    def test_invalid_behavior_string_raises_model_retry(self) -> None:
+        with pytest.raises(ModelRetry, match="Invalid behavior"):
+            CreatorOutputSpec(
+                name="Bad",
+                tags=[Tag.SOLID, Tag.RIGID],
+                behaviors=["not a valid behavior"],
+                visual_descriptor=_make_visual(),
+            )
+
+    def test_semantic_error_raises_model_retry(self) -> None:
+        with pytest.raises(ModelRetry, match="Invalid behavior"):
+            CreatorOutputSpec(
+                name="Bad",
+                tags=[Tag.SOLID, Tag.RIGID],
+                behaviors=["ALWAYS → MOVE_TOWARD → SELF"],
+                visual_descriptor=_make_visual(),
+            )
 
 
 class TestCreatorOutputBehaviors:

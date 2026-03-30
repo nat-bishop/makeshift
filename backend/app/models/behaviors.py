@@ -1,9 +1,14 @@
+import re
 from enum import StrEnum
-from typing import Self
+from typing import Self, TypeVar
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, model_validator
 
 from app.models.tags import Tag
+
+
+class BehaviorParseError(ValueError):
+    """Raised when a behavior notation string cannot be parsed."""
 
 
 class BehaviorTrigger(StrEnum):
@@ -146,8 +151,8 @@ _CONTACT_BODY_TRIGGERS: frozenset[BehaviorTrigger] = frozenset(
 
 
 # ---------------------------------------------------------------------------
-# Shared validation helpers — used by both Behavior (ValueError) and
-# BehaviorSpec (ModelRetry) so the constraint logic lives in one place.
+# Shared validation helpers — used by both Behavior and BehaviorSpec.
+# Return an error message string if invalid, None if OK.
 # ---------------------------------------------------------------------------
 
 
@@ -276,73 +281,52 @@ _POWER_TO_INTERVAL: dict[Power, Interval] = {
 
 
 class BehaviorSpec(BaseModel):
-    """Simplified behavior model for LLM output. Expanded to full Behavior after."""
+    """Internal intermediate model. Produced by parse_behavior_string(), consumed by
+    expand_behavior_spec(). Not directly used as LLM output — the LLM outputs string
+    notation which is parsed into this model.
+    """
 
-    trigger: BehaviorTrigger = Field(description="When this behavior fires")
-    action: BehaviorAction = Field(description="What this behavior does")
-    target: BehaviorTarget = Field(
-        default=BehaviorTarget.NEAREST_OBJECT,
-        description="What the action affects",
-    )
-    power: Power = Field(
-        default=Power.MEDIUM,
-        description="Strength/speed/range. 'high' adds +1 to action cost",
-    )
-    trigger_tag: Tag | None = Field(
-        default=None,
-        description="Required with ON_TAG_ADDED trigger: which tag to watch for",
-    )
-    tags_to_apply: list[Tag] | None = Field(
-        default=None,
-        description="Required with ADD_TAGS/REMOVE_TAGS actions: which tags to add/remove",
-    )
+    trigger: BehaviorTrigger
+    action: BehaviorAction
+    target: BehaviorTarget = BehaviorTarget.NEAREST_OBJECT
+    power: Power = Power.MEDIUM
+    trigger_tag: Tag | None = None
+    tags_to_apply: list[Tag] | None = None
 
     @model_validator(mode="after")
     def check_trigger_tag(self) -> Self:
-        from pydantic_ai import ModelRetry
-
         if msg := _check_trigger_tag(self.trigger, self.trigger_tag):
-            raise ModelRetry(msg)
+            raise ValueError(msg)
         return self
 
     @model_validator(mode="after")
     def check_tags_to_apply(self) -> Self:
-        from pydantic_ai import ModelRetry
-
         if msg := _check_tags_to_apply(self.action, self.tags_to_apply):
-            raise ModelRetry(msg)
+            raise ValueError(msg)
         return self
 
     @model_validator(mode="after")
     def check_self_only_actions(self) -> Self:
-        from pydantic_ai import ModelRetry
-
         if msg := _check_self_only_action(self.action, self.target):
-            raise ModelRetry(msg)
+            raise ValueError(msg)
         return self
 
     @model_validator(mode="after")
     def check_movement_target(self) -> Self:
-        from pydantic_ai import ModelRetry
-
         if msg := _check_movement_target(self.action, self.target):
-            raise ModelRetry(msg)
+            raise ValueError(msg)
         return self
 
     @model_validator(mode="after")
     def check_contact_body_trigger(self) -> Self:
-        from pydantic_ai import ModelRetry
-
         if msg := _check_contact_body_trigger(self.trigger, self.target):
-            raise ModelRetry(msg)
+            raise ValueError(msg)
         return self
 
     @model_validator(mode="after")
     def check_destroy_movement(self) -> Self:
-        from pydantic_ai import ModelRetry
-
         if msg := _check_destroy_movement(self.trigger, self.action):
-            raise ModelRetry(msg)
+            raise ValueError(msg)
         return self
 
 
@@ -357,8 +341,8 @@ def compute_spec_cost(spec: BehaviorSpec) -> int:
 def expand_behavior_spec(spec: BehaviorSpec) -> Behavior:
     """Expand a simplified BehaviorSpec into a full Behavior with deterministic mappings.
 
-    BehaviorSpec validators (ModelRetry) enforce action/target/trigger compatibility
-    before this function is called. This function only maps power to granular parameters.
+    BehaviorSpec validators enforce action/target/trigger compatibility before this
+    function is called. This function only maps power to granular parameters.
     The Behavior model validators (ValueError) serve as a safety net.
     """
     return Behavior(
@@ -371,4 +355,119 @@ def expand_behavior_spec(spec: BehaviorSpec) -> Behavior:
         interval=_POWER_TO_INTERVAL[spec.power],
         tags_to_apply=spec.tags_to_apply,
         trigger_tag=spec.trigger_tag,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Behavior string notation parser
+# ---------------------------------------------------------------------------
+
+_PARAMETRIC_RE = re.compile(r"^(\w+)\(([^)]+)\)$")
+
+
+_E = TypeVar("_E", bound=StrEnum)
+
+
+def _parse_enum(value: str, enum_cls: type[_E], label: str) -> _E:
+    """Look up a StrEnum member by value (case-insensitive)."""
+    stripped = value.strip()
+    # Try as-is, then uppercase, then lowercase (covers Power's lowercase values)
+    for candidate in (stripped, stripped.upper(), stripped.lower()):
+        try:
+            return enum_cls(candidate)
+        except ValueError:
+            continue
+    valid = ", ".join(m.value for m in enum_cls)
+    raise BehaviorParseError(f"Unknown {label} '{value}'. Valid: {valid}")
+
+
+def _parse_tag(value: str) -> Tag:
+    """Look up a Tag by name (case-insensitive)."""
+    return _parse_enum(value, Tag, "tag")
+
+
+def _parse_parametric(token: str) -> tuple[str, list[str]]:
+    """Parse 'NAME(arg1, arg2)' or plain 'NAME'. Returns (name, args)."""
+    m = _PARAMETRIC_RE.match(token)
+    if m:
+        name = m.group(1)
+        args = [a.strip() for a in m.group(2).split(",") if a.strip()]
+        if not args:
+            raise BehaviorParseError(
+                f"Empty parentheses in '{token}'. Provide arguments or remove the parens."
+            )
+        return name, args
+    if "(" in token or ")" in token:
+        raise BehaviorParseError(f"Malformed parentheses in '{token}'.")
+    return token.strip(), []
+
+
+def parse_behavior_string(s: str) -> BehaviorSpec:
+    """Parse behavior notation into a BehaviorSpec.
+
+    Format: TRIGGER -> ACTION -> TARGET, power=POWER
+    Parametric: ON_TAG_ADDED(TAG), ADD_TAGS(TAG1, TAG2), REMOVE_TAGS(TAG1, TAG2)
+
+    Raises BehaviorParseError for format issues. BehaviorSpec validators raise
+    ValueError for semantic issues (e.g. EXPLODE with non-SELF target).
+    """
+    s = s.strip()
+    # Strip outer braces — LLM may echo {behavior} from prompt examples
+    if s.startswith("{") and s.endswith("}"):
+        s = s[1:-1].strip()
+    if not s:
+        raise BehaviorParseError("Empty behavior string.")
+
+    # Normalize ASCII arrow to unicode
+    s = s.replace("->", "\u2192")
+    parts = [p.strip() for p in s.split("\u2192")]
+
+    if len(parts) < 2:
+        raise BehaviorParseError(
+            f"Expected TRIGGER -> ACTION -> TARGET, got '{s}'."
+        )
+    if len(parts) > 3:
+        raise BehaviorParseError(
+            f"Too many parts (expected 2-3 separated by ->), got {len(parts)}."
+        )
+
+    # --- Trigger ---
+    trigger_raw, trigger_args = _parse_parametric(parts[0])
+    trigger = _parse_enum(trigger_raw, BehaviorTrigger, "trigger")
+    trigger_tag = _parse_tag(trigger_args[0]) if trigger_args else None
+
+    # --- Action ---
+    action_raw, action_args = _parse_parametric(parts[1])
+    action = _parse_enum(action_raw, BehaviorAction, "action")
+    tags_to_apply = [_parse_tag(a) for a in action_args] if action_args else None
+
+    # --- Target + kwargs ---
+    power = Power.MEDIUM
+    if len(parts) == 3:
+        segments = [seg.strip() for seg in parts[2].split(",")]
+        target_str = segments[0]
+        target = _parse_enum(target_str, BehaviorTarget, "target")
+        for seg in segments[1:]:
+            if "=" not in seg:
+                continue
+            key, val = seg.split("=", 1)
+            key = key.strip().lower()
+            val = val.strip()
+            if key == "power":
+                power = _parse_enum(val, Power, "power")
+            # Unknown kwargs silently ignored — LLM may produce extra params
+    else:
+        # 2-part: default target based on action
+        if action in _SELF_ONLY_ACTIONS:
+            target = BehaviorTarget.SELF
+        else:
+            target = BehaviorTarget.NEAREST_OBJECT
+
+    return BehaviorSpec(
+        trigger=trigger,
+        action=action,
+        target=target,
+        power=power,
+        trigger_tag=trigger_tag,
+        tags_to_apply=tags_to_apply,
     )

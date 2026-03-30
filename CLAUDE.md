@@ -20,6 +20,11 @@ make check                     # lint + typecheck + test
 make fix                       # autofix lint issues
 make format                    # format code
 make clear-sprites             # delete all cached sprites (backend/static/sprites/*.png)
+make install                   # install all Python dependencies
+make godot                     # open Godot editor
+make play                      # run the game (Godot)
+make lint                      # lint backend (ruff)
+make typecheck                 # type check backend (mypy)
 
 # CLI — test image gen, LLM, and sprite pipeline standalone (no server needed):
 make cli-create PROMPT="fire sword"        # run LLM creator, print JSON blueprint
@@ -40,11 +45,11 @@ uv run pytest -k "test_name"              # single test by name
 
 - **Tag system** (`models/tags.py`): 30 `Tag` StrEnum values, 7 categories, power costs 1-5, budget of 10. 14 contradiction pairs enforced via `ModelRetry`. Tags define what objects *are* — physics, interactions, and durability. See [GAME_DESIGN.md](docs/GAME_DESIGN.md) for design rationale.
 
-- **Behavior system** (`models/behaviors.py`, `models/blueprint.py`): 0-3 behaviors per object. Each behavior: trigger (10 types) + action (12 types) + target (5 types) + optional condition + categorical params (intensity, range, speed, interval). Budget of 6, separate from tag budget. See [ARCHITECTURE.md](docs/ARCHITECTURE.md) and [GAME_DESIGN.md](docs/GAME_DESIGN.md) for full detail.
+- **Behavior system** (`models/behaviors.py`, `models/blueprint.py`): 0-3 behaviors per object. Each behavior: trigger (9 types) + action (12 types) + target (5 types) + optional condition + categorical params (intensity, range, speed, interval). Budget of 8, separate from tag budget. See [ARCHITECTURE.md](docs/ARCHITECTURE.md) and [GAME_DESIGN.md](docs/GAME_DESIGN.md) for full detail.
 
 - **Rule engine** (`engine/resolver.py`, `engine/rules_data.py`): `RuleResolver` — two-tier matching (O(1) pair index + O(n) wildcard scan). 45 rules, 18 annotated `trigger_mode=TriggerMode.FIELD`. `TriggerMode` StrEnum (CONTACT | FIELD) on `InteractionRule` — default CONTACT. Mirrored client-side in Godot's `RuleEngine` autoload.
 
-- **Image pipeline** (`images/pipeline.py`, `images/gemini_client.py`, `images/local_image.py`): Self-contained with lazy singletons (`get_generate_image()`, `get_remove_bg()`) — no external wiring needed. Cache-first. Three backends (`IMAGE_BACKEND`): `gemini` (Gemini image generation), `local` (SGLang FLUX server), `fal` (fal.ai). Local backend: FLUX.2-klein-9B with torchao float8 quantization via cache-dit, served by SGLang (`services/sglang/`), ~0.45s/image. All backends → bg removal (local GPU via `gpu_bg` or cloud fal.ai birefnet) → crop & fit to 512×512 → cache by SHA-256 hash of the prompt. Prompt template: `"mixed media collage style paper cutout, side view, flat lighting, clean edges, {name}, {visual_description}, single centered object, contrasting solid background color, no text"`. World display size determined client-side by `size_category`. Also usable standalone via CLI (`make cli-sprite`).
+- **Image pipeline** (`images/pipeline.py`, `images/gemini_client.py`, `images/local_image.py`): Lazy singletons (`get_generate_image()`, `get_remove_bg()`). Three backends via `IMAGE_BACKEND`: gemini, local (SGLang FLUX), fal. All → bg removal → crop to 512×512 → cache by SHA-256(prompt). Prompt template in `pipeline.py`. Standalone via `make cli-sprite`.
 
 - **Session persistence** (`sessions/manager.py`): aiosqlite, 2 tables (sessions, objects). Budget: $1.00 at $0.041/object.
 
@@ -59,9 +64,24 @@ uv run pytest -k "test_name"              # single test by name
 | `GameManager` | Game state (MENU/PLAYING/PAUSED), level management, scene transitions, `debug_mode` flag (toggled by `toggle_debug` input, emits `debug_toggled`) |
 | `RuleEngine` | Client-side rule matching (mirrors backend resolver) |
 | `CollisionResolver` | Per-frame collision resolution, cooldowns, cascade (depth 3, 96px radius), STICKY joint creation |
-| `Logger` | Structured logging |
+| `Log` | Structured logging (`autoloads/logger.gd`) |
 
-Key systems: `WorldMutations` (static class — all game-state mutations route through it; used by EffectExecutor, BehaviorExecutor, projectile.gd, and level scripts), `EffectExecutor` (5 primitive effect types: DAMAGE, HEAL, ADD_TAG, REMOVE_TAG, APPLY_FORCE; DAMAGE with `tick_interval`/`tick_duration` fields becomes DOT), `PhysicsApplicator` (tag-to-physics mapping; final mass = `tag_mass × size_mass_multiplier`; also sets `linear_damp` from tag physics map), `PhysicsComposer` (`SIZE_MASS_MULTIPLIER`: tiny=0.25×, small=0.5×, medium=1.0×, large=4.0×, huge=10.0×; `DEFAULT_DAMPING=0.5`; damping resolved from `TagPhysicsMap` same priority system as mass/friction/bounce), `BehaviorExecutor` (per-object autonomous behavior runtime, attached as child node when behaviors present), `BehaviorMaps` (categorical→numeric value mappings for behavior params), `TagField` (per-object Area2D field component, attached when object has field-emitting tags — handles continuous per-frame forces and periodic rule evaluation at range), `FieldConfig` (static class mapping field-emitting tags to range category and mode), `EnvironmentBody` (`StaticBody2D`-based tagged env hazard — acid pools, fire pits, etc.; implements `get_tags()`/`add_tag()`/`remove_tag()`/`get_object_id()` but NOT `take_damage`/`heal` so it's indestructible; `solid=false` sets `collision_layer=0` so objects pass through; `solid=true` uses OBJECTS layer; rectangular Area2D field [body size + 32px margin] handles own periodic rule evaluation instead of TagField; FROZEN tag makes non-solid bodies solid/walkable; level scripts create via `BaseLevel._create_env_body(pos, size, tags, color, id, solid)` where pos is top-left; `BaseLevel` also provides `_spawn_game_object(blueprint, pos) -> Node` and `_create_kill_zone(pos, size)` — kill zone respawns player, deals 999 dmg to objects), `DebugLabel` (floating per-object overlay showing name, durability, tags, and behaviors — visibility driven by `GameManager.debug_mode`). Player has two interaction modes: passive push (continuous impulse on slide collision, force 80 — only on `is_passively_pushable()` objects: LIGHT-tagged or tiny-sized, but not HEAVY) and kick (action input, 48px range, force 400, 0.5s cooldown — impulse skipped on HEAVY objects, damage still applies). Player knockback: `EFFECTIVE_MASS=0.4` (very low — EXTREME force = ~5× jump velocity), `_knockback` vector decays at `KNOCKBACK_DECAY=800 px/s²`, control authority reduced to `KNOCKBACK_MIN_CONTROL=15%` at `KNOCKBACK_FULL_SUPPRESSION=1000 px/s` magnitude.
+| System | File | Purpose |
+|--------|------|---------|
+| `WorldMutations` | `scripts/systems/world_mutations.gd` | Static class — all game-state mutations route through here |
+| `EffectExecutor` | `scripts/systems/effect_executor.gd` | 5 effects: DAMAGE, HEAL, ADD_TAG, REMOVE_TAG, APPLY_FORCE. DAMAGE + tick params = DOT |
+| `PhysicsApplicator` | `scenes/game_object/physics_applicator.gd` | Tag→physics mapping. Mass = `tag_mass × size_mass_multiplier` |
+| `PhysicsComposer` | `scripts/systems/physics_composer.gd` | Size multipliers (tiny 0.25×…huge 10×), `DEFAULT_DAMPING=0.5`, resolves mass/friction/bounce/damping by tag priority |
+| `BehaviorExecutor` | `scripts/systems/behavior_executor.gd` | Per-object autonomous behavior runtime. Disables after 5 consecutive errors |
+| `BehaviorMaps` | `scripts/data/behavior_maps.gd` | Categorical→numeric value mappings for behavior params |
+| `TagField` | `scripts/systems/tag_field.gd` | Per-object Area2D field: continuous per-frame forces + periodic 2s rule eval |
+| `FieldConfig` | `scripts/data/field_config.gd` | Maps field-emitting tags → range category + mode |
+| `EnvironmentBody` | `scenes/environment_body/environment_body.gd` | StaticBody2D tagged hazard (acid, fire). Indestructible (no `take_damage`/`heal`). `solid=false` → pass-through; FROZEN makes solid |
+| `DebugLabel` | `scripts/ui/debug_label.gd` | Floating overlay (name, durability, tags, behaviors). Driven by `GameManager.debug_mode` |
+
+**Player interaction:** Passive push (force 80, LIGHT/tiny only, not HEAVY) · Kick (force 400, 48px range, 0.5s cooldown — impulse skipped on HEAVY, damage still applies) · Knockback (`EFFECTIVE_MASS=0.4`, decay 800 px/s², control min 15% at 1000 px/s)
+
+**BaseLevel helpers:** `_create_env_body(pos, size, tags, color, id, solid)` (pos = top-left) · `_spawn_game_object(blueprint, pos) -> Node` · `_create_kill_zone(pos, size)` (respawns player, 999 dmg to objects)
 
 ## API Endpoints
 
@@ -92,7 +112,13 @@ Requires `.env` file (see `.env.example`):
 - `BG_REMOVAL_BACKEND` — `local` (GPU via PyTorch) or `cloud` (fal.ai birefnet). Default: local
 - `BG_REMOVAL_MODEL` — HuggingFace BiRefNet model. Default: `briaai/RMBG-2.0`
 - `SPRITE_CACHE_ENABLED` — toggles sprite cache read/write. Default: true
-- Other settings have sensible defaults (budget $1.00, timeouts 15s/30s, max 3 concurrent images)
+- `LLM_MODEL` — Provider-prefixed model ID. Default: `google-gla:gemini-3.1-flash-lite-preview`. Prefixes: `google-gla:`, `anthropic:`, `openai:`. Bare name when `LOCAL_LLM_URL` set
+- `LOCAL_LLM_URL` — SGLang OpenAI-compatible endpoint for local LLM. Unset by default
+- `FAL_IMAGE_MODEL` — fal.ai image model (with `IMAGE_BACKEND=fal`). Default: `fal-ai/flux/schnell`
+- `LOG_LEVEL` — Default: INFO. `LOG_FORMAT` — `console` or `json`. Default: console
+- `LOGFIRE_ENABLED` — Pydantic Logfire. Default: false (run `logfire auth` first)
+- Sampling params loaded from `backend/app/model_profiles.toml` keyed by `LLM_MODEL`
+- Other settings have sensible defaults (budget $1.00, timeouts 30s, max 3 concurrent images)
 
 ## Code Conventions
 
@@ -111,29 +137,27 @@ Requires `.env` file (see `.env.example`):
 - `@computed_field` properties require `# type: ignore[prop-decorator]` — mypy still doesn't support decorators above `@property`
 - WebSocket connection rejected with close code 4004 if session doesn't exist
 - Sprite cache keyed by SHA-256 hash of the image prompt (first 16 hex chars), not object ID — identical prompts share sprites. Controlled by `SPRITE_CACHE_ENABLED` setting.
-- `ON_TAG_ADDED` behavior trigger requires `trigger_tag` field; validated via `ModelRetry` in `BehaviorSpec.check_trigger_tag()`
-- `CONTACT_BODY` behavior target is only valid with `ON_CONTACT`, `ON_DAMAGED`, or `ON_PROXIMITY` triggers — enforced by `ModelRetry` on `BehaviorSpec` and `ValueError` on `Behavior`
+- LLM outputs behaviors as string notation (`TRIGGER -> ACTION -> TARGET, power=POWER`), parsed by `parse_behavior_string()` in `models/behaviors.py`. Parametric syntax: `ON_TAG_ADDED(TAG)`, `ADD_TAGS(TAG1, TAG2)`. `ModelRetry` for LLM correction lives in `CreatorOutputSpec.check_behavior_budget()`, not on `BehaviorSpec` (which uses `ValueError`).
+- `CONTACT_BODY` behavior target is only valid with `ON_CONTACT`, `ON_DAMAGED`, or `ON_PROXIMITY` triggers — enforced by `ValueError` on both `BehaviorSpec` and `Behavior`, surfaced as `ModelRetry` in `CreatorOutputSpec.check_behavior_budget()`
 - `creator/agent.py` SYSTEM_PROMPT tag descriptions reflect interaction rules from `engine/rules_data.py` — if rules change, update tag descriptions in the prompt to match
 - `BehaviorExecutor` disables itself after 5 consecutive action errors to prevent runaway behavior on bad LLM output
 - Behavior-added tags (via `ADD_TAGS` action) have a 10s duration; they auto-remove via decay timer in `GameObject.add_tag()`
 - Movement conflicts resolved by fixed trigger priority: `ON_HEALTH_LOW` > `ON_TAG_ADDED` > `ON_DAMAGED` > `ON_CONTACT` > `ON_PROXIMITY` > `ON_TIMER` > `ALWAYS`
-- `ObjectVisual.set_sprite()` is guarded by `_sprite_applied: bool` — prevents double application when a cache hit in `set_object_id()` races with a late `sprite_ready` signal. `set_sprite()` sets texture + scale directly; no tween (a previous crossfade tween that set `modulate.a = 0` caused permanent invisibility on double-call)
+- `ObjectVisual.set_sprite()` is guarded by `_sprite_applied: bool` — prevents double application when cache hit races with late `sprite_ready`. Sets texture + scale directly (no tween)
 - `body_entered` collision handling is deferred via `call_deferred("_resolve_deferred", body)` — resolving collisions directly in the signal callback crashes Godot with "Can't change state while flushing queries" because resolution can chain into `add_tag` → `_reapply_physics` → new shapes
 - Backend autoload uses `127.0.0.1` not `localhost` — avoids DNS resolution delays and IPv6 fallback issues on some systems
 - In Godot 4.3+, assigning an untyped `Array` (e.g. from JSON parsing) to a typed `Array[Dictionary]` or `Array[String]` silently fails — the typed array rejects the source and remains empty. Use untyped `Array` or iterate-and-append. Pattern: `game_object.gd` tags use manual iterate/append; `behavior_executor.gd` `_behaviors` uses untyped `Array`.
 - `TagField` is lazily created by `game_object.gd`: created at `init_from_blueprint()` if field tags are present, or on first `add_tag()` that introduces a field tag. This means fire-spread (rule adds HEAT_SOURCE) automatically promotes a non-field object into a field emitter.
-- `TagField._rebuild()` short-circuits when field tags haven't changed — safe to call on every `add_tag()`/`remove_tag()`.
-- Continuous field rules (`WIND_SOURCE`, `MAGNETIC`, `GLOWING`) use `apply_central_force()` per physics frame — `force_magnitude` in rule data is tuned for per-frame application, not impulse. Periodic rules fire on a 2s timer; first tick fires immediately via `call_deferred`.
-- `resolve_collision(trigger_mode_filter="FIELD")` from `TagField._on_periodic_tick()` skips CONTACT-only rules, so pair cooldowns gate field re-fires to 0.5s intervals regardless of which path (contact or field) last fired the rule.
-- STICKY joint (`PinJoint2D`) is only created on direct contact (`cascade_depth == 0`). Joint auto-frees via `tree_exiting` signal on either body; stale signal on the surviving body is explicitly disconnected in `_on_sticky_body_freed`.
-- DOT timer replacement (`WorldMutations.apply_dot`): must call `stop()` + `remove_child()` before `queue_free()` on the existing timer. `queue_free()` alone leaves the node in the tree until end-of-frame, causing Godot to auto-rename the replacement `_dot_timer` node (appending `@2` etc.), breaking the `get_node_or_null("_dot_timer")` lookup on subsequent DOT applications.
+- Continuous field rules (`WIND_SOURCE`, `MAGNETIC`, `GLOWING`) use `apply_central_force()` per physics frame — `force_magnitude` tuned for per-frame, not impulse. Periodic rules fire on 2s timer; first tick immediate via `call_deferred`.
+- DOT timer replacement (`WorldMutations.apply_dot`): must `stop()` + `remove_child()` before `queue_free()` — `queue_free()` alone leaves the node until end-of-frame, causing Godot to auto-rename the replacement (appending `@2`).
 - `Backend` autoload has `process_mode = PROCESS_MODE_ALWAYS` — it must process during pause (creation panel pauses the game, but WebSocket keepalive and sprite delivery must continue).
-- `EnvironmentBody` periodic tick uses `trigger_mode_filter=""` (no filter, ALL rules) when `solid=false` — being inside a non-solid substance (acid pool) is semantically equivalent to continuous contact, so CONTACT rules must fire. When `solid=true`, the filter is `"FIELD"` because CONTACT rules already fire via `body_entered` on the colliding object. Player detection works via the env body's own `FieldArea`; player's `move_and_slide()` doesn't trigger `body_entered` on other bodies. Kicks/pushes skip env bodies naturally because player code checks `collider is RigidBody2D`.
+- `EnvironmentBody` periodic tick: `solid=false` uses no trigger_mode filter (ALL rules — being inside non-solid = continuous contact); `solid=true` filters to FIELD only (CONTACT fires via `body_entered`). Player detected via env body's own FieldArea (`move_and_slide` doesn't trigger `body_entered` on other bodies).
 
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md) — object creation pipeline, image generation, rule engine, behavior system, collision/cascade, physics, persistence, WebSocket protocol
 - [Game Design](docs/GAME_DESIGN.md) — tag system, behavior system design, rule philosophy, object economy, durability, levels
+- [Level Design](docs/LEVEL_DESIGN.md) — Level creation patterns, environment bodies, BaseLevel API
 - [Animation Pipeline](docs/ANIMATION_PIPELINE.md) — sprite sheet animation generation reference (not yet in production)
 - [Action Plan](docs/action-plan.md) — unified roadmap from all design analyses
 - [Scribblenauts Deep Dive](docs/scribblenauts-deep-dive.md) — Objectnaut engine research

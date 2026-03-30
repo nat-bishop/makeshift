@@ -1,14 +1,15 @@
 from typing import Literal
 
 import structlog
-from pydantic import BaseModel, Field, computed_field, field_validator
+from pydantic import BaseModel, Field, ValidationError, computed_field, field_validator
 
 from app.models.behaviors import (
     BEHAVIOR_BUDGET,
     Behavior,
-    BehaviorSpec,
+    BehaviorParseError,
     compute_behavior_cost,
     compute_spec_cost,
+    parse_behavior_string,
 )
 from app.models.tags import (
     OBJECT_TAG_BUDGET,
@@ -104,23 +105,41 @@ class CreatorOutput(BaseModel):
 
 
 class CreatorOutputSpec(CreatorOutput):
-    """A game object with a name, tags, optional behaviors, and visual description."""
+    """A game object with a name, tags, behaviors, and visual description."""
 
-    behaviors: list[BehaviorSpec] = Field(default_factory=list, max_length=3)  # type: ignore[assignment]
+    behaviors: list[str] = Field(  # type: ignore[assignment]
+        max_length=3,
+        description=(
+            "Behavior notation: TRIGGER -> ACTION -> TARGET, power=POWER. "
+            "Parametric: ON_TAG_ADDED(TAG), ADD_TAGS(TAG1, TAG2). "
+            "Example: ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+        ),
+    )
 
     @field_validator("behaviors")
     @classmethod
-    def check_behavior_budget(cls, behaviors: list[BehaviorSpec]) -> list[BehaviorSpec]:  # type: ignore[override]
+    def check_behavior_budget(cls, behaviors: list[str]) -> list[str]:  # type: ignore[override]
         from pydantic_ai import ModelRetry
 
         if not behaviors:
             return behaviors
-        costs = [(b, compute_spec_cost(b)) for b in behaviors]
-        total = sum(c for _, c in costs)
+        parsed = []
+        for s in behaviors:
+            try:
+                spec = parse_behavior_string(s)
+            except (BehaviorParseError, ValidationError) as e:
+                logger.debug("llm_retry_behavior_parse", behavior=s, error=str(e))
+                raise ModelRetry(
+                    f"Invalid behavior '{s}': {e}\n"
+                    f"Expected: TRIGGER -> ACTION -> TARGET\n"
+                    f"Example: ON_TAG_ADDED(HEAT_SOURCE) -> EXPLODE -> SELF, power=high"
+                ) from e
+            parsed.append(spec)
+        total = sum(compute_spec_cost(s) for s in parsed)
         if total > BEHAVIOR_BUDGET:
             logger.debug("llm_retry_behavior_budget", cost=total, budget=BEHAVIOR_BUDGET)
             breakdown = ", ".join(
-                f"{b.action.value}@{b.power.value}({c})" for b, c in costs
+                f"{s.action.value}@{s.power.value}({compute_spec_cost(s)})" for s in parsed
             )
             raise ModelRetry(
                 f"Behavior budget {total}/{BEHAVIOR_BUDGET}. Behaviors: {breakdown}. "
