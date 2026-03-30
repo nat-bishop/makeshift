@@ -128,7 +128,7 @@ class TestRuleResolver:
 
 class TestAllRules:
     def test_all_rules_loaded(self):
-        assert len(ALL_RULES) == 45
+        assert len(ALL_RULES) == 47
 
     def test_all_rules_have_unique_ids(self):
         ids = [r.rule_id for r in ALL_RULES]

@@ -34,11 +34,12 @@ class Tag(StrEnum):
     WIND_SOURCE = "WIND_SOURCE"
     CORROSIVE = "CORROSIVE"
     TOXIC = "TOXIC"
-    # Special (4)
+    # Special (5)
     LIVING = "LIVING"
     GLOWING = "GLOWING"
     CONDUCTING = "CONDUCTING"
     INSULATING = "INSULATING"
+    HOSTILE = "HOSTILE"
 
 
 TAG_POWER_COSTS: dict[Tag, int] = {
@@ -65,6 +66,7 @@ TAG_POWER_COSTS: dict[Tag, int] = {
     Tag.GLOWING: 2,
     Tag.CONDUCTING: 2,
     Tag.INSULATING: 2,
+    Tag.HOSTILE: 2,
     # Cost 3
     Tag.HEAT_SOURCE: 3,
     Tag.MAGNETIC: 3,

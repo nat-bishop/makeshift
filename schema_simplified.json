@@ -9,7 +9,7 @@
       "type": "array",
       "items": {
         "type": "string",
-        "enum": ["SOLID", "LIQUID", "GAS", "RIGID", "FLEXIBLE", "HEAVY", "LIGHT", "FROZEN", "COLD", "HOT", "MOLTEN", "FLAMMABLE", "HEAT_SOURCE", "ELECTRIC", "MAGNETIC", "EXPLOSIVE", "SHARP", "STICKY", "SLIPPERY", "REFLECTIVE", "BOUNCY", "BREAKABLE", "FLOATING", "WIND_SOURCE", "CORROSIVE", "TOXIC", "LIVING", "GLOWING", "CONDUCTING", "INSULATING"]
+        "enum": ["SOLID", "LIQUID", "GAS", "RIGID", "FLEXIBLE", "HEAVY", "LIGHT", "FROZEN", "COLD", "HOT", "MOLTEN", "FLAMMABLE", "HEAT_SOURCE", "ELECTRIC", "MAGNETIC", "EXPLOSIVE", "SHARP", "STICKY", "SLIPPERY", "REFLECTIVE", "BOUNCY", "BREAKABLE", "FLOATING", "WIND_SOURCE", "CORROSIVE", "TOXIC", "LIVING", "GLOWING", "CONDUCTING", "INSULATING", "HOSTILE"]
       },
       "minItems": 2,
       "maxItems": 6
@@ -21,8 +21,8 @@
         "type": "object",
         "required": ["trigger", "action"],
         "properties": {
-          "trigger": { "type": "string", "enum": ["ALWAYS", "ON_TIMER", "ON_PROXIMITY", "ON_CONTACT", "ON_DAMAGED", "ON_HEALTH_LOW", "ON_TAG_ADDED", "ON_CREATE", "ON_DESTROY", "ON_USE"] },
-          "action": { "type": "string", "enum": ["MOVE_TOWARD", "MOVE_AWAY", "PATROL", "DEAL_DAMAGE", "APPLY_FORCE", "ATTRACT", "SPAWN_PROJECTILE", "EXPLODE", "HEAL", "ADD_TAGS", "REMOVE_TAGS", "SELF_DESTRUCT"] },
+          "trigger": { "type": "string", "enum": ["ALWAYS", "ON_TIMER", "ON_PROXIMITY", "ON_CONTACT", "ON_DAMAGED", "ON_HEALTH_LOW", "ON_TAG_ADDED", "ON_CREATE", "ON_DESTROY"] },
+          "action": { "type": "string", "enum": ["MOVE_TOWARD", "MOVE_AWAY", "PATROL", "APPLY_FORCE", "ATTRACT", "SPAWN_PROJECTILE", "EXPLODE", "HEAL", "ADD_TAGS", "REMOVE_TAGS", "SELF_DESTRUCT"] },
           "target": { "type": "string", "enum": ["SELF", "NEAREST_OBJECT", "NEAREST_LIVING", "NEAREST_PLAYER", "CONTACT_BODY"] },
           "condition": {
             "type": "object",

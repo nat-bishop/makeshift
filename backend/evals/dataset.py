@@ -2,7 +2,7 @@
 
 Designed to mimic real player input — a mix of terse keywords,
 full sentences, mundane objects, wild ideas, and adversarial edge cases.
-50 cases covering all 30 tags, 9 behavior triggers, and 12 actions.
+50 cases covering all 31 tags, 9 behavior triggers, and 11 actions.
 """
 
 from __future__ import annotations
@@ -144,7 +144,7 @@ EVAL_CASES: list[CreatorCase] = [
         metadata=CaseMeta(
             category="weapon",
             expected_tags=["SOLID", "BOUNCY", "LIGHT"],
-            notes="Tests BOUNCY tag with ON_CONTACT -> DEAL_DAMAGE. Comedic escalation.",
+            notes="Tests BOUNCY tag with HOSTILE for contact damage. Comedic escalation.",
         ),
     ),
     Case(
@@ -174,7 +174,7 @@ EVAL_CASES: list[CreatorCase] = [
         metadata=CaseMeta(
             category="trap",
             expected_tags=["SOLID", "BREAKABLE", "SHARP", "GLOWING", "FLOATING"],
-            notes="Long description with ON_DAMAGED -> EXPLODE/DEAL_DAMAGE. Tests BREAKABLE + SHARP.",
+            notes="Long description with ON_DAMAGED -> EXPLODE. Tests BREAKABLE + SHARP.",
         ),
     ),
     Case(
@@ -192,7 +192,7 @@ EVAL_CASES: list[CreatorCase] = [
         metadata=CaseMeta(
             category="trap",
             expected_tags=["LIVING", "TOXIC"],
-            notes="Tests ON_DESTROY -> ADD_TAGS or DEAL_DAMAGE. Player explaining the gimmick.",
+            notes="Tests ON_DESTROY -> ADD_TAGS(TOXIC) or EXPLODE. Player explaining the gimmick.",
         ),
     ),
     # =========================================================================
@@ -204,7 +204,7 @@ EVAL_CASES: list[CreatorCase] = [
         metadata=CaseMeta(
             category="creature",
             expected_tags=["LIVING", "CORROSIVE"],
-            notes="Explicit behavior hint. Should map to ON_PROXIMITY + DEAL_DAMAGE or SPAWN_PROJECTILE.",
+            notes="Explicit behavior hint. Should map to ON_PROXIMITY -> SPAWN_PROJECTILE or CORROSIVE tag.",
         ),
     ),
     Case(
@@ -231,7 +231,7 @@ EVAL_CASES: list[CreatorCase] = [
         metadata=CaseMeta(
             category="creature",
             expected_tags=["LIVING", "LIGHT"],
-            notes="Long narrative with escalating behavior. Tests ON_PROXIMITY -> MOVE_TOWARD + DEAL_DAMAGE.",
+            notes="Long narrative with escalating behavior. Tests ON_PROXIMITY -> MOVE_TOWARD + HOSTILE tag.",
         ),
     ),
     Case(
@@ -240,7 +240,7 @@ EVAL_CASES: list[CreatorCase] = [
         metadata=CaseMeta(
             category="creature",
             expected_tags=["LIVING", "ELECTRIC", "GLOWING"],
-            notes="Nature reference. Tests ELECTRIC(4)+LIVING(3)+GLOWING(2)=9. ON_PROXIMITY -> DEAL_DAMAGE.",
+            notes="Nature reference. Tests ELECTRIC(4)+LIVING(3)+GLOWING(2)=9. ELECTRIC tag handles shock damage.",
         ),
     ),
     Case(
@@ -258,7 +258,7 @@ EVAL_CASES: list[CreatorCase] = [
         metadata=CaseMeta(
             category="creature",
             expected_tags=["LIVING", "TOXIC"],
-            notes="Tests TOXIC(4)+LIVING(3)=7. ON_CONTACT/ON_PROXIMITY -> DEAL_DAMAGE.",
+            notes="Tests TOXIC(4)+LIVING(3)=7. TOXIC tag handles poison damage automatically.",
         ),
     ),
     Case(
@@ -429,7 +429,7 @@ EVAL_CASES: list[CreatorCase] = [
         metadata=CaseMeta(
             category="environment",
             expected_tags=["GAS", "FLOATING", "CORROSIVE"],
-            notes="Environmental hazard. GAS+FLOATING+CORROSIVE. ON_TIMER -> DEAL_DAMAGE.",
+            notes="Environmental hazard. GAS+FLOATING+CORROSIVE. Tag handles acid damage automatically.",
         ),
     ),
     Case(

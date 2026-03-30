@@ -218,7 +218,7 @@ const SENTRY_BLUEPRINT := {
 # Projectiles: base tags [SOLID, LIGHT, BREAKABLE] + payload HOT (from HEAT_SOURCE via PAYLOAD_TAG_MAP).
 #   Speed 250 px/s, durability 15, lifetime 2.5s.
 #   Projectile hits player: behavior deals MEDIUM damage (20) + hot_living_burn rule (5 dmg) = 25 per hit.
-# Behavior budget: PATROL (2) + SPAWN_PROJECTILE (3) = 5/6. Valid.
+# Behavior budget: PATROL (2) + SPAWN_PROJECTILE (3) = 5/8. Valid.
 
 const BARRICADE_BLUEPRINT := {
     "id": "barricade_01",
@@ -463,7 +463,7 @@ const TOXIC_SLIME_BLUEPRINT := {
 # Durability: 100 (FLEXIBLE). Patrols corridor, chases player on proximity.
 # TOXIC field (MEDIUM range=96px, periodic 2s): toxic_living_damage → 10 dmg to player.
 # BOUNCY so it rebounds off walls.
-# Behavior budget: PATROL (2) + MOVE_TOWARD (2) = 4/6.
+# Behavior budget: PATROL (2) + MOVE_TOWARD (2) = 4/8.
 ```
 
 **Solutions:** Kick it repeatedly (10 dmg each, 100 HP = 10 kicks). Create SHARP/CORROSIVE objects to deal damage. Sprint past during patrol gap. Create a barrier to block it.
@@ -491,7 +491,7 @@ const FIRE_GUARDIAN_BLUEPRINT := {
     ],
 }
 # Stationary. Shoots HOT projectiles at 1.5s interval (MEDIUM).
-# Behavior budget: SPAWN_PROJECTILE (3) = 3/6.
+# Behavior budget: SPAWN_PROJECTILE (3) = 3/8.
 ```
 
 **The dilemma:** The room exit is elevated. A FLAMMABLE wooden wall provides the climbing surface. The guardian's field (HEAT_SOURCE, CLOSE=64px) will ignite anything FLAMMABLE within range. Player must either extinguish the guardian (LIQUID), shield the wall, or create a non-FLAMMABLE climbing alternative.
@@ -736,7 +736,7 @@ const LEVELS: Array[Dictionary] = [
 - [ ] Level 3 "The Chain Reaction" — `.gd` not yet rewritten
 - [ ] Playtest each solution path
 - [ ] Verify seed object durability values (BREAKABLE=50, RIGID=200, FLEXIBLE=100, default=150)
-- [ ] Verify behavior budgets are within limits (max 6)
+- [ ] Verify behavior budgets are within limits (max 8)
 - [ ] Verify tag costs are within limits (max 10)
 - [ ] Test that frozen objects (`freeze=true`) behave correctly with field interactions
 

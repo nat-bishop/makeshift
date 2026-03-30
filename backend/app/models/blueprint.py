@@ -112,7 +112,7 @@ class CreatorOutputSpec(CreatorOutput):
         description=(
             "Behavior notation: TRIGGER -> ACTION -> TARGET, power=POWER. "
             "Parametric: ON_TAG_ADDED(TAG), ADD_TAGS(TAG1, TAG2). "
-            "Example: ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+            "Example: ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING, power=high"
         ),
     )
 

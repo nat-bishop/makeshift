@@ -27,7 +27,6 @@ class BehaviorAction(StrEnum):
     MOVE_TOWARD = "MOVE_TOWARD"
     MOVE_AWAY = "MOVE_AWAY"
     PATROL = "PATROL"
-    DEAL_DAMAGE = "DEAL_DAMAGE"
     APPLY_FORCE = "APPLY_FORCE"
     ATTRACT = "ATTRACT"
     SPAWN_PROJECTILE = "SPAWN_PROJECTILE"
@@ -92,7 +91,6 @@ BEHAVIOR_ACTION_COSTS: dict[BehaviorAction, int] = {
     BehaviorAction.MOVE_TOWARD: 2,
     BehaviorAction.MOVE_AWAY: 2,
     BehaviorAction.PATROL: 2,
-    BehaviorAction.DEAL_DAMAGE: 2,
     BehaviorAction.APPLY_FORCE: 2,
     BehaviorAction.ATTRACT: 2,
     BehaviorAction.HEAL: 2,

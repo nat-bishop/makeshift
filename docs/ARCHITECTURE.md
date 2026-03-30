@@ -54,7 +54,7 @@ Full flow from player input to world-placed object with sprite:
 1. **Player types description** → `ObjectCreationPanel` sends text to `Backend.create_object()`
 2. **HTTP POST** → `POST /api/sessions/{id}/objects` with `{"description": "..."}`
 3. **Budget check** → `SessionManager.get_budget_info()` verifies remaining budget (rejects with 402 if exhausted)
-4. **LLM agent** → `creator.agent.create_object()` runs PydanticAI agent (Gemini 3.1 Flash Lite Preview, 3 retries). Validators enforce: 1-3 word name, 2-6 tags, no contradictions, tag budget ≤ 10, 0-3 behaviors, behavior budget ≤ 6. Falls back to generic "Mysterious {description}" on failure
+4. **LLM agent** → `creator.agent.create_object()` runs PydanticAI agent (Gemini 3.1 Flash Lite Preview, 3 retries). Validators enforce: 1-3 word name, 2-6 tags, no contradictions, tag budget ≤ 10, 0-3 behaviors, behavior budget ≤ 8. Falls back to generic "Mysterious {description}" on failure
 5. **Blueprint construction** → `GameObjectBlueprint` adds UUID, computed fields: `power_cost`, `behavior_cost`, `starting_durability`
 6. **Atomic persist** → `reserve_budget()` + `save_object()` charge $0.041 and save blueprint (including behaviors)
 7. **Immediate response** → Client receives blueprint JSON (with behaviors) + `budget_remaining`. `EventBus.creation_requested` was emitted on submit — `Game` starts a `MaterializeEffect` at the spawn point (paper scraps coalesce over 1.2s, then idle-bob)
@@ -99,7 +99,7 @@ Full flow from player input to world-placed object with sprite:
 
 ### Backend: `engine/resolver.py`
 
-`RuleResolver` builds a two-tier index at init from 45 `InteractionRule` definitions:
+`RuleResolver` builds a two-tier index at init from 47 `InteractionRule` definitions:
 
 **Pair index** (O(1) lookup): Nested dict `tag_a → tag_b → [rules]`. For bidirectional rules, both `(a,b)` and `(b,a)` entries are created.
 
@@ -110,7 +110,7 @@ Full flow from player input to world-placed object with sprite:
 2. Scan wildcard rules for subset matches
 3. Deduplicate by `rule_id`, sort by priority descending
 
-**`TriggerMode`** (`models/rules.py`): StrEnum — `CONTACT` (default) | `FIELD`. 18 of 45 rules are annotated `trigger_mode=TriggerMode.FIELD`. FIELD rules also fire on contact — `trigger_mode` is purely a filter used client-side by `TagField` and `CollisionResolver.resolve_collision(trigger_mode_filter=...)`.
+**`TriggerMode`** (`models/rules.py`): StrEnum — `CONTACT` (default) | `FIELD`. 18 of 47 rules are annotated `trigger_mode=TriggerMode.FIELD`. FIELD rules also fire on contact — `trigger_mode` is purely a filter used client-side by `TagField` and `CollisionResolver.resolve_collision(trigger_mode_filter=...)`.
 
 ### Godot: `autoloads/rule_engine.gd`
 
@@ -187,8 +187,8 @@ Each `Behavior` is a flat Pydantic record:
 
 | Field | Type | Values |
 |-------|------|--------|
-| `trigger` | `BehaviorTrigger` | ALWAYS, ON_TIMER, ON_PROXIMITY, ON_CONTACT, ON_DAMAGED, ON_HEALTH_LOW, ON_TAG_ADDED, ON_CREATE, ON_DESTROY, ON_USE |
-| `action` | `BehaviorAction` | MOVE_TOWARD, MOVE_AWAY, PATROL, DEAL_DAMAGE, APPLY_FORCE, ATTRACT, SPAWN_PROJECTILE, EXPLODE, HEAL, ADD_TAGS, REMOVE_TAGS, SELF_DESTRUCT |
+| `trigger` | `BehaviorTrigger` | ALWAYS, ON_TIMER, ON_PROXIMITY, ON_CONTACT, ON_DAMAGED, ON_HEALTH_LOW, ON_TAG_ADDED, ON_CREATE, ON_DESTROY |
+| `action` | `BehaviorAction` | MOVE_TOWARD, MOVE_AWAY, PATROL, APPLY_FORCE, ATTRACT, SPAWN_PROJECTILE, EXPLODE, HEAL, ADD_TAGS, REMOVE_TAGS, SELF_DESTRUCT |
 | `target` | `BehaviorTarget` | SELF, NEAREST_OBJECT, NEAREST_LIVING, NEAREST_PLAYER, CONTACT_BODY |
 | `condition` | `BehaviorCondition \| None` | Optional gate: HAS_TAG, NOT_HAS_TAG, TARGET_HAS_TAG |
 | `intensity` | `Intensity` | MINIMAL, LOW, MEDIUM, HIGH, EXTREME (default MEDIUM) |
@@ -201,7 +201,7 @@ Each `Behavior` is a flat Pydantic record:
 
 ### Budget
 
-- Behavior budget: 6 per object (separate from tag budget of 10)
+- Behavior budget: 8 per object (separate from tag budget of 10)
 - `cost = max(floor, action_base_cost + intensity_modifier)`
 - Action costs: SELF_DESTRUCT=1, most actions=2, SPAWN_PROJECTILE/EXPLODE=3
 - Intensity modifiers: MINIMAL=-1, LOW/MEDIUM=0, HIGH=+1, EXTREME=+2
@@ -275,9 +275,7 @@ Object A (HEAT_SOURCE) collides with Object B (EXPLOSIVE)
             └─ Behavior: ON_TAG_ADDED(HOT) → EXPLODE
 ```
 
-`ADD_TAGS` / `REMOVE_TAGS` behavior actions trigger cascade: after mutating tags, `CollisionResolver.resolve_collision()` is called on the target's neighbors, propagating rule engine interactions.
-
-Direct `DEAL_DAMAGE` from behaviors bypasses the rule engine — no double-dipping with collision rules.
+`ADD_TAGS` / `REMOVE_TAGS` behavior actions trigger cascade: after mutating tags, `CollisionResolver.resolve_collision()` re-evaluates the target's neighbors, propagating rule engine interactions.
 
 ## Collision & Cascade System
 

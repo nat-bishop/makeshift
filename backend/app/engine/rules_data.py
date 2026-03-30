@@ -770,6 +770,42 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
+    # 35b. HOSTILE + BREAKABLE → blunt damage
+    InteractionRule(
+        rule_id="hostile_breakable_damage",
+        name="Strike",
+        tags_required_a={Tag.HOSTILE},
+        tags_required_b={Tag.BREAKABLE},
+        priority=7,
+        bidirectional=False,
+        cascade_eligible=False,
+        effects=[
+            Effect(
+                effect_type=EffectType.DAMAGE,
+                target=EffectTarget.B,
+                damage_amount=20.0,
+                message="Struck! 20 damage.",
+            ),
+        ],
+    ),
+    # 35c. HOSTILE + LIVING → blunt damage
+    InteractionRule(
+        rule_id="hostile_living_damage",
+        name="Attack",
+        tags_required_a={Tag.HOSTILE},
+        tags_required_b={Tag.LIVING},
+        priority=7,
+        bidirectional=False,
+        cascade_eligible=False,
+        effects=[
+            Effect(
+                effect_type=EffectType.DAMAGE,
+                target=EffectTarget.B,
+                damage_amount=20.0,
+                message="Attacked! 20 damage.",
+            ),
+        ],
+    ),
     # 36. FLOATING + HEAVY → cancel float
     InteractionRule(
         rule_id="floating_heavy_cancel",

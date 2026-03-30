@@ -71,7 +71,7 @@ class TestComputeBehaviorCost:
 
     def test_intensity_modifiers(self) -> None:
         for intensity, modifier in INTENSITY_COST_MODIFIER.items():
-            b = _make_behavior(action=BehaviorAction.DEAL_DAMAGE, intensity=intensity)
+            b = _make_behavior(action=BehaviorAction.HEAL, intensity=intensity)
             expected = max(1, 2 + modifier)
             assert compute_behavior_cost(b) == expected
 
@@ -139,7 +139,7 @@ class TestBehaviorValidation:
         b = _make_behavior(
             trigger=BehaviorTrigger.ON_CONTACT,
             target=BehaviorTarget.CONTACT_BODY,
-            action=BehaviorAction.DEAL_DAMAGE,
+            action=BehaviorAction.HEAL,
         )
         assert b.target == BehaviorTarget.CONTACT_BODY
 
@@ -277,7 +277,7 @@ class TestBehaviorSpec:
         with pytest.raises(ValidationError):
             _make_spec(
                 trigger=BehaviorTrigger.ALWAYS,
-                action=BehaviorAction.DEAL_DAMAGE,
+                action=BehaviorAction.HEAL,
                 target=BehaviorTarget.CONTACT_BODY,
             )
 
@@ -292,13 +292,13 @@ class TestBehaviorSpec:
 
 class TestComputeSpecCost:
     def test_low_medium_same_cost(self) -> None:
-        s_low = _make_spec(action=BehaviorAction.DEAL_DAMAGE, power="low")
-        s_med = _make_spec(action=BehaviorAction.DEAL_DAMAGE, power="medium")
+        s_low = _make_spec(action=BehaviorAction.HEAL, power="low")
+        s_med = _make_spec(action=BehaviorAction.HEAL, power="medium")
         assert compute_spec_cost(s_low) == compute_spec_cost(s_med) == 2
 
     def test_high_costs_one_more(self) -> None:
-        s_med = _make_spec(action=BehaviorAction.DEAL_DAMAGE, power="medium")
-        s_high = _make_spec(action=BehaviorAction.DEAL_DAMAGE, power="high")
+        s_med = _make_spec(action=BehaviorAction.HEAL, power="medium")
+        s_high = _make_spec(action=BehaviorAction.HEAL, power="high")
         assert compute_spec_cost(s_high) == compute_spec_cost(s_med) + 1
 
     def test_spawn_projectile_floor(self) -> None:
@@ -335,13 +335,13 @@ class TestExpandBehaviorSpec:
             b = expand_behavior_spec(s)
             assert b.speed == expected
 
-    def test_damage_maps_intensity(self) -> None:
+    def test_heal_maps_intensity(self) -> None:
         for power, expected in [
             ("low", Intensity.LOW),
             ("medium", Intensity.MEDIUM),
             ("high", Intensity.HIGH),
         ]:
-            s = _make_spec(action=BehaviorAction.DEAL_DAMAGE, power=power)
+            s = _make_spec(action=BehaviorAction.HEAL, power=power)
             b = expand_behavior_spec(s)
             assert b.intensity == expected
 
@@ -381,9 +381,9 @@ class TestExpandBehaviorSpec:
 
 class TestParseBehaviorString:
     def test_basic_3_part(self) -> None:
-        s = parse_behavior_string("ON_CONTACT → DEAL_DAMAGE → CONTACT_BODY")
+        s = parse_behavior_string("ON_CONTACT → HEAL → CONTACT_BODY")
         assert s.trigger == BehaviorTrigger.ON_CONTACT
-        assert s.action == BehaviorAction.DEAL_DAMAGE
+        assert s.action == BehaviorAction.HEAL
         assert s.target == BehaviorTarget.CONTACT_BODY
         assert s.power == Power.MEDIUM
 
@@ -409,18 +409,18 @@ class TestParseBehaviorString:
         assert s.tags_to_apply == [Tag.HOT, Tag.HEAT_SOURCE]
 
     def test_ascii_arrow(self) -> None:
-        s = parse_behavior_string("ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY")
+        s = parse_behavior_string("ON_CONTACT -> HEAL -> CONTACT_BODY")
         assert s.trigger == BehaviorTrigger.ON_CONTACT
-        assert s.action == BehaviorAction.DEAL_DAMAGE
+        assert s.action == BehaviorAction.HEAL
 
     def test_case_insensitive(self) -> None:
-        s = parse_behavior_string("on_contact → deal_damage → contact_body")
+        s = parse_behavior_string("on_contact → heal → contact_body")
         assert s.trigger == BehaviorTrigger.ON_CONTACT
-        assert s.action == BehaviorAction.DEAL_DAMAGE
+        assert s.action == BehaviorAction.HEAL
         assert s.target == BehaviorTarget.CONTACT_BODY
 
     def test_extra_whitespace(self) -> None:
-        s = parse_behavior_string("  ON_CONTACT  →  DEAL_DAMAGE  →  SELF  ")
+        s = parse_behavior_string("  ON_CONTACT  →  HEAL  →  SELF  ")
         assert s.trigger == BehaviorTrigger.ON_CONTACT
 
     def test_2_part_explode_defaults_to_self(self) -> None:
@@ -435,7 +435,7 @@ class TestParseBehaviorString:
         assert s.target == BehaviorTarget.NEAREST_OBJECT
 
     def test_curly_brace_stripping(self) -> None:
-        s = parse_behavior_string("{ON_CONTACT → DEAL_DAMAGE → CONTACT_BODY}")
+        s = parse_behavior_string("{ON_CONTACT → HEAL → CONTACT_BODY}")
         assert s.trigger == BehaviorTrigger.ON_CONTACT
 
     def test_spaces_around_equals(self) -> None:
@@ -444,7 +444,7 @@ class TestParseBehaviorString:
 
     def test_unknown_kwargs_ignored(self) -> None:
         s = parse_behavior_string(
-            "ON_CONTACT → DEAL_DAMAGE → CONTACT_BODY, power=high, flavor=fire"
+            "ON_CONTACT → HEAL → CONTACT_BODY, power=high, flavor=fire"
         )
         assert s.power == Power.HIGH
 
@@ -468,9 +468,13 @@ class TestParseBehaviorString:
         with pytest.raises(BehaviorParseError, match="Unknown action"):
             parse_behavior_string("ON_CONTACT → FIRE_BLAST → SELF")
 
+    def test_removed_deal_damage_raises(self) -> None:
+        with pytest.raises(BehaviorParseError, match="Unknown action"):
+            parse_behavior_string("ON_CONTACT → DEAL_DAMAGE → CONTACT_BODY")
+
     def test_invalid_target_raises(self) -> None:
         with pytest.raises(BehaviorParseError, match="Unknown target"):
-            parse_behavior_string("ON_CONTACT → DEAL_DAMAGE → EVERYONE")
+            parse_behavior_string("ON_CONTACT → HEAL → EVERYONE")
 
     def test_invalid_tag_in_trigger_raises(self) -> None:
         with pytest.raises(BehaviorParseError, match="Unknown tag"):
@@ -522,10 +526,10 @@ class TestCreatorOutputSpec:
         out = CreatorOutputSpec(
             name="Fire Sword",
             tags=[Tag.SOLID, Tag.RIGID, Tag.SHARP, Tag.HEAT_SOURCE],
-            behaviors=["ON_CONTACT → DEAL_DAMAGE → CONTACT_BODY"],
+            behaviors=["ON_CONTACT → HEAL → CONTACT_BODY"],
             visual_descriptor=_make_visual(),
         )
-        assert out.behaviors == ["ON_CONTACT → DEAL_DAMAGE → CONTACT_BODY"]
+        assert out.behaviors == ["ON_CONTACT → HEAL → CONTACT_BODY"]
 
     def test_behavior_budget_exceeded_raises(self) -> None:
         with pytest.raises(ModelRetry):

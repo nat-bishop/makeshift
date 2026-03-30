@@ -29,8 +29,11 @@ create a game object by choosing a name, tags, behaviors, and visual appearance.
 
 Tags define what the object IS — the game engine automatically creates interactions between \
 objects based on their tags. For example, HEAT_SOURCE objects ignite FLAMMABLE objects on contact, \
-ELECTRIC propagates through CONDUCTING objects, and WIND_SOURCE pushes LIGHT objects. \
-Behaviors define what the object DOES autonomously — chase, flee, explode, heal, etc.
+ELECTRIC propagates through CONDUCTING objects, and WIND_SOURCE pushes LIGHT objects.
+
+Behaviors define what the object DOES autonomously — move, shoot, heal, transform, explode. \
+Tags already handle damage when things interact (SHARP cuts, HEAT_SOURCE burns, TOXIC poisons). \
+Don't add behaviors for things tags handle — a sword with SHARP doesn't need a damage behavior.
 
 ## Tags (pick 2-6, budget = 10 points)
 
@@ -77,6 +80,7 @@ Number in parentheses = point cost.
 - GLOWING(2) — emits visible light
 - CONDUCTING(2) — carries electricity and heat between objects
 - INSULATING(2) — blocks electricity and heat propagation
+- HOSTILE(2) — aggressive, deals physical damage on contact
 
 **Contradictions:** FROZEN↔MOLTEN, FROZEN↔HOT, COLD↔HOT, COLD↔MOLTEN, HEAVY↔LIGHT, \
 LIQUID↔RIGID, GAS↔RIGID, GAS↔HEAVY, SOLID↔LIQUID, SOLID↔GAS, LIQUID↔GAS, \
@@ -85,10 +89,11 @@ STICKY↔SLIPPERY, CONDUCTING↔INSULATING, REFLECTIVE↔STICKY, HEAT_SOURCE↔F
 Think about gameplay affordances: what can the player DO with this object? \
 Favor tags that enable interesting chain reactions and interactions with other objects.
 
-## Behaviors (1-3 behaviors, budget = 8 points)
+## Behaviors (0-3 behaviors, budget = 8 points)
 
-Behaviors make objects interactive and fun. Without them, objects are static props. \
-Even simple objects should react: a torch damages on touch, a balloon floats away when hit.
+Behaviors give objects autonomous agency. Objects without behaviors are passive — they interact \
+through tags alone, which is fine for weapons, obstacles, and materials. \
+Add behaviors when an object needs to move, shoot, heal, or transform things.
 
 **Triggers** (when the behavior fires):
 - ALWAYS — every frame (use for continuous movement)
@@ -105,12 +110,13 @@ Example: fire adds HEAT_SOURCE to a bee swarm -> ON_TAG_ADDED(HEAT_SOURCE) -> EX
 
 **Actions** with base cost:
 - MOVE_TOWARD(2), MOVE_AWAY(2), PATROL(2) — movement
-- DEAL_DAMAGE(2) — direct damage to target
 - APPLY_FORCE(2) — push target away
 - ATTRACT(2) — pull target toward self
 - HEAL(2) — restore target's durability
-- ADD_TAGS(2) — add tags to target (write tags in parens: ADD_TAGS(TAG1, TAG2))
-- REMOVE_TAGS(2) — remove tags from target (write tags in parens: REMOVE_TAGS(TAG1, TAG2))
+- ADD_TAGS(2) — add tags to target (write tags in parens: ADD_TAGS(TAG1, TAG2)). \
+Powerful: feeds back into the rule engine — adding HEAT_SOURCE makes the target ignite flammable things.
+- REMOVE_TAGS(2) — remove tags from target (write tags in parens: REMOVE_TAGS(TAG1, TAG2)). \
+Cleanser/purifier mechanic.
 - SELF_DESTRUCT(1) — destroy self
 - SPAWN_PROJECTILE(3) — fire a projectile at target (min cost 2)
 - EXPLODE(3) — area damage + force around self (min cost 2)
@@ -153,33 +159,39 @@ distinctive features. Describe the object itself, not a scene or environment.
 
 "fire sword" ->
   name: "Fire Sword", tags: [SOLID, RIGID, SHARP, HEAT_SOURCE]
-  behaviors: ["ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"]
+  behaviors: []
   visual: "a curved steel sword with a fiery red blade and bright orange edge, wreathed in flames", small
-  Reactive weapon — SHARP cuts, HEAT_SOURCE ignites flammable targets on contact.
+  SHARP cuts on contact. HEAT_SOURCE ignites flammable targets. No behaviors needed — it's a weapon.
 
 "cursed well" ->
-  name: "Cursed Well", tags: [SOLID, HEAVY, GLOWING, TOXIC]
-  behaviors: ["ON_PROXIMITY -> ATTRACT -> CONTACT_BODY", "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"]
+  name: "Cursed Well", tags: [SOLID, HEAVY, TOXIC, GLOWING]
+  behaviors: ["ON_PROXIMITY -> ATTRACT -> CONTACT_BODY"]
   visual: "a crumbling stone well with an eerie green glow and dark vines creeping over the rim", medium
-  Environmental trap — lures with ATTRACT, then poisons on contact.
+  TOXIC poisons LIVING things automatically. ATTRACT pulls victims in. One behavior, one tag.
 
 "fire-breathing dragon" ->
-  name: "Fire Dragon", tags: [LIVING, HEAT_SOURCE, HOT]
+  name: "Fire Dragon", tags: [LIVING, HEAT_SOURCE, HOT, HOSTILE]
   behaviors: ["ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING", "ON_PROXIMITY -> SPAWN_PROJECTILE -> NEAREST_LIVING, power=high"]
   visual: "a large red dragon with orange underbelly, leathery wings, and smoke rising from its nostrils", large
-  Active hunter — ALWAYS + MOVE_TOWARD makes creatures feel alive. Shoots at range.
+  HOSTILE deals contact damage. HEAT_SOURCE ignites. Movement + projectiles need behaviors.
 
 "angry bee swarm" ->
-  name: "Bee Swarm", tags: [LIVING, LIGHT, FLAMMABLE, TOXIC]
+  name: "Bee Swarm", tags: [LIVING, LIGHT, FLAMMABLE, TOXIC, HOSTILE]
   behaviors: ["ALWAYS -> MOVE_TOWARD -> NEAREST_PLAYER, power=high", "ON_TAG_ADDED(HEAT_SOURCE) -> EXPLODE -> SELF"]
   visual: "a dense swirling cloud of yellow and black striped bees with vibrating wings", small
-  Chain reaction — chases aggressively; fire adds HEAT_SOURCE tag -> triggers EXPLODE.
+  Chain reaction: fire adds HEAT_SOURCE via rules → triggers EXPLODE behavior.
 
 "healing mushroom" ->
   name: "Healing Shroom", tags: [LIVING, SOLID, GLOWING]
-  behaviors: ["ON_CONTACT -> HEAL -> CONTACT_BODY", "ON_PROXIMITY -> ADD_TAGS(GLOWING) -> CONTACT_BODY"]
+  behaviors: ["ON_PROXIMITY -> HEAL -> NEAREST_LIVING"]
   visual: "a plump turquoise mushroom with a softly pulsing bioluminescent cap and white spots", small
-  Utility — heals on touch, spreads GLOWING to nearby objects. Not everything is combat.\
+  HEAL is behavior-only. GLOWING emits light via tag field. Not everything is combat.
+
+"ice wall" ->
+  name: "Ice Wall", tags: [SOLID, RIGID, FROZEN, HEAVY]
+  behaviors: ["ON_CONTACT -> ADD_TAGS(FROZEN) -> CONTACT_BODY"]
+  visual: "a translucent blue wall of thick ice with frost crystals along the edges", large
+  ADD_TAGS bridges into rules — frozen targets become slippery, shatter easier. Per-object, not universal.\
 """
 
 _agent: Agent[None, CreatorOutputSpec] | None = None

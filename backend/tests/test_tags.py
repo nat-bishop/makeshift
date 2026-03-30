@@ -10,8 +10,8 @@ from app.models.tags import (
 
 
 def test_tag_count():
-    """There should be exactly 30 tags."""
-    assert len(Tag) == 30
+    """There should be exactly 31 tags."""
+    assert len(Tag) == 31
 
 
 def test_every_tag_has_a_cost():
@@ -52,7 +52,7 @@ def test_object_tag_budget():
 
 @pytest.mark.parametrize(
     ("cost", "expected_count"),
-    [(1, 10), (2, 11), (3, 4), (4, 4), (5, 1)],
+    [(1, 10), (2, 12), (3, 4), (4, 4), (5, 1)],
 )
 def test_cost_distribution(cost: int, expected_count: int) -> None:
     actual = [t for t, c in TAG_POWER_COSTS.items() if c == cost]

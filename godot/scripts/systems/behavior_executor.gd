@@ -184,7 +184,8 @@ func _execute_behavior(behavior_index: int, pre_resolved_target: Node = null, ac
 		"PATROL":
 			_apply_patrol(b.get("speed", "MEDIUM"))
 		"DEAL_DAMAGE":
-			success = _apply_damage(target, b.get("intensity", "MEDIUM"))
+			Log.debug("BehaviorExecutor: DEAL_DAMAGE is deprecated — use damage tags (SHARP, HOSTILE, etc.)")
+			success = false
 		"APPLY_FORCE":
 			success = _apply_force(target, b.get("intensity", "MEDIUM"), false)
 		"ATTRACT":
@@ -304,16 +305,6 @@ func _get_owner_element_color() -> Color:
 			return TagColors.COLORS[tag]
 	return Color.WHITE
 
-
-func _apply_damage(target: Node, intensity: String) -> bool:
-	if target == null or not is_instance_valid(target):
-		return false
-	var amount: float = BehaviorMaps.INTENSITY_DAMAGE.get(intensity, 20.0)
-	var element_color: Color = _get_owner_element_color()
-	WorldMutations.apply_damage(target, amount, element_color)
-	if target is Node2D:
-		EventBus.effect_applied.emit("DAMAGE", amount, element_color, target.global_position)
-	return true
 
 
 func _apply_heal(target: Node, intensity: String) -> bool:
