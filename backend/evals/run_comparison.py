@@ -1,61 +1,49 @@
-"""Creator agent prompt comparison runner.
+"""Compare saved eval results — no LLM calls.
 
 Usage:
-    # Compare two prompt variants:
-    uv run python -m evals.run_comparison --a baseline --b v2
+    # Compare two variants (finds latest result file for each):
+    cd backend && uv run python -m evals.run_comparison --a baseline --b v2
 
-    # Score a single variant:
-    uv run python -m evals.run_comparison --a baseline --single
+    # Compare specific files:
+    cd backend && uv run python -m evals.run_comparison \
+        --a results/20260330_041500_baseline.json \
+        --b results/20260330_042000_v2.json
 
-    # Filter to specific cases:
-    uv run python -m evals.run_comparison --a baseline --b v2 --cases "fire sword,rubber duck"
+    # Single variant analysis:
+    cd backend && uv run python -m evals.run_comparison --a baseline
 """
 
 from __future__ import annotations
 
 import argparse
-import asyncio
-import json
 import sys
-from datetime import UTC, datetime
 from pathlib import Path
 
-from pydantic_evals import Dataset
-from pydantic_evals.reporting import EvaluationReport
-
-from evals.conftest import make_agent, make_task
-from evals.dataset import EVAL_CASES, CaseMeta, CreatorCase
 from evals.distribution import print_distribution_report
-from evals.metrics import METRIC_NAMES, default_evaluators
-from evals.prompts import PROMPT_VARIANTS
-
-RESULTS_DIR = Path(__file__).parent / "results"
-
-
-def get_score(report_case, metric_name: str) -> float:
-    """Extract a numeric score from a report case."""
-    result = report_case.scores.get(metric_name)
-    return result.value if result else 0.0
+from evals.io import find_latest, load_result
+from evals.metrics import METRIC_NAMES
+from evals.models import EvalRunResult
 
 
-async def evaluate_variant(
-    variant_name: str,
-    prompt: str,
-    cases: list[CreatorCase],
-) -> EvaluationReport[str, str, CaseMeta]:
-    """Run all cases through a prompt variant and score with all evaluators."""
-    agent = make_agent(prompt)
-    dataset = Dataset(cases=cases, evaluators=default_evaluators())
-    return await dataset.evaluate(make_task(agent), name=variant_name, max_concurrency=1)
+def load_or_find(name_or_path: str) -> EvalRunResult:
+    """Load a result by file path or find the latest by variant name."""
+    path = Path(name_or_path)
+    if path.exists() and path.suffix == ".json":
+        return load_result(path)
+
+    # Treat as a variant name — find latest result file
+    found = find_latest(name_or_path)
+    if found is None:
+        print(f"Error: no result file found for variant '{name_or_path}'")
+        sys.exit(1)
+    print(f"  Loading {found}")
+    return load_result(found)
 
 
-def print_wilcoxon(
-    report_a: EvaluationReport,
-    report_b: EvaluationReport,
-) -> None:
+def print_wilcoxon(result_a: EvalRunResult, result_b: EvalRunResult) -> None:
     """Print Wilcoxon signed-rank test results for each metric."""
-    name_a = report_a.name or "A"
-    name_b = report_b.name or "B"
+    name_a = result_a.variant
+    name_b = result_b.variant
 
     print(
         f"\n{'Metric':<12} {name_a + ' (mean)':>12} {name_b + ' (mean)':>12} "
@@ -63,16 +51,24 @@ def print_wilcoxon(
     )
     print("-" * 56)
 
+    # Build score lookups keyed by case name
+    scores_a = {c.case: c.scores for c in result_a.cases}
+    scores_b = {c.case: c.scores for c in result_b.cases}
+    common = sorted(set(scores_a) & set(scores_b))
+
+    if not common:
+        print("  No common cases to compare.")
+        return
+
     a_wins = 0
     b_wins = 0
 
     for metric in METRIC_NAMES:
-        vals_a = [get_score(c, metric) for c in report_a.cases]
-        vals_b = [get_score(c, metric) for c in report_b.cases]
-        mean_a = sum(vals_a) / len(vals_a) if vals_a else 0
-        mean_b = sum(vals_b) / len(vals_b) if vals_b else 0
+        vals_a = [scores_a[c].get(metric, 0.0) for c in common]
+        vals_b = [scores_b[c].get(metric, 0.0) for c in common]
+        mean_a = sum(vals_a) / len(vals_a)
+        mean_b = sum(vals_b) / len(vals_b)
 
-        # Wilcoxon signed-rank test (paired)
         p_str = "  —"
         try:
             from scipy.stats import wilcoxon
@@ -102,103 +98,89 @@ def print_wilcoxon(
     print()
 
 
-def save_results(
-    report_a: EvaluationReport,
-    report_b: EvaluationReport | None = None,
-) -> None:
-    """Save raw results as timestamped JSON."""
-    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    ts = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
-    names = report_a.name or "unknown"
-    if report_b:
-        names += f"_vs_{report_b.name or 'unknown'}"
-    path = RESULTS_DIR / f"{ts}_{names}.json"
+def print_summary(result: EvalRunResult) -> None:
+    """Print a quick score summary table from a saved result."""
+    print(f"\n{'Case':<40} ", end="")
+    for m in METRIC_NAMES:
+        print(f"{m:>10}", end="")
+    print(f"{'Retries':>8}")
+    print("-" * (40 + 10 * len(METRIC_NAMES) + 8))
 
-    data = []
-    for report in [report_a] + ([report_b] if report_b else []):
-        for rc in report.cases:
-            data.append({
-                "case": rc.name,
-                "variant": report.name,
-                "output": rc.output,
-                "scores": {k: v.value for k, v in rc.scores.items()},
-                "reasons": {k: v.reason for k, v in rc.scores.items()},
-                "elapsed": rc.task_duration,
-            })
+    for c in result.cases:
+        print(f"{c.case:<40} ", end="")
+        for m in METRIC_NAMES:
+            val = c.scores.get(m, 0.0)
+            print(f"{val:>10.2f}", end="")
+        print(f"{c.retries:>8}")
 
-    path.write_text(json.dumps(data, indent=2))
-    print(f"Results saved to {path}")
+    # Averages
+    print("-" * (40 + 10 * len(METRIC_NAMES) + 8))
+    print(f"{'Averages':<40} ", end="")
+    for m in METRIC_NAMES:
+        print(f"{result.mean_scores.get(m, 0.0):>10.3f}", end="")
+    total_retries = sum(c.retries for c in result.cases)
+    print(f"{total_retries:>8}")
+    print()
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Creator agent prompt comparison")
-    parser.add_argument("--a", required=True, help="First prompt variant name")
-    parser.add_argument("--b", default=None, help="Second prompt variant name (omit for --single)")
-    parser.add_argument("--single", action="store_true", help="Score a single variant only")
+    parser = argparse.ArgumentParser(description="Compare saved eval results")
     parser.add_argument(
-        "--cases",
-        default=None,
-        help="Comma-separated case descriptions to filter (default: all)",
+        "--a", required=True, help="First result: variant name or path to JSON file"
+    )
+    parser.add_argument(
+        "--b", default=None, help="Second result: variant name or path to JSON file"
     )
     return parser.parse_args()
 
 
-async def main():
+def main():
     args = parse_args()
 
-    # Validate variant names
-    variant_a = args.a
-    if variant_a not in PROMPT_VARIANTS:
-        print(f"Error: variant '{variant_a}' not found. Available: {list(PROMPT_VARIANTS.keys())}")
-        sys.exit(1)
+    print(f"\nLoading result A: {args.a}")
+    result_a = load_or_find(args.a)
+    n = result_a.dataset.total_cases
+    print(f"  Variant: {result_a.variant}, {n} cases, {result_a.timestamp}")
 
-    if not args.single and not args.b:
-        print("Error: provide --b <variant> or use --single")
-        sys.exit(1)
-
-    if args.b and args.b not in PROMPT_VARIANTS:
-        print(f"Error: variant '{args.b}' not found. Available: {list(PROMPT_VARIANTS.keys())}")
-        sys.exit(1)
-
-    # Filter cases
-    cases = list(EVAL_CASES)
-    if args.cases:
-        requested = {c.strip().lower() for c in args.cases.split(",")}
-        cases = [c for c in cases if c.name.lower() in requested]
-        if not cases:
-            print(f"Error: no matching cases for '{args.cases}'")
-            sys.exit(1)
-
-    print(f"\nRunning {len(cases)} eval cases...")
-
-    # Run variant A
-    print(f"\n--- Variant: {variant_a} ---")
-    report_a = await evaluate_variant(variant_a, PROMPT_VARIANTS[variant_a], cases)
-
-    if args.single:
-        report_a.print(include_input=True, include_reasons=True)
-        print_distribution_report(report_a)
-        save_results(report_a)
+    if args.b is None:
+        # Single variant analysis
+        print_summary(result_a)
+        print_distribution_report(result_a)
     else:
         # Comparison mode
-        variant_b = args.b
-        print(f"\n--- Variant: {variant_b} ---")
-        report_b = await evaluate_variant(variant_b, PROMPT_VARIANTS[variant_b], cases)
+        print(f"\nLoading result B: {args.b}")
+        result_b = load_or_find(args.b)
+        print(
+            f"  Variant: {result_b.variant}, {result_b.dataset.total_cases} cases, "
+            f"{result_b.timestamp}"
+        )
 
-        # Built-in diff table
-        report_b.print(baseline=report_a, include_input=True)
+        # Validate comparable
+        cases_a = set(result_a.dataset.case_names)
+        cases_b = set(result_b.dataset.case_names)
+        if cases_a != cases_b:
+            only_a = cases_a - cases_b
+            only_b = cases_b - cases_a
+            if only_a:
+                print(f"  Warning: {len(only_a)} cases only in A: {', '.join(sorted(only_a)[:5])}")
+            if only_b:
+                print(f"  Warning: {len(only_b)} cases only in B: {', '.join(sorted(only_b)[:5])}")
+
+        # Summary tables
+        print(f"\n--- {result_a.variant} ---")
+        print_summary(result_a)
+        print(f"\n--- {result_b.variant} ---")
+        print_summary(result_b)
 
         # Statistical comparison
-        print_wilcoxon(report_a, report_b)
+        print_wilcoxon(result_a, result_b)
 
-        # Distribution for both variants
-        print(f"--- Distribution: {variant_a} ---")
-        print_distribution_report(report_a)
-        print(f"--- Distribution: {variant_b} ---")
-        print_distribution_report(report_b)
-
-        save_results(report_a, report_b)
+        # Distribution for both
+        print(f"--- Distribution: {result_a.variant} ---")
+        print_distribution_report(result_a)
+        print(f"\n--- Distribution: {result_b.variant} ---")
+        print_distribution_report(result_b)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

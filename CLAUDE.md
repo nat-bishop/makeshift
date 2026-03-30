@@ -32,6 +32,14 @@ make cli-image PROMPT="a red sword"        # generate raw image (no bg removal)
 make cli-sprite PROMPT="fire sword"        # full pipeline: LLM → image → bg removal → crop
 make cli-status                            # check health of configured services
 
+# Evals — LLM output quality evaluation (costs money, not in `make test`):
+cd backend && uv run python -m evals.run_eval                    # run all 50 cases, save results
+cd backend && uv run python -m evals.run_eval --variant v2       # run with a different prompt variant
+cd backend && uv run python -m evals.run_eval --cases "rock,fire sword"  # filter cases
+cd backend && uv run python -m evals.run_comparison --a baseline --b v2  # compare two saved results
+cd backend && uv run python -m evals.run_comparison --a baseline         # single result analysis
+cd backend && uv run pytest evals/test_eval.py -v                # pytest runner (also saves results)
+
 # For more granular control:
 uv run pytest backend/tests/test_tags.py  # single test file
 uv run pytest -k "test_name"              # single test by name
@@ -54,6 +62,8 @@ uv run pytest -k "test_name"              # single test by name
 - **Session persistence** (`sessions/manager.py`): aiosqlite, 2 tables (sessions, objects). Budget: $1.00 at $0.041/object.
 
 - **WebSocket** (`ws/handler.py`): Per-session multi-client broadcast. Messages: sprite_ready, sprite_failed, error, ping/pong.
+
+- **Eval suite** (`backend/evals/`): pydantic-evals framework. 50 curated test cases × 4 metrics (Validity deterministic + Relevance/Creativity/Coherence LLM-as-judge via Gemini). `run_eval.py` runs evals and saves `EvalRunResult` JSON to `evals/results/`. `run_comparison.py` loads saved results for offline Wilcoxon comparison. Retry count tracked per case via `set_eval_attribute`. Distribution analysis shows tag/behavior/size frequencies. Prompt variants defined in `evals/prompts.py`.
 
 **Godot Client** (`godot/`): Godot 4.3, GDScript.
 

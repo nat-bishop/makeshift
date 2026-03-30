@@ -49,8 +49,6 @@ make stop                          # stop everything
 | `make check` | Lint + typecheck + test |
 | `make fix` | Lint with autofix |
 | `make format` | Format code |
-| `make eval` | Compare two prompt variants (requires `PROMPT_B`) |
-| `make eval-single` | Score a single prompt variant |
 | `make help` | Show all available targets |
 
 ### CLI tools (no server needed)
@@ -62,24 +60,33 @@ make cli-sprite PROMPT="fire sword"   # full pipeline: LLM → image → bg remo
 make cli-status                       # check health of configured services
 ```
 
-### Prompt evaluation
+### Evals
 
-Compare creator agent prompt variants to find the best one. Evals call a real LLM and are separate from `make test`.
+Evaluate creator agent output quality. Evals call a real LLM and cost money — they are separate from `make test`.
 
 ```bash
-# Score the current baseline prompt
-make eval-single
+# Run evals and save results (50 cases, ~2-5 min)
+cd backend && uv run python -m evals.run_eval
 
-# Compare two prompt variants (add variants in backend/evals/prompts.py)
-make eval PROMPT_A=baseline PROMPT_B=v2
+# Run a specific prompt variant
+cd backend && uv run python -m evals.run_eval --variant v2
 
-# Filter to specific test cases
-make eval PROMPT_A=baseline PROMPT_B=v2 CASES="fire sword,rubber duck"
+# Filter to specific cases
+cd backend && uv run python -m evals.run_eval --cases "fire sword,rock"
+
+# Compare two saved results (no LLM calls — instant)
+cd backend && uv run python -m evals.run_comparison --a baseline --b v2
+
+# Analyze a single saved result
+cd backend && uv run python -m evals.run_comparison --a baseline
+
+# Pytest runner (also saves results)
+cd backend && uv run pytest evals/test_eval.py -v
 ```
 
-Results include 4 metrics per test case: validity (deterministic rule checks), relevance, creativity, and coherence (LLM-as-judge via Gemini). Aggregate comparison with statistical significance is printed at the end. Raw JSON results are saved to `backend/evals/results/`.
+**4 metrics** per case: Validity (deterministic rule checks), Relevance, Creativity, Coherence (LLM-as-judge via Gemini). Results saved as structured JSON to `backend/evals/results/` with pre-parsed tags/behaviors/size, retry counts, and aggregate stats. Comparison uses Wilcoxon signed-rank test for statistical significance. Distribution analysis shows tag/behavior/size frequencies across all objects.
 
-To add a new prompt variant, add an entry to `PROMPT_VARIANTS` in `backend/evals/prompts.py`. Test cases are defined in `backend/evals/dataset.py`.
+Add prompt variants in `backend/evals/prompts.py`. Test cases in `backend/evals/dataset.py` (50 cases across 9 categories).
 
 ## Documentation
 

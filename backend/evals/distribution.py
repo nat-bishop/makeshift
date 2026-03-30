@@ -1,21 +1,23 @@
 """Distribution analysis for creator agent eval outputs.
 
 Aggregates tag, behavior, and size frequencies across all cases
-in an evaluation report to show variety and output patterns.
+in a saved EvalRunResult to show variety and output patterns.
 """
 
 from __future__ import annotations
 
-import json
 from collections import Counter
 
 from app.models.behaviors import BehaviorParseError, compute_spec_cost, parse_behavior_string
 from app.models.tags import TAG_POWER_COSTS, Tag
-from pydantic_evals.reporting import EvaluationReport
+
+from evals.models import EvalRunResult
+
+ALL_TAGS = [t.value for t in Tag]
 
 
-def print_distribution_report(report: EvaluationReport) -> None:
-    """Parse all outputs in a report and print aggregate distribution stats."""
+def print_distribution_report(result: EvalRunResult) -> None:
+    """Print aggregate distribution stats from a saved eval result."""
     tag_counts: Counter[str] = Counter()
     trigger_counts: Counter[str] = Counter()
     action_counts: Counter[str] = Counter()
@@ -25,39 +27,31 @@ def print_distribution_report(report: EvaluationReport) -> None:
     tag_budgets: list[float] = []
     behavior_budgets: list[float] = []
     total = 0
-    parse_errors = 0
 
-    for case in report.cases:
-        try:
-            data = json.loads(case.output)
-        except (json.JSONDecodeError, TypeError):
-            parse_errors += 1
+    for case in result.cases:
+        if case.output is None:
             continue
-
         total += 1
+        out = case.output
 
         # Tags
-        tags = data.get("tags", [])
-        for tag in tags:
-            tag_counts[str(tag)] += 1
+        for tag in out.tags:
+            tag_counts[tag] += 1
 
         # Tag budget
         try:
-            cost = sum(TAG_POWER_COSTS.get(Tag(t), 0) for t in tags)
+            cost = sum(TAG_POWER_COSTS.get(Tag(t), 0) for t in out.tags)
             tag_budgets.append(cost)
         except (ValueError, KeyError):
             pass
 
         # Size
-        vd = data.get("visual_descriptor", {})
-        size = vd.get("size_category", "unknown") if isinstance(vd, dict) else "unknown"
-        size_counts[size] += 1
+        size_counts[out.size_category] += 1
 
         # Behaviors
-        raw_behaviors = data.get("behaviors", [])
-        behavior_count_dist[len(raw_behaviors)] += 1
+        behavior_count_dist[len(out.behaviors)] += 1
         bcost = 0
-        for b in raw_behaviors:
+        for b in out.behaviors:
             try:
                 spec = parse_behavior_string(str(b))
                 trigger_counts[spec.trigger.value] += 1
@@ -76,8 +70,10 @@ def print_distribution_report(report: EvaluationReport) -> None:
     print(f"  Distribution Analysis ({total} objects)")
     print(f"{'=' * 60}")
 
-    # Tag frequency
+    # Tag frequency (all tags, including zeros)
     print("\n  Tag Frequency:")
+    for tag in ALL_TAGS:
+        tag_counts.setdefault(tag, 0)
     for tag, count in tag_counts.most_common():
         pct = count / total * 100
         bar = "#" * int(pct / 2)
@@ -125,7 +121,15 @@ def print_distribution_report(report: EvaluationReport) -> None:
         max_beh = max(behavior_budgets)
         print(f"    Behavior budget: avg {avg_beh:.1f}/8,  max {max_beh:.0f}/8")
 
-    if parse_errors:
-        print(f"\n  ({parse_errors} outputs failed JSON parsing)")
+    # Retry stats
+    all_retries = [c.retries for c in result.cases]
+    total_retries = sum(all_retries)
+    first_try = sum(1 for r in all_retries if r == 0)
+    print("\n  Retry Stats:")
+    pct = first_try / len(all_retries) * 100
+    print(f"    First-try success: {first_try}/{len(all_retries)}  ({pct:.0f}%)")
+    print(f"    Avg retries:       {total_retries / len(all_retries):.2f}")
+    if total_retries > 0:
+        print(f"    Max retries:       {max(all_retries)}")
 
     print()

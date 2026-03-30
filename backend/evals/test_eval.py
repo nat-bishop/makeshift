@@ -9,10 +9,12 @@ in `make test` (testpaths only covers backend/tests/).
 from __future__ import annotations
 
 import pytest
+from app.config import settings
 
 from evals.conftest import make_agent, make_task
 from evals.dataset import EVAL_CASES, build_dataset
 from evals.distribution import print_distribution_report
+from evals.io import report_to_result, save_result
 from evals.metrics import default_evaluators
 from evals.prompts import PROMPT_VARIANTS
 
@@ -24,15 +26,20 @@ def report():
     """Run all eval cases through the agent once, score with all evaluators."""
     agent = make_agent(PROMPT_VARIANTS[VARIANT])
     dataset = build_dataset(evaluators=default_evaluators())
-    return dataset.evaluate_sync(make_task(agent), name=VARIANT, max_concurrency=1)
+    return dataset.evaluate_sync(make_task(agent), name=VARIANT, max_concurrency=8)
 
 
 @pytest.fixture(scope="module", autouse=True)
 def show_report(report):
-    """Print the full eval report and distribution stats after all tests."""
+    """Print the full eval report, save results, and show distribution stats."""
     yield
     report.print(include_input=True, include_reasons=True)
-    print_distribution_report(report)
+
+    result = report_to_result(report, VARIANT, settings.llm_model)
+    path = save_result(result)
+    print(f"\nResults saved to {path}")
+
+    print_distribution_report(result)
 
 
 @pytest.mark.parametrize("case_name", [c.name for c in EVAL_CASES])

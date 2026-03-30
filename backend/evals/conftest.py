@@ -52,10 +52,16 @@ def make_agent(system_prompt: str) -> Agent[None, CreatorOutputSpec]:
 
 
 def make_task(agent: Agent[None, CreatorOutputSpec]) -> Callable[[str], Awaitable[str]]:
-    """Wrap a PydanticAI agent as a pydantic-evals task function."""
+    """Wrap a PydanticAI agent as a pydantic-evals task function.
+
+    Records retry count via set_eval_attribute so it appears in
+    ReportCase.attributes["retries"] — works without logfire.
+    """
+    from pydantic_evals import set_eval_attribute
 
     async def task(description: str) -> str:
         result = await agent.run(f"Create a game object for: {description}")
+        set_eval_attribute("retries", result.usage().requests - 1)
         return result.output.model_dump_json(indent=2)
 
     return task

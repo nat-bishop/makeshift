@@ -48,7 +48,7 @@ def make_judge(name: str) -> LLMJudge:
     return LLMJudge(
         rubric=RUBRICS[name],
         include_input=True,
-        score={"evaluation_name": name},
+        score={"evaluation_name": name, "include_reason": True},
         assertion=False,
     )
 
