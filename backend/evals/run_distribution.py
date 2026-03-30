@@ -16,7 +16,9 @@ from evals.io import find_latest, load_result
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Show distribution analysis for a saved eval result")
+    parser = argparse.ArgumentParser(
+        description="Show distribution analysis for a saved eval result",
+    )
     parser.add_argument("result", help="Variant name or path to result JSON file")
     args = parser.parse_args()
 

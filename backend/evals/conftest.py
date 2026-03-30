@@ -57,11 +57,21 @@ def make_task(agent: Agent[None, CreatorOutputSpec]) -> Callable[[str], Awaitabl
     Records retry count via set_eval_attribute so it appears in
     ReportCase.attributes["retries"] — works without logfire.
     """
+    from pydantic_ai.messages import ModelRequest, RetryPromptPart
     from pydantic_evals import set_eval_attribute
 
     async def task(description: str) -> str:
         result = await agent.run(f"Create a game object for: {description}")
         set_eval_attribute("retries", result.usage().requests - 1)
+
+        retry_errors = []
+        for msg in result.all_messages():
+            if isinstance(msg, ModelRequest):
+                for part in msg.parts:
+                    if isinstance(part, RetryPromptPart):
+                        retry_errors.append(str(part.content))
+        set_eval_attribute("retry_errors", retry_errors)
+
         return result.output.model_dump_json(indent=2)
 
     return task

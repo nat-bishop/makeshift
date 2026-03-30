@@ -66,6 +66,7 @@ select = [
 "backend/evals/run_eval.py" = ["T20"]
 "backend/evals/test_eval.py" = ["T20"]
 "backend/evals/run_comparison.py" = ["T20"]
+"backend/evals/run_distribution.py" = ["T20"]
 "backend/evals/distribution.py" = ["T20"]
 "backend/evals/dataset.py" = ["E501"]
 

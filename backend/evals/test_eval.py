@@ -51,21 +51,21 @@ def test_validity(report, case_name):
 
 
 @pytest.mark.parametrize("case_name", [c.name for c in EVAL_CASES])
-def test_relevance(report, case_name):
+def test_faithfulness(report, case_name):
     rc = next(c for c in report.cases if c.name == case_name)
-    score = rc.scores.get("Relevance")
-    assert score is not None, f"{case_name}: Relevance score missing"
+    score = rc.scores.get("Faithfulness")
+    assert score is not None, f"{case_name}: Faithfulness score missing"
 
 
 @pytest.mark.parametrize("case_name", [c.name for c in EVAL_CASES])
-def test_creativity(report, case_name):
+def test_gameplay_quality(report, case_name):
     rc = next(c for c in report.cases if c.name == case_name)
-    score = rc.scores.get("Creativity")
-    assert score is not None, f"{case_name}: Creativity score missing"
+    score = rc.scores.get("Gameplay Quality")
+    assert score is not None, f"{case_name}: Gameplay Quality score missing"
 
 
 @pytest.mark.parametrize("case_name", [c.name for c in EVAL_CASES])
-def test_coherence(report, case_name):
+def test_sprite_prompt(report, case_name):
     rc = next(c for c in report.cases if c.name == case_name)
-    score = rc.scores.get("Coherence")
-    assert score is not None, f"{case_name}: Coherence score missing"
+    score = rc.scores.get("Sprite Prompt")
+    assert score is not None, f"{case_name}: Sprite Prompt score missing"

@@ -38,6 +38,10 @@ class CaseResult(BaseModel):
 
     elapsed: float
     retries: int
+    retry_errors: list[str] = []
+
+    trace_id: str | None = None
+    span_id: str | None = None
 
 
 class DatasetInfo(BaseModel):

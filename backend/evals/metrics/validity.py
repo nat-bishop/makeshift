@@ -6,6 +6,7 @@ game rules: budget, contradictions, behavior parsing, etc.
 
 from __future__ import annotations
 
+import dataclasses
 import json
 from dataclasses import dataclass
 
@@ -28,20 +29,32 @@ from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorCont
 class ValidityEvaluator(Evaluator[str, str, object]):
     """Deterministic checks on structured output correctness.
 
-    Scores 1.0 only if all 8 checks pass. Each failed check
-    deducts 1/8 from the score.
+    JSON parse failure is catastrophic (score 0.0). Other checks
+    are severity-weighted: structural issues (tags, behaviors)
+    weigh more than cosmetic ones (name length).
     """
+
+    # Severity weights for each check (higher = more important)
+    CHECK_WEIGHTS: dict[str, int] = dataclasses.field(default_factory=lambda: {
+        "valid_tag_enums": 2,
+        "tag_count": 1,
+        "tag_budget": 2,
+        "no_contradictions": 2,
+        "behaviors_parse": 2,
+        "behavior_budget": 1,
+        "name_length": 1,
+    })
 
     def evaluate(self, ctx: EvaluatorContext[str, str, object]) -> dict[str, EvaluationReason]:
         output_text = ctx.output or ""
-        checks: dict[str, bool] = {}
 
-        # 1. Parse as JSON
+        # 1. Parse as JSON — gate check, instant 0.0 on failure
         try:
             data = json.loads(output_text)
         except (json.JSONDecodeError, TypeError):
             return {"Validity": EvaluationReason(value=0.0, reason="Output is not valid JSON")}
-        checks["json_parse"] = True
+
+        checks: dict[str, bool] = {}
 
         # 2. Extract and validate tags
         raw_tags = data.get("tags", [])
@@ -95,9 +108,12 @@ class ValidityEvaluator(Evaluator[str, str, object]):
         words = str(name).strip().split()
         checks["name_length"] = 1 <= len(words) <= 3
 
-        passed = sum(1 for v in checks.values() if v)
-        total = len(checks)
-        score = passed / total if total > 0 else 0.0
+        # Weighted scoring
+        weighted_passed = sum(
+            self.CHECK_WEIGHTS.get(k, 1) for k, v in checks.items() if v
+        )
+        weighted_total = sum(self.CHECK_WEIGHTS.get(k, 1) for k in checks)
+        score = weighted_passed / weighted_total if weighted_total > 0 else 0.0
 
         failed = [k for k, v in checks.items() if not v]
         reason = f"Failed checks: {', '.join(failed)}" if failed else "All validity checks passed"

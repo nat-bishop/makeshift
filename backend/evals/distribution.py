@@ -6,7 +6,7 @@ in a saved EvalRunResult to show variety and output patterns.
 
 from __future__ import annotations
 
-from collections import Counter
+from collections import Counter, defaultdict
 
 from app.models.behaviors import BehaviorParseError, compute_spec_cost, parse_behavior_string
 from app.models.tags import TAG_POWER_COSTS, Tag
@@ -131,5 +131,55 @@ def print_distribution_report(result: EvalRunResult) -> None:
     print(f"    Avg retries:       {total_retries / len(all_retries):.2f}")
     if total_retries > 0:
         print(f"    Max retries:       {max(all_retries)}")
+
+    # Retry reasons
+    reason_counts: Counter[str] = Counter()
+    for case in result.cases:
+        for err in case.retry_errors:
+            truncated = err[:60] + "..." if len(err) > 60 else err
+            reason_counts[truncated] += 1
+    if reason_counts:
+        print("\n  Retry Reasons:")
+        for reason, count in reason_counts.most_common():
+            print(f"    {reason:<63} {count:>3}")
+
+    # Latency
+    elapsed = [c.elapsed for c in result.cases if c.elapsed > 0]
+    if elapsed:
+        elapsed_sorted = sorted(elapsed)
+        avg = sum(elapsed) / len(elapsed)
+        p95_idx = int(len(elapsed_sorted) * 0.95)
+        p95 = elapsed_sorted[min(p95_idx, len(elapsed_sorted) - 1)]
+        print("\n  Latency:")
+        print(
+            f"    min {elapsed_sorted[0]:.1f}s, avg {avg:.1f}s, "
+            f"p95 {p95:.1f}s, max {elapsed_sorted[-1]:.1f}s"
+        )
+
+    # Category score breakdown
+    cat_scores: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
+    cat_counts: Counter[str] = Counter()
+    for case in result.cases:
+        cat = case.category
+        cat_counts[cat] += 1
+        for metric, val in case.scores.items():
+            cat_scores[cat][metric].append(val)
+    if cat_scores:
+        metrics = sorted({m for scores in cat_scores.values() for m in scores})
+        header = f"    {'Category':<16}"
+        for m in metrics:
+            header += f"{m:>11}"
+        header += f"{'n':>5}"
+        print("\n  Scores by Category:")
+        print(header)
+        print("    " + "-" * (16 + 11 * len(metrics) + 5))
+        for cat in sorted(cat_scores):
+            row = f"    {cat:<16}"
+            for m in metrics:
+                vals = cat_scores[cat].get(m, [])
+                avg = sum(vals) / len(vals) if vals else 0.0
+                row += f"{avg:>11.2f}"
+            row += f"{cat_counts[cat]:>5}"
+            print(row)
 
     print()

@@ -47,6 +47,7 @@ def report_to_result(
 
     for rc in report.cases:
         retries = rc.attributes.get("retries", 0)
+        retry_errors = rc.attributes.get("retry_errors", [])
         meta = rc.metadata
         cases.append(CaseResult(
             case=rc.name,
@@ -60,6 +61,9 @@ def report_to_result(
             reasons={k: v.reason or "" for k, v in rc.scores.items()},
             elapsed=rc.task_duration,
             retries=int(retries),
+            retry_errors=list(retry_errors),
+            trace_id=rc.trace_id,
+            span_id=rc.span_id,
         ))
 
     for fc in report.failures:
