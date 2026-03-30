@@ -1,4 +1,4 @@
-.PHONY: dev gpu api stop gpu-restart gpu-logs godot play install test lint fix format typecheck check clear-sprites cli-create cli-image cli-sprite cli-status help
+.PHONY: dev gpu api stop gpu-restart gpu-logs godot play install test lint fix format typecheck check clear-sprites cli-create cli-image cli-sprite cli-status eval eval-single help
 
 GODOT ?= godot
 VERBOSE ?= 0
@@ -80,6 +80,14 @@ cli-sprite: ## Full sprite pipeline (PROMPT="fire sword" OUT=sprite.png)
 
 cli-status: ## Check health of configured services
 	cd backend && uv run python -m app.cli status
+
+PROMPT_A ?= baseline
+
+eval: ## Compare prompt variants (PROMPT_A=baseline PROMPT_B=v2)
+	cd backend && uv run python -m evals.run_comparison --a "$(PROMPT_A)" --b "$(PROMPT_B)" $(if $(CASES),--cases "$(CASES)")
+
+eval-single: ## Score a single prompt variant (PROMPT_A=baseline)
+	cd backend && uv run python -m evals.run_comparison --a "$(PROMPT_A)" --single $(if $(CASES),--cases "$(CASES)")
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'

@@ -49,6 +49,8 @@ make stop                          # stop everything
 | `make check` | Lint + typecheck + test |
 | `make fix` | Lint with autofix |
 | `make format` | Format code |
+| `make eval` | Compare two prompt variants (requires `PROMPT_B`) |
+| `make eval-single` | Score a single prompt variant |
 | `make help` | Show all available targets |
 
 ### CLI tools (no server needed)
@@ -59,6 +61,25 @@ make cli-image PROMPT="a red sword"   # generate raw image (no bg removal)
 make cli-sprite PROMPT="fire sword"   # full pipeline: LLM → image → bg removal → crop
 make cli-status                       # check health of configured services
 ```
+
+### Prompt evaluation
+
+Compare creator agent prompt variants to find the best one. Evals call a real LLM and are separate from `make test`.
+
+```bash
+# Score the current baseline prompt
+make eval-single
+
+# Compare two prompt variants (add variants in backend/evals/prompts.py)
+make eval PROMPT_A=baseline PROMPT_B=v2
+
+# Filter to specific test cases
+make eval PROMPT_A=baseline PROMPT_B=v2 CASES="fire sword,rubber duck"
+```
+
+Results include 4 metrics per test case: validity (deterministic rule checks), relevance, creativity, and coherence (LLM-as-judge via Gemini). Aggregate comparison with statistical significance is printed at the end. Raw JSON results are saved to `backend/evals/results/`.
+
+To add a new prompt variant, add an entry to `PROMPT_VARIANTS` in `backend/evals/prompts.py`. Test cases are defined in `backend/evals/dataset.py`.
 
 ## Documentation
 
