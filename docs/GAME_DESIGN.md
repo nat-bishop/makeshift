@@ -8,7 +8,7 @@ Player creativity is constrained by two budget systems — every object has a ta
 
 ## Tag System
 
-31 tags across 7 categories. Tags are the atomic unit of the entire game — they drive physics, interactions, and durability.
+32 tags across 7 categories. Tags are the atomic unit of the entire game — they drive physics, interactions, and durability.
 
 ### Categories and Cost Curve
 
@@ -19,16 +19,24 @@ Player creativity is constrained by two budget systems — every object has a ta
 | Energy | FLAMMABLE, HEAT_SOURCE, ELECTRIC, MAGNETIC, EXPLOSIVE | 1-5 |
 | Surface | SHARP, STICKY, SLIPPERY, REFLECTIVE | 1-2 |
 | Mechanical | BOUNCY, BREAKABLE | 1-2 |
-| Environmental | FLOATING, WIND_SOURCE, CORROSIVE, TOXIC | 2-4 |
+| Environmental | FLOATING, WIND_SOURCE, CORROSIVE, TOXIC, WET | 1-4 |
 | Special | LIVING, GLOWING, CONDUCTING, INSULATING, HOSTILE | 2-3 |
 
 **Design rationale**: Passive/physical properties are cheap (cost 1) because they describe what an object *is*. Active/energy properties are expensive (cost 3-5) because they create interactions, which create gameplay.
 
-HOSTILE (cost 2, Special) fills the gap for non-elemental contact damage — guardian golems, robots, enemies — without needing a DEAL_DAMAGE behavior. Two rules: HOSTILE + BREAKABLE and HOSTILE + LIVING each deal 20 damage on contact. Tags handle all contact damage; behaviors handle autonomous proactive actions.
+WET (cost 1, Environmental) is a state tag applied automatically by nearby LIQUID objects (15s duration). It amplifies interactions: ELECTRIC shock deals 45 dmg instead of 30, freezing occurs faster near COLD, and fire is resisted. Contradicts MOLTEN and HEAT_SOURCE. Physics effect: linear friction 0.1 (slippery when wet). Field tag (CLOSE, periodic).
+
+HOSTILE (cost 2, Special) is a danger-aura field tag — it deals 20 damage + knockback (150 force vs LIVING, 100 vs BREAKABLE) to everything in CLOSE range on a 2s tick. HOSTILE + HOSTILE clash rule deals 15 dmg to both sides + 120 force. This makes hostile objects into area-denial threats rather than simple contact hazards. Tags handle all contact damage; behaviors handle autonomous proactive actions.
+
+STICKY (cost 2, Surface) is a continuous field tag (CLOSE range) that slows everything nearby to 25% speed — applying `linear_damp=12.0` to RigidBody2D objects and a speed modifier to the player. Area denial trap mechanic. Contradicts SLIPPERY and REFLECTIVE. PinJoint2D gluing was removed in favour of this field approach.
+
+REFLECTIVE (cost 2, Surface) bounces heat, electricity, and resists acid — the `reflective_corrosive_resist` rule removes CORROSIVE from the attacker on contact.
+
+GLOWING (cost 2, Special) attracts LIVING things: attraction force -15.0 per physics frame (continuous field, MEDIUM range). Up from -8.0.
 
 EXPLOSIVE (cost 5) is the most expensive because it's the most powerful single-tag effect: area damage on heat or electricity contact. With the behavior system, a cheaper EXPLODE action (behavior budget) can achieve similar results with more control — but requires a trigger condition, while the tag fires automatically via the rule engine.
 
-### Contradiction Pairs (15)
+### Contradiction Pairs (17)
 
 Tags that can't coexist on the same object:
 
@@ -37,14 +45,14 @@ FROZEN↔MOLTEN    FROZEN↔HOT        COLD↔HOT         COLD↔MOLTEN
 HEAVY↔LIGHT      LIQUID↔RIGID      GAS↔RIGID        GAS↔HEAVY
 SOLID↔LIQUID     SOLID↔GAS         LIQUID↔GAS       STICKY↔SLIPPERY
 CONDUCTING↔INSULATING              REFLECTIVE↔STICKY
-HEAT_SOURCE↔FLAMMABLE
+HEAT_SOURCE↔FLAMMABLE              WET↔MOLTEN       WET↔HEAT_SOURCE
 ```
 
 Enforced by Pydantic validators on `CreatorOutput`. Violations trigger `ModelRetry` with feedback to the LLM, not hard failures.
 
 ## Rule System
 
-47 `InteractionRule` definitions in `engine/rules_data.py`. Each rule specifies:
+53 `InteractionRule` definitions in `engine/rules_data.py`. Each rule specifies:
 - Required tags on object A and/or B
 - Priority (higher fires first)
 - Whether bidirectional (A↔B or only A→B)
@@ -58,7 +66,7 @@ Enforced by Pydantic validators on `CreatorOutput`. Violations trigger `ModelRet
 
 **Chain reactions**: Cascade-eligible rules create emergent gameplay. Igniting one flammable object spreads HEAT_SOURCE to neighbors, which may ignite more flammable objects. Depth-limited to 3 to prevent infinite loops.
 
-**Distance-based interactions**: 18 rules are annotated `trigger_mode=FIELD`. These fire both at range (via `TagField`) and on direct contact. The rule declares *whether* an interaction works at distance; `FieldConfig` declares *how far* and *how* for the emitting tag. Separating these concerns avoids duplicating range values across rules that share the same emitting tag.
+**Distance-based interactions**: 24 rules are annotated `trigger_mode=FIELD`. These fire both at range (via `TagField`) and on direct contact. The rule declares *whether* an interaction works at distance; `FieldConfig` declares *how far* and *how* for the emitting tag. Separating these concerns avoids duplicating range values across rules that share the same emitting tag.
 
 **Counters exist**: Every powerful interaction has a counter. INSULATING blocks ELECTRIC propagation. REFLECTIVE bounces HEAT_SOURCE. LIQUID extinguishes HEAT_SOURCE. This creates a rock-paper-scissors dynamic.
 
@@ -70,16 +78,17 @@ Enforced by Pydantic validators on `CreatorOutput`. Violations trigger `ModelRet
 | Temperature | COLD + LIQUID → freeze, COLD + MOLTEN → solidify, HOT + LIVING → burn | No | Yes |
 | Electricity | ELECTRIC + CONDUCTING → electrify + propagate, + LIQUID → electrify, + FLAMMABLE → spark ignition, + GAS → ionize plasma | Yes (conduction, spark, ionize) | Yes (conduction, liquid, gas) |
 | Physical | SHARP + BREAKABLE → damage, HEAVY + BREAKABLE → damage, BOUNCY + RIGID → bounce | No | No |
-| Hostile | HOSTILE + BREAKABLE → 20 dmg, HOSTILE + LIVING → 20 dmg | No | No |
-| Counter | INSULATING blocks ELECTRIC, REFLECTIVE reflects HEAT_SOURCE/ELECTRIC | No | No |
+| Hostile | HOSTILE + BREAKABLE/LIVING → 20 dmg + knockback (field, periodic), HOSTILE + HOSTILE → 15 dmg + 120 force | No | Yes |
+| WET | LIQUID → adds WET (15s), WET + ELECTRIC → 45 dmg, WET + COLD → faster freeze, HEAT_SOURCE → removes WET | No | Yes (LIQUID, WET) |
+| Counter | INSULATING blocks ELECTRIC, REFLECTIVE reflects HEAT_SOURCE/ELECTRIC/acid (reflective_corrosive_resist) | No | No |
 | Magnetic/Wind | MAGNETIC + CONDUCTING → attract, WIND_SOURCE + LIGHT/GAS/FLOATING → push | No | Yes |
 | Environmental | CORROSIVE + BREAKABLE → corrode, TOXIC + LIVING → damage | No | Yes (TOXIC) |
 
 ### Field Modes
 
 Rules with `trigger_mode=FIELD` execute via two paths:
-- **Continuous** (WIND_SOURCE, MAGNETIC, GLOWING): `apply_central_force()` per physics frame via `TagField._physics_process`. Forces are tuned for per-frame application.
-- **Periodic** (HEAT_SOURCE, HOT, ELECTRIC, COLD, TOXIC, LIQUID): `resolve_collision()` on a 2s timer. Full rule engine evaluation, subject to the 0.5s pair cooldown.
+- **Continuous** (WIND_SOURCE, MAGNETIC, GLOWING, STICKY): `apply_central_force()` per physics frame via `TagField._physics_process`. Forces are tuned for per-frame application. STICKY applies `linear_damp=12.0` and a player speed modifier to slow nearby objects to 25%.
+- **Periodic** (HEAT_SOURCE, HOT, ELECTRIC, COLD, TOXIC, LIQUID, HOSTILE, WET): `resolve_collision()` on a 2s timer. Full rule engine evaluation, subject to the 0.5s pair cooldown.
 
 ### Wildcard Rules
 
@@ -137,7 +146,7 @@ This makes the two systems composable without tight coupling.
 - Tags: LIVING, HEAT_SOURCE, HOT, HEAVY, HOSTILE (cost 10)
 - Behavior 1: ALWAYS → MOVE_TOWARD → NEAREST_LIVING, MEDIUM speed (cost 2)
 - Behavior 2: ON_PROXIMITY(CLOSE) → SPAWN_PROJECTILE → NEAREST_LIVING, HIGH intensity (cost 4)
-- Total behavior cost: 6. HOSTILE handles melee contact damage; SPAWN_PROJECTILE handles ranged.
+- Total behavior cost: 6. HOSTILE field aura handles melee-range damage + knockback automatically; SPAWN_PROJECTILE handles ranged.
 
 **Time Bomb** (delayed threat):
 - Tags: EXPLOSIVE, RIGID, BREAKABLE (cost 7)

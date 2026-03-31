@@ -1,0 +1,2197 @@
+{
+  "version": 1,
+  "name": "baseline",
+  "variant": "baseline",
+  "timestamp": "2026-03-31T04:16:08.543181Z",
+  "model": "Qwen/Qwen3.5-35B-A3B-FP8",
+  "judge_model": "google-gla:gemini-3-flash-preview",
+  "dataset": {
+    "total_cases": 50,
+    "categories": {
+      "mundane": 8,
+      "weapon": 6,
+      "trap": 4,
+      "creature": 13,
+      "abstract": 5,
+      "adversarial": 6,
+      "environment": 1,
+      "defensive": 2,
+      "utility": 5
+    },
+    "case_names": [
+      "rock",
+      "wooden chair",
+      "bucket of water",
+      "banana",
+      "glass bottle",
+      "hot coal",
+      "giant boulder",
+      "tiny pebble",
+      "fire sword",
+      "sword",
+      "time bomb",
+      "homing missile",
+      "rubber ball from hell",
+      "firework",
+      "explosive barrel",
+      "glass cannon",
+      "sticky honey trap",
+      "death flower",
+      "acid spider",
+      "friendly dog",
+      "lava monster",
+      "angry bunny",
+      "electric jellyfish",
+      "wind spirit",
+      "toxic frog",
+      "mirror golem",
+      "lasso vine",
+      "cowardly slime",
+      "phoenix egg",
+      "patrol bot",
+      "electric lava golem",
+      "the sun",
+      "tiny black hole",
+      "sadness",
+      "indiana jones boulder",
+      "frozen fire",
+      "a thing",
+      "indestructible wall",
+      "fiar swrod",
+      "shield request",
+      "rambling glowing sword",
+      "not heavy floaty thing",
+      "acid rain cloud",
+      "ice shield",
+      "magnet",
+      "healing mushroom",
+      "conductor rod",
+      "spring trap",
+      "campfire",
+      "rubber armor"
+    ]
+  },
+  "cases": [
+    {
+      "case": "rock",
+      "inputs": "rock",
+      "category": "mundane",
+      "expected_tags": [
+        "SOLID",
+        "RIGID",
+        "HEAVY"
+      ],
+      "output_raw": "{\n  \"name\": \"Rock\",\n  \"tags\": [\n    \"SOLID\",\n    \"RIGID\",\n    \"HEAVY\"\n  ],\n  \"behaviors\": [],\n  \"visual_descriptor\": {\n    \"visual_description\": \"A rough, grey boulder with a jagged, uneven surface and small cracks running through it.\",\n    \"size_category\": \"medium\"\n  }\n}",
+      "output": {
+        "name": "Rock",
+        "tags": [
+          "SOLID",
+          "RIGID",
+          "HEAVY"
+        ],
+        "behaviors": [],
+        "size_category": "medium",
+        "visual_description": "A rough, grey boulder with a jagged, uneven surface and small cracks running through it."
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 1.0,
+        "Gameplay Quality": 1.0,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design perfectly captures the core concept of a rock. The name matches exactly, the tags 'SOLID', 'RIGID', and 'HEAVY' accurately reflect its physical properties, and the visual description is clear and appropriate. Leaving behaviors empty is correct for a simple inanimate object.",
+        "Gameplay Quality": "The design for the 'Rock' follows the rubric's specific example of a 1.0 design. It uses tags (SOLID, RIGID, HEAVY) that fully define its physical presence in a sandbox environment without needing redundant behaviors.",
+        "Sprite Prompt": "The visual description clearly specifies the shape (jagged, uneven surface, boulder), material (rough), and color (grey), along with a distinctive feature (small cracks). It focuses on the object itself without including a scene or environment, matches the provided tags, and is within the 1-2 sentence length requirement."
+      },
+      "elapsed": 1.4024304,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "92cfb28a4cce1f4d"
+    },
+    {
+      "case": "wooden chair",
+      "inputs": "wooden chair",
+      "category": "mundane",
+      "expected_tags": [
+        "SOLID",
+        "RIGID",
+        "FLAMMABLE"
+      ],
+      "output_raw": "{\n  \"name\": \"Wooden Chair\",\n  \"tags\": [\n    \"SOLID\",\n    \"RIGID\",\n    \"LIGHT\"\n  ],\n  \"behaviors\": [],\n  \"visual_descriptor\": {\n    \"visual_description\": \"a simple four-legged chair made of light oak wood with a slatted back and woven seat, featuring a natural brown finish.\",\n    \"size_category\": \"medium\"\n  }\n}",
+      "output": {
+        "name": "Wooden Chair",
+        "tags": [
+          "SOLID",
+          "RIGID",
+          "LIGHT"
+        ],
+        "behaviors": [],
+        "size_category": "medium",
+        "visual_description": "a simple four-legged chair made of light oak wood with a slatted back and woven seat, featuring a natural brown finish."
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 1.0,
+        "Gameplay Quality": 0.75,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design perfectly represents a wooden chair. The name matches, the tags (Solid, Rigid, Light) accurately describe its physical properties in a sandbox game context, and the visual description is detailed and consistent with the input.",
+        "Gameplay Quality": "The design is solid but misses the 'FLAMMABLE' tag, which is a key interaction for wood in this system. According to the rubric, a wooden object without FLAMMABLE is a minor missed opportunity resulting in a 0.75 score.",
+        "Sprite Prompt": "The description clearly specifies the shape (four-legged, slatted back), materials (oak wood, woven seat), and color (natural brown). It matches the name and tags provided, focuses on the object itself without environment, and is concise."
+      },
+      "elapsed": 2.1853078,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "8fefd76f32de6ff4"
+    },
+    {
+      "case": "bucket of water",
+      "inputs": "bucket of water",
+      "category": "mundane",
+      "expected_tags": [
+        "LIQUID",
+        "COLD"
+      ],
+      "output_raw": "{\n  \"name\": \"Water Bucket\",\n  \"tags\": [\n    \"SOLID\",\n    \"WET\"\n  ],\n  \"behaviors\": [\n    \"ON_DESTROY -> APPLY_FORCE -> NEAREST_OBJECT, power=low\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"a metal pail filled with clear blue water that ripples when moved, with a wire handle curving over the top rim.\",\n    \"size_category\": \"small\"\n  }\n}",
+      "output": {
+        "name": "Water Bucket",
+        "tags": [
+          "SOLID",
+          "WET"
+        ],
+        "behaviors": [
+          "ON_DESTROY -> APPLY_FORCE -> NEAREST_OBJECT, power=low"
+        ],
+        "size_category": "small",
+        "visual_description": "a metal pail filled with clear blue water that ripples when moved, with a wire handle curving over the top rim."
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 1.0,
+        "Gameplay Quality": 0.5,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design accurately captures the concept of a 'bucket of water'. The name is appropriate, the tags 'SOLID' and 'WET' correctly describe its physical nature, and the visual description is detailed and matches the prompt. The behavior 'ON_DESTROY -> APPLY_FORCE' with 'power=low' is a reasonable interpretation of a splash occurring when the bucket is broken in a physics sandbox.",
+        "Gameplay Quality": "The design is mediocre (0.5). It misses the primary interaction opportunities defined in the tag system. A metal water bucket should ideally use 'CONDUCTING' (to interact with ELECTRIC and MAGNETIC tags) and 'LIQUID' (to interact with the COLD tag as specified in the rubric). Using 'WET' instead of 'LIQUID' makes it miss the freezing interaction. Additionally, the 'ON_DESTROY' behavior only applies force, missing an opportunity to use 'ADD_TAGS' to spread the water effect to other objects, which the rubric identifies as a powerful emergent gameplay tool.",
+        "Sprite Prompt": "The description clearly specifies the shape (pail, curved handle), materials (metal, water), and color (blue), and it matches the object's name and tags. It is a single concise sentence focusing on the object itself, which would result in a recognizable sprite."
+      },
+      "elapsed": 5.2652895,
+      "retries": 1,
+      "retry_errors": [
+        "LIQUID and SOLID cannot coexist. Remove one.",
+        "LIQUID and SOLID cannot coexist. Remove one."
+      ],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "d288a8f3ab22654c"
+    },
+    {
+      "case": "banana",
+      "inputs": "banana",
+      "category": "mundane",
+      "expected_tags": [
+        "SOLID",
+        "LIGHT",
+        "SLIPPERY"
+      ],
+      "output_raw": "{\n  \"name\": \"Banana\",\n  \"tags\": [\n    \"SOLID\",\n    \"FLEXIBLE\",\n    \"LIGHT\",\n    \"WET\"\n  ],\n  \"behaviors\": [\n    \"ON_CONTACT -> REMOVE_TAGS(WET) -> SELF, power=medium\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"a curved yellow fruit with a smooth peel that has brown spots when ripe and a soft white interior when peeled.\",\n    \"size_category\": \"small\"\n  }\n}",
+      "output": {
+        "name": "Banana",
+        "tags": [
+          "SOLID",
+          "FLEXIBLE",
+          "LIGHT",
+          "WET"
+        ],
+        "behaviors": [
+          "ON_CONTACT -> REMOVE_TAGS(WET) -> SELF, power=medium"
+        ],
+        "size_category": "small",
+        "visual_description": "a curved yellow fruit with a smooth peel that has brown spots when ripe and a soft white interior when peeled."
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 0.5,
+        "Gameplay Quality": 0.5,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The visual description is excellent, but the tags and behaviors have significant issues. The behavior 'ON_CONTACT -> REMOVE_TAGS(WET)' is nonsensical for a banana (it implies the banana dries out upon touching something). Additionally, the design misses key tags that define a banana in a sandbox game context, such as 'EDIBLE', 'FOOD', or 'SLIPPERY'.",
+        "Gameplay Quality": "The design is mediocre. While it uses the 'LIGHT' tag correctly (allowing for interaction with wind sources), the 'WET' tag and its associated behavior ('REMOVE_TAGS(WET)' on contact) are nonsensical for a banana and do not correspond to any of the key tag interactions listed in the rubric. This results in a wasted behavior and a tag that provides no meaningful interaction surface. Additionally, it misses the opportunity to use the 'FROZEN' tag (which the rubric defines as making surfaces slippery) to represent the iconic slippery nature of a banana peel.",
+        "Sprite Prompt": "The description clearly specifies the shape (curved), colors (yellow, brown, white), and distinctive features (smooth peel, spots, soft interior) of a banana. It matches the name and tags, is concise (one sentence), and focuses solely on the object's appearance rather than a scene."
+      },
+      "elapsed": 2.1825017,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "0bad3224061d0796"
+    },
+    {
+      "case": "glass bottle",
+      "inputs": "a glass bottle, like an empty potion bottle that breaks easily",
+      "category": "mundane",
+      "expected_tags": [
+        "SOLID",
+        "RIGID",
+        "BREAKABLE"
+      ],
+      "output_raw": "{\n  \"name\": \"Fragile Bottle\",\n  \"tags\": [\n    \"SOLID\",\n    \"BREAKABLE\",\n    \"GLOWING\"\n  ],\n  \"behaviors\": [\n    \"ON_DAMAGED -> ADD_TAGS(FLAMMABLE) -> SELF, power=medium\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"a slender transparent glass bottle with a narrow neck and a cork stopper, faintly pulsing with an inner white light\",\n    \"size_category\": \"small\"\n  }\n}",
+      "output": {
+        "name": "Fragile Bottle",
+        "tags": [
+          "SOLID",
+          "BREAKABLE",
+          "GLOWING"
+        ],
+        "behaviors": [
+          "ON_DAMAGED -> ADD_TAGS(FLAMMABLE) -> SELF, power=medium"
+        ],
+        "size_category": "small",
+        "visual_description": "a slender transparent glass bottle with a narrow neck and a cork stopper, faintly pulsing with an inner white light"
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 0.5,
+        "Gameplay Quality": 0.75,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design includes several elements that contradict the player's description. The player asked for an 'empty' bottle, but the AI added a 'GLOWING' tag and 'inner white light' visual. Furthermore, the behavior 'ON_DAMAGED -> ADD_TAGS(FLAMMABLE)' makes no sense for a glass bottle, as glass does not become flammable when it breaks. While it captures the 'BREAKABLE' aspect, the added magical/nonsensical properties detract significantly from the core concept requested.",
+        "Gameplay Quality": "The design uses the behavior system effectively to create a conditional tag change (tag spreading/modification), which is a key principle for emergent gameplay in this system. However, it misses a minor opportunity to use the 'SHARP' tag, which is explicitly listed in the rubric and would be more thematic for a broken glass bottle than 'FLAMMABLE'. The choice of 'FLAMMABLE' for an empty glass bottle is slightly unintuitive, though it does create a gameplay interaction surface.",
+        "Sprite Prompt": "The visual description clearly specifies shape (slender, narrow neck), materials (transparent glass, cork), and color/glow (inner white light). It directly matches the object's name and the 'GLOWING' tag. It is concise and focuses on the object itself."
+      },
+      "elapsed": 2.1821642,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "034a98952a218e47"
+    },
+    {
+      "case": "hot coal",
+      "inputs": "a glowing piece of coal fresh out of a fire, still super hot to the touch",
+      "category": "mundane",
+      "expected_tags": [
+        "SOLID",
+        "HOT",
+        "GLOWING"
+      ],
+      "output_raw": "{\n  \"name\": \"Ember Coal\",\n  \"tags\": [\n    \"SOLID\",\n    \"RIGID\",\n    \"HEAT_SOURCE\",\n    \"HOT\",\n    \"GLOWING\"\n  ],\n  \"behaviors\": [],\n  \"visual_descriptor\": {\n    \"visual_description\": \"a rough, irregular black rock glowing with an intense orange-red core and emitting faint wisps of heat haze.\",\n    \"size_category\": \"small\"\n  }\n}",
+      "output": {
+        "name": "Ember Coal",
+        "tags": [
+          "SOLID",
+          "RIGID",
+          "HEAT_SOURCE",
+          "HOT",
+          "GLOWING"
+        ],
+        "behaviors": [],
+        "size_category": "small",
+        "visual_description": "a rough, irregular black rock glowing with an intense orange-red core and emitting faint wisps of heat haze."
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 1.0,
+        "Gameplay Quality": 1.0,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design perfectly captures the player's description. The name 'Ember Coal' is appropriate, and the tags (SOLID, RIGID, HEAT_SOURCE, HOT, GLOWING) accurately reflect the physical properties described. The visual description is detailed and matches the input's request for a glowing, hot object. While 'behaviors' is empty, the functional properties are well-represented by the tags in a way consistent with many 2D sandbox game architectures.",
+        "Gameplay Quality": "The object design is excellent and appropriately simple. It correctly identifies the core interaction tag (HEAT_SOURCE) to represent the 'super hot' nature of the coal, which automatically creates emergent gameplay by igniting FLAMMABLE objects. As per the rubric, simple objects with well-chosen tags that fully define them score highly without needing unnecessary behaviors.",
+        "Sprite Prompt": "The description clearly specifies the shape (rough, irregular), material (black rock), colors (black, orange-red), and distinctive features (glowing core, heat haze). It matches the name and tags perfectly and is focused on the object itself."
+      },
+      "elapsed": 2.1806802,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "18c46d7029a76525"
+    },
+    {
+      "case": "giant boulder",
+      "inputs": "a massive boulder the size of a house that just crushes anything in its path",
+      "category": "mundane",
+      "expected_tags": [
+        "SOLID",
+        "HEAVY",
+        "RIGID"
+      ],
+      "output_raw": "{\n  \"name\": \"Crusher Boulder\",\n  \"tags\": [\n    \"SOLID\",\n    \"RIGID\",\n    \"HEAVY\"\n  ],\n  \"behaviors\": [\n    \"ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING, power=high\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"A massive, jagged grey boulder roughly the size of a small house with a rough, ancient stone texture and deep cracks running through it.\",\n    \"size_category\": \"huge\"\n  }\n}",
+      "output": {
+        "name": "Crusher Boulder",
+        "tags": [
+          "SOLID",
+          "RIGID",
+          "HEAVY"
+        ],
+        "behaviors": [
+          "ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING, power=high"
+        ],
+        "size_category": "huge",
+        "visual_description": "A massive, jagged grey boulder roughly the size of a small house with a rough, ancient stone texture and deep cracks running through it."
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 1.0,
+        "Gameplay Quality": 0.75,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design captures the core concept of a massive, crushing boulder perfectly. The name is appropriate, the tags (SOLID, RIGID, HEAVY) match the physical properties, and the behavior (MOVE_TOWARD -> NEAREST_LIVING) provides the necessary movement to fulfill the 'crushing' aspect. The visual description and size category also align exactly with the player's input.",
+        "Gameplay Quality": "The design accurately reflects the prompt's description using appropriate physical tags (SOLID, RIGID, HEAVY) and a behavior that creates the intended 'crushing' movement (MOVE_TOWARD). However, it misses a key interaction opportunity: the HOSTILE tag. The rubric explicitly states that HOSTILE deals blunt physical damage on contact; for an object intended to 'crush anything in its path,' this tag is essential to utilize the system's automatic damage mechanics. While the 1.0 example for a 'simple rock' uses these same tags, a 'crusher' specifically implies lethal interaction that the HOSTILE tag provides.",
+        "Sprite Prompt": "The visual description clearly specifies the shape (jagged boulder), material (ancient stone texture), color (grey), and distinctive features (deep cracks). It is a single sentence that describes the object itself, matching the name and tags provided."
+      },
+      "elapsed": 2.1799295,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "bd81fa154a18a5e4"
+    },
+    {
+      "case": "tiny pebble",
+      "inputs": "the worlds smallest pebble",
+      "category": "mundane",
+      "expected_tags": [
+        "SOLID",
+        "LIGHT"
+      ],
+      "output_raw": "{\n  \"name\": \"Cosmic Pebble\",\n  \"tags\": [\n    \"SOLID\",\n    \"RIGID\",\n    \"LIGHT\",\n    \"FLOATING\"\n  ],\n  \"behaviors\": [],\n  \"visual_descriptor\": {\n    \"visual_description\": \"A microscopic, greyish-black speck of rock that seems to absorb the light around it, hovering just above the ground.\",\n    \"size_category\": \"tiny\"\n  }\n}",
+      "output": {
+        "name": "Cosmic Pebble",
+        "tags": [
+          "SOLID",
+          "RIGID",
+          "LIGHT",
+          "FLOATING"
+        ],
+        "behaviors": [],
+        "size_category": "tiny",
+        "visual_description": "A microscopic, greyish-black speck of rock that seems to absorb the light around it, hovering just above the ground."
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 0.75,
+        "Gameplay Quality": 1.0,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design captures the core concept of the \"world's smallest pebble\" by using the \"tiny\" size category and describing it as a \"microscopic speck.\" However, the addition of the \"FLOATING\" tag and the \"Cosmic\" name/hovering visual are unnecessary embellishments that deviate slightly from the physical nature of a standard pebble, which would typically be affected by gravity.",
+        "Gameplay Quality": "The design for the 'Cosmic Pebble' is an excellent example of a simple physics object that leverages the tag system for emergent gameplay. By using 'LIGHT', it ensures the object interacts with 'WIND_SOURCE' (as specified in the rubric), which is appropriate for the world's smallest pebble. The inclusion of 'FLOATING' and 'SOLID'/'RIGID' defines its physical presence without the need for redundant behaviors, matching the 1.0 example of a simple rock provided in the rubric.",
+        "Sprite Prompt": "The description provides specific details for color (greyish-black), material (rock), and distinctive features (absorbing light, hovering) that align with the 'FLOATING' tag. It is concise and describes the object well within the 1-2 sentence limit."
+      },
+      "elapsed": 2.1764518,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "0c38beadd5baae87"
+    },
+    {
+      "case": "fire sword",
+      "inputs": "fire sword",
+      "category": "weapon",
+      "expected_tags": [
+        "SOLID",
+        "SHARP",
+        "HEAT_SOURCE"
+      ],
+      "output_raw": "{\n  \"name\": \"Fire Sword\",\n  \"tags\": [\n    \"SOLID\",\n    \"RIGID\",\n    \"SHARP\",\n    \"HEAT_SOURCE\"\n  ],\n  \"behaviors\": [],\n  \"visual_descriptor\": {\n    \"visual_description\": \"a curved steel blade wreathed in roaring flames with a crimson glow and blackened edges from intense heat\",\n    \"size_category\": \"small\"\n  }\n}",
+      "output": {
+        "name": "Fire Sword",
+        "tags": [
+          "SOLID",
+          "RIGID",
+          "SHARP",
+          "HEAT_SOURCE"
+        ],
+        "behaviors": [],
+        "size_category": "small",
+        "visual_description": "a curved steel blade wreathed in roaring flames with a crimson glow and blackened edges from intense heat"
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 1.0,
+        "Gameplay Quality": 1.0,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design perfectly captures the core concept of a 'fire sword'. The name is correct, the tags accurately reflect the physical properties of a sword (SOLID, RIGID, SHARP) and the fire element (HEAT_SOURCE), and the visual description is vivid and matches the concept. The empty behaviors list is acceptable as the core properties are captured in the tags.",
+        "Gameplay Quality": "The design perfectly utilizes the tag system to define the object's properties. By using SHARP and HEAT_SOURCE, it ensures the sword will cut and ignite objects automatically through the physics engine's emergent gameplay. It avoids unnecessary behaviors and generic damage tags, making it a high-quality implementation of the core principles.",
+        "Sprite Prompt": "The description is clear and specific, detailing the shape (curved), materials (steel blade, roaring flames), and colors (crimson glow, blackened edges). It accurately reflects the name and tags, and it describes the object rather than a scene."
+      },
+      "elapsed": 0.7501814,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "687d9ddee6cb153d"
+    },
+    {
+      "case": "sword",
+      "inputs": "sword",
+      "category": "weapon",
+      "expected_tags": [
+        "SOLID",
+        "SHARP"
+      ],
+      "output_raw": "{\n  \"name\": \"Rune Sword\",\n  \"tags\": [\n    \"SOLID\",\n    \"RIGID\",\n    \"SHARP\"\n  ],\n  \"behaviors\": [],\n  \"visual_descriptor\": {\n    \"visual_description\": \"a sleek, straight-bladed steel sword with an ornate silver hilt and runic carvings along the fuller that glow faintly blue.\",\n    \"size_category\": \"small\"\n  }\n}",
+      "output": {
+        "name": "Rune Sword",
+        "tags": [
+          "SOLID",
+          "RIGID",
+          "SHARP"
+        ],
+        "behaviors": [],
+        "size_category": "small",
+        "visual_description": "a sleek, straight-bladed steel sword with an ornate silver hilt and runic carvings along the fuller that glow faintly blue."
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 1.0,
+        "Gameplay Quality": 0.75,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design perfectly captures the essence of a sword. The name 'Rune Sword' is a valid specialization of the prompt. The tags (SOLID, RIGID, SHARP) accurately describe the physical properties of a sword. The visual description is detailed and consistent with the name and tags. The lack of behaviors is appropriate for a passive handheld object in many sandbox systems, as its primary interaction (cutting) is often handled via the 'SHARP' tag.",
+        "Gameplay Quality": "The design correctly identifies the core tag for a sword (SHARP) and provides essential physical tags (SOLID, RIGID). However, it misses significant emergent gameplay opportunities presented in its own visual description: a 'steel' sword should likely be CONDUCTING to interact with ELECTRIC and MAGNETIC tags, and the 'glowing blue runes' suggest an elemental property like COLD or ELECTRIC which is not reflected in the tags. It follows the example of a simple object but leaves potential interactions on the table given the specific flavor provided.",
+        "Sprite Prompt": "The description clearly specifies the shape (straight-bladed), materials (steel, silver), colors (silver, blue), and distinctive features (runic carvings). It is a single sentence focusing on the object itself and matches the tags and name."
+      },
+      "elapsed": 0.9718844,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "a9b1af9e86b14472"
+    },
+    {
+      "case": "time bomb",
+      "inputs": "time bomb that blows up after a few seconds",
+      "category": "weapon",
+      "expected_tags": [
+        "SOLID",
+        "EXPLOSIVE"
+      ],
+      "output_raw": "{\n  \"name\": \"Time Bomb\",\n  \"tags\": [\n    \"SOLID\",\n    \"RIGID\",\n    \"EXPLOSIVE\"\n  ],\n  \"behaviors\": [\n    \"ON_TIMER -> EXPLODE -> SELF\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"a cylindrical steel canister with a red digital timer displaying descending numbers and sparking wires sticking out the top\",\n    \"size_category\": \"small\"\n  }\n}",
+      "output": {
+        "name": "Time Bomb",
+        "tags": [
+          "SOLID",
+          "RIGID",
+          "EXPLOSIVE"
+        ],
+        "behaviors": [
+          "ON_TIMER -> EXPLODE -> SELF"
+        ],
+        "size_category": "small",
+        "visual_description": "a cylindrical steel canister with a red digital timer displaying descending numbers and sparking wires sticking out the top"
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 1.0,
+        "Gameplay Quality": 1.0,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design perfectly captures the player's request. The name and tags are appropriate, the behavior correctly implements the timing and explosion mechanism, and the visual description aligns with the concept of a time bomb.",
+        "Gameplay Quality": "The design excellently utilizes the tag system for emergent gameplay. By using the EXPLOSIVE tag, the bomb becomes part of the automatic interaction system (reacting to heat and electricity). The behavior (ON_TIMER -> EXPLODE) correctly implements the specific \"time\" requirement that the tag system cannot handle alone, ensuring the behavior complements rather than duplicates the tag logic. The design is simple, effective, and creates clear interaction surfaces.",
+        "Sprite Prompt": "The description is clear and specific, detailing the shape (cylindrical), materials (steel), colors (red), and distinctive features (digital timer, sparking wires). It perfectly matches the object's name and tags, is a single sentence, and focuses solely on the object itself."
+      },
+      "elapsed": 1.0983557,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "85f2e2b6a564e4b5"
+    },
+    {
+      "case": "homing missile",
+      "inputs": "a missile that locks onto the nearest enemy and chases them down, like those heat seeking ones from movies",
+      "category": "weapon",
+      "expected_tags": [
+        "SOLID",
+        "EXPLOSIVE"
+      ],
+      "output_raw": "{\n  \"name\": \"Heat-Seeking Missile\",\n  \"tags\": [\n    \"SOLID\",\n    \"HEAVY\",\n    \"FLAMMABLE\",\n    \"EXPLOSIVE\"\n  ],\n  \"behaviors\": [\n    \"ON_CONTACT -> ADD_TAGS(HEAT_SOURCE) -> CONTACT_BODY\",\n    \"ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING, power=high\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"a sleek metallic rocket with a cylindrical body and stabilizing fins at the rear, featuring a glowing red sensor nose cone that pulses as it tracks its target.\",\n    \"size_category\": \"small\"\n  }\n}",
+      "output": {
+        "name": "Heat-Seeking Missile",
+        "tags": [
+          "SOLID",
+          "HEAVY",
+          "FLAMMABLE",
+          "EXPLOSIVE"
+        ],
+        "behaviors": [
+          "ON_CONTACT -> ADD_TAGS(HEAT_SOURCE) -> CONTACT_BODY",
+          "ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING, power=high"
+        ],
+        "size_category": "small",
+        "visual_description": "a sleek metallic rocket with a cylindrical body and stabilizing fins at the rear, featuring a glowing red sensor nose cone that pulses as it tracks its target."
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 1.0,
+        "Gameplay Quality": 1.0,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design captures the core concept perfectly. The name matches the prompt, the tags (SOLID, HEAVY, FLAMMABLE, EXPLOSIVE) are appropriate for a missile, and the behaviors ('MOVE_TOWARD -> NEAREST_LIVING') directly implement the 'locks onto nearest enemy and chases them down' requirement. The visual description is also highly accurate to the prompt's description.",
+        "Gameplay Quality": "The design excellently exploits the tag system for emergent gameplay. By making the missile FLAMMABLE and EXPLOSIVE, and using a behavior to apply HEAT_SOURCE to the target on contact, the designer creates a clever chain reaction where the missile's own contact triggers its detonation via the tag system's automatic interactions. The movement behavior handles the tracking logic which tags cannot do, while the tags themselves allow for emergent interactions (like being detonated prematurely by environmental heat).",
+        "Sprite Prompt": "The description clearly specifies shape (cylindrical body, stabilizing fins), material (metallic), and colors (glowing red sensor). It is a concise, single-sentence description of the object itself and matches the name and tags provided."
+      },
+      "elapsed": 1.3333065,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "ef3f0b7daf6e670c"
+    },
+    {
+      "case": "rubber ball from hell",
+      "inputs": "a bouncy ball but its like possessed or something, it just keeps bouncing around faster and faster and if it hits you it really hurts",
+      "category": "weapon",
+      "expected_tags": [
+        "SOLID",
+        "BOUNCY",
+        "LIGHT"
+      ],
+      "output_raw": "{\n  \"name\": \"Possessed Bounceball\",\n  \"tags\": [\n    \"SOLID\",\n    \"BOUNCY\",\n    \"HOT\",\n    \"LIVING\"\n  ],\n  \"behaviors\": [\n    \"ON_CONTACT -> ADD_TAGS(FLAMMABLE) -> CONTACT_BODY, power=high\",\n    \"ON_TAG_ADDED(FLAMMABLE) -> SPAWN_PROJECTILE -> NEAREST_LIVING, power=medium\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"a cracked red rubber ball with swirling black veins pulsing under the surface and glowing white eyes that stare maniacally, constantly vibrating in mid-air\",\n    \"size_category\": \"small\"\n  }\n}",
+      "output": {
+        "name": "Possessed Bounceball",
+        "tags": [
+          "SOLID",
+          "BOUNCY",
+          "HOT",
+          "LIVING"
+        ],
+        "behaviors": [
+          "ON_CONTACT -> ADD_TAGS(FLAMMABLE) -> CONTACT_BODY, power=high",
+          "ON_TAG_ADDED(FLAMMABLE) -> SPAWN_PROJECTILE -> NEAREST_LIVING, power=medium"
+        ],
+        "size_category": "small",
+        "visual_description": "a cracked red rubber ball with swirling black veins pulsing under the surface and glowing white eyes that stare maniacally, constantly vibrating in mid-air"
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 0.5,
+        "Gameplay Quality": 0.5,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design captures the visual and thematic elements (possessed, bouncy ball) well, but the core mechanics requested by the player are missing. There is no behavior to make the ball bounce \"faster and faster,\" and the damage mechanic is implemented as making the target \"flammable\" rather than direct impact damage. Additionally, the 'HOT' tag is irrelevant to the prompt.",
+        "Gameplay Quality": "The design captures the theme but misses several core mechanics requested in the input and fails to adhere to the tag system's terminology. Specifically: 1) It completely ignores the 'bouncing faster and faster' requirement (no movement behaviors like APPLY_FORCE or MOVE). 2) It uses the tag 'HOT' instead of the rubric-defined 'HEAT_SOURCE'. 3) It misses the 'HOSTILE' tag for impact damage ('it really hurts'), choosing instead to use complex behaviors involving flammability and projectiles which weren't requested. 4) The 'ADD_TAGS(FLAMMABLE)' behavior is a good attempt at interaction, but it doesn't fit the 'possessed bouncy ball' concept as well as movement or HOSTILE tags would have.",
+        "Sprite Prompt": "The visual description provides a clear shape (ball), material (cracked red rubber), and colors (red, black, white). It includes distinctive features like pulsing veins and staring eyes that align perfectly with the \"Possessed\" name and \"LIVING\" tag. It is a single sentence focused on the object itself."
+      },
+      "elapsed": 1.7718526,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "8a7fab2a5a2bf65a"
+    },
+    {
+      "case": "firework",
+      "inputs": "a firework that goes off the second you place it",
+      "category": "weapon",
+      "expected_tags": [
+        "SOLID",
+        "EXPLOSIVE",
+        "LIGHT"
+      ],
+      "output_raw": "{\n  \"name\": \"Instant Fuse Firework\",\n  \"tags\": [\n    \"SOLID\",\n    \"BREAKABLE\",\n    \"EXPLOSIVE\",\n    \"HEAT_SOURCE\",\n    \"GLOWING\"\n  ],\n  \"behaviors\": [\n    \"ON_CONTACT -> EXPLODE -> SELF\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"A small, cylindrical cartridge with a bright glowing red fuse and a metallic casing speckled with colorful sparks.\",\n    \"size_category\": \"small\"\n  }\n}",
+      "output": {
+        "name": "Instant Fuse Firework",
+        "tags": [
+          "SOLID",
+          "BREAKABLE",
+          "EXPLOSIVE",
+          "HEAT_SOURCE",
+          "GLOWING"
+        ],
+        "behaviors": [
+          "ON_CONTACT -> EXPLODE -> SELF"
+        ],
+        "size_category": "small",
+        "visual_description": "A small, cylindrical cartridge with a bright glowing red fuse and a metallic casing speckled with colorful sparks."
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 1.0,
+        "Gameplay Quality": 1.0,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design accurately captures the concept of an instant firework. The name reflects the 'instant' nature, and the 'ON_CONTACT -> EXPLODE' behavior ensures it goes off as soon as it touches the ground/surface where it is placed. Tags and visuals are consistent with the object's nature.",
+        "Gameplay Quality": "The design effectively utilizes the tag system to create emergent gameplay. The 'EXPLOSIVE' tag allows it to react to external heat/electricity, while the 'HEAT_SOURCE' tag allows it to ignite flammable objects. The behavior 'ON_CONTACT -> EXPLODE' is used correctly to implement the specific 'instant fuse' requirement (triggering the explosion upon hitting a surface) without duplicating the passive effects provided by the tags. It avoids the 'generic damage trap' by using specific interaction tags like HEAT_SOURCE and EXPLOSIVE.",
+        "Sprite Prompt": "The visual description clearly specifies the shape (cylindrical cartridge), materials (metallic casing), and colors (red fuse, colorful sparks). It aligns perfectly with the object's name and tags (EXPLOSIVE, GLOWING, HEAT_SOURCE). It describes the object itself in a single sentence suitable for sprite generation."
+      },
+      "elapsed": 1.4155902,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "761a2fc1673dc92c"
+    },
+    {
+      "case": "explosive barrel",
+      "inputs": "explosive barrel",
+      "category": "trap",
+      "expected_tags": [
+        "SOLID",
+        "FLAMMABLE",
+        "EXPLOSIVE"
+      ],
+      "output_raw": "{\n  \"name\": \"Explosive Barrel\",\n  \"tags\": [\n    \"SOLID\",\n    \"RIGID\",\n    \"HEAVY\",\n    \"EXPLOSIVE\"\n  ],\n  \"behaviors\": [],\n  \"visual_descriptor\": {\n    \"visual_description\": \"A weathered metal drum painted with red and black hazard stripes, bound with rusted iron hoops, topped with a sparking fuse.\",\n    \"size_category\": \"medium\"\n  }\n}",
+      "output": {
+        "name": "Explosive Barrel",
+        "tags": [
+          "SOLID",
+          "RIGID",
+          "HEAVY",
+          "EXPLOSIVE"
+        ],
+        "behaviors": [],
+        "size_category": "medium",
+        "visual_description": "A weathered metal drum painted with red and black hazard stripes, bound with rusted iron hoops, topped with a sparking fuse."
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 1.0,
+        "Gameplay Quality": 0.75,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design captures the concept of an explosive barrel perfectly. The name is accurate, the tags correctly define its physical and functional properties (Solid, Rigid, Heavy, Explosive), and the visual description is vivid and aligns with the concept. While the behaviors list is empty, the functional 'explosive' nature is captured in the tags, making the design comprehensive for a physics sandbox.",
+        "Gameplay Quality": "The design effectively uses the tag system to define a classic physics object. The tags SOLID, RIGID, HEAVY, and EXPLOSIVE provide clear interaction surfaces. However, it earns a 0.75 instead of a 1.0 because the visual description specifies it is a 'metal drum,' yet it lacks the CONDUCTING tag. This is a minor missed opportunity for emergent gameplay with magnets and electrical propagation, similar to the rubric's example of a wooden object lacking the FLAMMABLE tag.",
+        "Sprite Prompt": "The visual description clearly specifies the shape (metal drum), materials (weathered metal, rusted iron), colors (red and black hazard stripes), and distinctive features (sparking fuse). It aligns perfectly with the name and tags, and focuses solely on the object itself in a concise manner."
+      },
+      "elapsed": 1.2494139,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "781f7db24316c254"
+    },
+    {
+      "case": "glass cannon",
+      "inputs": "a crystal ball that just floats there and looks pretty but if anything bumps into it it shatters into a million sharp pieces and everything nearby gets cut up",
+      "category": "trap",
+      "expected_tags": [
+        "SOLID",
+        "BREAKABLE",
+        "SHARP",
+        "GLOWING",
+        "FLOATING"
+      ],
+      "output_raw": "{\n  \"name\": \"Shattering Crystal\",\n  \"tags\": [\n    \"SOLID\",\n    \"FLOATING\",\n    \"BREAKABLE\",\n    \"REFLECTIVE\"\n  ],\n  \"behaviors\": [\n    \"ON_CONTACT -> ADD_TAGS(SHARP) -> CONTACT_BODY, power=high\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"A perfect sphere of translucent blue crystal with a swirling white core, emitting a soft ethereal glow from within.\",\n    \"size_category\": \"small\"\n  }\n}",
+      "output": {
+        "name": "Shattering Crystal",
+        "tags": [
+          "SOLID",
+          "FLOATING",
+          "BREAKABLE",
+          "REFLECTIVE"
+        ],
+        "behaviors": [
+          "ON_CONTACT -> ADD_TAGS(SHARP) -> CONTACT_BODY, power=high"
+        ],
+        "size_category": "small",
+        "visual_description": "A perfect sphere of translucent blue crystal with a swirling white core, emitting a soft ethereal glow from within."
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 0.5,
+        "Gameplay Quality": 0.5,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design captures the visual aspect and basic physical properties (Floating, Breakable) well. However, the behavior 'ON_CONTACT -> ADD_TAGS(SHARP) -> CONTACT_BODY' fails to accurately represent the prompt. Instead of the ball shattering and damaging nearby objects (AOE), it makes the object that touches it 'SHARP'. It misses the 'shattering' action in the behavior and the 'everything nearby' (area of effect) requirement.",
+        "Gameplay Quality": "The design captures the visual and basic physical properties well with tags like SOLID, FLOATING, and REFLECTIVE (which creates good interaction surfaces for heat and electricity). However, it fails to implement the core gameplay hook described: shattering and cutting everything nearby. The behavior 'ADD_TAGS(SHARP) -> CONTACT_BODY' makes the object that touches the ball sharp, rather than the ball breaking and damaging the surrounding area. This misses the opportunity for emergent gameplay like an explosion of shards or a 'SHARP' debris field, falling into a logic trap where the behavior doesn't match the intended effect.",
+        "Sprite Prompt": "The visual description clearly specifies the shape (perfect sphere), materials (translucent crystal), colors (blue, white), and distinctive features (swirling core, glow). It is concise (one sentence) and describes the object rather than a scene. It aligns perfectly with the name and tags."
+      },
+      "elapsed": 1.304599,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "d12bb4616448a140"
+    },
+    {
+      "case": "sticky honey trap",
+      "inputs": "imagine like a big glob of honey that just sits there and anything that walks into it gets completely stuck and cant move",
+      "category": "trap",
+      "expected_tags": [
+        "STICKY",
+        "LIQUID"
+      ],
+      "output_raw": "{\n  \"name\": \"Honey Pool\",\n  \"tags\": [\n    \"LIQUID\",\n    \"STICKY\",\n    \"HEAVY\"\n  ],\n  \"behaviors\": [],\n  \"visual_descriptor\": {\n    \"visual_description\": \"A large, viscous golden glob of honey with a thick, glistening surface that slowly ripples inward, trapping everything within its boundary.\",\n    \"size_category\": \"medium\"\n  }\n}",
+      "output": {
+        "name": "Honey Pool",
+        "tags": [
+          "LIQUID",
+          "STICKY",
+          "HEAVY"
+        ],
+        "behaviors": [],
+        "size_category": "medium",
+        "visual_description": "A large, viscous golden glob of honey with a thick, glistening surface that slowly ripples inward, trapping everything within its boundary."
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 0.5,
+        "Gameplay Quality": 1.0,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design captures the visual aspect and the physical nature (via tags like STICKY) of the object, but it fails to include any entries in the 'behaviors' array. Given the player's input was almost entirely focused on the behavior of the object (\"anything that walks into it gets completely stuck and cant move\"), leaving the behaviors empty is a notable gap. Additionally, the size category 'medium' slightly conflicts with the user's request for a 'big' glob and the visual description's 'large' descriptor.",
+        "Gameplay Quality": "The design perfectly translates the prompt into the tag system. By using the STICKY tag, it achieves the primary goal of trapping objects through automatic physical joints. The inclusion of the LIQUID tag adds emergent gameplay potential (interaction with COLD/FROZEN), and HEAVY ensures it remains stationary against WIND_SOURCE effects. Like the 'rock' example in the rubric, this simple but effective use of tags fully defines the object without needing redundant behaviors.",
+        "Sprite Prompt": "The description clearly specifies the material (viscous golden honey), shape (large glob), and color (golden). It is concise, matches the tags and name provided, and focuses on the object itself rather than a scene."
+      },
+      "elapsed": 0.7912782,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "10e3ffc919c416e1"
+    },
+    {
+      "case": "death flower",
+      "inputs": "a pretty flower but when you destroy it a cloud of toxic gas comes out and poisons everything in the area, like a trap you know",
+      "category": "trap",
+      "expected_tags": [
+        "LIVING",
+        "TOXIC"
+      ],
+      "output_raw": "{\n  \"name\": \"Toxic Bloom\",\n  \"tags\": [\n    \"SOLID\",\n    \"BREAKABLE\",\n    \"TOXIC\",\n    \"GLOWING\"\n  ],\n  \"behaviors\": [\n    \"ON_DESTROY -> ADD_TAGS(TOXIC) -> SELF, power=high\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"a vibrant flower with iridescent petals that shift from purple to green and a pulsing bioluminescent center emitting faint mist\",\n    \"size_category\": \"small\"\n  }\n}",
+      "output": {
+        "name": "Toxic Bloom",
+        "tags": [
+          "SOLID",
+          "BREAKABLE",
+          "TOXIC",
+          "GLOWING"
+        ],
+        "behaviors": [
+          "ON_DESTROY -> ADD_TAGS(TOXIC) -> SELF, power=high"
+        ],
+        "size_category": "small",
+        "visual_description": "a vibrant flower with iridescent petals that shift from purple to green and a pulsing bioluminescent center emitting faint mist"
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 0.75,
+        "Gameplay Quality": 0.75,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design captures the core concept well. The name \"Toxic Bloom\" and the visual description perfectly match the \"pretty flower\" and \"trap\" theme. The tags SOLID and BREAKABLE are appropriate. However, there's a slight logic issue: the player requested the toxic cloud *when destroyed*, but the TOXIC tag is included in the base object tags, and the behavior targets SELF rather than the area. These are minor technicalities in the representation of the effect, making it a very strong but slightly imperfect fit.",
+        "Gameplay Quality": "The design successfully uses the tag system to create the requested object. It uses TOXIC for damage and BREAKABLE as a trigger for its behavior. It loses some points because the base object already has the TOXIC tag, which makes it a hazard on contact before it is destroyed, potentially spoiling the 'trap' aspect or making the ON_DESTROY behavior redundant. Additionally, targeting SELF with ADD_TAGS doesn't fully capture the 'everything in the area' requirement as effectively as targeting 'NEARBY' or 'AREA' would have.",
+        "Sprite Prompt": "The visual description provides specific details regarding the object's shape (flower), colors (purple to green iridescent petals), and distinctive features (pulsing bioluminescent center, faint mist). It matches the tags 'TOXIC' and 'GLOWING' perfectly and describes the object itself in a concise manner."
+      },
+      "elapsed": 1.1548037,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "2aa646445aed1eb8"
+    },
+    {
+      "case": "acid spider",
+      "inputs": "a little spider that spits acid at you if you get too close",
+      "category": "creature",
+      "expected_tags": [
+        "LIVING",
+        "CORROSIVE"
+      ],
+      "output_raw": "{\n  \"name\": \"Acid Spitter Spider\",\n  \"tags\": [\n    \"LIVING\",\n    \"SOLID\",\n    \"TOXIC\",\n    \"HOSTILE\",\n    \"FLEXIBLE\"\n  ],\n  \"behaviors\": [\n    \"ON_PROXIMITY -> SPAWN_PROJECTILE -> NEAREST_PLAYER, power=high\",\n    \"ON_TAG_ADDED(TOXIC) -> ADD_TAGS(TOXIC) -> SELF\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"a small dark spider with a bulbous abdomen that pulses with green acid, dripping corrosive liquid from its fangs\",\n    \"size_category\": \"small\"\n  }\n}",
+      "output": {
+        "name": "Acid Spitter Spider",
+        "tags": [
+          "LIVING",
+          "SOLID",
+          "TOXIC",
+          "HOSTILE",
+          "FLEXIBLE"
+        ],
+        "behaviors": [
+          "ON_PROXIMITY -> SPAWN_PROJECTILE -> NEAREST_PLAYER, power=high",
+          "ON_TAG_ADDED(TOXIC) -> ADD_TAGS(TOXIC) -> SELF"
+        ],
+        "size_category": "small",
+        "visual_description": "a small dark spider with a bulbous abdomen that pulses with green acid, dripping corrosive liquid from its fangs"
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 1.0,
+        "Gameplay Quality": 0.75,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design captures the core concept perfectly. The tags (LIVING, TOXIC, HOSTILE) are appropriate, the behavior accurately reflects the proximity-based spitting mechanic, and the visual description aligns with the \"little spider\" and \"acid\" elements.",
+        "Gameplay Quality": "The design captures the core mechanic requested (proximity-based spitting) using behaviors. It uses the TOXIC tag to provide interaction, though it missed the opportunity to use the CORROSIVE tag which is specifically mentioned in the rubric for dissolving materials (fitting for acid). The second behavior is redundant/circular (adding TOXIC to itself if it already has it), but the overall object remains functional and thematic.",
+        "Sprite Prompt": "The visual description clearly specifies the shape (small spider, bulbous abdomen), colors (dark, green acid), and distinctive features (pulsing abdomen, dripping fangs) that match the name and tags. It is concise and focuses on the object itself."
+      },
+      "elapsed": 1.5212022,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "a7c04aa4b18f3cc6"
+    },
+    {
+      "case": "friendly dog",
+      "inputs": "friendly dog",
+      "category": "creature",
+      "expected_tags": [
+        "LIVING",
+        "LIGHT"
+      ],
+      "output_raw": "{\n  \"name\": \"Companion Dog\",\n  \"tags\": [\n    \"SOLID\",\n    \"RIGID\",\n    \"LIVING\",\n    \"LIGHT\"\n  ],\n  \"behaviors\": [\n    \"ALWAYS -> MOVE_TOWARD -> NEAREST_PLAYER, power=medium\",\n    \"ON_PROXIMITY -> HEAL -> NEAREST_LIVING\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"a fluffy golden retriever with a wagging tail and bright, trusting eyes wearing a red collar with a gold tag\",\n    \"size_category\": \"small\"\n  }\n}",
+      "output": {
+        "name": "Companion Dog",
+        "tags": [
+          "SOLID",
+          "RIGID",
+          "LIVING",
+          "LIGHT"
+        ],
+        "behaviors": [
+          "ALWAYS -> MOVE_TOWARD -> NEAREST_PLAYER, power=medium",
+          "ON_PROXIMITY -> HEAL -> NEAREST_LIVING"
+        ],
+        "size_category": "small",
+        "visual_description": "a fluffy golden retriever with a wagging tail and bright, trusting eyes wearing a red collar with a gold tag"
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 1.0,
+        "Gameplay Quality": 0.75,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design perfectly captures the concept of a 'friendly dog'. The name is appropriate, tags like 'LIVING' and 'SOLID' are correct, and the behaviors (following the player and healing) effectively translate 'friendly' into game mechanics. The visual description is detailed and matches the theme.",
+        "Gameplay Quality": "The design is good and thematic, using the LIGHT tag effectively to ensure the object interacts with physics (WIND_SOURCE). The behaviors (HEAL and MOVE_TOWARD) perfectly capture the 'friendly' prompt. However, it misses a significant interaction surface for emergent gameplay: as a 'fluffy' creature, it should likely have the FLAMMABLE tag. The rubric specifically notes that missing a tag like FLAMMABLE for a material that should have it (like wood) results in a 0.75.",
+        "Sprite Prompt": "The description clearly specifies the breed (shape), texture (fluffy), and specific colors (golden, red, gold), along with distinctive features like the collar and tag. It is a single sentence focusing on the object itself, matching the name and tags perfectly."
+      },
+      "elapsed": 0.8883567,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "a737f4f6c5d5279a"
+    },
+    {
+      "case": "lava monster",
+      "inputs": "a lava monster that chases you around and sets everything on fire",
+      "category": "creature",
+      "expected_tags": [
+        "LIVING",
+        "MOLTEN",
+        "HEAT_SOURCE"
+      ],
+      "output_raw": "{\n  \"name\": \"Lava Behemoth\",\n  \"tags\": [\n    \"LIQUID\",\n    \"MOLTEN\",\n    \"HEAT_SOURCE\",\n    \"HOT\",\n    \"HOSTILE\"\n  ],\n  \"behaviors\": [\n    \"ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING, power=high\",\n    \"ON_CONTACT -> ADD_TAGS(FLAMMABLE) -> CONTACT_BODY\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"a towering, amorphous mass of glowing orange and red molten rock with dark cracks pulsing with light, oozing and dripping as it moves\",\n    \"size_category\": \"large\"\n  }\n}",
+      "output": {
+        "name": "Lava Behemoth",
+        "tags": [
+          "LIQUID",
+          "MOLTEN",
+          "HEAT_SOURCE",
+          "HOT",
+          "HOSTILE"
+        ],
+        "behaviors": [
+          "ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING, power=high",
+          "ON_CONTACT -> ADD_TAGS(FLAMMABLE) -> CONTACT_BODY"
+        ],
+        "size_category": "large",
+        "visual_description": "a towering, amorphous mass of glowing orange and red molten rock with dark cracks pulsing with light, oozing and dripping as it moves"
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 1.0,
+        "Gameplay Quality": 1.0,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design perfectly captures the user's description. The name 'Lava Behemoth' matches 'lava monster'. The behavior 'MOVE_TOWARD -> NEAREST_LIVING' matches 'chases you around'. The tags 'HEAT_SOURCE' and 'HOT' combined with 'ON_CONTACT -> ADD_TAGS(FLAMMABLE)' effectively simulate 'sets everything on fire'. The visual description and tags like 'LIQUID' and 'MOLTEN' align perfectly with the concept of lava.",
+        "Gameplay Quality": "The design excellently utilizes the tag system. By combining the HEAT_SOURCE tag with a behavior that adds the FLAMMABLE tag to objects on contact, it ensures that the monster can set anything on fire, creating exactly the kind of emergent gameplay the system is designed for. The MOVE_TOWARD behavior correctly implements the \"chases you\" requirement.",
+        "Sprite Prompt": "The visual description clearly specifies the shape (towering, amorphous mass), materials (molten rock), and colors (glowing orange, red, dark) of the entity. It matches the name and tags provided and avoids describing a scene, focusing instead on the object's appearance."
+      },
+      "elapsed": 1.4397394,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "04023583510fabff"
+    },
+    {
+      "case": "angry bunny",
+      "inputs": "a bunny that gets more and more angry as it sees the player and eventually just charges at them trying to bite",
+      "category": "creature",
+      "expected_tags": [
+        "LIVING",
+        "LIGHT"
+      ],
+      "output_raw": "{\n  \"name\": \"Rabid Bunny\",\n  \"tags\": [\n    \"LIVING\",\n    \"SOLID\",\n    \"HOSTILE\"\n  ],\n  \"behaviors\": [\n    \"ON_CONTACT -> SPAWN_PROJECTILE -> NEAREST_PLAYER, power=low\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"a fluffy white rabbit with matted fur, glowing red eyes, and an open mouth revealing sharp teeth as it twitches violently.\",\n    \"size_category\": \"small\"\n  }\n}",
+      "output": {
+        "name": "Rabid Bunny",
+        "tags": [
+          "LIVING",
+          "SOLID",
+          "HOSTILE"
+        ],
+        "behaviors": [
+          "ON_CONTACT -> SPAWN_PROJECTILE -> NEAREST_PLAYER, power=low"
+        ],
+        "size_category": "small",
+        "visual_description": "a fluffy white rabbit with matted fur, glowing red eyes, and an open mouth revealing sharp teeth as it twitches violently."
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 0.5,
+        "Gameplay Quality": 0.25,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design captures the basic theme (a hostile bunny) but fails to implement the specific mechanics requested: the progression of anger as it sees the player and the 'charging' behavior. The behavior provided ('ON_CONTACT -> SPAWN_PROJECTILE') is unrelated to charging or biting and lacks any logic for sight or state changes.",
+        "Gameplay Quality": "The design fails to fulfill the input prompt's core requirements. It does not include a movement behavior (like MOVE_TOWARD) to facilitate the 'charge' mentioned, leaving the object effectively inert. Additionally, it uses the generic HOSTILE tag instead of SHARP for a biting creature, and the chosen behavior (spawning a projectile on contact) is nonsensical for a biting attack.",
+        "Sprite Prompt": "The description clearly specifies the shape (rabbit), materials (matted fur), colors (white, glowing red), and distinctive features (sharp teeth). It matches the name and tags perfectly and is a single sentence focusing on the object itself."
+      },
+      "elapsed": 1.0979682,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "d18bc6f3438359b5"
+    },
+    {
+      "case": "electric jellyfish",
+      "inputs": "one of those deep sea jellyfish that glows in the dark and shocks anything that gets close to its tentacles",
+      "category": "creature",
+      "expected_tags": [
+        "LIVING",
+        "ELECTRIC",
+        "GLOWING"
+      ],
+      "output_raw": "{\n  \"name\": \"Shock Jellyfish\",\n  \"tags\": [\n    \"LIQUID\",\n    \"FLEXIBLE\",\n    \"ELECTRIC\",\n    \"LIVING\"\n  ],\n  \"behaviors\": [\n    \"ON_PROXIMITY -> SPAWN_PROJECTILE -> NEAREST_LIVING, power=high\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"a translucent bell-shaped body pulsing with neon blue electricity, trailing long semi-transparent tentacles that crackle with voltage.\",\n    \"size_category\": \"medium\"\n  }\n}",
+      "output": {
+        "name": "Shock Jellyfish",
+        "tags": [
+          "LIQUID",
+          "FLEXIBLE",
+          "ELECTRIC",
+          "LIVING"
+        ],
+        "behaviors": [
+          "ON_PROXIMITY -> SPAWN_PROJECTILE -> NEAREST_LIVING, power=high"
+        ],
+        "size_category": "medium",
+        "visual_description": "a translucent bell-shaped body pulsing with neon blue electricity, trailing long semi-transparent tentacles that crackle with voltage."
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 1.0,
+        "Gameplay Quality": 1.0,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design captures all elements of the player's description. The name is appropriate, the tags (LIQUID, FLEXIBLE, ELECTRIC, LIVING) match the physical nature of a jellyfish that shocks, and the behavior (ON_PROXIMITY) correctly implements the proximity-based shocking mechanic. The visual description also effectively communicates the glowing, deep-sea aesthetic.",
+        "Gameplay Quality": "The design effectively uses the tag system to create emergent gameplay. By using the ELECTRIC tag, the object automatically interacts with CONDUCTING and REFLECTIVE objects, allowing for chain reactions (like shocking a pool of water or a metal grid). The LIQUID tag also provides an interaction surface for COLD/FROZEN effects. The behavior (ON_PROXIMITY -> SPAWN_PROJECTILE) correctly complements the tags by addressing the \"proximity\" requirement of the prompt which tags alone don't handle, and it avoids the \"generic damage\" trap by relying on the elemental ELECTRIC property.",
+        "Sprite Prompt": "The description clearly specifies the shape (bell-shaped, long tentacles), materials (translucent, semi-transparent), colors (neon blue), and distinctive features (pulsing electricity, crackling voltage). It perfectly matches the object's name and tags and describes the object itself in a concise manner."
+      },
+      "elapsed": 1.1515869,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "a64b1ff04616c343"
+    },
+    {
+      "case": "wind spirit",
+      "inputs": "a little tornado spirit, its alive and it blows everything around it away, like leaves and small objects just go flying",
+      "category": "creature",
+      "expected_tags": [
+        "LIVING",
+        "WIND_SOURCE",
+        "FLOATING"
+      ],
+      "output_raw": "{\n  \"name\": \"Tornado Spirit\",\n  \"tags\": [\n    \"LIVING\",\n    \"GAS\",\n    \"WIND_SOURCE\",\n    \"LIGHT\",\n    \"GLOWING\"\n  ],\n  \"behaviors\": [\n    \"ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING, power=high\",\n    \"ON_PROXIMITY -> APPLY_FORCE -> CONTACT_BODY, power=medium\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"A small, swirling vortex of semi-transparent pale blue air with a faint glowing core and wisps of white mist, resembling a miniature hurricane.\",\n    \"size_category\": \"small\"\n  }\n}",
+      "output": {
+        "name": "Tornado Spirit",
+        "tags": [
+          "LIVING",
+          "GAS",
+          "WIND_SOURCE",
+          "LIGHT",
+          "GLOWING"
+        ],
+        "behaviors": [
+          "ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING, power=high",
+          "ON_PROXIMITY -> APPLY_FORCE -> CONTACT_BODY, power=medium"
+        ],
+        "size_category": "small",
+        "visual_description": "A small, swirling vortex of semi-transparent pale blue air with a faint glowing core and wisps of white mist, resembling a miniature hurricane."
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 1.0,
+        "Gameplay Quality": 1.0,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design perfectly captures the player's request. The name 'Tornado Spirit' is accurate. The tags 'LIVING', 'GAS', and 'WIND_SOURCE' directly reflect the physical nature and the 'alive' requirement. The behaviors capture both the movement of a living entity ('MOVE_TOWARD') and the mechanical effect of blowing things away ('APPLY_FORCE' on proximity). The visual description is very consistent with the 'little tornado spirit' concept.",
+        "Gameplay Quality": "The design effectively uses the tag system, specifically the WIND_SOURCE tag which interacts automatically with LIGHT objects as described in the rubric. The behaviors complement the tags: MOVE_TOWARD provides autonomous movement, and APPLY_FORCE enhances the physical interaction beyond just LIGHT objects at close range. This aligns closely with the example of an excellent (1.0) design provided in the rubric.",
+        "Sprite Prompt": "The description clearly specifies the shape (swirling vortex), material (pale blue air, white mist), and distinctive features (glowing core). It matches the tags (GAS, GLOWING, etc.) and is concise (one sentence), focusing on the object rather than a scene."
+      },
+      "elapsed": 1.3636216,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "a48bd6853f4ad398"
+    },
+    {
+      "case": "toxic frog",
+      "inputs": "a cute little frog but its actually super poisonous, if you touch it or get too close the poison seeps out and hurts you",
+      "category": "creature",
+      "expected_tags": [
+        "LIVING",
+        "TOXIC"
+      ],
+      "output_raw": "{\n  \"name\": \"Poison Dart Frog\",\n  \"tags\": [\n    \"LIVING\",\n    \"TOXIC\",\n    \"COLD\",\n    \"LIGHT\"\n  ],\n  \"behaviors\": [\n    \"ON_PROXIMITY -> ADD_TAGS(TOXIC) -> NEAREST_LIVING, power=medium\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"a tiny, plump frog with vibrant iridescent blue skin and bright orange spots on its legs, looking deceptively cute but dangerous\",\n    \"size_category\": \"tiny\"\n  }\n}",
+      "output": {
+        "name": "Poison Dart Frog",
+        "tags": [
+          "LIVING",
+          "TOXIC",
+          "COLD",
+          "LIGHT"
+        ],
+        "behaviors": [
+          "ON_PROXIMITY -> ADD_TAGS(TOXIC) -> NEAREST_LIVING, power=medium"
+        ],
+        "size_category": "tiny",
+        "visual_description": "a tiny, plump frog with vibrant iridescent blue skin and bright orange spots on its legs, looking deceptively cute but dangerous"
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 1.0,
+        "Gameplay Quality": 1.0,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design perfectly captures the user's request. The name is appropriate, the tags (LIVING, TOXIC) represent the physical nature, the behavior (ON_PROXIMITY) matches the 'get too close' requirement, and the visual description captures the 'cute little frog' aesthetic.",
+        "Gameplay Quality": "The design effectively uses the tag system for automatic interactions (TOXIC for contact damage, LIGHT for physics) and uses behaviors to extend these interactions in a way that creates emergent gameplay (ADD_TAGS(TOXIC) on proximity spreads the hazard to other living things). This perfectly follows the principle of using tags for passive interactions and behaviors for conditional tag spreading.",
+        "Sprite Prompt": "The visual description clearly specifies the shape (tiny, plump frog), colors (blue, orange spots), and distinctive features (iridescent skin). It is a single sentence focusing on the object itself and aligns perfectly with the name and tags provided."
+      },
+      "elapsed": 0.8938522,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "c524c6b4c8127755"
+    },
+    {
+      "case": "mirror golem",
+      "inputs": "a golem made entirely out of mirrors, it reflects everything back at you - fire, lightning, whatever you throw at it bounces right back",
+      "category": "creature",
+      "expected_tags": [
+        "SOLID",
+        "LIVING",
+        "REFLECTIVE",
+        "RIGID"
+      ],
+      "output_raw": "{\n  \"name\": \"Mirror Golem\",\n  \"tags\": [\n    \"SOLID\",\n    \"RIGID\",\n    \"HOSTILE\",\n    \"REFLECTIVE\"\n  ],\n  \"behaviors\": [\n    \"ON_TAG_ADDED(HEAT_SOURCE) -> ADD_TAGS(HOT) -> SELF\",\n    \"ON_TAG_ADDED(ELECTRIC) -> ADD_TAGS(ELECTRIC) -> SELF\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"A towering humanoid construct composed of jagged, polished silver mirror shards that flash and sparkle in the light, with a blank, featureless face made of dark reflective glass.\",\n    \"size_category\": \"large\"\n  }\n}",
+      "output": {
+        "name": "Mirror Golem",
+        "tags": [
+          "SOLID",
+          "RIGID",
+          "HOSTILE",
+          "REFLECTIVE"
+        ],
+        "behaviors": [
+          "ON_TAG_ADDED(HEAT_SOURCE) -> ADD_TAGS(HOT) -> SELF",
+          "ON_TAG_ADDED(ELECTRIC) -> ADD_TAGS(ELECTRIC) -> SELF"
+        ],
+        "size_category": "large",
+        "visual_description": "A towering humanoid construct composed of jagged, polished silver mirror shards that flash and sparkle in the light, with a blank, featureless face made of dark reflective glass."
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 0.5,
+        "Gameplay Quality": 0.75,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The name, tags, and visual description accurately represent a Mirror Golem. However, the design fails to implement the core mechanic requested by the player: that the golem \"reflects everything back at you.\" Instead of reflecting fire and lightning, the behavior scripts explicitly show the golem absorbing these properties (applying them to 'SELF' instead of a 'SOURCE' or 'PLAYER'). This is a notable gap in the behavior logic that contradicts the specific instructions provided.",
+        "Gameplay Quality": "The design correctly identifies and uses the 'REFLECTIVE' tag to fulfill the core requirement of the prompt. The chosen behaviors (becoming HOT or ELECTRIC upon contact) create interesting secondary effects that complement the reflection mechanic. However, it misses the 'SHARP' tag, which is a significant missed opportunity given the description of 'jagged mirror shards'. Additionally, as a 'golem', the lack of any movement behaviors (like MOVE_TOWARD or PATROL) makes it a static obstacle rather than a dynamic creature, which is a minor missed opportunity for a physics sandbox.",
+        "Sprite Prompt": "The visual description clearly specifies the shape (humanoid construct), materials (polished silver mirror shards, dark reflective glass), and colors (silver, dark). It provides distinctive features like the \"blank, featureless face\" and the \"jagged shards.\" It is a single sentence focusing on the object rather than a scene, and it perfectly matches the name and tags."
+      },
+      "elapsed": 1.6609595,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "adb81c846d34d0be"
+    },
+    {
+      "case": "lasso vine",
+      "inputs": "a living vine that reaches out and wraps around things nearby, pulling them in closer like a lasso",
+      "category": "creature",
+      "expected_tags": [
+        "LIVING",
+        "FLEXIBLE",
+        "STICKY"
+      ],
+      "output_raw": "{\n  \"name\": \"Reach Vine\",\n  \"tags\": [\n    \"LIVING\",\n    \"SOLID\",\n    \"FLEXIBLE\",\n    \"STICKY\"\n  ],\n  \"behaviors\": [\n    \"ON_PROXIMITY -> ATTRACT -> CONTACT_BODY, power=medium\",\n    \"ALWAYS -> MOVE_TOWARD -> NEAREST_OBJECT, power=low\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"a thick green vine with smaller tendrils branching off the main stem, constantly twitching and reaching outwards with small thorns at the tips\",\n    \"size_category\": \"medium\"\n  }\n}",
+      "output": {
+        "name": "Reach Vine",
+        "tags": [
+          "LIVING",
+          "SOLID",
+          "FLEXIBLE",
+          "STICKY"
+        ],
+        "behaviors": [
+          "ON_PROXIMITY -> ATTRACT -> CONTACT_BODY, power=medium",
+          "ALWAYS -> MOVE_TOWARD -> NEAREST_OBJECT, power=low"
+        ],
+        "size_category": "medium",
+        "visual_description": "a thick green vine with smaller tendrils branching off the main stem, constantly twitching and reaching outwards with small thorns at the tips"
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 1.0,
+        "Gameplay Quality": 0.75,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design captures the concept perfectly. The behaviors 'ATTRACT' on 'PROXIMITY' directly reflect the player's request for a lasso-like pulling action. The tags and visual description are all highly relevant and consistent with the core idea of a living, reaching vine.",
+        "Gameplay Quality": "The design effectively uses the STICKY tag in combination with the ATTRACT behavior to simulate the 'lasso' effect described in the prompt, which is an excellent use of the physics system for emergent gameplay. However, it misses a few obvious interaction opportunities: as a plant-like vine, it should likely be FLAMMABLE, and while the visual description mentions thorns, the SHARP tag is missing. These omissions put it in the 0.75 category for minor missed opportunities.",
+        "Sprite Prompt": "The visual description clearly specifies the shape (thick vine with tendrils), material (plant-like vine), and color (green). It captures the \"living\" and \"flexible\" aspects mentioned in the tags and input. While the \"sticky\" tag is represented by \"thorns\" (which helps with the lasso behavior), the overall description is concise, descriptive, and would result in a recognizable game sprite."
+      },
+      "elapsed": 1.2302838,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "77602ce7f4a5e535"
+    },
+    {
+      "case": "cowardly slime",
+      "inputs": "a little slime creature thats really scared of everything, the moment anything comes near it just books it in the other direction as fast as it can",
+      "category": "creature",
+      "expected_tags": [
+        "LIVING",
+        "SLIPPERY"
+      ],
+      "output_raw": "{\n  \"name\": \"Panicked Slime\",\n  \"tags\": [\n    \"SOLID\",\n    \"FLEXIBLE\",\n    \"LIGHT\",\n    \"LIVING\"\n  ],\n  \"behaviors\": [\n    \"ON_PROXIMITY -> MOVE_AWAY -> CONTACT_BODY, power=high\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"A small, translucent teal blob with wide, trembling eyes and a wobbly body that jiggles with every frantic hop\",\n    \"size_category\": \"tiny\"\n  }\n}",
+      "output": {
+        "name": "Panicked Slime",
+        "tags": [
+          "SOLID",
+          "FLEXIBLE",
+          "LIGHT",
+          "LIVING"
+        ],
+        "behaviors": [
+          "ON_PROXIMITY -> MOVE_AWAY -> CONTACT_BODY, power=high"
+        ],
+        "size_category": "tiny",
+        "visual_description": "A small, translucent teal blob with wide, trembling eyes and a wobbly body that jiggles with every frantic hop"
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 1.0,
+        "Gameplay Quality": 0.75,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design perfectly captures the user's request. The name 'Panicked Slime' fits the theme. The behavior 'ON_PROXIMITY -> MOVE_AWAY' with 'power=high' directly translates the 'books it in the other direction' instruction. The visual description of trembling eyes and a jiggling body reinforces the 'scared' aspect, and the 'tiny' size category matches 'little'.",
+        "Gameplay Quality": "The design effectively captures the 'scared' behavior requested in the prompt using a MOVE_AWAY behavior and the LIGHT tag, which allows it to be easily pushed by environmental forces like WIND_SOURCE. However, it misses a significant opportunity for emergent gameplay by not giving the 'slime' creature any slime-like tags such as STICKY or CORROSIVE. For example, a STICKY panicked slime would drag objects with it as it flees, creating much more interesting physics interactions. This represents a minor missed opportunity to fully exploit the tag system.",
+        "Sprite Prompt": "The visual description clearly specifies the shape (blob), material (translucent, wobbly, jiggling), color (teal), and distinctive features (wide, trembling eyes) in a concise format. It perfectly captures the \"panicked\" nature of the creature and matches the name and tags."
+      },
+      "elapsed": 0.9875973,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "cd12583b97618b18"
+    },
+    {
+      "case": "phoenix egg",
+      "inputs": "an egg that looks totally normal but when its about to break it suddenly bursts into flames and a firebird comes out, or at least thats the idea",
+      "category": "creature",
+      "expected_tags": [
+        "SOLID",
+        "LIVING"
+      ],
+      "output_raw": "{\n  \"name\": \"Phoenix Egg\",\n  \"tags\": [\n    \"SOLID\",\n    \"BREAKABLE\",\n    \"GLOWING\"\n  ],\n  \"behaviors\": [\n    \"ON_DAMAGED -> SPAWN_PROJECTILE -> NEAREST_LIVING, power=medium\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"A smooth, speckled white egg with a faint golden shimmer pulsing from within the shell, about the size of a standard chicken egg.\",\n    \"size_category\": \"small\"\n  }\n}",
+      "output": {
+        "name": "Phoenix Egg",
+        "tags": [
+          "SOLID",
+          "BREAKABLE",
+          "GLOWING"
+        ],
+        "behaviors": [
+          "ON_DAMAGED -> SPAWN_PROJECTILE -> NEAREST_LIVING, power=medium"
+        ],
+        "size_category": "small",
+        "visual_description": "A smooth, speckled white egg with a faint golden shimmer pulsing from within the shell, about the size of a standard chicken egg."
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 0.5,
+        "Gameplay Quality": 0.5,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design captures the basic theme but fails on several specific requirements. The user requested the egg look 'totally normal', but the design includes a 'GLOWING' tag and a 'faint golden shimmer'. More importantly, the 'bursts into flames' part of the description is entirely missing from the behaviors and tags (no fire or explosion effect). Spawning a projectile is a loose interpretation of a 'firebird' coming out.",
+        "Gameplay Quality": "The design misses the core emergent gameplay opportunities provided by the tag system. Specifically, for an object that 'bursts into flames,' it lacks the HEAT_SOURCE or EXPLOSIVE tags, which would allow it to interact with FLAMMABLE objects or the physics engine automatically. The use of 'SPAWN_PROJECTILE' as a behavior captures the 'firebird' part partially, but the object itself is relatively inert within the described sandbox's interaction systems (missing fire, heat, or explosion interactions).",
+        "Sprite Prompt": "The description clearly specifies the shape (egg), materials (speckled shell), and colors (white, golden), along with a distinctive pulsing shimmer feature. It accurately reflects the 'GLOWING' tag and the input prompt's requirement for a 'mostly normal' appearance with a hint of its fiery nature. It is concise (one sentence) and focuses on the object itself."
+      },
+      "elapsed": 1.2133657,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "b11e0564814086c8"
+    },
+    {
+      "case": "patrol bot",
+      "inputs": "a little robot that just walks back and forth guarding an area, and if it spots you it starts shooting",
+      "category": "creature",
+      "expected_tags": [
+        "SOLID",
+        "LIVING"
+      ],
+      "output_raw": "{\n  \"name\": \"Sentinel Drone\",\n  \"tags\": [\n    \"SOLID\",\n    \"RIGID\",\n    \"ELECTRIC\",\n    \"LIVING\",\n    \"HOSTILE\"\n  ],\n  \"behaviors\": [\n    \"ALWAYS -> MOVE_TOWARD -> NEAREST_OBJECT, power=low\",\n    \"ON_PROXIMITY -> ADD_TAGS(HEAT_SOURCE) -> CONTACT_BODY, power=high\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"a small boxy robot with a single glowing red optical sensor and two mechanical legs that shuffle side-to-side\",\n    \"size_category\": \"small\"\n  }\n}",
+      "output": {
+        "name": "Sentinel Drone",
+        "tags": [
+          "SOLID",
+          "RIGID",
+          "ELECTRIC",
+          "LIVING",
+          "HOSTILE"
+        ],
+        "behaviors": [
+          "ALWAYS -> MOVE_TOWARD -> NEAREST_OBJECT, power=low",
+          "ON_PROXIMITY -> ADD_TAGS(HEAT_SOURCE) -> CONTACT_BODY, power=high"
+        ],
+        "size_category": "small",
+        "visual_description": "a small boxy robot with a single glowing red optical sensor and two mechanical legs that shuffle side-to-side"
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 0.5,
+        "Gameplay Quality": 0.75,
+        "Sprite Prompt": 0.75
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design captures the visual and thematic elements of a 'hostile robot' well, but fails significantly on the requested behaviors. Instead of 'walking back and forth' (patrolling), it is programmed to constantly move toward the nearest object. Instead of 'shooting', it applies a heat source tag on proximity/contact. Additionally, the 'LIVING' tag is inconsistent with a mechanical robot description.",
+        "Gameplay Quality": "The design makes good use of the tag system, particularly the ELECTRIC tag and the clever use of ADD_TAGS(HEAT_SOURCE) to simulate a heat-ray/shooting effect that creates emergent fire interactions. It avoids the 'generic damage trap' by incorporating these elemental effects. However, it misses a 1.0 score because it fails to implement the requested 'patrol' behavior (choosing a basic chase instead) and interprets 'shooting' as a proximity aura rather than a projectile interaction, which limits the physics-based gameplay potential of the shooting mechanic. The absence of the CONDUCTING tag on a mechanical/electric robot is also a minor missed opportunity for chain reactions.",
+        "Sprite Prompt": "The visual description provides a clear shape (boxy), material (mechanical), and color (glowing red sensor). It is concise and describes the object directly. However, it misses a specific body color and does not include a visual element for the \"shooting\" capability described in the input, making it slightly incomplete but still very functional for sprite generation."
+      },
+      "elapsed": 1.325744,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "c114dc527153992b"
+    },
+    {
+      "case": "electric lava golem",
+      "inputs": "a golem thats made of lava and shoots lightning, like the final boss of a video game",
+      "category": "creature",
+      "expected_tags": [
+        "LIVING",
+        "MOLTEN",
+        "ELECTRIC"
+      ],
+      "output_raw": "{\n  \"name\": \"Lava Golem\",\n  \"tags\": [\n    \"SOLID\",\n    \"RIGID\",\n    \"MOLTEN\",\n    \"HOT\",\n    \"ELECTRIC\",\n    \"HOSTILE\"\n  ],\n  \"behaviors\": [\n    \"ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING, power=high\",\n    \"ON_PROXIMITY -> SPAWN_PROJECTILE -> NEAREST_PLAYER, power=high\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"A towering, humanoid figure composed of crackling molten rock with veins of bright blue electricity arcing through its fissures. Its body glows an intense orange-red, and lightning bolts constantly burst from its fists.\",\n    \"size_category\": \"large\"\n  }\n}",
+      "output": {
+        "name": "Lava Golem",
+        "tags": [
+          "SOLID",
+          "RIGID",
+          "MOLTEN",
+          "HOT",
+          "ELECTRIC",
+          "HOSTILE"
+        ],
+        "behaviors": [
+          "ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING, power=high",
+          "ON_PROXIMITY -> SPAWN_PROJECTILE -> NEAREST_PLAYER, power=high"
+        ],
+        "size_category": "large",
+        "visual_description": "A towering, humanoid figure composed of crackling molten rock with veins of bright blue electricity arcing through its fissures. Its body glows an intense orange-red, and lightning bolts constantly burst from its fists."
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 1.0,
+        "Gameplay Quality": 0.75,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design perfectly captures the user's input. The name and visual description align with a lava golem that shoots lightning. The tags (MOLTEN, ELECTRIC, HOSTILE) and behaviors (SPAWN_PROJECTILE, MOVE_TOWARD) accurately reflect the physical properties and the combat-oriented \"final boss\" nature of the request.",
+        "Gameplay Quality": "The design uses the ELECTRIC tag effectively to create emergent gameplay through conduction. The behaviors complement the tags by adding movement and a ranged attack (shooting lightning). However, it misses a key opportunity to use the HEAT_SOURCE tag for its lava composition, instead using non-functional descriptive tags like 'HOT' and 'MOLTEN', which prevents it from automatically igniting flammable objects as per the system's rules.",
+        "Sprite Prompt": "The visual description clearly specifies the shape (towering humanoid), materials (molten rock, electricity), and colors (orange-red, bright blue). It perfectly matches the name and tags, and consists of two sentences focused solely on the object itself."
+      },
+      "elapsed": 1.5511729,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "a524795a52d1dc7c"
+    },
+    {
+      "case": "the sun",
+      "inputs": "the sun",
+      "category": "abstract",
+      "expected_tags": [
+        "HEAT_SOURCE",
+        "GLOWING"
+      ],
+      "output_raw": "{\n  \"name\": \"Stellar Sun\",\n  \"tags\": [\n    \"HEAVY\",\n    \"HEAT_SOURCE\",\n    \"HOT\",\n    \"GLOWING\"\n  ],\n  \"behaviors\": [\n    \"ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING, power=high\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"a massive, blindingly bright sphere of plasma with a surface texture of swirling fire and solar flares radiating outward.\",\n    \"size_category\": \"huge\"\n  }\n}",
+      "output": {
+        "name": "Stellar Sun",
+        "tags": [
+          "HEAVY",
+          "HEAT_SOURCE",
+          "HOT",
+          "GLOWING"
+        ],
+        "behaviors": [
+          "ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING, power=high"
+        ],
+        "size_category": "huge",
+        "visual_description": "a massive, blindingly bright sphere of plasma with a surface texture of swirling fire and solar flares radiating outward."
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 0.5,
+        "Gameplay Quality": 1.0,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The name, tags, and visual description accurately represent 'the sun'. However, the behavior 'ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING' is completely contradictory to the nature of the sun, turning it into an aggressive entity that chases players, which does not fit the player's intent.",
+        "Gameplay Quality": "The design effectively uses the tag system. 'HEAT_SOURCE' is a core interaction tag that creates emergent gameplay with 'FLAMMABLE' objects. The behavior 'MOVE_TOWARD' complements the tags by turning a passive heat source into an active hazard/predator, which is a clever gameplay twist on 'the sun'. The tags chosen (HEAVY, HEAT_SOURCE) provide clear physics and interaction surfaces without duplicating the behavior's function.",
+        "Sprite Prompt": "The description clearly specifies the shape (sphere), materials (plasma, fire), and distinctive features (solar flares). While specific color names like 'yellow' are not used, 'blindingly bright' and 'fire' effectively communicate the color palette for an image generator. It perfectly matches the tags and name."
+      },
+      "elapsed": 1.2266832,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "76758d85f8fe1b7f"
+    },
+    {
+      "case": "tiny black hole",
+      "inputs": "a tiny black hole that sucks everything in",
+      "category": "abstract",
+      "expected_tags": [
+        "MAGNETIC",
+        "HEAVY"
+      ],
+      "output_raw": "{\n  \"name\": \"Stellar Vortex\",\n  \"tags\": [\n    \"SOLID\",\n    \"HEAVY\",\n    \"MAGNETIC\"\n  ],\n  \"behaviors\": [\n    \"ALWAYS -> ATTRACT -> NEAREST_OBJECT, power=high\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"A perfectly spherical void of pure blackness about the size of a marble, surrounded by a faint purple distortion halo that warps the light around it.\",\n    \"size_category\": \"tiny\"\n  }\n}",
+      "output": {
+        "name": "Stellar Vortex",
+        "tags": [
+          "SOLID",
+          "HEAVY",
+          "MAGNETIC"
+        ],
+        "behaviors": [
+          "ALWAYS -> ATTRACT -> NEAREST_OBJECT, power=high"
+        ],
+        "size_category": "tiny",
+        "visual_description": "A perfectly spherical void of pure blackness about the size of a marble, surrounded by a faint purple distortion halo that warps the light around it."
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 0.75,
+        "Gameplay Quality": 1.0,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design captures the core concept well. The name and visual description are very accurate. The behavior 'ATTRACT -> NEAREST_OBJECT' perfectly matches the request to 'suck everything in'. However, the 'MAGNETIC' tag is slightly inaccurate as black holes use gravity, and 'SOLID' is a bit contradictory for a black hole which usually consumes objects rather than having them bounce off. These are minor tag issues, making 0.75 the most appropriate score.",
+        "Gameplay Quality": "The design effectively uses the tag system to create range attraction (MAGNETIC) while using a behavior (ATTRACT) to extend that functionality to non-conducting objects, which the tag system doesn't cover. This is a perfect example of a behavior complementing the tag system. The choice of HEAVY and SOLID tags further defines the object's physical presence in a way that creates emergent interactions (e.g., using it as an anchor or a shield).",
+        "Sprite Prompt": "The visual description clearly specifies the shape (spherical void), color (blackness, purple), and distinctive features (distortion halo, warping light) in a single concise sentence. It matches the name 'Stellar Vortex' and the input 'tiny black hole'. Though the tag 'SOLID' is conceptually odd for a black hole, the visual description focuses accurately on the appearance of the object."
+      },
+      "elapsed": 1.1686708,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "40eecd87177d5c15"
+    },
+    {
+      "case": "sadness",
+      "inputs": "sadness",
+      "category": "abstract",
+      "expected_tags": [
+        "GLOWING"
+      ],
+      "output_raw": "{\n  \"name\": \"Melancholy Mist\",\n  \"tags\": [\n    \"GAS\",\n    \"TOXIC\",\n    \"COLD\",\n    \"LIGHT\"\n  ],\n  \"behaviors\": [\n    \"ON_CREATE -> SPAWN_PROJECTILE -> NEAREST_LIVING, power=medium\",\n    \"ON_TAG_ADDED(LIGHT) -> ADD_TAGS(FROZEN) -> SELF\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"a wispy, grey-blue cloud that drifts with a heavy, sorrowful presence, occasionally pulsing with faint, dim blue light.\",\n    \"size_category\": \"small\"\n  }\n}",
+      "output": {
+        "name": "Melancholy Mist",
+        "tags": [
+          "GAS",
+          "TOXIC",
+          "COLD",
+          "LIGHT"
+        ],
+        "behaviors": [
+          "ON_CREATE -> SPAWN_PROJECTILE -> NEAREST_LIVING, power=medium",
+          "ON_TAG_ADDED(LIGHT) -> ADD_TAGS(FROZEN) -> SELF"
+        ],
+        "size_category": "small",
+        "visual_description": "a wispy, grey-blue cloud that drifts with a heavy, sorrowful presence, occasionally pulsing with faint, dim blue light."
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 1.0,
+        "Gameplay Quality": 1.0,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design creatively and faithfully translates the abstract concept of 'sadness' into a concrete game object ('Melancholy Mist'). The tags (COLD, TOXIC, GAS) and visual description (grey-blue cloud, sorrowful presence) align perfectly with the theme. The behaviors reflect a negative/draining effect consistent with the emotion.",
+        "Gameplay Quality": "The design effectively uses the tag system to create emergent gameplay. It uses the 'LIGHT' tag to allow interaction with 'WIND_SOURCE' and the 'COLD' tag to interact with 'LIQUID', both of which are core interactions in the provided rubric. The 'TOXIC' tag provides automatic contact damage without needing a behavior. The behaviors are complementary: 'SPAWN_PROJECTILE' provides a combat action not covered by tags, and the conditional 'ADD_TAGS(FROZEN)' creates a unique reaction to external stimuli. The theme of 'sadness' is creatively translated into a 'Melancholy Mist' with appropriate mechanical properties.",
+        "Sprite Prompt": "The visual description clearly specifies the shape (wispy cloud), colors (grey-blue), and distinctive features (pulsing light) of the object. It aligns well with the name and the provided tags (GAS, LIGHT, COLD). It is concise and describes the object itself rather than a scene."
+      },
+      "elapsed": 2.3756926,
+      "retries": 1,
+      "retry_errors": [
+        "Invalid behavior 'ON_TAG_ADDED(LIGHT) -> ADD_TAGS(FROZEN) -> CONTACT_BODY': 1 validation error for BehaviorSpec\n  Value error, CONTACT_BODY target requires ON_CONTACT, ON_DAMAGED, or ON_PROXIMITY trigger, not ON_TAG_ADDED. [type=value_error, input_value={'trigger': <BehaviorTrig...<Tag.FROZEN: 'FROZEN'>]}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/value_error\nExpected: TRIGGER -> ACTION -> TARGET\nExample: ON_TAG_ADDED(HEAT_SOURCE) -> EXPLODE -> SELF, power=high"
+      ],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "63ba65b56fd6f839"
+    },
+    {
+      "case": "indiana jones boulder",
+      "inputs": "that one boulder from indiana jones",
+      "category": "abstract",
+      "expected_tags": [
+        "SOLID",
+        "HEAVY",
+        "RIGID"
+      ],
+      "output_raw": "{\n  \"name\": \"Indy Boulder\",\n  \"tags\": [\n    \"SOLID\",\n    \"RIGID\",\n    \"HEAVY\",\n    \"FLEXIBLE\"\n  ],\n  \"behaviors\": [\n    \"ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING, power=high\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"a massive spherical rock with a rough, pitted surface, covered in desert dust and ancient-looking carvings that seem to shift as it rolls.\",\n    \"size_category\": \"large\"\n  }\n}",
+      "output": {
+        "name": "Indy Boulder",
+        "tags": [
+          "SOLID",
+          "RIGID",
+          "HEAVY",
+          "FLEXIBLE"
+        ],
+        "behaviors": [
+          "ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING, power=high"
+        ],
+        "size_category": "large",
+        "visual_description": "a massive spherical rock with a rough, pitted surface, covered in desert dust and ancient-looking carvings that seem to shift as it rolls."
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 0.75,
+        "Gameplay Quality": 0.5,
+        "Sprite Prompt": 0.75
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design captures the core concept very well. The name and visual description are spot on for the Indiana Jones boulder. The behavior (chasing living things) effectively translates the iconic movie scene into a game mechanic. However, the tag 'FLEXIBLE' is contradictory to a boulder and the 'RIGID' tag, which is a minor error in the physical properties.",
+        "Gameplay Quality": "The design contains a contradictory tag ('FLEXIBLE' for a boulder that is also 'SOLID' and 'RIGID') and misses a key interaction opportunity by not including the 'HOSTILE' tag, which the rubric specifies for dealing blunt physical damage. While the behavior accurately reflects the source material, the tag selection is poor and doesn't fully exploit the interaction system.",
+        "Sprite Prompt": "The description is clear, specific, and would produce a recognizable sprite. It details the shape (spherical), material (rough, pitted rock), and distinctive features (carvings). It loses some points because it contradicts the \"FLEXIBLE\" tag included in the JSON, and the color is implied (\"desert dust\") rather than explicitly named."
+      },
+      "elapsed": 1.2326919,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "359d816505403955"
+    },
+    {
+      "case": "frozen fire",
+      "inputs": "frozen fire",
+      "category": "abstract",
+      "expected_tags": [],
+      "output_raw": "{\n  \"name\": \"Frost Ember\",\n  \"tags\": [\n    \"SOLID\",\n    \"GLOWING\",\n    \"COLD\",\n    \"INSULATING\"\n  ],\n  \"behaviors\": [\n    \"ON_CONTACT -> ADD_TAGS(FROZEN) -> CONTACT_BODY\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"a jagged, charcoal-black stone glowing with an eerie blue inner light, encased in a crust of rime and ice crystals that seem to flicker rather than melt.\",\n    \"size_category\": \"small\"\n  }\n}",
+      "output": {
+        "name": "Frost Ember",
+        "tags": [
+          "SOLID",
+          "GLOWING",
+          "COLD",
+          "INSULATING"
+        ],
+        "behaviors": [
+          "ON_CONTACT -> ADD_TAGS(FROZEN) -> CONTACT_BODY"
+        ],
+        "size_category": "small",
+        "visual_description": "a jagged, charcoal-black stone glowing with an eerie blue inner light, encased in a crust of rime and ice crystals that seem to flicker rather than melt."
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 1.0,
+        "Gameplay Quality": 1.0,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design captures the oxymoron of 'frozen fire' perfectly. The name 'Frost Ember' balances both elements. The tags 'COLD' and 'GLOWING' represent the fire/ice duality, the behavior to freeze other objects on contact fits the 'frozen' aspect, and the visual description is vivid and evocative of the prompt.",
+        "Gameplay Quality": "The design for the 'Frost Ember' effectively uses the tag system to create emergent gameplay that fits the 'frozen fire' prompt. It uses the COLD tag for its passive interaction with liquids (freezing them) and a behavior to spread the FROZEN tag to other objects on contact, effectively simulating the way fire spreads but with a freezing effect. The choice of tags and behaviors is non-redundant and provides clear interaction surfaces for the physics sandbox.",
+        "Sprite Prompt": "The description specifies the shape (jagged stone), materials (charcoal-black stone, ice crystals), and colors (black, blue), while capturing the 'frozen fire' concept through the glowing inner light and flickering ice. It aligns perfectly with the name and tags."
+      },
+      "elapsed": 1.2008515,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "714fcb84d2c0b10d"
+    },
+    {
+      "case": "a thing",
+      "inputs": "a thing",
+      "category": "adversarial",
+      "expected_tags": [
+        "SOLID"
+      ],
+      "output_raw": "{\n  \"name\": \"Sonic Spike\",\n  \"tags\": [\n    \"SOLID\",\n    \"FLEXIBLE\",\n    \"BOUNCY\",\n    \"ELECTRIC\"\n  ],\n  \"behaviors\": [\n    \"ON_CONTACT -> ADD_TAGS(ELECTRIC) -> CONTACT_BODY, power=high\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"a silver, coiled metal spring with exposed copper wires and bright blue sparks crackling along its length\",\n    \"size_category\": \"small\"\n  }\n}",
+      "output": {
+        "name": "Sonic Spike",
+        "tags": [
+          "SOLID",
+          "FLEXIBLE",
+          "BOUNCY",
+          "ELECTRIC"
+        ],
+        "behaviors": [
+          "ON_CONTACT -> ADD_TAGS(ELECTRIC) -> CONTACT_BODY, power=high"
+        ],
+        "size_category": "small",
+        "visual_description": "a silver, coiled metal spring with exposed copper wires and bright blue sparks crackling along its length"
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 0.75,
+        "Gameplay Quality": 1.0,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The prompt 'a thing' is extremely broad, and the AI provided a specific, detailed object. While any object qualifies as 'a thing', the design has a slight internal inconsistency: the name 'Sonic Spike' suggests a sharp, rigid object, whereas the visual description (coiled metal spring) and the tags (FLEXIBLE, BOUNCY) describe a spring. This minor mismatch between the name and the physical properties makes it a 0.75.",
+        "Gameplay Quality": "The object design effectively utilizes the tag system to create emergent gameplay. The combination of physics tags (BOUNCY, FLEXIBLE) with the ELECTRIC tag creates a clear interaction surface. The behavior ADD_TAGS(ELECTRIC) complements the ELECTRIC tag by forcing electricity onto objects that might not naturally be CONDUCTING, thereby facilitating the chain reaction mentioned in the rubric. It avoids the 'generic damage' trap by focusing on elemental and physics-based interactions rather than just using the HOSTILE tag.",
+        "Sprite Prompt": "The visual description clearly specifies the shape (coiled metal spring), materials (silver, copper wires), and colors (silver, copper, bright blue sparks). It aligns perfectly with the tags provided (FLEXIBLE, BOUNCY, ELECTRIC) and describes the object itself without including a scene or environment."
+      },
+      "elapsed": 0.9750631,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "a6f0323f550ea784"
+    },
+    {
+      "case": "indestructible wall",
+      "inputs": "a wall that literally nothing can break, like at all",
+      "category": "adversarial",
+      "expected_tags": [
+        "SOLID",
+        "RIGID",
+        "HEAVY"
+      ],
+      "output_raw": "{\n  \"name\": \"Unbreakable Wall\",\n  \"tags\": [\n    \"SOLID\",\n    \"RIGID\",\n    \"HEAVY\"\n  ],\n  \"behaviors\": [],\n  \"visual_descriptor\": {\n    \"visual_description\": \"A massive, featureless slab of impenetrable black metal with a smooth, matte finish that seems to absorb all light around it.\",\n    \"size_category\": \"large\"\n  }\n}",
+      "output": {
+        "name": "Unbreakable Wall",
+        "tags": [
+          "SOLID",
+          "RIGID",
+          "HEAVY"
+        ],
+        "behaviors": [],
+        "size_category": "large",
+        "visual_description": "A massive, featureless slab of impenetrable black metal with a smooth, matte finish that seems to absorb all light around it."
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 0.75,
+        "Gameplay Quality": 1.0,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design captures the core concept well with an appropriate name and a visual description that reinforces the idea of being 'impenetrable.' However, it misses a specific mechanical tag or behavior (such as 'INDESTRUCTIBLE' or 'INVULNERABLE') that would technically enforce the player's request that 'literally nothing can break' it in a physics sandbox context. The current tags (SOLID, RIGID, HEAVY) describe a standard wall but not an unbreakable one.",
+        "Gameplay Quality": "The design perfectly captures the request for an 'unbreakable wall' using the tag system. By choosing SOLID, RIGID, and HEAVY, it establishes its physical presence and resistance to movement (WIND_SOURCE). By omitting tags like FLAMMABLE or CONDUCTING, it remains inert to most environmental interactions, effectively making it 'unbreakable' within the context of the game's emergent mechanics. This matches the example of a 1.0 design provided in the rubric (the simple rock).",
+        "Sprite Prompt": "The visual description clearly specifies the shape (massive slab), material (black metal), and color/finish (black, matte). It is a single concise sentence focusing on the object itself and matches the name and tags."
+      },
+      "elapsed": 1.1118284,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "fbc9b71088fa8994"
+    },
+    {
+      "case": "fiar swrod",
+      "inputs": "fiar swrod",
+      "category": "adversarial",
+      "expected_tags": [
+        "SOLID",
+        "SHARP",
+        "HEAT_SOURCE"
+      ],
+      "output_raw": "{\n  \"name\": \"Fiery Sword\",\n  \"tags\": [\n    \"SOLID\",\n    \"RIGID\",\n    \"SHARP\",\n    \"HEAT_SOURCE\"\n  ],\n  \"behaviors\": [],\n  \"visual_descriptor\": {\n    \"visual_description\": \"A sturdy steel blade glowing with an inner molten core, wreathed in flickering orange and yellow flames that dance along the edge.\",\n    \"size_category\": \"small\"\n  }\n}",
+      "output": {
+        "name": "Fiery Sword",
+        "tags": [
+          "SOLID",
+          "RIGID",
+          "SHARP",
+          "HEAT_SOURCE"
+        ],
+        "behaviors": [],
+        "size_category": "small",
+        "visual_description": "A sturdy steel blade glowing with an inner molten core, wreathed in flickering orange and yellow flames that dance along the edge."
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 1.0,
+        "Gameplay Quality": 1.0,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The AI correctly interpreted the misspelled input \"fiar swrod\" as \"Fiery Sword.\" The tags (SOLID, RIGID, SHARP, HEAT_SOURCE) accurately reflect the physical properties of such an object. The visual description is evocative and aligns with the concept. While no behaviors were listed, the tags sufficiently capture the functional essence of the object for a physics sandbox.",
+        "Gameplay Quality": "The design correctly uses the tag system to create emergent gameplay. 'SHARP' handles the cutting damage and 'HEAT_SOURCE' handles the fire-related interactions (igniting flammable objects) automatically, as per the game's rules. No redundant behaviors were added, which aligns with the principle that tags handle passive interactions. It is a concise and effective representation of the concept.",
+        "Sprite Prompt": "The description is clear and concise (one sentence). it specifies materials (steel), colors (orange, yellow), and distinctive features (molten core, flames) that align perfectly with the name and tags (HEAT_SOURCE, SHARP). it describes the object itself rather than a scene."
+      },
+      "elapsed": 0.800278,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "7dd0be28faef3bba"
+    },
+    {
+      "case": "shield request",
+      "inputs": "hey can you make me like a shield or something? nothing fancy just something to block stuff",
+      "category": "adversarial",
+      "expected_tags": [
+        "SOLID",
+        "RIGID"
+      ],
+      "output_raw": "{\n  \"name\": \"Rusty Shield\",\n  \"tags\": [\n    \"SOLID\",\n    \"RIGID\",\n    \"HEAVY\"\n  ],\n  \"behaviors\": [],\n  \"visual_descriptor\": {\n    \"visual_description\": \"a bent iron plate with a wooden back and a worn leather grip, covered in surface rust and dents\",\n    \"size_category\": \"medium\"\n  }\n}",
+      "output": {
+        "name": "Rusty Shield",
+        "tags": [
+          "SOLID",
+          "RIGID",
+          "HEAVY"
+        ],
+        "behaviors": [],
+        "size_category": "medium",
+        "visual_description": "a bent iron plate with a wooden back and a worn leather grip, covered in surface rust and dents"
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 1.0,
+        "Gameplay Quality": 0.75,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design perfectly captures the user's request for a basic, \"nothing fancy\" shield. The name \"Rusty Shield\" and the visual description of a dented iron plate fit the request perfectly. The tags \"SOLID\" and \"RIGID\" correctly define its ability to block things in a physics sandbox.",
+        "Gameplay Quality": "The design effectively uses the tag system to create a functional physical object (SOLID, RIGID, HEAVY) that fulfills the user's request for a basic shield. It correctly identifies that no behaviors are needed for a passive physical object. However, it misses a few opportunities for emergent gameplay based on its own visual description: since it is made of iron and wood, it should ideally have the CONDUCTING and FLAMMABLE tags to interact with electricity and fire, which fits the 0.75 criteria for 'minor missed opportunities'.",
+        "Sprite Prompt": "The description clearly specifies the shape (bent plate), materials (iron, wood, leather), and distinctive features (rust, dents). It matches the name and tags perfectly, is object-focused, and consists of a single concise sentence."
+      },
+      "elapsed": 0.6208892,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "dcabf8fd4ff1aa3f"
+    },
+    {
+      "case": "rambling glowing sword",
+      "inputs": "ok so I want like a really cool sword right, it should be super sharp and glow like a lightsaber and maybe be on fire or something idk, oh and make it big, like really big, biggest sword youve ever seen",
+      "category": "adversarial",
+      "expected_tags": [
+        "SOLID",
+        "SHARP",
+        "GLOWING"
+      ],
+      "output_raw": "{\n  \"name\": \"Inferno Colossus\",\n  \"tags\": [\n    \"SOLID\",\n    \"RIGID\",\n    \"SHARP\",\n    \"HEAT_SOURCE\",\n    \"GLOWING\"\n  ],\n  \"behaviors\": [],\n  \"visual_descriptor\": {\n    \"visual_description\": \"A massive blade made of crackling black metal that hums with intense heat, radiating a bright crimson-orange glow from its core and emitting waves of shimmering fire.\",\n    \"size_category\": \"huge\"\n  }\n}",
+      "output": {
+        "name": "Inferno Colossus",
+        "tags": [
+          "SOLID",
+          "RIGID",
+          "SHARP",
+          "HEAT_SOURCE",
+          "GLOWING"
+        ],
+        "behaviors": [],
+        "size_category": "huge",
+        "visual_description": "A massive blade made of crackling black metal that hums with intense heat, radiating a bright crimson-orange glow from its core and emitting waves of shimmering fire."
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 1.0,
+        "Gameplay Quality": 1.0,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design captures all the player's requests perfectly: \"SHARP\" for super sharp, \"GLOWING\" for the lightsaber effect, \"HEAT_SOURCE\" and visual description for the fire, and \"huge\" size category with the name \"Colossus\" for the massive size. The tags and visual description are fully aligned with the prompt.",
+        "Gameplay Quality": "The design uses the tag system effectively to fulfill all aspects of the user's request. 'SHARP' and 'HEAT_SOURCE' provide the gameplay mechanics for cutting and fire interactions without needing redundant behaviors. The size and visual description match the 'really big' and 'glowing' requirements perfectly.",
+        "Sprite Prompt": "The visual description clearly specifies the object's shape (massive blade), material (black metal), and colors (crimson-orange glow). It aligns perfectly with the tags and name, and it is a single sentence focused on the object itself rather than a scene."
+      },
+      "elapsed": 1.3424782,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "27a69951cf5c77c2"
+    },
+    {
+      "case": "not heavy floaty thing",
+      "inputs": "something light that floats and definitely isnt heavy at all, like a feather but cooler",
+      "category": "adversarial",
+      "expected_tags": [
+        "LIGHT",
+        "FLOATING"
+      ],
+      "output_raw": "{\n  \"name\": \"Glowing Ember Feather\",\n  \"tags\": [\n    \"LIGHT\",\n    \"FLOATING\",\n    \"FLAMMABLE\",\n    \"GLOWING\"\n  ],\n  \"behaviors\": [\n    \"ON_TAG_ADDED(HEAT_SOURCE) -> ADD_TAGS(HOT, HEAT_SOURCE) -> SELF\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"A translucent white feather with shimmering golden veins that pulse with soft light and trail tiny sparks of fire\",\n    \"size_category\": \"small\"\n  }\n}",
+      "output": {
+        "name": "Glowing Ember Feather",
+        "tags": [
+          "LIGHT",
+          "FLOATING",
+          "FLAMMABLE",
+          "GLOWING"
+        ],
+        "behaviors": [
+          "ON_TAG_ADDED(HEAT_SOURCE) -> ADD_TAGS(HOT, HEAT_SOURCE) -> SELF"
+        ],
+        "size_category": "small",
+        "visual_description": "A translucent white feather with shimmering golden veins that pulse with soft light and trail tiny sparks of fire"
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 1.0,
+        "Gameplay Quality": 1.0,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design captures the core concept perfectly. The name 'Glowing Ember Feather' and the visual description directly address the 'feather but cooler' request. The tags 'LIGHT' and 'FLOATING' satisfy the physical requirements, and the behaviors add a thematic interaction consistent with the 'Ember' theme.",
+        "Gameplay Quality": "The design perfectly captures the request for a 'cool feather' and utilizes the tag system effectively. By combining the LIGHT tag (which interacts with WIND_SOURCE) with the FLAMMABLE tag and a behavior that turns the object into a HEAT_SOURCE upon ignition, it creates a high potential for emergent gameplay (e.g., a burning feather being blown by wind to spread fire). The tags and behaviors complement each other well.",
+        "Sprite Prompt": "The visual description clearly specifies the shape (feather), materials (translucent, golden veins), colors (white, golden), and distinctive features (pulsing light, sparks). It is a concise, two-part description that matches the tags and name perfectly."
+      },
+      "elapsed": 1.0421054,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "6894fbf4fe1a99b9"
+    },
+    {
+      "case": "acid rain cloud",
+      "inputs": "a cloud that rains acid on everything below it",
+      "category": "environment",
+      "expected_tags": [
+        "GAS",
+        "FLOATING",
+        "CORROSIVE"
+      ],
+      "output_raw": "{\n  \"name\": \"Acid Rain Cloud\",\n  \"tags\": [\n    \"GAS\",\n    \"TOXIC\",\n    \"COLD\",\n    \"WET\"\n  ],\n  \"behaviors\": [\n    \"ON_TIMER -> SPAWN_PROJECTILE -> NEAREST_LIVING, power=medium\",\n    \"ON_TAG_ADDED(HEAT_SOURCE) -> REMOVE_TAGS(TOXIC) -> SELF, power=low\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"A large, churning storm cloud with a dark grey and purple hue, emitting occasional drops of bubbling green liquid from its underside.\",\n    \"size_category\": \"large\"\n  }\n}",
+      "output": {
+        "name": "Acid Rain Cloud",
+        "tags": [
+          "GAS",
+          "TOXIC",
+          "COLD",
+          "WET"
+        ],
+        "behaviors": [
+          "ON_TIMER -> SPAWN_PROJECTILE -> NEAREST_LIVING, power=medium",
+          "ON_TAG_ADDED(HEAT_SOURCE) -> REMOVE_TAGS(TOXIC) -> SELF, power=low"
+        ],
+        "size_category": "large",
+        "visual_description": "A large, churning storm cloud with a dark grey and purple hue, emitting occasional drops of bubbling green liquid from its underside."
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 0.75,
+        "Gameplay Quality": 0.75,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design captures the core concept of an acid rain cloud effectively. The name, tags (GAS, TOXIC, WET), and visual description are all highly appropriate. The behavior captures the \"raining\" aspect through spawning projectiles on a timer. The inclusion of the \"COLD\" tag is slightly arbitrary, and the behavior specifically targets \"NEAREST_LIVING\" rather than \"everything below it\" as requested, which is a minor mismatch in scope.",
+        "Gameplay Quality": "The design includes appropriate tags like GAS, TOXIC, and WET for an acid rain cloud, and features a clever interaction where heat sources can neutralize the toxicity. However, it missed the CORROSIVE tag which is specifically mentioned in the rubric as the tag that dissolves materials on contact—a key trait of acid. Additionally, the behavior targets 'NEAREST_LIVING' rather than 'everything below it' as requested in the prompt, limiting the environmental interaction.",
+        "Sprite Prompt": "The visual description clearly specifies the shape (churning storm cloud), colors (dark grey, purple, green), and distinctive features (bubbling green drops) of the object. It aligns perfectly with the name and tags, and it describes the object itself in a single sentence."
+      },
+      "elapsed": 4.5204264,
+      "retries": 3,
+      "retry_errors": [
+        "GAS and HEAVY cannot coexist. Remove one.",
+        "Invalid behavior 'ON_TAG_ADDED(HEAT_SOURCE) -> REMOVE_TAGS(TOXIC), power=low': Malformed parentheses in 'REMOVE_TAGS(TOXIC), power=low'.\nExpected: TRIGGER -> ACTION -> TARGET\nExample: ON_TAG_ADDED(HEAT_SOURCE) -> EXPLODE -> SELF, power=high",
+        "Invalid behavior 'ON_TAG_ADDED(HEAT_SOURCE) -> REMOVE_TAGS(TOXIC), power=low': Malformed parentheses in 'REMOVE_TAGS(TOXIC), power=low'.\nExpected: TRIGGER -> ACTION -> TARGET\nExample: ON_TAG_ADDED(HEAT_SOURCE) -> EXPLODE -> SELF, power=high"
+      ],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "f13b83f1948b38bf"
+    },
+    {
+      "case": "ice shield",
+      "inputs": "an ice shield that freezes stuff when they touch it",
+      "category": "defensive",
+      "expected_tags": [
+        "SOLID",
+        "RIGID",
+        "FROZEN"
+      ],
+      "output_raw": "{\n  \"name\": \"Frost Shield\",\n  \"tags\": [\n    \"SOLID\",\n    \"RIGID\",\n    \"FROZEN\",\n    \"REFLECTIVE\"\n  ],\n  \"behaviors\": [\n    \"ON_CONTACT -> ADD_TAGS(FROZEN) -> CONTACT_BODY\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"a translucent azure shield made of solid ice with jagged frost spikes around the rim and swirling white vapor rising from its surface\",\n    \"size_category\": \"medium\"\n  }\n}",
+      "output": {
+        "name": "Frost Shield",
+        "tags": [
+          "SOLID",
+          "RIGID",
+          "FROZEN",
+          "REFLECTIVE"
+        ],
+        "behaviors": [
+          "ON_CONTACT -> ADD_TAGS(FROZEN) -> CONTACT_BODY"
+        ],
+        "size_category": "medium",
+        "visual_description": "a translucent azure shield made of solid ice with jagged frost spikes around the rim and swirling white vapor rising from its surface"
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 1.0,
+        "Gameplay Quality": 1.0,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design perfectly captures the player's request. The name is appropriate, the tags reflect the physical properties of ice, the behavior correctly implements the freezing-on-contact requirement, and the visual description matches the theme.",
+        "Gameplay Quality": "The design perfectly fulfills the prompt using the tag system. It uses appropriate physical tags (SOLID, RIGID) and the FROZEN tag for its inherent properties (slippery). Crucially, it uses the ADD_TAGS behavior to implement the requested 'freezing stuff' mechanic, which correctly recognizes that the FROZEN tag doesn't automatically spread to non-liquids. The inclusion of the REFLECTIVE tag is a clever addition that creates emergent gameplay by allowing the shield to bounce back heat and electricity, making it a nuanced defensive tool.",
+        "Sprite Prompt": "The visual description clearly specifies the shape (shield, jagged spikes), material (solid ice), and colors (translucent azure, white vapor). It matches the tags and name perfectly, describes only the object, and is a single concise sentence."
+      },
+      "elapsed": 1.5430136,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "a1e395b5903818bb"
+    },
+    {
+      "case": "magnet",
+      "inputs": "magnet",
+      "category": "utility",
+      "expected_tags": [
+        "SOLID",
+        "MAGNETIC"
+      ],
+      "output_raw": "{\n  \"name\": \"Magnet Bar\",\n  \"tags\": [\n    \"SOLID\",\n    \"RIGID\",\n    \"MAGNETIC\"\n  ],\n  \"behaviors\": [],\n  \"visual_descriptor\": {\n    \"visual_description\": \"A sturdy red bar with distinct white poles at each end, featuring a metallic core and slightly raised edges for grip.\",\n    \"size_category\": \"medium\"\n  }\n}",
+      "output": {
+        "name": "Magnet Bar",
+        "tags": [
+          "SOLID",
+          "RIGID",
+          "MAGNETIC"
+        ],
+        "behaviors": [],
+        "size_category": "medium",
+        "visual_description": "A sturdy red bar with distinct white poles at each end, featuring a metallic core and slightly raised edges for grip."
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 0.75,
+        "Gameplay Quality": 0.75,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design captures the core concept of a magnet well, using appropriate tags (SOLID, RIGID, MAGNETIC) and a clear visual description. The name is a faithful representation of the input. However, the 'behaviors' list is empty, which is a minor issue as a magnet in a physics sandbox should ideally have a behavior associated with attraction or repulsion, though the 'MAGNETIC' tag partially covers this.",
+        "Gameplay Quality": "The design is solid and uses the core functional tag (MAGNETIC) correctly. However, it misses a significant interaction opportunity: magnets are metallic and should be CONDUCTING. Without the CONDUCTING tag, this magnet won't interact with the electricity system (chain lightning) and won't be attracted by other magnets (since MAGNETIC attracts CONDUCTING objects). This is a minor missed opportunity similar to the 'wooden object without FLAMMABLE' example in the rubric.",
+        "Sprite Prompt": "The description clearly specifies the shape (bar), color (red/white), material (metallic), and distinctive features (poles at ends, raised edges). It matches the tags and name perfectly, describes the object alone, and is within the 1-2 sentence limit."
+      },
+      "elapsed": 0.8113478,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "a51b6270aa167699"
+    },
+    {
+      "case": "healing mushroom",
+      "inputs": "I want a healing mushroom that heals you when you kick it",
+      "category": "utility",
+      "expected_tags": [
+        "LIVING",
+        "SOLID"
+      ],
+      "output_raw": "{\n  \"name\": \"Healing Toadstool\",\n  \"tags\": [\n    \"SOLID\",\n    \"RIGID\",\n    \"LIVING\",\n    \"GLOWING\"\n  ],\n  \"behaviors\": [\n    \"ON_CONTACT -> HEAL -> CONTACT_BODY, power=medium\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"a plump turquoise mushroom with a softly pulsing bioluminescent cap and white spots\",\n    \"size_category\": \"small\"\n  }\n}",
+      "output": {
+        "name": "Healing Toadstool",
+        "tags": [
+          "SOLID",
+          "RIGID",
+          "LIVING",
+          "GLOWING"
+        ],
+        "behaviors": [
+          "ON_CONTACT -> HEAL -> CONTACT_BODY, power=medium"
+        ],
+        "size_category": "small",
+        "visual_description": "a plump turquoise mushroom with a softly pulsing bioluminescent cap and white spots"
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 1.0,
+        "Gameplay Quality": 0.75,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design perfectly captures the user's request. It provides a healing behavior triggered by contact (which includes kicking), the name and visuals match a \"healing mushroom\" theme, and the tags appropriately define its physical presence in a sandbox environment. The addition of the \"GLOWING\" tag is a fitting thematic touch for a magical healing item.",
+        "Gameplay Quality": "The design accurately fulfills the user's request using the HEAL behavior, which is appropriate since tags do not handle healing. The tags SOLID and RIGID provide the necessary physics for 'kicking'. However, it misses an opportunity for better integration with the tag system; specifically, a mushroom should likely be FLAMMABLE (an organic object) and could benefit from the LIGHT tag to make the physics of kicking it more dynamic. This fits the 0.75 'minor missed opportunities' criteria.",
+        "Sprite Prompt": "The visual description clearly specifies the shape (plump mushroom), colors (turquoise, white), and distinctive features (bioluminescent cap, white spots). It aligns perfectly with the name and the \"GLOWING\" tag, and it describes the object itself in a single sentence."
+      },
+      "elapsed": 1.1641293,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "78bfd43080066673"
+    },
+    {
+      "case": "conductor rod",
+      "inputs": "a metal rod that conducts electricity between things, like if you put it between a tesla coil and a robot it would zap the robot",
+      "category": "utility",
+      "expected_tags": [
+        "SOLID",
+        "CONDUCTING",
+        "RIGID"
+      ],
+      "output_raw": "{\n  \"name\": \"Conduction Rod\",\n  \"tags\": [\n    \"SOLID\",\n    \"RIGID\",\n    \"ELECTRIC\",\n    \"CONDUCTING\"\n  ],\n  \"behaviors\": [],\n  \"visual_descriptor\": {\n    \"visual_description\": \"a sturdy silver metallic rod with smooth, polished surfaces and glowing blue energy arcs traveling along its length\",\n    \"size_category\": \"small\"\n  }\n}",
+      "output": {
+        "name": "Conduction Rod",
+        "tags": [
+          "SOLID",
+          "RIGID",
+          "ELECTRIC",
+          "CONDUCTING"
+        ],
+        "behaviors": [],
+        "size_category": "small",
+        "visual_description": "a sturdy silver metallic rod with smooth, polished surfaces and glowing blue energy arcs traveling along its length"
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 1.0,
+        "Gameplay Quality": 1.0,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design perfectly captures the player's request. The name \"Conduction Rod\" is appropriate. The tags \"ELECTRIC\" and \"CONDUCTING\" directly address the core functionality of conducting electricity, while \"SOLID\" and \"RIGID\" describe the physical nature of a rod. The visual description specifically includes \"glowing blue energy arcs,\" which visually reinforces the \"zap\" and conduction described in the prompt. While behaviors are empty, the functional requirement is fully met by the tags for an inanimate object.",
+        "Gameplay Quality": "The design perfectly uses the tag system to achieve the requested functionality. By including 'ELECTRIC' and 'CONDUCTING', the rod will automatically propagate power to other objects and interact with 'MAGNETIC' or 'EXPLOSIVE' objects without needing any behaviors. This is a prime example of a simple object that exploits the tag system for emergent gameplay as described in the rubric.",
+        "Sprite Prompt": "The description clearly specifies the shape (rod), material (silver metallic), and distinctive features (glowing blue energy arcs), perfectly matching the name and tags. It is a single sentence and focuses on the object itself."
+      },
+      "elapsed": 1.045637,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "0c143de429b57ed4"
+    },
+    {
+      "case": "spring trap",
+      "inputs": "one of those cartoon spring platforms that launches you way up in the air when you step on it, BOING",
+      "category": "utility",
+      "expected_tags": [
+        "SOLID",
+        "BOUNCY"
+      ],
+      "output_raw": "{\n  \"name\": \"Bouncy Spring\",\n  \"tags\": [\n    \"SOLID\",\n    \"FLEXIBLE\",\n    \"BOUNCY\"\n  ],\n  \"behaviors\": [\n    \"ON_CONTACT -> APPLY_FORCE -> CONTACT_BODY, power=high\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"a coiled steel spring with bright primary colors (red and yellow stripes) and a flat metal platform on top\",\n    \"size_category\": \"small\"\n  }\n}",
+      "output": {
+        "name": "Bouncy Spring",
+        "tags": [
+          "SOLID",
+          "FLEXIBLE",
+          "BOUNCY"
+        ],
+        "behaviors": [
+          "ON_CONTACT -> APPLY_FORCE -> CONTACT_BODY, power=high"
+        ],
+        "size_category": "small",
+        "visual_description": "a coiled steel spring with bright primary colors (red and yellow stripes) and a flat metal platform on top"
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 1.0,
+        "Gameplay Quality": 0.75,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design captures the core concept perfectly. The name, tags, and behaviors (specifically applying high force on contact) directly align with the player's request for a cartoon spring platform that launches them high. The visual description also matches the \"cartoon\" and \"platform\" descriptors.",
+        "Gameplay Quality": "The design captures the core functionality of the prompt using a behavior for the high-power launch. However, it misses a minor opportunity to integrate with the specific tag interaction system described in the rubric: as a metal/steel object, it should have the CONDUCTING tag to interact with ELECTRIC or MAGNETIC properties, which would enhance emergent gameplay.",
+        "Sprite Prompt": "The description clearly specifies the shape (coiled spring, flat platform), materials (steel, metal), and colors (red and yellow stripes). It is concise, object-focused, and matches the name and tags perfectly."
+      },
+      "elapsed": 0.7268733,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "a8b48a00da4b2883"
+    },
+    {
+      "case": "campfire",
+      "inputs": "just a regular campfire, you know, logs burning, keeps you warm, maybe heals you a little if you stand near it",
+      "category": "utility",
+      "expected_tags": [
+        "SOLID",
+        "HEAT_SOURCE",
+        "GLOWING"
+      ],
+      "output_raw": "{\n  \"name\": \"Campfire\",\n  \"tags\": [\n    \"SOLID\",\n    \"HEAT_SOURCE\",\n    \"GLOWING\"\n  ],\n  \"behaviors\": [\n    \"ON_PROXIMITY -> HEAL -> NEAREST_LIVING, power=low\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"a small pile of stacked wooden logs burning with bright orange and yellow flames, casting a warm golden glow in the surrounding darkness\",\n    \"size_category\": \"small\"\n  }\n}",
+      "output": {
+        "name": "Campfire",
+        "tags": [
+          "SOLID",
+          "HEAT_SOURCE",
+          "GLOWING"
+        ],
+        "behaviors": [
+          "ON_PROXIMITY -> HEAL -> NEAREST_LIVING, power=low"
+        ],
+        "size_category": "small",
+        "visual_description": "a small pile of stacked wooden logs burning with bright orange and yellow flames, casting a warm golden glow in the surrounding darkness"
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 1.0,
+        "Gameplay Quality": 1.0,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design perfectly captures the player's request. The name is correct, the tags reflect the physical properties (heat, light, solidity), the behavior implements the healing proximity requested, and the visual description matches the logs and flames.",
+        "Gameplay Quality": "The design effectively uses the tag system (HEAT_SOURCE) to handle the fire/warmth interactions automatically while using a behavior (HEAL) for the specific proximity-based healing requested in the prompt. It avoids duplicating tag effects with behaviors and chooses appropriate tags for a burning object.",
+        "Sprite Prompt": "The visual description is clear and specific, detailing the shape (stacked wooden logs), materials (wood), and colors (orange, yellow, golden). It perfectly matches the name and tags. While it mentions 'surrounding darkness', this serves to emphasize the 'GLOWING' tag and does not detract from the clear description of the object itself. It is a single, well-constructed sentence."
+      },
+      "elapsed": 1.0780891,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "aa6c5bc656c5d377"
+    },
+    {
+      "case": "rubber armor",
+      "inputs": "armor made of rubber so electricity cant hurt you when youre wearing it, like an insulator",
+      "category": "defensive",
+      "expected_tags": [
+        "SOLID",
+        "FLEXIBLE",
+        "INSULATING"
+      ],
+      "output_raw": "{\n  \"name\": \"Rubber Armor\",\n  \"tags\": [\n    \"SOLID\",\n    \"RIGID\",\n    \"INSULATING\",\n    \"FLEXIBLE\"\n  ],\n  \"behaviors\": [\n    \"ON_CONTACT -> ADD_TAGS(INSULATING) -> CONTACT_BODY\"\n  ],\n  \"visual_descriptor\": {\n    \"visual_description\": \"a bulky segmented suit made of matte black rubber with reinforced plating and a hooded design, appearing thick and slightly stretchy\",\n    \"size_category\": \"medium\"\n  }\n}",
+      "output": {
+        "name": "Rubber Armor",
+        "tags": [
+          "SOLID",
+          "RIGID",
+          "INSULATING",
+          "FLEXIBLE"
+        ],
+        "behaviors": [
+          "ON_CONTACT -> ADD_TAGS(INSULATING) -> CONTACT_BODY"
+        ],
+        "size_category": "medium",
+        "visual_description": "a bulky segmented suit made of matte black rubber with reinforced plating and a hooded design, appearing thick and slightly stretchy"
+      },
+      "error": null,
+      "scores": {
+        "Validity": 1.0,
+        "Faithfulness": 1.0,
+        "Gameplay Quality": 0.75,
+        "Sprite Prompt": 1.0
+      },
+      "reasons": {
+        "Validity": "All validity checks passed",
+        "Faithfulness": "The design perfectly captures the user's intent. The name is accurate, the core 'INSULATING' tag is present, and the behavior correctly implements the protection from electricity by applying the tag to the wearer. The visual description is also spot-on. While 'RIGID' and 'FLEXIBLE' are slightly contradictory, it accurately reflects the nature of reinforced rubber armor.",
+        "Gameplay Quality": "The design uses the ADD_TAGS behavior effectively to solve the \"wearing it\" mechanic, passing protection to the wearer. However, it contains contradictory tags (RIGID and FLEXIBLE) and misses the opportunity to use the REFLECTIVE tag, which is explicitly mentioned in the rubric as the mechanism for interacting with electricity. It also misses FLAMMABLE, which is a common property of rubber that would add to emergent gameplay.",
+        "Sprite Prompt": "The visual description clearly specifies shape (bulky segmented suit, hooded), material (matte black rubber), and color (matte black). It includes distinctive features like reinforced plating and explains the texture (thick and slightly stretchy). It describes the object itself in a single concise sentence and matches the provided tags and name."
+      },
+      "elapsed": 1.0964657,
+      "retries": 0,
+      "retry_errors": [],
+      "trace_id": "019d4219d4bc15892c2e074381f2d5ec",
+      "span_id": "e66925a6a0fdf8e0"
+    }
+  ],
+  "mean_scores": {
+    "Faithfulness": 0.86,
+    "Gameplay Quality": 0.83,
+    "Sprite Prompt": 0.99,
+    "Validity": 1.0
+  },
+  "retry_stats": {
+    "total": 5,
+    "mean": 0.1,
+    "max": 3,
+    "first_try_pct": 94.0
+  }
+}

@@ -1,0 +1,2267 @@
+{
+  "set": "A",
+  "runs": [
+    {
+      "run_index": 0,
+      "objects": {
+        "rock": {
+          "prompt": "rock",
+          "name": "Rubble Rock",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "BREAKABLE",
+            "HEAVY"
+          ],
+          "behaviors": [],
+          "size_category": "small",
+          "visual_description": "A jagged, grey stone fragment with rough textures and sharp edges."
+        },
+        "wooden chair": {
+          "prompt": "wooden chair",
+          "name": "Wooden Chair",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "BREAKABLE",
+            "FLOATING"
+          ],
+          "behaviors": [
+            "ON_DAMAGED -> ADD_TAGS(SLIPPERY) -> SELF, power=medium"
+          ],
+          "size_category": "medium",
+          "visual_description": "a simple wooden chair with four legs, a flat seat, and a backrest, made of light brown wood with visible grain patterns."
+        },
+        "bucket of water": {
+          "prompt": "bucket of water",
+          "name": "Water Bucket",
+          "tags": [
+            "SOLID",
+            "COLD"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> ADD_TAGS(COLD) -> CONTACT_BODY"
+          ],
+          "size_category": "small",
+          "visual_description": "A rustic wooden bucket with metal bands, filled to the brim with clear blue water that ripples slightly at the surface."
+        },
+        "banana": {
+          "prompt": "banana",
+          "name": "Banana",
+          "tags": [
+            "SOLID",
+            "FLEXIBLE",
+            "SLIPPERY"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> ADD_TAGS(SLIPPERY) -> CONTACT_BODY"
+          ],
+          "size_category": "small",
+          "visual_description": "A curved yellow fruit with a peel that is slightly translucent and brown-speckled at the tips."
+        },
+        "glass bottle": {
+          "prompt": "glass bottle",
+          "name": "Glass Bottle",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "BREAKABLE",
+            "FLOATING"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> SELF_DESTRUCT -> SELF"
+          ],
+          "size_category": "small",
+          "visual_description": "a transparent, delicate bottle with a narrow neck and rounded base, made of clear glass that sparkles in the light"
+        },
+        "hot coal": {
+          "prompt": "hot coal",
+          "name": "Hot Ember Coal",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "GLOWING",
+            "HOT"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+          ],
+          "size_category": "small",
+          "visual_description": "A jagged, charcoal-black chunk of coal with a bright orange-red core glowing through its cracks and ash-covered surface."
+        },
+        "giant boulder": {
+          "prompt": "giant boulder",
+          "name": "House-Sized Boulder",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "HEAVY"
+          ],
+          "behaviors": [
+            "ALWAYS -> APPLY_FORCE -> NEAREST_LIVING, power=high"
+          ],
+          "size_category": "huge",
+          "visual_description": "a colossal, jagged grey rock formation resembling a small house with cracked surfaces and mossy patches, dwarfing any nearby creature."
+        },
+        "tiny pebble": {
+          "prompt": "tiny pebble",
+          "name": "Fina's Pebble",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "LIGHT",
+            "BOUNCY"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> APPLY_FORCE -> CONTACT_BODY, power=high"
+          ],
+          "size_category": "tiny",
+          "visual_description": "a pebble no larger than a fingernail with a glossy grey surface and faint iridescent flecks."
+        },
+        "fire sword": {
+          "prompt": "fire sword",
+          "name": "Fire Sword",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "SHARP",
+            "HEAT_SOURCE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+          ],
+          "size_category": "small",
+          "visual_description": "A steel longsword with a jagged, glowing red blade that emits shimmering heat waves and small orange sparks."
+        },
+        "sword": {
+          "prompt": "sword",
+          "name": "Shadow Blade",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "SHARP"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+          ],
+          "size_category": "small",
+          "visual_description": "a sleek black dagger with a curved, razor-sharp edge and an obsidian-like finish"
+        },
+        "time bomb": {
+          "prompt": "time bomb",
+          "name": "Time Bomb",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "EXPLOSIVE",
+            "HEAVY"
+          ],
+          "behaviors": [
+            "ON_TIMER -> EXPLODE -> SELF"
+          ],
+          "size_category": "small",
+          "visual_description": "A cylindrical canister of heavy steel with a blinking red digital timer counting down and a lit red fuse sparking at the top"
+        },
+        "homing missile": {
+          "prompt": "homing missile",
+          "name": "Homing Missile",
+          "tags": [
+            "SOLID",
+            "FLAMMABLE",
+            "HEAVY"
+          ],
+          "behaviors": [
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING, power=high",
+            "ON_CONTACT -> ADD_TAGS(HEAT_SOURCE) -> CONTACT_BODY",
+            "ON_TAG_ADDED(HEAT_SOURCE) -> EXPLODE -> SELF"
+          ],
+          "size_category": "small",
+          "visual_description": "A sleek silver cylindrical projectile with a pointed nose cone, glowing red sensor ring at the tip and small stabilizer fins near the tail emitting faint blue exhaust trails."
+        },
+        "rubber ball from hell": {
+          "prompt": "rubber ball from hell",
+          "name": "Cursed Bouncy Ball",
+          "tags": [
+            "SOLID",
+            "BOUNCY",
+            "HEAVY"
+          ],
+          "behaviors": [
+            "ON_CREATE -> MOVE_TOWARD -> NEAREST_LIVING, power=high",
+            "ON_CONTACT -> ADD_TAGS(HEAVY) -> SELF",
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY, power=high"
+          ],
+          "size_category": "small",
+          "visual_description": "a pitch-black rubber sphere with faint, angry red veins pulsing across its surface and a menacing glowing eye in the center"
+        },
+        "firework": {
+          "prompt": "firework",
+          "name": "Flash Firework",
+          "tags": [
+            "SOLID",
+            "EXPLOSIVE",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_CREATE -> EXPLODE -> SELF"
+          ],
+          "size_category": "small",
+          "visual_description": "A small, spherical shell with a dark paper casing and a short glowing fuse on top that sizzles immediately upon placement."
+        },
+        "explosive barrel": {
+          "prompt": "explosive barrel",
+          "name": "Explosive Barrel",
+          "tags": [
+            "SOLID",
+            "HEAVY",
+            "FLAMMABLE",
+            "EXPLOSIVE"
+          ],
+          "behaviors": [
+            "ON_TAG_ADDED(HEAT_SOURCE) -> EXPLODE -> SELF",
+            "ON_TAG_ADDED(ELECTRIC) -> EXPLODE -> SELF"
+          ],
+          "size_category": "medium",
+          "visual_description": "A large cylindrical metal barrel painted with rusted red and black stripes, featuring a cracked wooden hoop and a small glowing fuse port."
+        },
+        "glass cannon": {
+          "prompt": "glass cannon",
+          "name": "Shattering Crystal Ball",
+          "tags": [
+            "SOLID",
+            "FLOATING",
+            "FLEXIBLE",
+            "BREAKABLE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> ADD_TAGS(SHARP) -> SELF",
+            "ON_TAG_ADDED(SHARP) -> EXPLODE -> SELF"
+          ],
+          "size_category": "small",
+          "visual_description": "a smooth, translucent orb of swirling blue and silver crystal with faint internal light, hovering slightly off the ground"
+        },
+        "sticky honey trap": {
+          "prompt": "sticky honey trap",
+          "name": "Honey Puddle",
+          "tags": [
+            "SOLID",
+            "STICKY"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> ADD_TAGS(LIGHT) -> CONTACT_BODY"
+          ],
+          "size_category": "medium",
+          "visual_description": "A large, viscous glob of golden honey that slowly drips and shifts on the ground surface."
+        },
+        "death flower": {
+          "prompt": "death flower",
+          "name": "Toxic Bloom",
+          "tags": [
+            "SOLID",
+            "FLEXIBLE",
+            "GLOWING",
+            "TOXIC"
+          ],
+          "behaviors": [
+            "ON_DESTROY -> EXPLODE -> SELF"
+          ],
+          "size_category": "small",
+          "visual_description": "A delicate flower with translucent pink petals that pulse with a faint bioluminescent glow, hiding a dark violet center."
+        },
+        "acid spider": {
+          "prompt": "acid spider",
+          "name": "Acid Spitter Spider",
+          "tags": [
+            "LIVING",
+            "SOLID",
+            "TOXIC",
+            "SHARP"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> SPAWN_PROJECTILE -> NEAREST_PLAYER, power=medium",
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+          ],
+          "size_category": "small",
+          "visual_description": "a small glossy black spider with bulging red eyes and jagged fangs dripping with green corrosive liquid"
+        },
+        "friendly dog": {
+          "prompt": "friendly dog",
+          "name": "Friendly Pup",
+          "tags": [
+            "LIVING",
+            "SOLID",
+            "FLEXIBLE",
+            "LIGHT"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> HEAL -> CONTACT_BODY, power=low",
+            "ON_PROXIMITY -> ATTRACT -> NEAREST_PLAYER, power=medium"
+          ],
+          "size_category": "small",
+          "visual_description": "a fluffy golden retriever pup with soft amber eyes and a wagging tail that acts like a metronome."
+        },
+        "lava monster": {
+          "prompt": "lava monster",
+          "name": "Lava Golem",
+          "tags": [
+            "SOLID",
+            "MOLTEN",
+            "HEAT_SOURCE"
+          ],
+          "behaviors": [
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING, power=high",
+            "ON_CONTACT -> ADD_TAGS(FLAMMABLE) -> CONTACT_BODY, power=medium"
+          ],
+          "size_category": "large",
+          "visual_description": "a towering entity of flowing orange and red molten rock with glowing fissures and cracking blackened crust"
+        },
+        "angry bunny": {
+          "prompt": "angry bunny",
+          "name": "Furious Rabbit",
+          "tags": [
+            "LIVING",
+            "LIGHT",
+            "SHARP",
+            "BOUNCY"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> ATTRACT -> NEAREST_PLAYER, power=low",
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_PLAYER, power=medium",
+            "ON_PROXIMITY -> DEAL_DAMAGE -> NEAREST_PLAYER, power=high"
+          ],
+          "size_category": "small",
+          "visual_description": "a fluffy white rabbit with small twitching ears and wide, increasingly bloodshot eyes that glow faint red as it gets angrier."
+        },
+        "electric jellyfish": {
+          "prompt": "electric jellyfish",
+          "name": "Shock Jelly",
+          "tags": [
+            "LIQUID",
+            "FLEXIBLE",
+            "ELECTRIC",
+            "GLOWING",
+            "LIGHT"
+          ],
+          "behaviors": [
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING, power=medium",
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+          ],
+          "size_category": "small",
+          "visual_description": "A translucent, bell-shaped jellyfish with pulsing blue bioluminescent tendrils trailing behind it like electric sparks"
+        },
+        "wind spirit": {
+          "prompt": "wind spirit",
+          "name": "Tornado Spirit",
+          "tags": [
+            "LIVING",
+            "WIND_SOURCE",
+            "GAS",
+            "LIGHT"
+          ],
+          "behaviors": [
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_PLAYER, power=medium",
+            "ON_PROXIMITY -> APPLY_FORCE -> NEAREST_OBJECT, power=high"
+          ],
+          "size_category": "small",
+          "visual_description": "a swirling vortex of translucent grey and white air with faint golden sparkles dancing inside, constantly rotating and shifting shape"
+        },
+        "toxic frog": {
+          "prompt": "toxic frog",
+          "name": "Poison Dart Frog",
+          "tags": [
+            "LIVING",
+            "SOLID",
+            "TOXIC",
+            "COLD"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY",
+            "ON_PROXIMITY -> ADD_TAGS(TOXIC) -> NEAREST_LIVING"
+          ],
+          "size_category": "tiny",
+          "visual_description": "a tiny, plump frog with vibrant blue skin and bright orange spots on its limbs, looking adorable but dangerous"
+        },
+        "mirror golem": {
+          "prompt": "mirror golem",
+          "name": "Mirror Golem",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "HEAVY",
+            "REFLECTIVE",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> ADD_TAGS(HEAT_SOURCE) -> CONTACT_BODY",
+            "ON_CONTACT -> APPLY_FORCE -> CONTACT_BODY, power=high"
+          ],
+          "size_category": "large",
+          "visual_description": "A towering humanoid statue constructed from fragmented, highly polished silver mirrors that refract light into dazzling rainbows."
+        },
+        "lasso vine": {
+          "prompt": "lasso vine",
+          "name": "Coral Vine",
+          "tags": [
+            "LIVING",
+            "FLEXIBLE",
+            "STICKY",
+            "SOLID"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> ATTRACT -> NEAREST_LIVING, power=medium",
+            "ON_CONTACT -> ADD_TAGS(STICKY) -> CONTACT_BODY, power=low",
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_OBJECT, power=low"
+          ],
+          "size_category": "small",
+          "visual_description": "a thick, emerald-green vine with small purple buds and a glossy, wet texture, extending multiple writhing tendrils"
+        },
+        "cowardly slime": {
+          "prompt": "cowardly slime",
+          "name": "Scared Slime",
+          "tags": [
+            "LIVING",
+            "FLEXIBLE",
+            "SLIPPERY"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> MOVE_AWAY -> NEAREST_OBJECT, power=high"
+          ],
+          "size_category": "small",
+          "visual_description": "A small, translucent pale blue blob with a wobbling surface and wide eyes that constantly dart around in fear."
+        },
+        "phoenix egg": {
+          "prompt": "phoenix egg",
+          "name": "Phoenix Egg",
+          "tags": [
+            "SOLID",
+            "BREAKABLE",
+            "FLAMMABLE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> EXPLODE -> SELF"
+          ],
+          "size_category": "small",
+          "visual_description": "A smooth, speckled white egg with a faint warm orange glow radiating from within, sitting quietly on the ground."
+        },
+        "patrol bot": {
+          "prompt": "patrol bot",
+          "name": "Perimeter Bot",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "LIVING",
+            "ELECTRIC"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> ADD_TAGS(HEAT_SOURCE) -> SELF, power=medium",
+            "ON_TAG_ADDED(HEAT_SOURCE) -> SPAWN_PROJECTILE -> NEAREST_LIVING, power=high"
+          ],
+          "size_category": "small",
+          "visual_description": "a compact metallic robot with glowing red optical sensors and a small shoulder-mounted cannon"
+        },
+        "electric lava golem": {
+          "prompt": "electric lava golem",
+          "name": "Magma Thunder Golem",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "HEAVY",
+            "HOT",
+            "ELECTRIC"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY, power=high",
+            "ON_TIMER -> SPAWN_PROJECTILE -> NEAREST_LIVING, power=high"
+          ],
+          "size_category": "large",
+          "visual_description": "A towering humanoid construct of cracked obsidian filled with flowing orange molten lava, crackling with arcs of blue and purple lightning along its limbs."
+        },
+        "the sun": {
+          "prompt": "the sun",
+          "name": "Star",
+          "tags": [
+            "HEAT_SOURCE",
+            "HOT",
+            "GLOWING",
+            "MAGNETIC"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> SPAWN_PROJECTILE -> NEAREST_LIVING, power=high"
+          ],
+          "size_category": "large",
+          "visual_description": "A massive, brilliant sphere of seething orange and yellow plasma with swirling white-hot cores and coronas, radiating intense light."
+        },
+        "tiny black hole": {
+          "prompt": "tiny black hole",
+          "name": "Void Maw",
+          "tags": [
+            "SOLID",
+            "HEAVY",
+            "BREAKABLE",
+            "GLOWING",
+            "MAGNETIC"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> ATTRACT -> CONTACT_BODY, power=high",
+            "ON_DAMAGED -> SELF_DESTRUCT -> SELF"
+          ],
+          "size_category": "tiny",
+          "visual_description": "A swirling sphere of absolute darkness with a thin halo of distorted light around its edges, resembling a miniature cosmic vortex."
+        },
+        "sadness": {
+          "prompt": "sadness",
+          "name": "Shadow of Sorrow",
+          "tags": [
+            "SOLID",
+            "FROZEN",
+            "COLD",
+            "TOXIC"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY",
+            "ON_TAG_ADDED(HEAT_SOURCE) -> REMOVE_TAGS(FROZEN) -> SELF"
+          ],
+          "size_category": "small",
+          "visual_description": "A floating, dark indigo tear-shaped entity with a crystalline surface that weeps a slow, frozen mist."
+        },
+        "indiana jones boulder": {
+          "prompt": "indiana jones boulder",
+          "name": "Rolling Boulder",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "HEAVY"
+          ],
+          "behaviors": [
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING, power=high",
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+          ],
+          "size_category": "large",
+          "visual_description": "A massive spherical boulder of rough, grey granite with mossy patches and cracks, rolling with immense momentum."
+        },
+        "frozen fire": {
+          "prompt": "frozen fire",
+          "name": "Frost Ember",
+          "tags": [
+            "SOLID",
+            "FROZEN",
+            "GLOWING",
+            "INSULATING"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY, power=low",
+            "ON_DAMAGED -> REMOVE_TAGS(FROZEN) -> SELF, power=medium"
+          ],
+          "size_category": "small",
+          "visual_description": "A jagged, crystalline shard of deep blue ice that pulses with a faint, ghostly white-blue light, surrounded by swirling frost."
+        },
+        "a thing": {
+          "prompt": "a thing",
+          "name": "Ink Blob",
+          "tags": [
+            "LIQUID",
+            "TOXIC",
+            "SLIPPERY"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> ADD_TAGS(SLIPPERY) -> CONTACT_BODY",
+            "ON_DAMAGED -> ADD_TAGS(TOXIC) -> SELF, power=medium"
+          ],
+          "size_category": "small",
+          "visual_description": "A glossy, amorphous puddle of thick black ink that constantly shifts shape with a faint oily sheen."
+        },
+        "indestructible wall": {
+          "prompt": "indestructible wall",
+          "name": "Unbreakable Wall",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "HEAVY"
+          ],
+          "behaviors": [],
+          "size_category": "large",
+          "visual_description": "A massive, seamless slab of dark grey metallic stone with no seams or cracks, appearing completely solid and immovable."
+        },
+        "fiar swrod": {
+          "prompt": "fiar swrod",
+          "name": "Fiar Sword",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "SHARP",
+            "FLAMMABLE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+          ],
+          "size_category": "small",
+          "visual_description": "a curved steel blade with a glowing yellow-orange edge and intricate carvings along the spine, emitting faint heat waves"
+        },
+        "shield request": {
+          "prompt": "shield request",
+          "name": "Iron Shield",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "HEAVY"
+          ],
+          "behaviors": [],
+          "size_category": "medium",
+          "visual_description": "a round metal shield with a dull grey finish, a simple central boss, and a leather-wrapped handle on the back"
+        },
+        "rambling glowing sword": {
+          "prompt": "rambling glowing sword",
+          "name": "Inferno Colossus",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "SHARP",
+            "HEAT_SOURCE",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+          ],
+          "size_category": "huge",
+          "visual_description": "A massive, towering broadsword with a glowing neon-blue edge that flickers like plasma, wreathed in dancing orange and red flames along the blade."
+        },
+        "not heavy floaty thing": {
+          "prompt": "not heavy floaty thing",
+          "name": "Glowfeather",
+          "tags": [
+            "SOLID",
+            "LIGHT",
+            "FLOATING",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_PLAYER, power=low",
+            "ON_CONTACT -> ADD_TAGS(INSULATING) -> CONTACT_BODY"
+          ],
+          "size_category": "small",
+          "visual_description": "A small, iridescent feather with shimmering blue and violet barbs that trail faint wisps of soft white light."
+        },
+        "acid rain cloud": {
+          "prompt": "acid rain cloud",
+          "name": "Acid Rain Cloud",
+          "tags": [
+            "GAS",
+            "TOXIC",
+            "FLOATING"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> ADD_TAGS(CORROSIVE) -> CONTACT_BODY, power=medium",
+            "ALWAYS -> APPLY_FORCE -> NEAREST_OBJECT, power=low"
+          ],
+          "size_category": "large",
+          "visual_description": "A dark, swirling mass of storm clouds with a sickly yellow-green tint, leaking viscous droplets from its bottom edge."
+        },
+        "ice shield": {
+          "prompt": "ice shield",
+          "name": "Frost Shield",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "COLD"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY",
+            "ON_CONTACT -> ADD_TAGS(FROZEN) -> CONTACT_BODY"
+          ],
+          "size_category": "medium",
+          "visual_description": "a sturdy translucent blue shield made of solid ice with jagged crystalline edges and a faint cold mist emanating from its surface"
+        },
+        "magnet": {
+          "prompt": "magnet",
+          "name": "Magnet",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "MAGNETIC"
+          ],
+          "behaviors": [
+            "ALWAYS -> ATTRACT -> NEAREST_OBJECT"
+          ],
+          "size_category": "small",
+          "visual_description": "A smooth, polished silver bar magnet with distinct red and blue ends, featuring subtle metallic engravings."
+        },
+        "healing mushroom": {
+          "prompt": "healing mushroom",
+          "name": "Kicker's Folly",
+          "tags": [
+            "SOLID",
+            "BREAKABLE",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> HEAL -> CONTACT_BODY, power=high"
+          ],
+          "size_category": "small",
+          "visual_description": "a plump, vibrant purple mushroom with a soft white glow emanating from its cap and stem, featuring a slightly cracked texture indicating fragility."
+        },
+        "conductor rod": {
+          "prompt": "conductor rod",
+          "name": "Conduction Rod",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "CONDUCTING"
+          ],
+          "behaviors": [],
+          "size_category": "small",
+          "visual_description": "a polished silver metal rod with a slightly brushed texture, featuring small brass connectors on each end for contact points."
+        },
+        "spring trap": {
+          "prompt": "spring trap",
+          "name": "Boing Spring",
+          "tags": [
+            "SOLID",
+            "FLEXIBLE",
+            "BOUNCY"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> APPLY_FORCE -> NEAREST_LIVING, power=high"
+          ],
+          "size_category": "small",
+          "visual_description": "A cartoonish coiled spring made of bright blue and red metal with exaggerated curves, looking compressed and ready to launch."
+        },
+        "campfire": {
+          "prompt": "campfire",
+          "name": "Campfire",
+          "tags": [
+            "SOLID",
+            "HEAT_SOURCE",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY, power=low",
+            "ALWAYS -> HEAL -> NEAREST_LIVING, power=low"
+          ],
+          "size_category": "small",
+          "visual_description": "a small pile of brown logs with crackling orange and yellow flames rising from the center, emitting a warm glow"
+        },
+        "rubber armor": {
+          "prompt": "rubber armor",
+          "name": "Rubber Suit",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "INSULATING",
+            "BREAKABLE"
+          ],
+          "behaviors": [
+            "ON_TAG_ADDED(ELECTRIC) -> REMOVE_TAGS(ELECTRIC) -> SELF, power=medium"
+          ],
+          "size_category": "small",
+          "visual_description": "a thick, form-fitting black rubber suit with a slightly glossy finish and reinforced seams at the joints."
+        }
+      }
+    },
+    {
+      "run_index": 1,
+      "objects": {
+        "rock": {
+          "prompt": "rock",
+          "name": "Rock",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "HEAVY"
+          ],
+          "behaviors": [],
+          "size_category": "medium",
+          "visual_description": "A rough, irregular grey stone with a matte surface and jagged edges."
+        },
+        "wooden chair": {
+          "prompt": "wooden chair",
+          "name": "Wooden Chair",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "LIGHT"
+          ],
+          "behaviors": [
+            "ON_DAMAGED -> ADD_TAGS(BREAKABLE) -> SELF"
+          ],
+          "size_category": "small",
+          "visual_description": "A classic four-legged wooden chair with a simple curved backrest, made of light brown oak planks."
+        },
+        "bucket of water": {
+          "prompt": "bucket of water",
+          "name": "Water Bucket",
+          "tags": [
+            "SOLID",
+            "COLD"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> ADD_TAGS(COLD) -> CONTACT_BODY"
+          ],
+          "size_category": "small",
+          "visual_description": "A sturdy metal bucket brimful with clear, rippling water that glints under the light, featuring a worn wooden handle."
+        },
+        "banana": {
+          "prompt": "banana",
+          "name": "Banana Peel",
+          "tags": [
+            "SOLID",
+            "FLEXIBLE",
+            "SLIPPERY"
+          ],
+          "behaviors": [],
+          "size_category": "small",
+          "visual_description": "A curved yellow banana peel with brown spots and a slightly wrinkled texture, looking freshly discarded."
+        },
+        "glass bottle": {
+          "prompt": "glass bottle",
+          "name": "Glass Flask",
+          "tags": [
+            "SOLID",
+            "BREAKABLE",
+            "SLIPPERY"
+          ],
+          "behaviors": [
+            "ON_DAMAGED -> EXPLODE -> SELF"
+          ],
+          "size_category": "small",
+          "visual_description": "a translucent blue glass bottle with a narrow neck and smooth, curved body, reflecting light off its thin surface"
+        },
+        "hot coal": {
+          "prompt": "hot coal",
+          "name": "Hot Coal",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "HEAT_SOURCE",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY, power=medium"
+          ],
+          "size_category": "small",
+          "visual_description": "A jagged, charcoal-black lump of coal with a deep orange-red glow emanating from its cracks and surface."
+        },
+        "giant boulder": {
+          "prompt": "giant boulder",
+          "name": "Crushing Boulder",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "HEAVY",
+            "BREAKABLE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY, power=high"
+          ],
+          "size_category": "huge",
+          "visual_description": "A colossal grey boulder with a rough, cracked surface and jagged edges, rolling with immense weight."
+        },
+        "tiny pebble": {
+          "prompt": "tiny pebble",
+          "name": "Micro Pebble",
+          "tags": [
+            "SOLID",
+            "LIGHT",
+            "BREAKABLE"
+          ],
+          "behaviors": [
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_PLAYER, power=high",
+            "ON_CONTACT -> ADD_TAGS(STICKY) -> CONTACT_BODY"
+          ],
+          "size_category": "tiny",
+          "visual_description": "A translucent, polished grey sphere just a few millimeters across, resembling a miniature ocean glass stone with subtle internal fractures."
+        },
+        "fire sword": {
+          "prompt": "fire sword",
+          "name": "Fire Sword",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "SHARP",
+            "HEAT_SOURCE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+          ],
+          "size_category": "small",
+          "visual_description": "A straight steel blade wreathed in bright orange and red flames, with a hilt wrapped in heat-resistant leather."
+        },
+        "sword": {
+          "prompt": "sword",
+          "name": "Steel Sword",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "SHARP"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+          ],
+          "size_category": "small",
+          "visual_description": "a gleaming steel blade with a simple leather-wrapped hilt and a small crossguard, tapering to a razor-sharp point"
+        },
+        "time bomb": {
+          "prompt": "time bomb",
+          "name": "Time Bomb",
+          "tags": [
+            "SOLID",
+            "BREAKABLE",
+            "EXPLOSIVE"
+          ],
+          "behaviors": [
+            "ON_TIMER -> EXPLODE -> SELF, power=high"
+          ],
+          "size_category": "small",
+          "visual_description": "a compact cylindrical device with a red digital timer counting down and a blinking alarm light on top, encased in heavy metal housing."
+        },
+        "homing missile": {
+          "prompt": "homing missile",
+          "name": "Heat-Seeking Missile",
+          "tags": [
+            "SOLID",
+            "HEAVY",
+            "EXPLOSIVE",
+            "FLAMMABLE"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> ADD_TAGS(HEAT_SOURCE) -> CONTACT_BODY, power=medium",
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING, power=high"
+          ],
+          "size_category": "small",
+          "visual_description": "A sleek cylindrical projectile with a matte grey body, yellow fins at the rear, and a glowing red tip that pulses as it homes in on targets."
+        },
+        "rubber ball from hell": {
+          "prompt": "rubber ball from hell",
+          "name": "Possessed Bouncer",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "BOUNCY",
+            "TOXIC"
+          ],
+          "behaviors": [
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING, power=high",
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY, power=high",
+            "ON_TAG_ADDED(FLOATING) -> ADD_TAGS(HEAT_SOURCE) -> SELF"
+          ],
+          "size_category": "small",
+          "visual_description": "A sleek black rubber ball with jagged white cracks radiating from its center, glowing with an ominous violet light that pulses as it bounces. The surface seems to ripple unnaturally like liquid shadow."
+        },
+        "firework": {
+          "prompt": "firework",
+          "name": "Instant Firework",
+          "tags": [
+            "SOLID",
+            "BREAKABLE",
+            "EXPLOSIVE",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_CREATE -> EXPLODE -> SELF, power=high"
+          ],
+          "size_category": "small",
+          "visual_description": "A small colorful paper cylinder with a glowing fuse protruding from the top and metallic sparkles visible through the casing."
+        },
+        "explosive barrel": {
+          "prompt": "explosive barrel",
+          "name": "Explosive Barrel",
+          "tags": [
+            "SOLID",
+            "HEAVY",
+            "BREAKABLE",
+            "EXPLOSIVE"
+          ],
+          "behaviors": [
+            "ON_DAMAGED -> EXPLODE -> SELF, power=high",
+            "ON_TAG_ADDED(HEAT_SOURCE) -> EXPLODE -> SELF, power=high"
+          ],
+          "size_category": "medium",
+          "visual_description": "a rusty metal drum with a black 'DANGER' warning label and leaking dark oil stains around the lid."
+        },
+        "glass cannon": {
+          "prompt": "glass cannon",
+          "name": "Shatter Orb",
+          "tags": [
+            "SOLID",
+            "FLOATING",
+            "BREAKABLE",
+            "SHARP"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> SELF_DESTRUCT -> SELF",
+            "ON_DESTROY -> EXPLODE -> SELF, power=high"
+          ],
+          "size_category": "small",
+          "visual_description": "A flawless transparent crystal sphere with swirling internal light patterns that hovers steadily in mid-air."
+        },
+        "sticky honey trap": {
+          "prompt": "sticky honey trap",
+          "name": "Sticky Honey Trap",
+          "tags": [
+            "SOLID",
+            "STICKY",
+            "LIGHT",
+            "FLEXIBLE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> REMOVE_TAGS(LIGHT) -> CONTACT_BODY, power=medium"
+          ],
+          "size_category": "large",
+          "visual_description": "A large, viscous amber-colored glob with a glossy, drippy surface that slowly undulates and bubbles."
+        },
+        "death flower": {
+          "prompt": "death flower",
+          "name": "Poison Bloom",
+          "tags": [
+            "SOLID",
+            "BREAKABLE",
+            "GLOWING",
+            "TOXIC"
+          ],
+          "behaviors": [
+            "ON_DESTROY -> ADD_TAGS(GAS) -> SELF",
+            "ON_TAG_ADDED(GAS) -> EXPLODE -> SELF, power=medium"
+          ],
+          "size_category": "small",
+          "visual_description": "a delicate flower with pale lavender petals and a glowing amber center, sitting on a slender green stem."
+        },
+        "acid spider": {
+          "prompt": "acid spider",
+          "name": "Acid Spitter Spider",
+          "tags": [
+            "LIVING",
+            "SOLID",
+            "TOXIC",
+            "FLAMMABLE"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> SPAWN_PROJECTILE -> NEAREST_PLAYER, power=medium",
+            "ON_CONTACT -> ADD_TAGS(CORROSIVE) -> CONTACT_BODY"
+          ],
+          "size_category": "small",
+          "visual_description": "a small black spider with iridescent purple markings and glowing green eyes, poised to strike with a droplet of acidic venom at its fangs"
+        },
+        "friendly dog": {
+          "prompt": "friendly dog",
+          "name": "Loyal Hound",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "LIVING",
+            "LIGHT"
+          ],
+          "behaviors": [
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_PLAYER",
+            "ON_DAMAGED -> SPAWN_PROJECTILE -> CONTACT_BODY, power=low"
+          ],
+          "size_category": "medium",
+          "visual_description": "A medium-sized golden retriever with a fluffy coat, wagging tail, and expressive brown eyes that follow the player's movement."
+        },
+        "lava monster": {
+          "prompt": "lava monster",
+          "name": "Lava Monster",
+          "tags": [
+            "SOLID",
+            "MOLTEN",
+            "HOT",
+            "LIVING"
+          ],
+          "behaviors": [
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING, power=high",
+            "ON_CONTACT -> ADD_TAGS(FLAMMABLE) -> CONTACT_BODY"
+          ],
+          "size_category": "large",
+          "visual_description": "A hulking humanoid form made of bubbling, bright orange and red molten rock with cracks emitting intense white-hot light."
+        },
+        "angry bunny": {
+          "prompt": "angry bunny",
+          "name": "Rage Bunny",
+          "tags": [
+            "LIVING",
+            "LIGHT",
+            "FLEXIBLE"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> ADD_TAGS(HOT) -> CONTACT_BODY, power=low",
+            "ON_TAG_ADDED(HOT) -> MOVE_TOWARD -> NEAREST_PLAYER, power=high",
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+          ],
+          "size_category": "small",
+          "visual_description": "A small, fluffy white bunny with twitching nose and ears that flatten back when angry, revealing glowing red eyes."
+        },
+        "electric jellyfish": {
+          "prompt": "electric jellyfish",
+          "name": "Shock Jelly",
+          "tags": [
+            "LIQUID",
+            "FLOATING",
+            "ELECTRIC",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> DEAL_DAMAGE -> NEAREST_LIVING, power=medium"
+          ],
+          "size_category": "small",
+          "visual_description": "A translucent, bell-shaped creature with trailing neon-blue tentacles that pulse with an inner electric glow."
+        },
+        "wind spirit": {
+          "prompt": "wind spirit",
+          "name": "Tornado Spirit",
+          "tags": [
+            "LIVING",
+            "GAS",
+            "LIGHT",
+            "WIND_SOURCE"
+          ],
+          "behaviors": [
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_OBJECT, power=medium",
+            "ON_CONTACT -> APPLY_FORCE -> CONTACT_BODY, power=high"
+          ],
+          "size_category": "small",
+          "visual_description": "A small, swirling vortex of gray and white mist with a faint, ghostly face forming in the center, constantly spinning and sucking in dust."
+        },
+        "toxic frog": {
+          "prompt": "toxic frog",
+          "name": "Poison Dart Frog",
+          "tags": [
+            "SOLID",
+            "LIVING",
+            "TOXIC",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> DEAL_DAMAGE -> NEAREST_LIVING",
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+          ],
+          "size_category": "small",
+          "visual_description": "A plump, vibrant frog with bright yellow and black spotted skin, emitting a soft pulsating green glow from its back."
+        },
+        "lasso vine": {
+          "prompt": "lasso vine",
+          "name": "Wrapping Vine",
+          "tags": [
+            "LIVING",
+            "FLEXIBLE",
+            "STICKY"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> ADD_TAGS(STICKY) -> CONTACT_BODY, power=medium",
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_OBJECT, power=medium"
+          ],
+          "size_category": "small",
+          "visual_description": "a long, twisting green vine with small thorns along its length and a vibrant red flower at the tip, coiling eagerly in the air"
+        },
+        "cowardly slime": {
+          "prompt": "cowardly slime",
+          "name": "Terrified Slime",
+          "tags": [
+            "LIQUID",
+            "LIGHT",
+            "FLAMMABLE"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> MOVE_AWAY -> NEAREST_OBJECT, power=high"
+          ],
+          "size_category": "small",
+          "visual_description": "a translucent, quivering gelatinous blob in pale blue with large wide eyes and tiny trembling legs"
+        },
+        "phoenix egg": {
+          "prompt": "phoenix egg",
+          "name": "Phoenix Egg",
+          "tags": [
+            "SOLID",
+            "BREAKABLE",
+            "FLAMMABLE",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_DAMAGED -> ADD_TAGS(HEAT_SOURCE) -> SELF",
+            "ON_TAG_ADDED(HEAT_SOURCE) -> SPAWN_PROJECTILE -> NEAREST_PLAYER, power=high"
+          ],
+          "size_category": "small",
+          "visual_description": "A pristine white egg with subtle, iridescent gold speckles that seem to shift and shimmer when viewed from different angles."
+        },
+        "patrol bot": {
+          "prompt": "patrol bot",
+          "name": "Sentinel Bot",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "LIVING",
+            "ELECTRIC"
+          ],
+          "behaviors": [
+            "ON_CREATE -> ADD_TAGS(GLOWING) -> SELF",
+            "ALWAYS -> PATROL -> SELF",
+            "ON_PROXIMITY -> SPAWN_PROJECTILE -> NEAREST_LIVING, power=medium"
+          ],
+          "size_category": "small",
+          "visual_description": "a compact metallic robot with a single glowing red eye and rotating sensor dishes on its chassis"
+        },
+        "electric lava golem": {
+          "prompt": "electric lava golem",
+          "name": "Lava Golem",
+          "tags": [
+            "SOLID",
+            "MOLTEN",
+            "ELECTRIC"
+          ],
+          "behaviors": [
+            "ON_CREATE -> SPAWN_PROJECTILE -> NEAREST_LIVING, power=high",
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+          ],
+          "size_category": "large",
+          "visual_description": "A towering humanoid figure composed of flowing orange lava with cracks pulsing bright yellow electricity."
+        },
+        "the sun": {
+          "prompt": "the sun",
+          "name": "The Sun",
+          "tags": [
+            "HEAVY",
+            "HOT",
+            "HEAT_SOURCE",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ALWAYS -> MOVE_AWAY -> NEAREST_LIVING, power=medium",
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY",
+            "ON_PROXIMITY -> ADD_TAGS(FLAMMABLE) -> NEAREST_OBJECT"
+          ],
+          "size_category": "huge",
+          "visual_description": "a massive, searing sphere of burning plasma with a blinding white-hot core and radiating golden-orange solar flares"
+        },
+        "tiny black hole": {
+          "prompt": "tiny black hole",
+          "name": "Micro Black Hole",
+          "tags": [
+            "SOLID",
+            "HEAVY",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ALWAYS -> ATTRACT -> NEAREST_OBJECT, power=high"
+          ],
+          "size_category": "tiny",
+          "visual_description": "A pitch-black sphere about the size of a marble, surrounded by a thin ring of distorted violet light and swirling accretion dust."
+        },
+        "sadness": {
+          "prompt": "sadness",
+          "name": "Melancholy Orb",
+          "tags": [
+            "SOLID",
+            "GLOWING",
+            "COLD",
+            "TOXIC"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> ADD_TAGS(COLD) -> CONTACT_BODY",
+            "ON_TAG_ADDED(COLD) -> DEAL_DAMAGE -> NEAREST_LIVING, power=medium"
+          ],
+          "size_category": "small",
+          "visual_description": "A small, translucent sphere of swirling gray mist with a faint blue inner glow that pulses sadly, dripping faint droplets of cold moisture."
+        },
+        "indiana jones boulder": {
+          "prompt": "indiana jones boulder",
+          "name": "Boulder of Doom",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "HEAVY",
+            "BREAKABLE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY, power=high"
+          ],
+          "size_category": "large",
+          "visual_description": "A massive, spherical gray rock with a rough, cracked surface that seems to have been rolling for centuries."
+        },
+        "frozen fire": {
+          "prompt": "frozen fire",
+          "name": "Frost Torch",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "COLD",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY",
+            "ON_TAG_ADDED(HEAT_SOURCE) -> ADD_TAGS(FROZEN, COLD) -> SELF"
+          ],
+          "size_category": "small",
+          "visual_description": "A jagged chunk of glowing blue ice that emits a cold white light with wisps of frozen vapor."
+        },
+        "a thing": {
+          "prompt": "a thing",
+          "name": "Magnetic Sphere",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "GLOWING",
+            "MAGNETIC"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> ADD_TAGS(GLOWING, MAGNETIC) -> CONTACT_BODY"
+          ],
+          "size_category": "medium",
+          "visual_description": "A perfect sphere made of polished chrome with a swirling, pulsing blue core that emits light."
+        },
+        "indestructible wall": {
+          "prompt": "indestructible wall",
+          "name": "Unbreakable Wall",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "HEAVY",
+            "REFLECTIVE"
+          ],
+          "behaviors": [],
+          "size_category": "large",
+          "visual_description": "A towering monolith of seamless, impenetrable grey stone that seems to absorb light rather than reflect it, with an utterly smooth surface showing no cracks or joints."
+        },
+        "fiar swrod": {
+          "prompt": "fiar swrod",
+          "name": "Fiery Blade",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "SHARP",
+            "HEAT_SOURCE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+          ],
+          "size_category": "small",
+          "visual_description": "A curved steel blade wreathed in crackling orange and red flames, with a dark hilt wrapped in heat-resistant leather."
+        },
+        "shield request": {
+          "prompt": "shield request",
+          "name": "Guardian Shield",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "REFLECTIVE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY, power=low",
+            "ALWAYS -> ATTRACT -> NEAREST_PLAYER, power=high"
+          ],
+          "size_category": "small",
+          "visual_description": "A sturdy round metal shield with a polished silver surface that gleams in the light and a deep blue center emblem, featuring a simple wooden grip."
+        },
+        "rambling glowing sword": {
+          "prompt": "rambling glowing sword",
+          "name": "Colossal Flameblade",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "SHARP",
+            "HEAT_SOURCE",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+          ],
+          "size_category": "large",
+          "visual_description": "A massive, towering greatsword with a long blade that constantly burns with intense white-hot flames and emits a blinding light."
+        },
+        "not heavy floaty thing": {
+          "prompt": "not heavy floaty thing",
+          "name": "Aether Feather",
+          "tags": [
+            "GAS",
+            "LIGHT",
+            "FLOATING",
+            "FLEXIBLE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> APPLY_FORCE -> CONTACT_BODY, power=low"
+          ],
+          "size_category": "small",
+          "visual_description": "A translucent, shimmering blue feather with a glowing white core that ripples in the air like smoke. It constantly drifts upward and twists softly as if caught in an invisible breeze."
+        },
+        "acid rain cloud": {
+          "prompt": "acid rain cloud",
+          "name": "Corrosive Miasma",
+          "tags": [
+            "GAS",
+            "FLOATING",
+            "CORROSIVE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> APPLY_FORCE -> CONTACT_BODY, power=low",
+            "ON_CREATE -> ADD_TAGS(TOXIC) -> SELF"
+          ],
+          "size_category": "large",
+          "visual_description": "A billowing, opaque fog bank with an iridescent sheen of oily green and purple, bubbling slightly as it drifts."
+        },
+        "ice shield": {
+          "prompt": "ice shield",
+          "name": "Frost Shield",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "SHARP",
+            "COLD"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+          ],
+          "size_category": "medium",
+          "visual_description": "A translucent hexagonal shield made of jagged blue ice with frost patterns etched into its surface and tiny frozen shards sticking out around the rim."
+        },
+        "magnet": {
+          "prompt": "magnet",
+          "name": "Nesquik Magnet",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "MAGNETIC"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+          ],
+          "size_category": "small",
+          "visual_description": "A classic red and white rectangular magnet with the word 'NESQUIK' in bold yellow letters, slightly worn edges"
+        },
+        "healing mushroom": {
+          "prompt": "healing mushroom",
+          "name": "Kickheal Mushroom",
+          "tags": [
+            "SOLID",
+            "LIVING",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> HEAL -> CONTACT_BODY"
+          ],
+          "size_category": "small",
+          "visual_description": "a plump, bioluminescent mushroom with a soft teal cap and white spotted stem that pulses gently."
+        },
+        "conductor rod": {
+          "prompt": "conductor rod",
+          "name": "Conducting Rod",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "CONDUCTING"
+          ],
+          "behaviors": [],
+          "size_category": "small",
+          "visual_description": "a straight, polished silver metal rod with slightly rounded ends and a smooth cylindrical surface."
+        },
+        "spring trap": {
+          "prompt": "spring trap",
+          "name": "Boing Spring",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "BOUNCY"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> APPLY_FORCE -> CONTACT_BODY, power=high"
+          ],
+          "size_category": "small",
+          "visual_description": "A coiled metal spring painted bright cyan with a flat top platform, featuring cartoonish exaggerated compression when stepped on."
+        },
+        "campfire": {
+          "prompt": "campfire",
+          "name": "Campfire",
+          "tags": [
+            "SOLID",
+            "HEAT_SOURCE",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY, power=low",
+            "ON_PROXIMITY -> HEAL -> NEAREST_LIVING, power=medium"
+          ],
+          "size_category": "small",
+          "visual_description": "A small pile of stacked brown logs with flickering orange and yellow flames rising from the center, casting a warm amber glow."
+        },
+        "rubber armor": {
+          "prompt": "rubber armor",
+          "name": "Rubber Armor",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "INSULATING"
+          ],
+          "behaviors": [
+            "ON_TAG_ADDED(ELECTRIC) -> REMOVE_TAGS(ELECTRIC) -> SELF"
+          ],
+          "size_category": "medium",
+          "visual_description": "a bulky, matte black protective suit made of thick rubber with segmented joints and a slightly textured surface."
+        },
+        "mirror golem": {
+          "prompt": "mirror golem",
+          "name": "",
+          "tags": [],
+          "behaviors": [],
+          "size_category": "",
+          "visual_description": ""
+        }
+      }
+    },
+    {
+      "run_index": 2,
+      "objects": {
+        "rock": {
+          "prompt": "rock",
+          "name": "Rock",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "HEAVY"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY, power=low"
+          ],
+          "size_category": "medium",
+          "visual_description": "A rough, grey irregular stone with a weathered texture and small cracks."
+        },
+        "wooden chair": {
+          "prompt": "wooden chair",
+          "name": "Wooden Chair",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "BREAKABLE"
+          ],
+          "behaviors": [
+            "ON_DAMAGED -> ADD_TAGS(BREAKABLE) -> SELF"
+          ],
+          "size_category": "medium",
+          "visual_description": "a classic wooden dining chair with four legs, a curved backrest, and woven rush seating in a light oak finish."
+        },
+        "bucket of water": {
+          "prompt": "bucket of water",
+          "name": "Water Bucket",
+          "tags": [
+            "SOLID",
+            "FLOATING"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> ADD_TAGS(COLD) -> CONTACT_BODY"
+          ],
+          "size_category": "small",
+          "visual_description": "A rustic wooden bucket with iron hoops, filled with clear blue water that ripples slightly when moved."
+        },
+        "banana": {
+          "prompt": "banana",
+          "name": "Banana",
+          "tags": [
+            "SOLID",
+            "FLAMMABLE",
+            "LIGHT"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY, power=low",
+            "ON_DAMAGED -> ADD_TAGS(SLIPPERY) -> SELF"
+          ],
+          "size_category": "small",
+          "visual_description": "a curved yellow fruit with a slight green tip and brown speckles on its peel, lying on the ground"
+        },
+        "glass bottle": {
+          "prompt": "glass bottle",
+          "name": "Fragile Glass Bottle",
+          "tags": [
+            "SOLID",
+            "BREAKABLE",
+            "LIGHT"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> SELF_DESTRUCT -> SELF"
+          ],
+          "size_category": "small",
+          "visual_description": "a slender, transparent glass bottle with a narrow neck and small body, showing faint reflections of light on its smooth surface."
+        },
+        "hot coal": {
+          "prompt": "hot coal",
+          "name": "Ember Coal",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "HOT",
+            "HEAT_SOURCE",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY",
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING, power=low"
+          ],
+          "size_category": "small",
+          "visual_description": "a jagged, dark grey piece of coal that emits a faint orange glow from within its cracked surface and radiates heat waves."
+        },
+        "giant boulder": {
+          "prompt": "giant boulder",
+          "name": "Cataclysm Boulder",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "HEAVY",
+            "BREAKABLE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> APPLY_FORCE -> CONTACT_BODY, power=high",
+            "ON_DAMAGED -> SELF_DESTRUCT -> SELF"
+          ],
+          "size_category": "huge",
+          "visual_description": "A colossal grey rock formation resembling a jagged mountain peak, covered in deep cracks and dust."
+        },
+        "tiny pebble": {
+          "prompt": "tiny pebble",
+          "name": "Micro Pebble",
+          "tags": [
+            "SOLID",
+            "LIGHT",
+            "RIGID"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+          ],
+          "size_category": "tiny",
+          "visual_description": "A tiny, smooth grey stone just visible to the naked eye, perfectly oval with a slightly polished sheen."
+        },
+        "fire sword": {
+          "prompt": "fire sword",
+          "name": "Fire Sword",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "SHARP",
+            "HEAT_SOURCE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+          ],
+          "size_category": "small",
+          "visual_description": "A curved steel blade wreathed in bright orange and red flames, with a molten core visible through the metal."
+        },
+        "sword": {
+          "prompt": "sword",
+          "name": "Sunblade",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "SHARP",
+            "HEAT_SOURCE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY",
+            "ON_TAG_ADDED(FLAMMABLE) -> EXPLODE -> SELF"
+          ],
+          "size_category": "small",
+          "visual_description": "A longsword with a blade forged from glowing white-hot metal that radiates heat waves, featuring a hilt wrapped in red leather."
+        },
+        "time bomb": {
+          "prompt": "time bomb",
+          "name": "Time Bomb",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "EXPLOSIVE"
+          ],
+          "behaviors": [
+            "ON_TIMER -> EXPLODE -> SELF"
+          ],
+          "size_category": "small",
+          "visual_description": "A cylindrical steel canister with a ticking red digital timer and flashing warning lights on top, mounted on a small stand."
+        },
+        "homing missile": {
+          "prompt": "homing missile",
+          "name": "Heat-Seek Missile",
+          "tags": [
+            "SOLID",
+            "LIGHT",
+            "FLAMMABLE",
+            "EXPLOSIVE"
+          ],
+          "behaviors": [
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING, power=high",
+            "ON_CONTACT -> EXPLODE -> SELF"
+          ],
+          "size_category": "small",
+          "visual_description": "a sleek silver missile with a glowing red sensor cone at the nose and small stabilizing fins at the rear, trailing a faint plume of exhaust smoke."
+        },
+        "rubber ball from hell": {
+          "prompt": "rubber ball from hell",
+          "name": "Possessed Bounceball",
+          "tags": [
+            "SOLID",
+            "BOUNCY",
+            "SHARP",
+            "HOT"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> ADD_TAGS(HOT) -> SELF, power=high",
+            "ON_TAG_ADDED(HOT) -> MOVE_TOWARD -> NEAREST_PLAYER, power=high"
+          ],
+          "size_category": "small",
+          "visual_description": "a cracked rubber ball with a swirling purple aura and jagged red veins pulsing on its surface"
+        },
+        "firework": {
+          "prompt": "firework",
+          "name": "Instant Firework",
+          "tags": [
+            "LIGHT",
+            "EXPLOSIVE",
+            "FLAMMABLE"
+          ],
+          "behaviors": [
+            "ON_TAG_ADDED(SOLID) -> EXPLODE -> SELF"
+          ],
+          "size_category": "small",
+          "visual_description": "A small, cylindrical rocket with a metallic red casing and a sparking golden fuse at the top."
+        },
+        "explosive barrel": {
+          "prompt": "explosive barrel",
+          "name": "Explosive Barrel",
+          "tags": [
+            "SOLID",
+            "BREAKABLE",
+            "HEAVY",
+            "EXPLOSIVE"
+          ],
+          "behaviors": [
+            "ON_DAMAGED -> EXPLODE -> SELF"
+          ],
+          "size_category": "medium",
+          "visual_description": "A large, weathered wooden barrel with rusted metal bands, marked with a red skull-and-crossbones symbol and faint orange soot stains."
+        },
+        "glass cannon": {
+          "prompt": "glass cannon",
+          "name": "Shatterball Crystal",
+          "tags": [
+            "FLOATING",
+            "FLEXIBLE",
+            "BREAKABLE",
+            "SHARP"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> SELF_DESTRUCT -> SELF",
+            "ON_DESTROY -> ADD_TAGS(SHARP) -> NEAREST_OBJECT, power=high"
+          ],
+          "size_category": "medium",
+          "visual_description": "A smooth, pearlescent crystal sphere with swirling internal light patterns that hovers gently in the air."
+        },
+        "sticky honey trap": {
+          "prompt": "sticky honey trap",
+          "name": "Honey Trap",
+          "tags": [
+            "SOLID",
+            "STICKY"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> APPLY_FORCE -> CONTACT_BODY"
+          ],
+          "size_category": "large",
+          "visual_description": "A large, glistening mound of golden amber liquid with a viscous, dripping texture that slowly oozes across the ground."
+        },
+        "death flower": {
+          "prompt": "death flower",
+          "name": "Toxic Bloom",
+          "tags": [
+            "SOLID",
+            "BREAKABLE",
+            "TOXIC"
+          ],
+          "behaviors": [
+            "ON_DESTROY -> ADD_TAGS(TOXIC, GAS) -> SELF",
+            "ALWAYS -> DEAL_DAMAGE -> NEAREST_LIVING"
+          ],
+          "size_category": "small",
+          "visual_description": "A delicate flower with vibrant purple petals and a glowing amber center, standing on a slender green stem."
+        },
+        "acid spider": {
+          "prompt": "acid spider",
+          "name": "Acid Spider",
+          "tags": [
+            "SOLID",
+            "LIVING",
+            "TOXIC"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> SPAWN_PROJECTILE -> NEAREST_PLAYER, power=medium",
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_PLAYER, power=high"
+          ],
+          "size_category": "small",
+          "visual_description": "A small black spider with iridescent purple accents and visible fangs dripping green saliva."
+        },
+        "friendly dog": {
+          "prompt": "friendly dog",
+          "name": "Friendly Dog",
+          "tags": [
+            "LIVING",
+            "SOLID",
+            "LIGHT"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> MOVE_TOWARD -> NEAREST_PLAYER, power=high",
+            "ALWAYS -> PATROL -> SELF"
+          ],
+          "size_category": "medium",
+          "visual_description": "a fluffy golden-furred dog with floppy ears and a wagging tail, wearing a friendly smile"
+        },
+        "lava monster": {
+          "prompt": "lava monster",
+          "name": "Lava Behemoth",
+          "tags": [
+            "SOLID",
+            "MOLTEN",
+            "HEAT_SOURCE"
+          ],
+          "behaviors": [
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_PLAYER, power=high",
+            "ON_CONTACT -> ADD_TAGS(FLAMMABLE) -> CONTACT_BODY"
+          ],
+          "size_category": "large",
+          "visual_description": "A towering, irregular mass of glowing orange magma contained within a jagged crust of black obsidian, with viscous lava constantly oozing from its cracks and venting hot smoke."
+        },
+        "angry bunny": {
+          "prompt": "angry bunny",
+          "name": "Rampant Bunny",
+          "tags": [
+            "LIVING",
+            "SOLID",
+            "LIGHT",
+            "SHARP"
+          ],
+          "behaviors": [
+            "ON_TIMER -> MOVE_AWAY -> NEAREST_PLAYER, power=medium",
+            "ON_DAMAGED -> ADD_TAGS(HOT) -> SELF",
+            "ON_TAG_ADDED(HOT) -> APPLY_FORCE -> NEAREST_PLAYER, power=high"
+          ],
+          "size_category": "small",
+          "visual_description": "a fluffy white rabbit with increasingly glowing red eyes and bared sharp teeth, its fur bristling with rage as it twitches violently."
+        },
+        "electric jellyfish": {
+          "prompt": "electric jellyfish",
+          "name": "Electric Jellyfish",
+          "tags": [
+            "SOLID",
+            "LIVING",
+            "ELECTRIC",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+          ],
+          "size_category": "medium",
+          "visual_description": "a translucent, bell-shaped jellyfish with pulsating bioluminescent blue and purple patterns, trailing long, wispy tentacles that emit crackling sparks."
+        },
+        "wind spirit": {
+          "prompt": "wind spirit",
+          "name": "Tornado Spirit",
+          "tags": [
+            "LIVING",
+            "GAS",
+            "LIGHT",
+            "WIND_SOURCE"
+          ],
+          "behaviors": [
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_PLAYER, power=high",
+            "ON_PROXIMITY -> APPLY_FORCE -> CONTACT_BODY, power=high"
+          ],
+          "size_category": "small",
+          "visual_description": "a swirling vortex of translucent white and light blue mist forming a humanoid shape with no distinct face, constantly spinning rapidly"
+        },
+        "toxic frog": {
+          "prompt": "toxic frog",
+          "name": "Toxic Froglet",
+          "tags": [
+            "LIVING",
+            "SOLID",
+            "TOXIC",
+            "COLD"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> DEAL_DAMAGE -> CONTACT_BODY",
+            "ON_CONTACT -> ADD_TAGS(COLD) -> CONTACT_BODY"
+          ],
+          "size_category": "small",
+          "visual_description": "A tiny, plump frog with vibrant emerald skin and deep crimson blotches on its belly, featuring wide, innocent-looking eyes."
+        },
+        "mirror golem": {
+          "prompt": "mirror golem",
+          "name": "Mirror Golem",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "REFLECTIVE",
+            "LIVING",
+            "HEAVY"
+          ],
+          "behaviors": [
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_PLAYER, power=medium",
+            "ON_TAG_ADDED(HEAT_SOURCE) -> ADD_TAGS(HEAT_SOURCE) -> NEAREST_LIVING, power=high",
+            "ON_TAG_ADDED(ELECTRIC) -> ADD_TAGS(ELECTRIC) -> NEAREST_LIVING, power=high"
+          ],
+          "size_category": "large",
+          "visual_description": "A towering humanoid figure constructed from jagged, interlocking shards of perfect mirror glass that shimmer with cold light."
+        },
+        "lasso vine": {
+          "prompt": "lasso vine",
+          "name": "Snaring Vine",
+          "tags": [
+            "LIVING",
+            "FLEXIBLE",
+            "STICKY"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> ATTRACT -> NEAREST_OBJECT, power=medium"
+          ],
+          "size_category": "medium",
+          "visual_description": "a thick, pulsating green vine with a glossy texture and barbed thorns protruding from its surface, coiling slightly as if ready to strike"
+        },
+        "cowardly slime": {
+          "prompt": "cowardly slime",
+          "name": "Panic Slime",
+          "tags": [
+            "LIVING",
+            "LIGHT",
+            "FLEXIBLE"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> MOVE_AWAY -> NEAREST_OBJECT, power=high"
+          ],
+          "size_category": "small",
+          "visual_description": "A small, translucent green blob with wide, terrified eyes and a wobbling form that quivers constantly."
+        },
+        "phoenix egg": {
+          "prompt": "phoenix egg",
+          "name": "Phoenix Egg",
+          "tags": [
+            "SOLID",
+            "BREAKABLE",
+            "FLOATING"
+          ],
+          "behaviors": [
+            "ON_DAMAGED -> EXPLODE -> SELF, power=medium"
+          ],
+          "size_category": "small",
+          "visual_description": "A smooth, unassuming white egg with subtle golden veins running across its shell, appearing fragile and innocent."
+        },
+        "patrol bot": {
+          "prompt": "patrol bot",
+          "name": "Turret Bot",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "LIVING",
+            "ELECTRIC"
+          ],
+          "behaviors": [
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_PLAYER, power=low",
+            "ON_PROXIMITY -> SPAWN_PROJECTILE -> NEAREST_PLAYER, power=medium"
+          ],
+          "size_category": "small",
+          "visual_description": "a compact metallic robot with glowing blue optics and a rotating barrel on its shoulder, featuring a rugged industrial chassis."
+        },
+        "electric lava golem": {
+          "prompt": "electric lava golem",
+          "name": "Magma Shock Golem",
+          "tags": [
+            "SOLID",
+            "HEAVY",
+            "HOT",
+            "ELECTRIC"
+          ],
+          "behaviors": [
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING, power=high",
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY",
+            "ON_TAG_ADDED(ELECTRIC) -> ADD_TAGS(HOT) -> SELF"
+          ],
+          "size_category": "large",
+          "visual_description": "A towering figure composed of crackling magma and jagged obsidian rock, with bright electric arcs constantly surging through its fissures."
+        },
+        "the sun": {
+          "prompt": "the sun",
+          "name": "The Sun",
+          "tags": [
+            "HEAT_SOURCE",
+            "HOT",
+            "GLOWING",
+            "LIGHT",
+            "FLOATING"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY",
+            "ON_PROXIMITY -> SPAWN_PROJECTILE -> NEAREST_LIVING"
+          ],
+          "size_category": "huge",
+          "visual_description": "A massive, brilliant sphere of burning orange and yellow plasma with swirling solar flares and a blinding white core."
+        },
+        "tiny black hole": {
+          "prompt": "tiny black hole",
+          "name": "Void Singularity",
+          "tags": [
+            "SOLID",
+            "HEAVY",
+            "MAGNETIC",
+            "FLOATING"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> ATTRACT -> NEAREST_OBJECT, power=high"
+          ],
+          "size_category": "tiny",
+          "visual_description": "a small, perfectly spherical black orb with a faint purple gravitational lensing distortion around it and swirling shadow tendrils at its edges."
+        },
+        "sadness": {
+          "prompt": "sadness",
+          "name": "Weeping Spirit",
+          "tags": [
+            "GAS",
+            "FLOATING",
+            "COLD",
+            "TOXIC"
+          ],
+          "behaviors": [
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING, power=low",
+            "ON_TAG_ADDED(LIVING) -> ADD_TAGS(COLD) -> NEAREST_LIVING"
+          ],
+          "size_category": "small",
+          "visual_description": "A small, semi-transparent cloud of deep indigo mist with faint, teardrop-shaped particles slowly drifting downward, emitting a pale blue glow."
+        },
+        "indiana jones boulder": {
+          "prompt": "indiana jones boulder",
+          "name": "Giant Boulders",
+          "tags": [
+            "SOLID",
+            "HEAVY",
+            "BREAKABLE"
+          ],
+          "behaviors": [
+            "ON_TAG_ADDED(HEAT_SOURCE) -> EXPLODE -> SELF, power=high"
+          ],
+          "size_category": "huge",
+          "visual_description": "A massive, rounded grey stone with a cracked surface and patches of weathered moss, resembling the iconic rolling boulder from the opening sequence."
+        },
+        "frozen fire": {
+          "prompt": "frozen fire",
+          "name": "Frost Flame",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "COLD",
+            "HEAT_SOURCE",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY, power=medium",
+            "ON_TAG_ADDED(COLD) -> ADD_TAGS(FROZEN) -> SELF, power=high"
+          ],
+          "size_category": "small",
+          "visual_description": "A jagged, translucent icicle glowing with a cold blue-white inner light, emitting faint crystalline particles."
+        },
+        "a thing": {
+          "prompt": "a thing",
+          "name": "Molten Core",
+          "tags": [
+            "SOLID",
+            "MOLTEN",
+            "HEAT_SOURCE",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_DAMAGED -> SPAWN_PROJECTILE -> CONTACT_BODY, power=high"
+          ],
+          "size_category": "medium",
+          "visual_description": "A rough, cracked black stone sphere with glowing orange fissures pulsing within its core, leaking small droplets of liquid magma that instantly solidify on the ground."
+        },
+        "indestructible wall": {
+          "prompt": "indestructible wall",
+          "name": "Unbreakable Wall",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "HEAVY"
+          ],
+          "behaviors": [],
+          "size_category": "large",
+          "visual_description": "A towering monolithic slab of impossible black stone with a perfectly smooth, light-swallowing surface and glowing faint gold runic seams."
+        },
+        "fiar swrod": {
+          "prompt": "fiar swrod",
+          "name": "Flame Sword",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "SHARP",
+            "HEAT_SOURCE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+          ],
+          "size_category": "small",
+          "visual_description": "A straight-bladed sword forged from steel with a glowing orange edge and wreathed in crackling yellow flames."
+        },
+        "shield request": {
+          "prompt": "shield request",
+          "name": "Heavy Shield",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "HEAVY"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+          ],
+          "size_category": "medium",
+          "visual_description": "a large rectangular shield made of dark iron with a thick wooden backing and a rusty metal boss in the center."
+        },
+        "rambling glowing sword": {
+          "prompt": "rambling glowing sword",
+          "name": "Colossal Lightsaber Blade",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "SHARP",
+            "HEAT_SOURCE",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+          ],
+          "size_category": "huge",
+          "visual_description": "An immense, massive blade glowing with an intense electric-blue plasma light, with molten orange sparks and fire dancing along its jagged edge."
+        },
+        "not heavy floaty thing": {
+          "prompt": "not heavy floaty thing",
+          "name": "Glowing Feather",
+          "tags": [
+            "LIGHT",
+            "FLOATING",
+            "FLEXIBLE",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_CREATE -> SPAWN_PROJECTILE -> NEAREST_LIVING, power=medium",
+            "ALWAYS -> MOVE_AWAY -> NEAREST_OBJECT, power=low"
+          ],
+          "size_category": "tiny",
+          "visual_description": "a translucent, iridescent white feather that constantly shimmers with rainbow colors and floats gently in the air without touching the ground."
+        },
+        "acid rain cloud": {
+          "prompt": "acid rain cloud",
+          "name": "Acid Rain Cloud",
+          "tags": [
+            "GAS",
+            "FLOATING",
+            "TOXIC"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY",
+            "ALWAYS -> ADD_TAGS(CORROSIVE) -> NEAREST_OBJECT, power=medium"
+          ],
+          "size_category": "large",
+          "visual_description": "a dark, ominous gray cloud with bubbling purple lightning flickering inside and acidic droplets constantly falling from its underside."
+        },
+        "ice shield": {
+          "prompt": "ice shield",
+          "name": "Frost Guard",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "SHARP",
+            "COLD"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY, power=low",
+            "ON_CONTACT -> ADD_TAGS(FROZEN) -> CONTACT_BODY"
+          ],
+          "size_category": "medium",
+          "visual_description": "A large, hexagonal shield made of translucent blue ice with jagged frost crystals protruding from its edges and a glowing white core."
+        },
+        "magnet": {
+          "prompt": "magnet",
+          "name": "Magneto Core",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "MAGNETIC",
+            "HEAVY"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> ATTRACT -> NEAREST_OBJECT, power=high"
+          ],
+          "size_category": "medium",
+          "visual_description": "A heavy, hexagonal blue and silver block with pulsing magnetic field lines and crackling arcs of energy around its edges."
+        },
+        "healing mushroom": {
+          "prompt": "healing mushroom",
+          "name": "Kick-Me Healer",
+          "tags": [
+            "SOLID",
+            "LIVING",
+            "BREAKABLE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> HEAL -> CONTACT_BODY, power=low",
+            "ON_DAMAGED -> REMOVE_TAGS(BREAKABLE) -> SELF"
+          ],
+          "size_category": "small",
+          "visual_description": "a plump, bioluminescent turquoise mushroom with a glossy cap and white spots, pulsing gently as if alive"
+        },
+        "conductor rod": {
+          "prompt": "conductor rod",
+          "name": "Conductor Rod",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "CONDUCTING"
+          ],
+          "behaviors": [
+            "ON_TAG_ADDED(ELECTRIC) -> ADD_TAGS(ELECTRIC) -> NEAREST_OBJECT"
+          ],
+          "size_category": "small",
+          "visual_description": "A straight, polished steel rod with faint blue electrical sparks crackling along its length, showing its conductive nature."
+        },
+        "spring trap": {
+          "prompt": "spring trap",
+          "name": "Spring Plinko",
+          "tags": [
+            "SOLID",
+            "FLEXIBLE",
+            "BOUNCY"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> APPLY_FORCE -> CONTACT_BODY, power=high"
+          ],
+          "size_category": "small",
+          "visual_description": "a bright yellow coiled metal spring with a red circular platform on top and black accents, bobbing slightly as if idle."
+        },
+        "campfire": {
+          "prompt": "campfire",
+          "name": "Campfire",
+          "tags": [
+            "HEAT_SOURCE",
+            "SOLID",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> HEAL -> NEAREST_LIVING, power=low",
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+          ],
+          "size_category": "small",
+          "visual_description": "A small pile of rough brown logs arranged in a star shape with bright orange and yellow flames crackling on top, surrounded by scattered grey ash."
+        },
+        "rubber armor": {
+          "prompt": "rubber armor",
+          "name": "Electro-Insulator Armor",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "INSULATING",
+            "HEAVY"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> ADD_TAGS(INSULATING) -> CONTACT_BODY",
+            "ON_DAMAGED -> REMOVE_TAGS(INSULATING) -> SELF, power=low"
+          ],
+          "size_category": "medium",
+          "visual_description": "a bulky suit made of thick black rubber with visible stitching and a matte finish, featuring reinforced joints and a high collar."
+        }
+      }
+    }
+  ]
+}

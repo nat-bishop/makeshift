@@ -51,11 +51,11 @@ uv run pytest -k "test_name"              # single test by name
 
 - **Object creation pipeline** (`creator/agent.py` → `routers/objects.py` → `images/pipeline.py` → `ws/handler.py`): Player text → PydanticAI agent (Gemini) → `CreatorOutput` (tags + behaviors) → immediate JSON response (blueprint + `budget_remaining`) → background Gemini sprite generation → WebSocket `sprite_ready` delivery. See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for full pipeline flow.
 
-- **Tag system** (`models/tags.py`): 31 `Tag` StrEnum values, 7 categories, power costs 1-5, budget of 10. 15 contradiction pairs enforced via `ModelRetry`. Tags define what objects *are* — physics, interactions, and durability. HOSTILE tag handles non-elemental contact damage. See [GAME_DESIGN.md](docs/GAME_DESIGN.md) for design rationale.
+- **Tag system** (`models/tags.py`): 32 `Tag` StrEnum values, 7 categories, power costs 1-5, budget of 10. 17 contradiction pairs enforced via `ModelRetry`. Tags define what objects *are* — physics, interactions, and durability. WET (cost 1, Environmental): damp/soaked — freezes easier near COLD, amplifies ELECTRIC (45 dmg vs 30), resists fire, dries near HEAT_SOURCE; applied by LIQUID objects (15s duration); contradicts MOLTEN + HEAT_SOURCE; low friction (0.1). HOSTILE (cost 2, Special): danger aura field (CLOSE, periodic) — 20 dmg + knockback (150 force vs LIVING, 100 vs BREAKABLE); HOSTILE + HOSTILE clash deals 15 dmg to both + 120 force. See [GAME_DESIGN.md](docs/GAME_DESIGN.md) for design rationale.
 
 - **Behavior system** (`models/behaviors.py`, `models/blueprint.py`): 0-3 behaviors per object. Each behavior: trigger (9 types) + action (11 types) + target (5 types) + optional condition + categorical params (intensity, range, speed, interval). Budget of 8, separate from tag budget. Tags handle all contact damage (SHARP, HEAT_SOURCE, HOSTILE, etc.) — DEAL_DAMAGE was removed from behavior actions to eliminate double-triggering. ADD_TAGS/REMOVE_TAGS are the key bridge between behaviors and the rule engine. See [ARCHITECTURE.md](docs/ARCHITECTURE.md) and [GAME_DESIGN.md](docs/GAME_DESIGN.md) for full detail.
 
-- **Rule engine** (`engine/resolver.py`, `engine/rules_data.py`): `RuleResolver` — two-tier matching (O(1) pair index + O(n) wildcard scan). 47 rules, 18 annotated `trigger_mode=TriggerMode.FIELD`. `TriggerMode` StrEnum (CONTACT | FIELD) on `InteractionRule` — default CONTACT. Mirrored client-side in Godot's `RuleEngine` autoload.
+- **Rule engine** (`engine/resolver.py`, `engine/rules_data.py`): `RuleResolver` — two-tier matching (O(1) pair index + O(n) wildcard scan). 53 rules, 24 annotated `trigger_mode=TriggerMode.FIELD`. `TriggerMode` StrEnum (CONTACT | FIELD) on `InteractionRule` — default CONTACT. Mirrored client-side in Godot's `RuleEngine` autoload.
 
 - **Image pipeline** (`images/pipeline.py`, `images/gemini_client.py`, `images/local_image.py`): Lazy singletons (`get_generate_image()`, `get_remove_bg()`). Three backends via `IMAGE_BACKEND`: gemini, local (SGLang FLUX), fal. All → bg removal → crop to 512×512 → cache by SHA-256(prompt). Prompt template in `pipeline.py`. Standalone via `make cli-sprite`.
 
@@ -73,7 +73,7 @@ uv run pytest -k "test_name"              # single test by name
 | `Backend` | HTTP + WebSocket client, session persistence, sprite cache, 10s sync timer |
 | `GameManager` | Game state (MENU/PLAYING/PAUSED), level management, scene transitions, `debug_mode` flag (toggled by `toggle_debug` input, emits `debug_toggled`) |
 | `RuleEngine` | Client-side rule matching (mirrors backend resolver) |
-| `CollisionResolver` | Per-frame collision resolution, cooldowns, cascade (depth 3, 96px radius), STICKY joint creation |
+| `CollisionResolver` | Per-frame collision resolution, cooldowns, cascade (depth 3, 96px radius) |
 | `Log` | Structured logging (`autoloads/logger.gd`) |
 
 | System | File | Purpose |
@@ -157,8 +157,8 @@ Requires `.env` file (see `.env.example`):
 - `body_entered` collision handling is deferred via `call_deferred("_resolve_deferred", body)` — resolving collisions directly in the signal callback crashes Godot with "Can't change state while flushing queries" because resolution can chain into `add_tag` → `_reapply_physics` → new shapes
 - Backend autoload uses `127.0.0.1` not `localhost` — avoids DNS resolution delays and IPv6 fallback issues on some systems
 - In Godot 4.3+, assigning an untyped `Array` (e.g. from JSON parsing) to a typed `Array[Dictionary]` or `Array[String]` silently fails — the typed array rejects the source and remains empty. Use untyped `Array` or iterate-and-append. Pattern: `game_object.gd` tags use manual iterate/append; `behavior_executor.gd` `_behaviors` uses untyped `Array`.
-- `TagField` is lazily created by `game_object.gd`: created at `init_from_blueprint()` if field tags are present, or on first `add_tag()` that introduces a field tag. This means fire-spread (rule adds HEAT_SOURCE) automatically promotes a non-field object into a field emitter.
-- Continuous field rules (`WIND_SOURCE`, `MAGNETIC`, `GLOWING`) use `apply_central_force()` per physics frame — `force_magnitude` tuned for per-frame, not impulse. Periodic rules fire on 2s timer; first tick immediate via `call_deferred`.
+- `TagField` is lazily created by `game_object.gd`: created at `init_from_blueprint()` if field tags are present, or on first `add_tag()` that introduces a field tag. This means fire-spread (rule adds HEAT_SOURCE) or WET propagation (LIQUID adds WET) automatically promotes a non-field object into a field emitter.
+- Continuous field rules (`WIND_SOURCE`, `MAGNETIC`, `GLOWING`, `STICKY`) use `apply_central_force()` per physics frame — `force_magnitude` tuned for per-frame, not impulse. Periodic rules fire on 2s timer; first tick immediate via `call_deferred`.
 - DOT timer replacement (`WorldMutations.apply_dot`): must `stop()` + `remove_child()` before `queue_free()` — `queue_free()` alone leaves the node until end-of-frame, causing Godot to auto-rename the replacement (appending `@2`).
 - `Backend` autoload has `process_mode = PROCESS_MODE_ALWAYS` — it must process during pause (creation panel pauses the game, but WebSocket keepalive and sprite delivery must continue).
 - `EnvironmentBody` periodic tick: `solid=false` uses no trigger_mode filter (ALL rules — being inside non-solid = continuous contact); `solid=true` filters to FIELD only (CONTACT fires via `body_entered`). Player detected via env body's own FieldArea (`move_and_slide` doesn't trigger `body_entered` on other bodies).

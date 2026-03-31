@@ -1,0 +1,2360 @@
+{
+  "set": "B",
+  "runs": [
+    {
+      "run_index": 0,
+      "objects": {
+        "rock": {
+          "prompt": "rock",
+          "name": "Stone Boulder",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "HEAVY"
+          ],
+          "behaviors": [
+            "ON_DAMAGED -> EXPLODE -> SELF"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "wooden chair": {
+          "prompt": "wooden chair",
+          "name": "Wooden Chair",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "BREAKABLE"
+          ],
+          "behaviors": [
+            "ON_DAMAGED -> ADD_TAGS(STICKY) -> CONTACT_BODY",
+            "ON_DESTROY -> EXPLODE -> SELF, power=low"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "bucket of water": {
+          "prompt": "bucket of water",
+          "name": "Water Bucket",
+          "tags": [
+            "SOLID",
+            "HEAVY",
+            "COLD"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> ADD_TAGS(LIQUID, COLD) -> CONTACT_BODY",
+            "ON_DAMAGED -> REMOVE_TAGS(HEAVY) -> SELF"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "banana": {
+          "prompt": "banana",
+          "name": "Ripe Banana",
+          "tags": [
+            "SOLID",
+            "FLEXIBLE",
+            "SLIPPERY",
+            "LIVING"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> ADD_TAGS(SLIPPERY) -> CONTACT_BODY",
+            "ON_DAMAGED -> REMOVE_TAGS(LIVING) -> SELF"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "glass bottle": {
+          "prompt": "glass bottle",
+          "name": "Glass Bottle",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "BREAKABLE",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_DAMAGED -> EXPLODE -> SELF",
+            "ON_DESTROY -> ADD_TAGS(GLOWING) -> NEAREST_OBJECT"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "hot coal": {
+          "prompt": "hot coal",
+          "name": "Burning Coal",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "GLOWING",
+            "HEAT_SOURCE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY",
+            "ON_PROXIMITY -> ADD_TAGS(FROZEN) -> NEAREST_OBJECT"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "giant boulder": {
+          "prompt": "giant boulder",
+          "name": "House-Sized Boulder",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "HEAVY"
+          ],
+          "behaviors": [
+            "ON_CREATE -> APPLY_FORCE -> NEAREST_LIVING",
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "tiny pebble": {
+          "prompt": "tiny pebble",
+          "name": "Nano Pebble",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "HEAVY"
+          ],
+          "behaviors": [
+            "ON_DAMAGED -> EXPLODE -> SELF, power=high",
+            "ON_CREATE -> SELF_DESTRUCT -> SELF"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "fire sword": {
+          "prompt": "fire sword",
+          "name": "Fire Sword",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "SHARP",
+            "HEAT_SOURCE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY",
+            "ON_CONTACT -> ADD_TAGS(FLAMMABLE) -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "sword": {
+          "prompt": "sword",
+          "name": "Steel Sword",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "SHARP"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "time bomb": {
+          "prompt": "time bomb",
+          "name": "Time Bomb",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "FLAMMABLE",
+            "EXPLOSIVE"
+          ],
+          "behaviors": [
+            "ON_TIMER -> EXPLODE -> SELF, power=high"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "homing missile": {
+          "prompt": "homing missile",
+          "name": "Heat-Seeker Missile",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "HEAVY",
+            "EXPLOSIVE"
+          ],
+          "behaviors": [
+            "ON_CREATE -> ADD_TAGS(GLOWING) -> SELF",
+            "ON_TIMER -> MOVE_TOWARD -> NEAREST_PLAYER, power=high",
+            "ON_CONTACT -> EXPLODE -> SELF"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "rubber ball from hell": {
+          "prompt": "rubber ball from hell",
+          "name": "Possessed Ball",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "BOUNCY",
+            "HEAVY"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> APPLY_FORCE -> CONTACT_BODY",
+            "ON_DAMAGED -> ADD_TAGS(ELECTRIC) -> NEAREST_OBJECT",
+            "ON_TAG_ADDED(ELECTRIC) -> EXPLODE -> SELF, power=low"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "firework": {
+          "prompt": "firework",
+          "name": "Instant Firework",
+          "tags": [
+            "SOLID",
+            "LIGHT",
+            "EXPLOSIVE",
+            "HEAT_SOURCE"
+          ],
+          "behaviors": [
+            "ON_CREATE -> EXPLODE -> SELF, power=high",
+            "ON_CONTACT -> ADD_TAGS(HEAT_SOURCE) -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "explosive barrel": {
+          "prompt": "explosive barrel",
+          "name": "Explosive Barrel",
+          "tags": [
+            "SOLID",
+            "BREAKABLE",
+            "HEAVY",
+            "FLAMMABLE",
+            "EXPLOSIVE"
+          ],
+          "behaviors": [
+            "ON_DAMAGED -> EXPLODE -> SELF",
+            "ON_TAG_ADDED(HEAT_SOURCE) -> ADD_TAGS(FROZEN) -> NEAREST_OBJECT"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "glass cannon": {
+          "prompt": "glass cannon",
+          "name": "Shatter Orb",
+          "tags": [
+            "SOLID",
+            "FLOATING",
+            "GLOWING",
+            "BREAKABLE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> SELF_DESTRUCT -> SELF",
+            "ON_DESTROY -> ADD_TAGS(SHARP) -> NEAREST_OBJECT"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "sticky honey trap": {
+          "prompt": "sticky honey trap",
+          "name": "Honey Trap",
+          "tags": [
+            "LIQUID",
+            "STICKY"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> ADD_TAGS(STICKY) -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "death flower": {
+          "prompt": "death flower",
+          "name": "Toxic Bloom Trap",
+          "tags": [
+            "SOLID",
+            "LIVING",
+            "BREAKABLE"
+          ],
+          "behaviors": [
+            "ON_DESTROY -> EXPLODE -> SELF",
+            "ON_TAG_ADDED(TOXIC) -> ADD_TAGS(TOXIC) -> NEAREST_OBJECT"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "acid spider": {
+          "prompt": "acid spider",
+          "name": "Acid Spider",
+          "tags": [
+            "LIVING",
+            "SOLID",
+            "TOXIC",
+            "SHARP"
+          ],
+          "behaviors": [
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING",
+            "ON_PROXIMITY -> SPAWN_PROJECTILE -> NEAREST_PLAYER, power=high"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "friendly dog": {
+          "prompt": "friendly dog",
+          "name": "Friendly Dog",
+          "tags": [
+            "LIVING",
+            "FLEXIBLE",
+            "HEAVY",
+            "BOUNCY"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> MOVE_TOWARD -> NEAREST_PLAYER, power=low",
+            "ALWAYS -> PATROL -> SELF, power=low"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "lava monster": {
+          "prompt": "lava monster",
+          "name": "Lava Beast",
+          "tags": [
+            "LIVING",
+            "MOLTEN",
+            "HEAVY",
+            "FLAMMABLE"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> MOVE_TOWARD -> NEAREST_PLAYER, power=high",
+            "ALWAYS -> SPAWN_PROJECTILE -> NEAREST_LIVING",
+            "ON_CONTACT -> ADD_TAGS(FLAMMABLE, HEAT_SOURCE) -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "angry bunny": {
+          "prompt": "angry bunny",
+          "name": "Rabid Bunny",
+          "tags": [
+            "LIVING",
+            "SOLID",
+            "BOUNCY",
+            "LIGHT",
+            "SHARP"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> MOVE_TOWARD -> NEAREST_PLAYER",
+            "ON_DAMAGED -> ADD_TAGS(HOT) -> SELF",
+            "ALWAYS -> DEAL_DAMAGE -> NEAREST_PLAYER, power=high"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "electric jellyfish": {
+          "prompt": "electric jellyfish",
+          "name": "Electric Jellyfish",
+          "tags": [
+            "SOLID",
+            "FLEXIBLE",
+            "ELECTRIC",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> DEAL_DAMAGE -> NEAREST_LIVING",
+            "ON_CONTACT -> ADD_TAGS(ELECTRIC) -> CONTACT_BODY, power=low"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "wind spirit": {
+          "prompt": "wind spirit",
+          "name": "Tornado Spirit",
+          "tags": [
+            "LIVING",
+            "GAS",
+            "LIGHT",
+            "WIND_SOURCE"
+          ],
+          "behaviors": [
+            "ALWAYS -> APPLY_FORCE -> NEAREST_OBJECT",
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY, power=low",
+            "ON_PROXIMITY -> ATTRACT -> NEAREST_PLAYER, power=high"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "toxic frog": {
+          "prompt": "toxic frog",
+          "name": "Poison Dart Frog",
+          "tags": [
+            "LIVING",
+            "SOLID",
+            "TOXIC",
+            "COLD"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> DEAL_DAMAGE -> CONTACT_BODY",
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY, power=high"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "mirror golem": {
+          "prompt": "mirror golem",
+          "name": "Mirror Golem",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "REFLECTIVE",
+            "HEAVY"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> APPLY_FORCE -> CONTACT_BODY, power=high",
+            "ON_DAMAGED -> ADD_TAGS(FROZEN) -> CONTACT_BODY",
+            "ON_PROXIMITY -> ATTRACT -> NEAREST_PLAYER, power=low"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "lasso vine": {
+          "prompt": "lasso vine",
+          "name": "Lasso Vine",
+          "tags": [
+            "LIVING",
+            "FLEXIBLE",
+            "STICKY",
+            "HEAVY"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> ATTRACT -> NEAREST_OBJECT",
+            "ON_CONTACT -> ADD_TAGS(STICKY) -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "cowardly slime": {
+          "prompt": "cowardly slime",
+          "name": "Scared Slime",
+          "tags": [
+            "LIVING",
+            "FLEXIBLE",
+            "LIGHT"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> MOVE_AWAY -> NEAREST_OBJECT, power=high"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "phoenix egg": {
+          "prompt": "phoenix egg",
+          "name": "Phoenix Egg",
+          "tags": [
+            "SOLID",
+            "BREAKABLE",
+            "FLAMMABLE"
+          ],
+          "behaviors": [
+            "ON_HEALTH_LOW -> SELF_DESTRUCT -> SELF",
+            "ON_DESTROY -> SPAWN_PROJECTILE(HEAT_SOURCE, LIVING) -> NEAREST_PLAYER, power=high"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "patrol bot": {
+          "prompt": "patrol bot",
+          "name": "Guard Bot",
+          "tags": [
+            "LIVING",
+            "SOLID",
+            "RIGID",
+            "CONDUCTING"
+          ],
+          "behaviors": [
+            "ALWAYS -> PATROL -> SELF",
+            "ON_PROXIMITY -> MOVE_TOWARD -> NEAREST_PLAYER",
+            "ON_PROXIMITY -> SPAWN_PROJECTILE -> NEAREST_PLAYER"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "the sun": {
+          "prompt": "the sun",
+          "name": "The Sun",
+          "tags": [
+            "HEAVY",
+            "HEAT_SOURCE",
+            "HOT",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ALWAYS -> DEAL_DAMAGE -> NEAREST_LIVING, power=high",
+            "ON_CONTACT -> ADD_TAGS(BREAKABLE) -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "tiny black hole": {
+          "prompt": "tiny black hole",
+          "name": "Micro Singularity",
+          "tags": [
+            "SOLID",
+            "HEAVY",
+            "MAGNETIC"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> ATTRACT -> NEAREST_OBJECT, power=high",
+            "ALWAYS -> ADD_TAGS(HEAVY) -> NEAREST_OBJECT"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "sadness": {
+          "prompt": "sadness",
+          "name": "Grief Fog",
+          "tags": [
+            "GAS",
+            "TOXIC",
+            "LIGHT"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> ADD_TAGS(TOXIC) -> NEAREST_LIVING",
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_PLAYER, power=low"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "indiana jones boulder": {
+          "prompt": "indiana jones boulder",
+          "name": "Boulder of Doom",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "HEAVY",
+            "BREAKABLE"
+          ],
+          "behaviors": [
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_PLAYER, power=high",
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "frozen fire": {
+          "prompt": "frozen fire",
+          "name": "Ice Torch",
+          "tags": [
+            "SOLID",
+            "FROZEN",
+            "HEAT_SOURCE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY",
+            "ON_TAG_ADDED(HEAT_SOURCE) -> REMOVE_TAGS(FLAMMABLE) -> SELF"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "a thing": {
+          "prompt": "a thing",
+          "name": "Molten Blob",
+          "tags": [
+            "LIQUID",
+            "MOLTEN",
+            "HEAT_SOURCE"
+          ],
+          "behaviors": [
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_PLAYER, power=low",
+            "ON_CONTACT -> APPLY_FORCE -> CONTACT_BODY, power=high"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "indestructible wall": {
+          "prompt": "indestructible wall",
+          "name": "Unbreakable Wall",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "HEAVY"
+          ],
+          "behaviors": [],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "fiar swrod": {
+          "prompt": "fiar swrod",
+          "name": "Fiery Sword",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "SHARP",
+            "HEAT_SOURCE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY",
+            "ON_CONTACT -> ADD_TAGS(FLAMMABLE) -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "shield request": {
+          "prompt": "shield request",
+          "name": "Shoddy Shield",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "BREAKABLE"
+          ],
+          "behaviors": [
+            "ON_DAMAGED -> REMOVE_TAGS(BREAKABLE) -> SELF",
+            "ON_HEALTH_LOW -> DEAL_DAMAGE -> NEAREST_OBJECT"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "rambling glowing sword": {
+          "prompt": "rambling glowing sword",
+          "name": "Flaming Greatsword",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "SHARP",
+            "HEAT_SOURCE",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY, power=high",
+            "ON_PROXIMITY -> ADD_TAGS(FLAMMABLE) -> NEAREST_OBJECT"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "not heavy floaty thing": {
+          "prompt": "not heavy floaty thing",
+          "name": "Luminous Feather",
+          "tags": [
+            "GAS",
+            "LIGHT",
+            "FLOATING",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_CREATE -> MOVE_AWAY -> NEAREST_PLAYER",
+            "ALWAYS -> PATROL -> SELF"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "acid rain cloud": {
+          "prompt": "acid rain cloud",
+          "name": "Acid Cloud",
+          "tags": [
+            "GAS",
+            "LIGHT",
+            "FLOATING",
+            "CORROSIVE"
+          ],
+          "behaviors": [
+            "ON_TIMER -> SPAWN_PROJECTILE -> NEAREST_LIVING",
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING, power=low"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "ice shield": {
+          "prompt": "ice shield",
+          "name": "Frost Shield",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "SHARP",
+            "COLD"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> ADD_TAGS(FROZEN) -> CONTACT_BODY",
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY, power=low"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "magnet": {
+          "prompt": "magnet",
+          "name": "Magnet",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "MAGNETIC",
+            "REFLECTIVE"
+          ],
+          "behaviors": [
+            "ALWAYS -> ATTRACT -> NEAREST_OBJECT",
+            "ON_CONTACT -> REMOVE_TAGS(MAGNETIC) -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "healing mushroom": {
+          "prompt": "healing mushroom",
+          "name": "Kick-Heal Mushroom",
+          "tags": [
+            "SOLID",
+            "FLEXIBLE",
+            "GLOWING",
+            "LIVING"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> HEAL -> CONTACT_BODY",
+            "ON_PROXIMITY -> ATTRACT -> NEAREST_LIVING"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "conductor rod": {
+          "prompt": "conductor rod",
+          "name": "Conductive Rod",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "CONDUCTING"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> ADD_TAGS(ELECTRIC) -> CONTACT_BODY",
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_OBJECT"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "spring trap": {
+          "prompt": "spring trap",
+          "name": "SplatSpring",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "BOUNCY",
+            "LIGHT"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> APPLY_FORCE -> CONTACT_BODY, power=high",
+            "ON_CREATE -> ADD_TAGS(BOUNCY) -> SELF"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "campfire": {
+          "prompt": "campfire",
+          "name": "Campfire",
+          "tags": [
+            "SOLID",
+            "HEAT_SOURCE",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> HEAL -> CONTACT_BODY, power=low",
+            "ON_PROXIMITY -> ADD_TAGS(GLOWING) -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "rubber armor": {
+          "prompt": "rubber armor",
+          "name": "Insulated Rubber Armor",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "FLEXIBLE",
+            "INSULATING"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> REMOVE_TAGS(ELECTRIC) -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "electric lava golem": {
+          "prompt": "electric lava golem",
+          "name": "Magma Golem",
+          "tags": [
+            "SOLID",
+            "LIVING",
+            "HEAVY",
+            "MOLTEN"
+          ],
+          "behaviors": [
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_PLAYER",
+            "ON_PROXIMITY -> SPAWN_PROJECTILE -> NEAREST_PLAYER, power=high"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        }
+      }
+    },
+    {
+      "run_index": 1,
+      "objects": {
+        "rock": {
+          "prompt": "rock",
+          "name": "Rock",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "HEAVY"
+          ],
+          "behaviors": [
+            "ON_DAMAGED -> EXPLODE -> SELF"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "wooden chair": {
+          "prompt": "wooden chair",
+          "name": "Wooden Chair",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "BREAKABLE"
+          ],
+          "behaviors": [
+            "ON_DAMAGED -> EXPLODE -> SELF, power=low"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "bucket of water": {
+          "prompt": "bucket of water",
+          "name": "Water Bucket",
+          "tags": [
+            "SOLID",
+            "HEAVY"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> REMOVE_TAGS(FROZEN, COLD) -> CONTACT_BODY",
+            "ON_DAMAGED -> APPLY_FORCE -> CONTACT_BODY",
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_PLAYER, power=low"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "banana": {
+          "prompt": "banana",
+          "name": "Banana",
+          "tags": [
+            "SOLID",
+            "FLEXIBLE",
+            "SLIPPERY"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> ADD_TAGS(SLIPPERY) -> CONTACT_BODY",
+            "ON_DAMAGED -> REMOVE_TAGS(FLEXIBLE) -> SELF"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "glass bottle": {
+          "prompt": "glass bottle",
+          "name": "Fragile Glass Bottle",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "BREAKABLE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> SELF_DESTRUCT -> SELF"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "hot coal": {
+          "prompt": "hot coal",
+          "name": "Hot Coal Ember",
+          "tags": [
+            "SOLID",
+            "HEAT_SOURCE",
+            "GLOWING",
+            "FLEXIBLE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY",
+            "ON_PROXIMITY -> SPAWN_PROJECTILE -> NEAREST_LIVING, power=low"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "giant boulder": {
+          "prompt": "giant boulder",
+          "name": "Crushing Boulder",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "HEAVY",
+            "BREAKABLE"
+          ],
+          "behaviors": [
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING, power=high",
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "tiny pebble": {
+          "prompt": "tiny pebble",
+          "name": "Micro Pebble",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "BREAKABLE",
+            "LIGHT"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> REMOVE_TAGS(BREAKABLE) -> CONTACT_BODY",
+            "ON_DAMAGED -> SELF_DESTRUCT -> SELF"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "fire sword": {
+          "prompt": "fire sword",
+          "name": "Inferno Blade",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "SHARP",
+            "HEAT_SOURCE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY",
+            "ON_CONTACT -> ADD_TAGS(FLAMMABLE) -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "sword": {
+          "prompt": "sword",
+          "name": "Blade of Flame",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "SHARP",
+            "HEAT_SOURCE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY",
+            "ON_CONTACT -> ADD_TAGS(FLAMMABLE) -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "time bomb": {
+          "prompt": "time bomb",
+          "name": "Time Bomb",
+          "tags": [
+            "SOLID",
+            "BREAKABLE",
+            "EXPLOSIVE"
+          ],
+          "behaviors": [
+            "ON_TIMER -> EXPLODE -> SELF, power=high"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "homing missile": {
+          "prompt": "homing missile",
+          "name": "Heat-Seeking Missile",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "EXPLOSIVE",
+            "HEAVY"
+          ],
+          "behaviors": [
+            "ON_CREATE -> SPAWN_PROJECTILE -> NEAREST_LIVING",
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_PLAYER",
+            "ON_CONTACT -> EXPLODE -> SELF"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "rubber ball from hell": {
+          "prompt": "rubber ball from hell",
+          "name": "Possessed Bouncer",
+          "tags": [
+            "SOLID",
+            "BOUNCY",
+            "LIVING",
+            "HEAVY"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY, power=high",
+            "ON_CONTACT -> ADD_TAGS(LIGHT) -> SELF",
+            "ON_DESTROY -> EXPLODE -> SELF"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "firework": {
+          "prompt": "firework",
+          "name": "Fusil Rocket",
+          "tags": [
+            "SOLID",
+            "FLAMMABLE",
+            "EXPLOSIVE",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_CREATE -> EXPLODE -> SELF, power=high"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "explosive barrel": {
+          "prompt": "explosive barrel",
+          "name": "Explosive Barrel",
+          "tags": [
+            "SOLID",
+            "HEAVY",
+            "BREAKABLE",
+            "FLAMMABLE"
+          ],
+          "behaviors": [
+            "ON_TAG_ADDED(HEAT_SOURCE) -> EXPLODE(TOXIC) -> SELF",
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY, power=high"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "glass cannon": {
+          "prompt": "glass cannon",
+          "name": "Crystal Shards",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "FLOATING",
+            "SHARP",
+            "BREAKABLE",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> EXPLODE(SHARP) -> SELF",
+            "ON_DESTROY -> ADD_TAGS(SHARP) -> NEAREST_OBJECT"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "sticky honey trap": {
+          "prompt": "sticky honey trap",
+          "name": "Honey Pool",
+          "tags": [
+            "LIQUID",
+            "STICKY"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> ADD_TAGS(STICKY) -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "death flower": {
+          "prompt": "death flower",
+          "name": "Toxic Bloom",
+          "tags": [
+            "SOLID",
+            "GLOWING",
+            "TOXIC",
+            "BREAKABLE"
+          ],
+          "behaviors": [
+            "ON_DESTROY -> SPAWN_PROJECTILE(TOXIC) -> NEAREST_OBJECT",
+            "ALWAYS -> APPLY_FORCE -> NEAREST_LIVING, power=low"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "acid spider": {
+          "prompt": "acid spider",
+          "name": "Acid Spider",
+          "tags": [
+            "LIVING",
+            "SOLID",
+            "RIGID",
+            "CORROSIVE"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> SPAWN_PROJECTILE -> NEAREST_PLAYER",
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_PLAYER"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "friendly dog": {
+          "prompt": "friendly dog",
+          "name": "Loyal Pup",
+          "tags": [
+            "LIVING",
+            "SOLID",
+            "LIGHT"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> ATTRACT -> NEAREST_PLAYER, power=low",
+            "ON_CONTACT -> HEAL -> CONTACT_BODY",
+            "ON_DAMAGED -> MOVE_AWAY -> CONTACT_BODY, power=low"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "lava monster": {
+          "prompt": "lava monster",
+          "name": "Lava Stalker",
+          "tags": [
+            "LIVING",
+            "HEAT_SOURCE",
+            "HOT",
+            "LIQUID"
+          ],
+          "behaviors": [
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_PLAYER, power=high",
+            "ON_CONTACT -> DEAL_DAMAGE(FLAMMABLE) -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "angry bunny": {
+          "prompt": "angry bunny",
+          "name": "Rabid Bunny",
+          "tags": [
+            "LIVING",
+            "LIGHT",
+            "FLAMMABLE"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> MOVE_TOWARD -> NEAREST_PLAYER",
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "electric jellyfish": {
+          "prompt": "electric jellyfish",
+          "name": "Deep Sea Shockjelly",
+          "tags": [
+            "LIVING",
+            "LIGHT",
+            "ELECTRIC",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> DEAL_DAMAGE -> CONTACT_BODY",
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_PLAYER, power=low"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "wind spirit": {
+          "prompt": "wind spirit",
+          "name": "Tornado Spirit",
+          "tags": [
+            "LIVING",
+            "WIND_SOURCE",
+            "LIGHT",
+            "FLEXIBLE",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ALWAYS -> APPLY_FORCE -> NEAREST_OBJECT",
+            "ON_PROXIMITY -> MOVE_AWAY -> NEAREST_LIVING, power=high"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "toxic frog": {
+          "prompt": "toxic frog",
+          "name": "Toxic Frog",
+          "tags": [
+            "LIVING",
+            "SOLID",
+            "COLD",
+            "TOXIC"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> APPLY_FORCE -> CONTACT_BODY",
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY",
+            "ON_TIMER -> ADD_TAGS(TOXIC) -> NEAREST_LIVING, power=low"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "mirror golem": {
+          "prompt": "mirror golem",
+          "name": "Mirror Golem",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "REFLECTIVE",
+            "HEAVY"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> APPLY_FORCE -> CONTACT_BODY, power=high",
+            "ON_DAMAGED -> REMOVE_TAGS(FLAMMABLE, HOT) -> NEAREST_LIVING",
+            "ON_DAMAGED -> ADD_TAGS(ELECTRIC) -> NEAREST_LIVING"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "lasso vine": {
+          "prompt": "lasso vine",
+          "name": "Lasso Vine",
+          "tags": [
+            "LIVING",
+            "FLEXIBLE",
+            "SOLID",
+            "STICKY"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> ATTRACT -> NEAREST_OBJECT, power=high",
+            "ON_CONTACT -> ADD_TAGS(STICKY) -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "cowardly slime": {
+          "prompt": "cowardly slime",
+          "name": "Terrified Slime",
+          "tags": [
+            "LIQUID",
+            "LIVING",
+            "LIGHT",
+            "COLD"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> MOVE_AWAY -> NEAREST_OBJECT, power=high",
+            "ON_DAMAGED -> EXPLODE(LIQUID) -> SELF, power=low"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "phoenix egg": {
+          "prompt": "phoenix egg",
+          "name": "Phoenix Egg",
+          "tags": [
+            "SOLID",
+            "BREAKABLE",
+            "FLAMMABLE",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> ADD_TAGS(FLAMMABLE) -> CONTACT_BODY",
+            "ON_HEALTH_LOW -> EXPLODE -> SELF, power=high",
+            "ON_DESTROY -> SELF_DESTRUCT -> SELF"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "patrol bot": {
+          "prompt": "patrol bot",
+          "name": "Sentinel Bot",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "LIVING",
+            "ELECTRIC"
+          ],
+          "behaviors": [
+            "ON_CREATE -> PATROL -> SELF",
+            "ON_PROXIMITY -> SPAWN_PROJECTILE -> NEAREST_PLAYER, power=high"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "the sun": {
+          "prompt": "the sun",
+          "name": "The Sun",
+          "tags": [
+            "GAS",
+            "HEAT_SOURCE",
+            "HOT",
+            "LIVING"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> DEAL_DAMAGE -> CONTACT_BODY",
+            "ON_TIMER -> ADD_TAGS(HEAT_SOURCE) -> NEAREST_PLAYER, power=high"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "tiny black hole": {
+          "prompt": "tiny black hole",
+          "name": "Gravitational Singularity",
+          "tags": [
+            "SOLID",
+            "HEAVY",
+            "MAGNETIC",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> ATTRACT -> NEAREST_OBJECT, power=high",
+            "ON_CONTACT -> SELF_DESTRUCT -> SELF"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "sadness": {
+          "prompt": "sadness",
+          "name": "Sorrow Stone",
+          "tags": [
+            "SOLID",
+            "GLOWING",
+            "COLD"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> APPLY_FORCE -> NEAREST_LIVING, power=low",
+            "ALWAYS -> DEAL_DAMAGE -> NEAREST_LIVING, power=low"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "indiana jones boulder": {
+          "prompt": "indiana jones boulder",
+          "name": "Rolling Boulder",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "HEAVY",
+            "BREAKABLE"
+          ],
+          "behaviors": [
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_PLAYER, power=high",
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY, power=high",
+            "ON_DAMAGED -> ADD_TAGS(FLEXIBLE) -> SELF"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "frozen fire": {
+          "prompt": "frozen fire",
+          "name": "Cryo-Flame",
+          "tags": [
+            "SOLID",
+            "FROZEN",
+            "HEAT_SOURCE",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY, power=low",
+            "ON_DAMAGED -> SPAWN_PROJECTILE -> NEAREST_LIVING"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "a thing": {
+          "prompt": "a thing",
+          "name": "Floating Orb",
+          "tags": [
+            "SOLID",
+            "FLOATING",
+            "GLOWING",
+            "BOUNCY"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> ADD_TAGS(GLOWING) -> NEAREST_OBJECT",
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_PLAYER"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "indestructible wall": {
+          "prompt": "indestructible wall",
+          "name": "Unbreakable Wall",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "HEAVY"
+          ],
+          "behaviors": [
+            "ON_DAMAGED -> HEAL -> SELF, power=low"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "fiar swrod": {
+          "prompt": "fiar swrod",
+          "name": "Flare Sword",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "SHARP",
+            "HEAT_SOURCE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY",
+            "ON_CONTACT -> ADD_TAGS(FLAMMABLE) -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "shield request": {
+          "prompt": "shield request",
+          "name": "Iron Shield",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "SHARP"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> APPLY_FORCE -> CONTACT_BODY",
+            "ON_DAMAGED -> ADD_TAGS(HOT) -> SELF"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "rambling glowing sword": {
+          "prompt": "rambling glowing sword",
+          "name": "Colossal Plasma Blade",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "SHARP",
+            "GLOWING",
+            "HEAT_SOURCE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY, power=high",
+            "ON_TAG_ADDED(FLAMMABLE) -> EXPLODE -> SELF"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "not heavy floaty thing": {
+          "prompt": "not heavy floaty thing",
+          "name": "Glowing Feather",
+          "tags": [
+            "SOLID",
+            "LIGHT",
+            "FLOATING",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> APPLY_FORCE -> CONTACT_BODY, power=low",
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_PLAYER, power=low"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "acid rain cloud": {
+          "prompt": "acid rain cloud",
+          "name": "Acid Cloud",
+          "tags": [
+            "GAS",
+            "CORROSIVE",
+            "LIVING"
+          ],
+          "behaviors": [
+            "ALWAYS -> APPLY_FORCE -> NEAREST_OBJECT",
+            "ON_PROXIMITY -> SPAWN_PROJECTILE(CORROSIVE) -> CONTACT_BODY, power=low"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "ice shield": {
+          "prompt": "ice shield",
+          "name": "Frost Shield",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "COLD",
+            "SHARP"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY, power=low",
+            "ON_CONTACT -> ADD_TAGS(FROZEN) -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "magnet": {
+          "prompt": "magnet",
+          "name": "Magnet",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "MAGNETIC"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> ATTRACT -> NEAREST_OBJECT"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "healing mushroom": {
+          "prompt": "healing mushroom",
+          "name": "Kicking Healer",
+          "tags": [
+            "SOLID",
+            "LIVING",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> HEAL -> CONTACT_BODY",
+            "ON_TAG_ADDED(HEAT_SOURCE) -> ADD_TAGS(MOLTEN) -> SELF"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "conductor rod": {
+          "prompt": "conductor rod",
+          "name": "Conduction Rod",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "CONDUCTING",
+            "ELECTRIC"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> APPLY_FORCE -> CONTACT_BODY",
+            "ON_CREATE -> ADD_TAGS(ELECTRIC) -> NEAREST_OBJECT"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "spring trap": {
+          "prompt": "spring trap",
+          "name": "Bouncy Spring Platform",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "BOUNCY"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> APPLY_FORCE -> CONTACT_BODY, power=high"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "campfire": {
+          "prompt": "campfire",
+          "name": "Campfire",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "HEAT_SOURCE"
+          ],
+          "behaviors": [
+            "ON_TIMER -> HEAL -> NEAREST_LIVING, power=low",
+            "ON_PROXIMITY -> ADD_TAGS(WIND_SOURCE) -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "rubber armor": {
+          "prompt": "rubber armor",
+          "name": "Rubber Armor",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "INSULATING",
+            "FLEXIBLE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> REMOVE_TAGS(ELECTRIC) -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        }
+      }
+    },
+    {
+      "run_index": 2,
+      "objects": {
+        "rock": {
+          "prompt": "rock",
+          "name": "Rough Rock",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "BREAKABLE",
+            "HEAVY"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY",
+            "ON_DAMAGED -> REMOVE_TAGS(RIGID) -> SELF, power=low"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "wooden chair": {
+          "prompt": "wooden chair",
+          "name": "Wooden Chair",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "BREAKABLE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> SELF_DESTRUCT -> SELF"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "bucket of water": {
+          "prompt": "bucket of water",
+          "name": "Water Bucket",
+          "tags": [
+            "LIQUID",
+            "FLEXIBLE",
+            "COLD"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> REMOVE_TAGS(FLAMMABLE) -> CONTACT_BODY",
+            "ON_CREATE -> ADD_TAGS(WIND_SOURCE) -> SELF"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "banana": {
+          "prompt": "banana",
+          "name": "Rotten Banana",
+          "tags": [
+            "SOLID",
+            "FLEXIBLE",
+            "SLIPPERY",
+            "TOXIC"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY",
+            "ON_DAMAGED -> SELF_DESTRUCT -> SELF",
+            "ON_CREATE -> ADD_TAGS(TOXIC) -> NEAREST_LIVING"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "glass bottle": {
+          "prompt": "glass bottle",
+          "name": "Glass Bottle",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "BREAKABLE",
+            "SLIPPERY"
+          ],
+          "behaviors": [
+            "ON_DAMAGED -> EXPLODE -> SELF, power=low",
+            "ON_CONTACT -> ADD_TAGS(SLIPPERY) -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "hot coal": {
+          "prompt": "hot coal",
+          "name": "Hot Ember",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "HEAT_SOURCE",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY",
+            "ON_TIMER -> REMOVE_TAGS(HEAT_SOURCE) -> SELF"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "giant boulder": {
+          "prompt": "giant boulder",
+          "name": "House-Sized Boulder",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "HEAVY"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY, power=high",
+            "ON_TIMER -> MOVE_TOWARD -> NEAREST_LIVING, power=high"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "tiny pebble": {
+          "prompt": "tiny pebble",
+          "name": "Dust Pebble",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "LIGHT",
+            "BREAKABLE",
+            "FROZEN"
+          ],
+          "behaviors": [
+            "ALWAYS -> MOVE_AWAY -> NEAREST_LIVING, power=low",
+            "ON_DAMAGED -> EXPLODE -> SELF, power=low"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "fire sword": {
+          "prompt": "fire sword",
+          "name": "Fire Sword",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "SHARP",
+            "HEAT_SOURCE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "sword": {
+          "prompt": "sword",
+          "name": "Rusty Cutlass",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "SHARP"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "time bomb": {
+          "prompt": "time bomb",
+          "name": "Time Bomb",
+          "tags": [
+            "SOLID",
+            "HEAVY",
+            "EXPLOSIVE"
+          ],
+          "behaviors": [
+            "ON_TIMER -> EXPLODE -> SELF, power=high"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "homing missile": {
+          "prompt": "homing missile",
+          "name": "Heat-Seeker Missile",
+          "tags": [
+            "SOLID",
+            "HEAVY",
+            "GLOWING",
+            "EXPLOSIVE"
+          ],
+          "behaviors": [
+            "ON_CREATE -> ADD_TAGS(HEAT_SOURCE) -> SELF",
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING",
+            "ON_CONTACT -> EXPLODE -> SELF"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "rubber ball from hell": {
+          "prompt": "rubber ball from hell",
+          "name": "Cursed Bouncer",
+          "tags": [
+            "SOLID",
+            "BOUNCY",
+            "LIVING",
+            "SHARP"
+          ],
+          "behaviors": [
+            "ALWAYS -> APPLY_FORCE -> NEAREST_OBJECT",
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY, power=high",
+            "ON_CONTACT -> ADD_TAGS(EXPLOSIVE) -> SELF"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "firework": {
+          "prompt": "firework",
+          "name": "Instant Fuse Firework",
+          "tags": [
+            "SOLID",
+            "BREAKABLE",
+            "FLAMMABLE",
+            "EXPLOSIVE",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_CREATE -> ADD_TAGS(HEAT_SOURCE) -> NEAREST_OBJECT",
+            "ON_TAG_ADDED(HEAT_SOURCE) -> EXPLODE -> SELF, power=high",
+            "ALWAYS -> MOVE_AWAY -> NEAREST_OBJECT, power=low"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "explosive barrel": {
+          "prompt": "explosive barrel",
+          "name": "Explosive Barrel",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "HEAVY",
+            "FLAMMABLE",
+            "EXPLOSIVE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> EXPLODE -> SELF",
+            "ON_DAMAGED -> EXPLODE -> SELF"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "glass cannon": {
+          "prompt": "glass cannon",
+          "name": "Shard Prism",
+          "tags": [
+            "SOLID",
+            "FLOATING",
+            "BREAKABLE",
+            "SHARP"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> EXPLODE -> SELF",
+            "ON_DESTROY -> ADD_TAGS(SHARP) -> NEAREST_LIVING"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "sticky honey trap": {
+          "prompt": "sticky honey trap",
+          "name": "Honey Trap",
+          "tags": [
+            "LIQUID",
+            "STICKY",
+            "LIGHT"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> APPLY_FORCE -> CONTACT_BODY",
+            "ALWAYS -> ATTRACT -> NEAREST_LIVING"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "death flower": {
+          "prompt": "death flower",
+          "name": "Toxic Bloom Trap",
+          "tags": [
+            "SOLID",
+            "BREAKABLE",
+            "TOXIC"
+          ],
+          "behaviors": [
+            "ON_DESTROY -> ADD_TAGS(TOXIC) -> NEAREST_OBJECT, power=high",
+            "ON_DESTROY -> EXPLODE -> SELF"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "acid spider": {
+          "prompt": "acid spider",
+          "name": "Acid Spider",
+          "tags": [
+            "LIVING",
+            "SOLID",
+            "TOXIC",
+            "SHARP"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> SPAWN_PROJECTILE -> NEAREST_PLAYER",
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY, power=low"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "friendly dog": {
+          "prompt": "friendly dog",
+          "name": "Loyal Dog",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "LIVING",
+            "FLAMMABLE"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> MOVE_TOWARD -> NEAREST_PLAYER",
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY, power=low"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "lava monster": {
+          "prompt": "lava monster",
+          "name": "Lava Beast",
+          "tags": [
+            "LIVING",
+            "MOLTEN",
+            "HEAT_SOURCE"
+          ],
+          "behaviors": [
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING, power=high",
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "angry bunny": {
+          "prompt": "angry bunny",
+          "name": "Rabid Bunny",
+          "tags": [
+            "LIVING",
+            "BOUNCY",
+            "SHARP"
+          ],
+          "behaviors": [
+            "ALWAYS -> MOVE_AWAY -> NEAREST_PLAYER, power=low",
+            "ON_PROXIMITY -> MOVE_TOWARD -> NEAREST_PLAYER",
+            "ON_PROXIMITY -> DEAL_DAMAGE -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "electric jellyfish": {
+          "prompt": "electric jellyfish",
+          "name": "Shocking Jellyfish",
+          "tags": [
+            "LIVING",
+            "ELECTRIC",
+            "GLOWING",
+            "FLEXIBLE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY, power=high",
+            "ON_PROXIMITY -> APPLY_FORCE -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "wind spirit": {
+          "prompt": "wind spirit",
+          "name": "Tornado Spirit",
+          "tags": [
+            "LIVING",
+            "GAS",
+            "WIND_SOURCE",
+            "FLOATING"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> APPLY_FORCE -> CONTACT_BODY, power=high",
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_PLAYER"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "toxic frog": {
+          "prompt": "toxic frog",
+          "name": "Poison Dart Frog",
+          "tags": [
+            "LIVING",
+            "SOLID",
+            "TOXIC",
+            "FLEXIBLE"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> DEAL_DAMAGE -> NEAREST_LIVING",
+            "ON_CONTACT -> SELF_DESTRUCT -> SELF, power=low"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "mirror golem": {
+          "prompt": "mirror golem",
+          "name": "Mirror Golem",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "REFLECTIVE",
+            "HEAVY"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> ADD_TAGS(STICKY) -> NEAREST_OBJECT, power=high",
+            "ON_CONTACT -> ATTRACT -> CONTACT_BODY, power=high"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "lasso vine": {
+          "prompt": "lasso vine",
+          "name": "Reaching Vine",
+          "tags": [
+            "LIVING",
+            "FLEXIBLE",
+            "HEAVY"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> ATTRACT -> CONTACT_BODY",
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_OBJECT, power=low"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "cowardly slime": {
+          "prompt": "cowardly slime",
+          "name": "Scaredy-Slime",
+          "tags": [
+            "LIVING",
+            "SLIPPERY",
+            "LIGHT",
+            "FLEXIBLE"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> MOVE_AWAY -> NEAREST_OBJECT, power=high",
+            "ON_CREATE -> ADD_TAGS(SLIPPERY) -> SELF"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "phoenix egg": {
+          "prompt": "phoenix egg",
+          "name": "Phoenix Egg",
+          "tags": [
+            "SOLID",
+            "BREAKABLE",
+            "FLAMMABLE"
+          ],
+          "behaviors": [
+            "ON_DAMAGED -> EXPLODE -> SELF, power=high",
+            "ON_TAG_ADDED(FLAMMABLE) -> SPAWN_PROJECTILE -> NEAREST_LIVING"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "patrol bot": {
+          "prompt": "patrol bot",
+          "name": "Patrol Drone",
+          "tags": [
+            "SOLID",
+            "LIVING",
+            "LIGHT"
+          ],
+          "behaviors": [
+            "ON_CREATE -> ADD_TAGS(LIVING) -> NEAREST_OBJECT",
+            "ALWAYS -> MOVE_TOWARD -> NEAREST_OBJECT, power=low"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "the sun": {
+          "prompt": "the sun",
+          "name": "The Sun",
+          "tags": [
+            "HEAT_SOURCE",
+            "HOT",
+            "GLOWING",
+            "LIGHT"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY",
+            "ON_CREATE -> ADD_TAGS(HEAT_SOURCE) -> NEAREST_OBJECT",
+            "ON_TIMER -> SPAWN_PROJECTILE -> NEAREST_LIVING, power=high"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "tiny black hole": {
+          "prompt": "tiny black hole",
+          "name": "Microsingularity",
+          "tags": [
+            "SOLID",
+            "HEAVY",
+            "MAGNETIC"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> SELF_DESTRUCT -> SELF, power=high",
+            "ALWAYS -> ATTRACT -> NEAREST_OBJECT, power=high",
+            "ON_DESTROY -> EXPLODE -> SELF"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "sadness": {
+          "prompt": "sadness",
+          "name": "Sorrow Stone",
+          "tags": [
+            "SOLID",
+            "BREAKABLE",
+            "COLD",
+            "INSULATING"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE(COLD) -> CONTACT_BODY",
+            "ON_DAMAGED -> ADD_TAGS(INSULATING) -> SELF, power=low",
+            "ON_DESTROY -> SPAWN_PROJECTILE -> NEAREST_OBJECT"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "indiana jones boulder": {
+          "prompt": "indiana jones boulder",
+          "name": "The Boulder",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "HEAVY",
+            "BREAKABLE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> EXPLODE -> SELF, power=high",
+            "ON_CREATE -> ADD_TAGS(RIGID) -> SELF"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "frozen fire": {
+          "prompt": "frozen fire",
+          "name": "Frost Ember",
+          "tags": [
+            "SOLID",
+            "GLOWING",
+            "COLD",
+            "BREAKABLE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY, power=low",
+            "ON_DAMAGED -> EXPLODE -> SELF"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "a thing": {
+          "prompt": "a thing",
+          "name": "Mystery Blob",
+          "tags": [
+            "SOLID",
+            "LIVING",
+            "SLIPPERY",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY, power=low",
+            "ON_PROXIMITY -> MOVE_AWAY -> NEAREST_LIVING",
+            "ON_DESTROY -> SPAWN_PROJECTILE -> SELF"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "indestructible wall": {
+          "prompt": "indestructible wall",
+          "name": "Immovable Wall",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "HEAVY"
+          ],
+          "behaviors": [],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "fiar swrod": {
+          "prompt": "fiar swrod",
+          "name": "Flaming Sword",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "SHARP",
+            "HEAT_SOURCE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY",
+            "ON_TIMER -> SPAWN_PROJECTILE -> NEAREST_LIVING"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "shield request": {
+          "prompt": "shield request",
+          "name": "Shield",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "REFLECTIVE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> APPLY_FORCE -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "rambling glowing sword": {
+          "prompt": "rambling glowing sword",
+          "name": "Inferno Colossus Blade",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "SHARP",
+            "HEAT_SOURCE",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> DEAL_DAMAGE -> CONTACT_BODY, power=high",
+            "ON_PROXIMITY -> SPAWN_PROJECTILE -> NEAREST_PLAYER"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "not heavy floaty thing": {
+          "prompt": "not heavy floaty thing",
+          "name": "Glowing Quill",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "LIGHT",
+            "FLOATING",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_TIMER -> ADD_TAGS(GLOWING) -> NEAREST_LIVING",
+            "ON_CONTACT -> SPAWN_PROJECTILE -> CONTACT_BODY, power=low"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "acid rain cloud": {
+          "prompt": "acid rain cloud",
+          "name": "Acid Rain Cloud",
+          "tags": [
+            "GAS",
+            "TOXIC",
+            "FLOATING",
+            "WIND_SOURCE"
+          ],
+          "behaviors": [
+            "ON_TIMER -> SPAWN_PROJECTILE -> NEAREST_OBJECT, power=low",
+            "ON_PROXIMITY -> APPLY_FORCE -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "ice shield": {
+          "prompt": "ice shield",
+          "name": "Frost Shield",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "SHARP",
+            "COLD",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> ADD_TAGS(FROZEN) -> CONTACT_BODY",
+            "ON_DAMAGED -> SPAWN_PROJECTILE -> NEAREST_OBJECT"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "magnet": {
+          "prompt": "magnet",
+          "name": "Magnet",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "MAGNETIC",
+            "REFLECTIVE"
+          ],
+          "behaviors": [
+            "ON_PROXIMITY -> ATTRACT -> NEAREST_OBJECT",
+            "ON_CONTACT -> REMOVE_TAGS(HEAVY) -> CONTACT_BODY",
+            "ON_TAG_ADDED(MAGNETIC) -> ADD_TAGS(GLOWING) -> SELF"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "healing mushroom": {
+          "prompt": "healing mushroom",
+          "name": "Bouncy Healer",
+          "tags": [
+            "LIVING",
+            "SOLID",
+            "BOUNCY",
+            "FLAMMABLE"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> HEAL -> CONTACT_BODY",
+            "ON_CONTACT -> APPLY_FORCE -> CONTACT_BODY, power=high"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "conductor rod": {
+          "prompt": "conductor rod",
+          "name": "Conduction Rod",
+          "tags": [
+            "SOLID",
+            "RIGID",
+            "CONDUCTING",
+            "HEAVY"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> ADD_TAGS(ELECTRIC) -> CONTACT_BODY",
+            "ON_TAG_ADDED(ELECTRIC) -> DEAL_DAMAGE -> NEAREST_OBJECT"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "spring trap": {
+          "prompt": "spring trap",
+          "name": "Launch Spring",
+          "tags": [
+            "SOLID",
+            "FLEXIBLE",
+            "BOUNCY"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> APPLY_FORCE -> CONTACT_BODY, power=high"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "campfire": {
+          "prompt": "campfire",
+          "name": "Campfire",
+          "tags": [
+            "SOLID",
+            "HEAT_SOURCE",
+            "HOT",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ON_CONTACT -> HEAL -> CONTACT_BODY",
+            "ON_PROXIMITY -> ADD_TAGS(WIND_SOURCE) -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "rubber armor": {
+          "prompt": "rubber armor",
+          "name": "Insulating Armor",
+          "tags": [
+            "SOLID",
+            "FLEXIBLE",
+            "INSULATING",
+            "BREAKABLE"
+          ],
+          "behaviors": [
+            "ON_DAMAGED -> ADD_TAGS(INSULATING) -> CONTACT_BODY",
+            "ON_CONTACT -> REMOVE_TAGS(ELECTRIC) -> CONTACT_BODY"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        },
+        "electric lava golem": {
+          "prompt": "electric lava golem",
+          "name": "Lava Storm Golem",
+          "tags": [
+            "SOLID",
+            "HEAVY",
+            "MOLTEN",
+            "GLOWING"
+          ],
+          "behaviors": [
+            "ALWAYS -> DEAL_DAMAGE -> NEAREST_LIVING",
+            "ON_TIMER -> SPAWN_PROJECTILE -> NEAREST_PLAYER"
+          ],
+          "size_category": "unknown",
+          "visual_description": ""
+        }
+      }
+    }
+  ]
+}
