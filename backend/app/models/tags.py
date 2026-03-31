@@ -8,11 +8,12 @@ class Tag(StrEnum):
     RIGID = "RIGID"
     HEAVY = "HEAVY"
     LIGHT = "LIGHT"
-    # Temperature (3) — HOT kept as internal-only (not in LLM vocab)
+    # Temperature (3+1 internal) — HOT kept as internal-only (not in LLM vocab)
     FROZEN = "FROZEN"
     COLD = "COLD"
     HOT = "HOT"
     MOLTEN = "MOLTEN"
+    BRITTLE = "BRITTLE"  # internal-only: added by freeze rules, shatterable by force
     # Energy (5)
     FLAMMABLE = "FLAMMABLE"
     HEAT_SOURCE = "HEAT_SOURCE"
@@ -26,12 +27,13 @@ class Tag(StrEnum):
     # Mechanical (2)
     BOUNCY = "BOUNCY"
     BREAKABLE = "BREAKABLE"
-    # Environmental (5) — CORROSIVE renamed to ACIDIC
+    # Environmental (5+1 internal) — CORROSIVE renamed to ACIDIC
     FLOATING = "FLOATING"
     WIND_SOURCE = "WIND_SOURCE"
     ACIDIC = "ACIDIC"
     TOXIC = "TOXIC"
     WET = "WET"
+    CORRODED = "CORRODED"  # internal-only: added by acid rules, vulnerable to force
     # Special (5) — GLOWING kept as internal-only, CONDUCTING renamed to METALLIC
     LIVING = "LIVING"
     GLOWING = "GLOWING"
@@ -40,8 +42,13 @@ class Tag(StrEnum):
     HOSTILE = "HOSTILE"
 
 
-# Tags the LLM can pick. HOT and GLOWING are internal-only (rule-applied).
-LLM_VISIBLE_TAGS: frozenset[Tag] = frozenset(Tag) - {Tag.HOT, Tag.GLOWING}
+# Tags the LLM can pick. Internal-only tags are rule-applied at runtime.
+LLM_VISIBLE_TAGS: frozenset[Tag] = frozenset(Tag) - {
+    Tag.HOT,
+    Tag.GLOWING,
+    Tag.BRITTLE,
+    Tag.CORRODED,
+}
 
 # One-line gameplay descriptions for hallucinated-tag retry messages.
 TAG_DESCRIPTIONS: dict[Tag, str] = {
@@ -83,6 +90,8 @@ TAG_AUTO_CORRECTIONS: dict[str, Tag] = {
     "SLIPPERY": Tag.FROZEN,
     "FLEXIBLE": Tag.BOUNCY,
     "GLOWING": Tag.HEAT_SOURCE,  # closest gameplay equivalent
+    "BRITTLE": Tag.FROZEN,  # closest LLM-visible equivalent
+    "CORRODED": Tag.ACIDIC,  # closest LLM-visible equivalent
 }
 
 
@@ -100,4 +109,6 @@ TAG_CONTRADICTIONS: list[frozenset[Tag]] = [
     frozenset({Tag.HEAT_SOURCE, Tag.FLAMMABLE}),
     frozenset({Tag.WET, Tag.MOLTEN}),
     frozenset({Tag.WET, Tag.HEAT_SOURCE}),
+    frozenset({Tag.BRITTLE, Tag.LIQUID}),
+    frozenset({Tag.BRITTLE, Tag.GAS}),
 ]

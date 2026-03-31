@@ -136,6 +136,11 @@ ALL_RULES: list[InteractionRule] = [
                 effect_type=EffectType.REMOVE_TAG,
                 target=EffectTarget.B,
                 tag=Tag.LIQUID,
+            ),
+            Effect(
+                effect_type=EffectType.ADD_TAG,
+                target=EffectTarget.B,
+                tag=Tag.BRITTLE,
                 message="The liquid freezes solid!",
             ),
         ],
@@ -369,6 +374,11 @@ ALL_RULES: list[InteractionRule] = [
                 effect_type=EffectType.REMOVE_TAG,
                 target=EffectTarget.B,
                 tag=Tag.LIQUID,
+            ),
+            Effect(
+                effect_type=EffectType.ADD_TAG,
+                target=EffectTarget.B,
+                tag=Tag.BRITTLE,
                 message="The molten material solidifies into rock!",
             ),
         ],
@@ -432,7 +442,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 19. ACIDIC + RIGID → weaken
+    # 19. ACIDIC + RIGID → weaken + corrode
     InteractionRule(
         rule_id="acidic_rigid_weaken",
         name="Acid Weakening",
@@ -448,6 +458,11 @@ ALL_RULES: list[InteractionRule] = [
                 damage_amount=10.0,
                 tick_interval=1.0,
                 tick_duration=3.0,
+            ),
+            Effect(
+                effect_type=EffectType.ADD_TAG,
+                target=EffectTarget.B,
+                tag=Tag.CORRODED,
                 message="The rigid structure corrodes. 10 damage.",
             ),
         ],
@@ -695,7 +710,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 34. ACIDIC + METALLIC → dissolve metal
+    # 34. ACIDIC + METALLIC → dissolve metal + corrode
     InteractionRule(
         rule_id="acidic_metallic_dissolve",
         name="Metal Dissolution",
@@ -711,6 +726,11 @@ ALL_RULES: list[InteractionRule] = [
                 damage_amount=20.0,
                 tick_interval=1.0,
                 tick_duration=3.0,
+            ),
+            Effect(
+                effect_type=EffectType.ADD_TAG,
+                target=EffectTarget.B,
+                tag=Tag.CORRODED,
                 message="The acid dissolves the metal! 20 damage.",
             ),
         ],
@@ -822,7 +842,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 39. HEAT_SOURCE + METALLIC → heat transfer
+    # 39. HEAT_SOURCE + METALLIC → heat transfer (hot metal glows)
     InteractionRule(
         rule_id="heat_metallic_transfer",
         name="Heat Conduction",
@@ -838,6 +858,11 @@ ALL_RULES: list[InteractionRule] = [
                 effect_type=EffectType.ADD_TAG,
                 target=EffectTarget.B,
                 tag=Tag.HOT,
+            ),
+            Effect(
+                effect_type=EffectType.ADD_TAG,
+                target=EffectTarget.B,
+                tag=Tag.GLOWING,
                 message="Heat conducts through the material!",
             ),
         ],
@@ -1073,7 +1098,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 50. WET + COLD → freeze
+    # 50. WET + COLD → freeze + brittle
     InteractionRule(
         rule_id="wet_cold_freeze",
         name="Wet Freeze",
@@ -1098,6 +1123,11 @@ ALL_RULES: list[InteractionRule] = [
                 effect_type=EffectType.REMOVE_TAG,
                 target=EffectTarget.A,
                 tag=Tag.WET,
+            ),
+            Effect(
+                effect_type=EffectType.ADD_TAG,
+                target=EffectTarget.A,
+                tag=Tag.BRITTLE,
                 message="The wet surface freezes solid!",
             ),
         ],
@@ -1118,6 +1148,195 @@ ALL_RULES: list[InteractionRule] = [
                 target=EffectTarget.B,
                 tag=Tag.WET,
                 message="Dried out by the heat!",
+            ),
+        ],
+    ),
+    # =========================================================================
+    # BRITTLE rules (internal tag — created by freeze rules)
+    # =========================================================================
+    # 52. BRITTLE + HEAVY → shatter
+    InteractionRule(
+        rule_id="brittle_heavy_shatter",
+        name="Shatter",
+        tags_required_a={Tag.BRITTLE},
+        tags_required_b={Tag.HEAVY},
+        execution_order=8,
+        bidirectional=True,
+        cascade_eligible=False,
+        effects=[
+            Effect(
+                effect_type=EffectType.DAMAGE,
+                target=EffectTarget.A,
+                damage_amount=40.0,
+            ),
+            Effect(
+                effect_type=EffectType.APPLY_FORCE,
+                target=EffectTarget.A,
+                force_magnitude=200.0,
+                message="Shattered by the impact! 40 damage.",
+            ),
+        ],
+    ),
+    # 53. BRITTLE + SHARP → crack
+    InteractionRule(
+        rule_id="brittle_sharp_crack",
+        name="Crack",
+        tags_required_a={Tag.BRITTLE},
+        tags_required_b={Tag.SHARP},
+        execution_order=8,
+        bidirectional=True,
+        cascade_eligible=False,
+        effects=[
+            Effect(
+                effect_type=EffectType.DAMAGE,
+                target=EffectTarget.A,
+                damage_amount=35.0,
+                message="Cracked apart! 35 damage.",
+            ),
+        ],
+    ),
+    # =========================================================================
+    # CORRODED rules (internal tag — created by acid rules)
+    # =========================================================================
+    # 54. CORRODED + HEAVY → amplified crush
+    InteractionRule(
+        rule_id="corroded_heavy_crush",
+        name="Crush Weakened",
+        tags_required_a={Tag.CORRODED},
+        tags_required_b={Tag.HEAVY},
+        execution_order=8,
+        bidirectional=True,
+        cascade_eligible=False,
+        effects=[
+            Effect(
+                effect_type=EffectType.DAMAGE,
+                target=EffectTarget.A,
+                damage_amount=35.0,
+                message="Corroded structure crumbles! 35 damage.",
+            ),
+        ],
+    ),
+    # 55. CORRODED + SHARP → amplified cut
+    InteractionRule(
+        rule_id="corroded_sharp_slice",
+        name="Slice Weakened",
+        tags_required_a={Tag.CORRODED},
+        tags_required_b={Tag.SHARP},
+        execution_order=8,
+        bidirectional=True,
+        cascade_eligible=False,
+        effects=[
+            Effect(
+                effect_type=EffectType.DAMAGE,
+                target=EffectTarget.A,
+                damage_amount=40.0,
+                message="Blade cuts through corroded material! 40 damage.",
+            ),
+        ],
+    ),
+    # =========================================================================
+    # GLOWING rules (internal tag — activated: smolder + attract)
+    # =========================================================================
+    # 56. GLOWING + FLAMMABLE → weak smolder (adds HOT, not HEAT_SOURCE)
+    InteractionRule(
+        rule_id="glowing_flammable_smolder",
+        name="Smolder",
+        tags_required_a={Tag.GLOWING},
+        tags_required_b={Tag.FLAMMABLE},
+        execution_order=6,
+        bidirectional=True,
+        cascade_eligible=False,
+        tags_blocked_by={Tag.INSULATING, Tag.WET},
+        trigger_mode=TriggerMode.FIELD,
+        effects=[
+            Effect(
+                effect_type=EffectType.ADD_TAG,
+                target=EffectTarget.B,
+                tag=Tag.HOT,
+                message="Begins to smolder from the glow.",
+            ),
+        ],
+    ),
+    # 57. GLOWING + LIVING → moths-to-light attraction
+    InteractionRule(
+        rule_id="glowing_living_attract",
+        name="Light Attraction",
+        tags_required_a={Tag.GLOWING},
+        tags_required_b={Tag.LIVING},
+        execution_order=4,
+        bidirectional=False,
+        cascade_eligible=False,
+        trigger_mode=TriggerMode.FIELD,
+        effects=[
+            Effect(
+                effect_type=EffectType.APPLY_FORCE,
+                target=EffectTarget.B,
+                force_magnitude=-20.0,
+                message="Drawn toward the glow.",
+            ),
+        ],
+    ),
+    # =========================================================================
+    # STICKY rules
+    # =========================================================================
+    # 58. STICKY + any → slow (wildcard, continuous field)
+    InteractionRule(
+        rule_id="sticky_slow",
+        name="Sticky Slow",
+        tags_required_a={Tag.STICKY},
+        tags_required_b=set(),
+        execution_order=2,
+        bidirectional=False,
+        cascade_eligible=False,
+        trigger_mode=TriggerMode.FIELD,
+        effects=[
+            Effect(
+                effect_type=EffectType.APPLY_SLOW,
+                target=EffectTarget.B,
+                slow_factor=0.25,
+                message="Caught in sticky goo!",
+            ),
+        ],
+    ),
+    # 59. STICKY + LIVING → struggle damage
+    InteractionRule(
+        rule_id="sticky_living_struggle",
+        name="Struggle",
+        tags_required_a={Tag.STICKY},
+        tags_required_b={Tag.LIVING},
+        execution_order=4,
+        bidirectional=False,
+        cascade_eligible=False,
+        trigger_mode=TriggerMode.FIELD,
+        effects=[
+            Effect(
+                effect_type=EffectType.DAMAGE,
+                target=EffectTarget.B,
+                damage_amount=2.0,
+                message="Struggling against the adhesion!",
+            ),
+        ],
+    ),
+    # 60. STICKY + HEAT_SOURCE → sticky fuel burns (sticky is flammable fuel)
+    InteractionRule(
+        rule_id="sticky_heat_fuel",
+        name="Sticky Fuel",
+        tags_required_a={Tag.STICKY},
+        tags_required_b={Tag.HEAT_SOURCE},
+        execution_order=7,
+        bidirectional=True,
+        cascade_eligible=True,
+        effects=[
+            Effect(
+                effect_type=EffectType.ADD_TAG,
+                target=EffectTarget.A,
+                tag=Tag.HEAT_SOURCE,
+            ),
+            Effect(
+                effect_type=EffectType.ADD_TAG,
+                target=EffectTarget.A,
+                tag=Tag.HOT,
+                message="The sticky substance catches fire!",
             ),
         ],
     ),

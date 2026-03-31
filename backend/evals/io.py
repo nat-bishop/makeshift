@@ -5,6 +5,7 @@ Bridges pydantic-evals EvaluationReport to our persistent EvalRunResult format.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import re
 from collections import Counter
@@ -66,10 +67,8 @@ def _resolve_behaviors(tags: list[str], signature: str | None) -> list[str]:
 
     explicit = None
     if signature:
-        try:
+        with contextlib.suppress(BehaviorParseError, ValueError):
             explicit = expand_behavior_spec(parse_behavior_string(signature))
-        except (BehaviorParseError, ValueError):
-            pass
 
     resolved = resolve_implied_behaviors(parsed_tags, explicit)
 

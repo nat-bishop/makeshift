@@ -19,7 +19,7 @@ ALL_TAGS = [t.value for t in Tag]
 # Metrics that use 0-1 scale (formatted as .2f)
 _SCORE_METRICS = {"Validity", "Faithfulness", "Gameplay Quality", "Sprite Prompt"}
 # Metrics with special formatting
-_COUNT_METRICS = {"Interaction Surface", "Living Movement"}
+_COUNT_METRICS = {"Interaction Surface", "Has Signature"}
 
 
 def _fmt_score(metric: str, value: float) -> str:
@@ -97,9 +97,12 @@ def _section_programmatic(result: EvalRunResult) -> str:
     min_surface = min(surfaces) if surfaces else 0
     max_surface = max(surfaces) if surfaces else 0
 
-    # Living movement
+    # Has Signature (LIVING objects)
     living_cases = [c for c in result.cases if c.output and "LIVING" in c.output.tags]
-    living_no_move = [c for c in result.cases if c.scores.get("Living Movement") == 0.0]
+    living_no_sig = [c for c in result.cases if c.scores.get("Has Signature") == 0.0]
+
+    # Signature rate overall
+    sig_cases = [c for c in result.cases if c.output and c.output.signature]
 
     # Visual description lengths
     vd_lengths = [
@@ -118,17 +121,18 @@ def _section_programmatic(result: EvalRunResult) -> str:
         "|--------|-------|",
         f"| Interaction Surface (avg) | {avg_surface:.1f} / 53 rules "
         f"(min {min_surface:.0f}, max {max_surface:.0f}) |",
-        f"| LIVING w/o movement | {len(living_no_move)} / {len(living_cases)} LIVING objects |",
+        f"| Signature rate | {len(sig_cases)} / {result.dataset.total_cases} objects |",
+        f"| LIVING w/o signature | {len(living_no_sig)} / {len(living_cases)} LIVING objects |",
         f"| Visual desc length | {vd_min} / {vd_median} / {vd_max} chars "
         f"(min / median / max) |",
     ]
     if vd_short:
         lines.append(f"| Visual desc < 40 chars | {vd_short} |")
 
-    # List the LIVING objects without movement
-    if living_no_move:
-        names = ", ".join(c.case for c in living_no_move)
-        lines.extend(["", f"**LIVING without movement:** {names}"])
+    # List the LIVING objects without signature
+    if living_no_sig:
+        names = ", ".join(c.case for c in living_no_sig)
+        lines.extend(["", f"**LIVING without signature:** {names}"])
 
     lines.append("")
     return "\n".join(lines)
@@ -138,11 +142,11 @@ def _section_distribution(result: EvalRunResult) -> str:
     """Tag, size, behavior distributions."""
     tag_counts: Counter[str] = Counter()
     size_counts: Counter[str] = Counter()
-    behavior_count_dist: Counter[int] = Counter()
-    trigger_counts: Counter[str] = Counter()
-    action_counts: Counter[str] = Counter()
-    target_counts: Counter[str] = Counter()
+    sig_trigger_counts: Counter[str] = Counter()
+    sig_action_counts: Counter[str] = Counter()
+    resolved_behavior_dist: Counter[int] = Counter()
     total = 0
+    with_sig = 0
 
     for case in result.cases:
         if case.output is None:
@@ -152,13 +156,13 @@ def _section_distribution(result: EvalRunResult) -> str:
         for tag in out.tags:
             tag_counts[tag] += 1
         size_counts[out.size_category] += 1
-        behavior_count_dist[len(out.behaviors)] += 1
-        for b in out.behaviors:
+        resolved_behavior_dist[len(out.resolved_behaviors)] += 1
+        if out.signature:
+            with_sig += 1
             try:
-                spec = parse_behavior_string(str(b))
-                trigger_counts[spec.trigger.value] += 1
-                action_counts[spec.action.value] += 1
-                target_counts[spec.target.value] += 1
+                spec = parse_behavior_string(str(out.signature))
+                sig_trigger_counts[spec.trigger.value] += 1
+                sig_action_counts[spec.action.value] += 1
             except (BehaviorParseError, ValueError):
                 pass
 
@@ -183,28 +187,30 @@ def _section_distribution(result: EvalRunResult) -> str:
         pct = count / total * 100
         lines.append(f"| {size} | {count}/{total} | {pct:.0f}% |")
 
-    # Behaviors per object
+    # Resolved behaviors per object (implied + signature)
     lines.extend([
-        "", "### Behaviors Per Object", "",
+        "", "### Resolved Behaviors Per Object (implied + signature)", "",
         "| Count | Objects | Pct |", "|-------|---------|-----|",
     ])
-    for n in sorted(behavior_count_dist):
-        count = behavior_count_dist[n]
+    for n in sorted(resolved_behavior_dist):
+        count = resolved_behavior_dist[n]
         pct = count / total * 100
         lines.append(f"| {n} | {count}/{total} | {pct:.0f}% |")
 
-    # Trigger/action/target tables side by side
-    for label, counts in [
-        ("Triggers", trigger_counts),
-        ("Actions", action_counts),
-        ("Targets", target_counts),
-    ]:
-        if counts:
-            lines.extend([
-                "", f"### {label}", "", "| Type | Count |", "|------|-------|",
-            ])
-            for item, count in counts.most_common():
-                lines.append(f"| {item} | {count} |")
+    # Signature trigger/action distribution
+    if sig_trigger_counts:
+        lines.extend([
+            "", "### Signature Triggers", "", "| Type | Count |", "|------|-------|",
+        ])
+        for item, count in sig_trigger_counts.most_common():
+            lines.append(f"| {item} | {count} |")
+
+    if sig_action_counts:
+        lines.extend([
+            "", "### Signature Actions", "", "| Type | Count |", "|------|-------|",
+        ])
+        for item, count in sig_action_counts.most_common():
+            lines.append(f"| {item} | {count} |")
 
     lines.append("")
     return "\n".join(lines)
@@ -266,12 +272,14 @@ def _section_cases(result: EvalRunResult) -> str:
         tags_str = ", ".join(out.tags) if out.tags else "(none)"
         lines.append(f"**Tags:** {tags_str} | **Size:** {out.size_category}")
 
-        # Behaviors
-        if out.behaviors:
-            for b in out.behaviors:
-                lines.append(f"- `{b}`")
+        # Signature + resolved behaviors
+        if out.signature:
+            lines.append(f"**Signature:** `{out.signature}`")
+        if out.resolved_behaviors:
+            lines.append(f"**Behaviors ({len(out.resolved_behaviors)}):** "
+                         + ", ".join(f"`{b}`" for b in out.resolved_behaviors))
         else:
-            lines.append("- *(no behaviors)*")
+            lines.append("*(no behaviors)*")
 
         # Scores line
         score_parts = []
@@ -290,9 +298,9 @@ def _section_cases(result: EvalRunResult) -> str:
             if score < 1.0 and reason:
                 lines.append(f"> **{m} ({_fmt_score(m, score)}):** {reason}")
 
-        # Living movement warning
-        if case.scores.get("Living Movement") == 0.0:
-            lines.append("> **Note:** LIVING object with no movement behaviors")
+        # Has Signature warning
+        if case.scores.get("Has Signature") == 0.0:
+            lines.append("> **Note:** LIVING object with no signature behavior")
 
         # Retry info
         if case.retries > 0:

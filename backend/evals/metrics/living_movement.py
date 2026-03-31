@@ -1,7 +1,8 @@
-"""Living Movement evaluator — deterministic, no LLM call.
+"""Has Signature evaluator — deterministic, no LLM call.
 
-Flags LIVING objects that have no movement behaviors.
-Informational metric, not a quality penalty.
+Flags LIVING objects that have no signature behavior (only generic
+tag-implied behaviors like wander/chase). These objects work but
+lack unique personality.
 """
 
 from __future__ import annotations
@@ -9,23 +10,19 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 
-from app.models.behaviors import BehaviorAction, BehaviorParseError, parse_behavior_string
 from app.models.tags import Tag
 from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorContext
 
-_MOVEMENT_ACTIONS = frozenset({
-    BehaviorAction.MOVE_TOWARD,
-    BehaviorAction.MOVE_AWAY,
-    BehaviorAction.PATROL,
-})
-
 
 @dataclass
-class LivingMovementEvaluator(Evaluator[str, str, object]):
-    """Check if LIVING objects have at least one movement behavior.
+class HasSignatureEvaluator(Evaluator[str, str, object]):
+    """Check if LIVING objects have a signature behavior for personality.
 
-    Returns 1.0 if the object has movement or is not LIVING.
-    Returns 0.0 if LIVING with no movement behaviors.
+    LIVING objects get implied behaviors (wander, chase) from tags automatically.
+    A signature behavior adds unique personality beyond the defaults.
+
+    Returns 1.0 if the object has a signature or is not LIVING.
+    Returns 0.0 if LIVING with no signature behavior.
     """
 
     def evaluate(self, ctx: EvaluatorContext[str, str, object]) -> dict[str, EvaluationReason]:
@@ -33,29 +30,24 @@ class LivingMovementEvaluator(Evaluator[str, str, object]):
         try:
             data = json.loads(output_text)
         except (json.JSONDecodeError, TypeError):
-            return {"Living Movement": EvaluationReason(value=1.0, reason="Not valid JSON")}
+            return {"Has Signature": EvaluationReason(value=1.0, reason="Not valid JSON")}
 
         raw_tags = data.get("tags", [])
         if Tag.LIVING.value not in raw_tags:
             return {
-                "Living Movement": EvaluationReason(value=1.0, reason="Not a LIVING object")
+                "Has Signature": EvaluationReason(value=1.0, reason="Not a LIVING object")
             }
 
-        # Check behaviors for movement actions
-        for b in data.get("behaviors", []):
-            try:
-                spec = parse_behavior_string(str(b))
-                if spec.action in _MOVEMENT_ACTIONS:
-                    return {
-                        "Living Movement": EvaluationReason(
-                            value=1.0, reason=f"Has {spec.action} behavior"
-                        )
-                    }
-            except (BehaviorParseError, ValueError):
-                continue
+        signature = data.get("signature")
+        if signature:
+            return {
+                "Has Signature": EvaluationReason(
+                    value=1.0, reason=f"Has signature: {signature}"
+                )
+            }
 
         return {
-            "Living Movement": EvaluationReason(
-                value=0.0, reason="LIVING object with no movement behaviors"
+            "Has Signature": EvaluationReason(
+                value=0.0, reason="LIVING object with no signature behavior"
             )
         }

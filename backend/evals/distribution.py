@@ -39,11 +39,12 @@ def print_distribution_report(result: EvalRunResult) -> None:
         # Size
         size_counts[out.size_category] += 1
 
-        # Behaviors
-        behavior_count_dist[len(out.behaviors)] += 1
-        for b in out.behaviors:
+        # Signature
+        has_sig = 1 if out.signature else 0
+        behavior_count_dist[has_sig] += 1
+        if out.signature:
             try:
-                spec = parse_behavior_string(str(b))
+                spec = parse_behavior_string(str(out.signature))
                 trigger_counts[spec.trigger.value] += 1
                 action_counts[spec.action.value] += 1
                 target_counts[spec.target.value] += 1
@@ -73,12 +74,12 @@ def print_distribution_report(result: EvalRunResult) -> None:
         pct = count / total * 100
         print(f"    {size:<10} {count:>3}/{total}  ({pct:4.0f}%)")
 
-    # Behavior count
-    print("\n  Behaviors Per Object:")
-    for n in sorted(behavior_count_dist):
-        count = behavior_count_dist[n]
-        pct = count / total * 100
-        print(f"    {n} behaviors: {count:>3}/{total}  ({pct:4.0f}%)")
+    # Signature distribution
+    print("\n  Signature Behavior:")
+    with_sig = behavior_count_dist.get(1, 0)
+    without_sig = behavior_count_dist.get(0, 0)
+    print(f"    with signature:    {with_sig:>3}/{total}  ({with_sig / total * 100:4.0f}%)")
+    print(f"    without signature: {without_sig:>3}/{total}  ({without_sig / total * 100:4.0f}%)")
 
     # Trigger distribution
     if trigger_counts:

@@ -9,7 +9,7 @@ from app.engine.rules_data import ALL_RULES
 from pydantic_evals.evaluators import LLMJudge
 
 from evals.metrics.interaction_surface import InteractionSurfaceEvaluator
-from evals.metrics.living_movement import LivingMovementEvaluator
+from evals.metrics.living_movement import HasSignatureEvaluator
 from evals.metrics.rubric_context import get_rules_summary_string, get_tag_list_string
 from evals.metrics.validity import ValidityEvaluator
 
@@ -112,7 +112,7 @@ RUBRICS: dict[str, str] = {
     ),
 }
 
-METRIC_NAMES: list[str] = ["Validity", "Interaction Surface", "Living Movement", *RUBRICS.keys()]
+METRIC_NAMES: list[str] = ["Validity", "Interaction Surface", "Has Signature", *RUBRICS.keys()]
 
 
 def make_judge(name: str) -> LLMJudge:
@@ -130,6 +130,6 @@ def default_evaluators() -> list:
     return [
         ValidityEvaluator(),
         InteractionSurfaceEvaluator(),
-        LivingMovementEvaluator(),
+        HasSignatureEvaluator(),
         *(make_judge(name) for name in RUBRICS),
     ]
