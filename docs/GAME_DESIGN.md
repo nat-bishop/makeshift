@@ -8,7 +8,7 @@ Tags define what an object *is*; behaviors define what it *does*. Each object ge
 
 ## Tag System
 
-27 tags across 7 categories (+ 2 internal-only). Tags are the atomic unit of the entire game — they drive physics, interactions, durability, and implied behaviors.
+27 LLM-visible tags across 7 categories (+ 4 internal-only). Tags are the atomic unit of the entire game — they drive physics, interactions, durability, and implied behaviors.
 
 ### Categories
 
@@ -21,7 +21,7 @@ Tags define what an object *is*; behaviors define what it *does*. Each object ge
 | Mechanical | BOUNCY, BREAKABLE |
 | Environmental | FLOATING, WIND_SOURCE, ACIDIC, TOXIC, WET |
 | Special | LIVING, METALLIC, INSULATING, HOSTILE |
-| Internal-only | HOT (rule-applied burn), GLOWING (legacy, unused) |
+| Internal-only | HOT (rule-applied burn), GLOWING (smolder + attract), BRITTLE (freeze-then-shatter), CORRODED (acid-weakened) |
 
 **Pruned tags**: SOLID (82% filler, 0 rules — implicit default), FLEXIBLE (1 unintuitive rule), SLIPPERY (0% generated, overlaps FROZEN physics). **Renamed**: CORROSIVE→ACIDIC, CONDUCTING→METALLIC (LLM-friendly names boost generation accuracy).
 
@@ -29,13 +29,13 @@ WET (Environmental) is a state tag applied automatically by nearby LIQUID object
 
 HOSTILE (Special) is a danger-aura field tag — it deals 20 damage + knockback (150 force vs LIVING, 100 vs BREAKABLE) to everything in CLOSE range on a 2s tick. HOSTILE + HOSTILE clash rule deals 15 dmg to both sides + 120 force. This makes hostile objects into area-denial threats rather than simple contact hazards. Tags handle all contact damage; behaviors handle autonomous proactive actions.
 
-STICKY (Surface) is a continuous field tag (CLOSE range) that slows everything nearby to 25% speed — applying `linear_damp=12.0` to RigidBody2D objects and a speed modifier to the player. Area denial trap mechanic.
+STICKY (Surface) is a continuous field tag (CLOSE range) that slows everything nearby to 25% speed via the `sticky_slow` rule (APPLY_SLOW effect). Also deals 2 damage to LIVING things in the field (`sticky_living_struggle`) and catches fire from HEAT_SOURCE contact (`sticky_heat_fuel`). Area denial trap mechanic.
 
 REFLECTIVE (Surface) bounces heat, electricity, and resists acid — the `reflective_acidic_resist` rule removes ACIDIC from the attacker on contact.
 
 EXPLOSIVE is the highest-impact single tag: area damage on heat or electricity contact. Tag-implied behavior: detonates when damaged (ON_DAMAGED → EXPLODE). The LLM can override the trigger via the signature behavior.
 
-### Contradiction Pairs (13)
+### Contradiction Pairs (15)
 
 Tags that can't coexist on the same object:
 
@@ -44,13 +44,14 @@ FROZEN↔MOLTEN    FROZEN↔HOT        COLD↔HOT         COLD↔MOLTEN
 HEAVY↔LIGHT      LIQUID↔RIGID      GAS↔RIGID        GAS↔HEAVY
 LIQUID↔GAS       METALLIC↔INSULATING
 HEAT_SOURCE↔FLAMMABLE              WET↔MOLTEN       WET↔HEAT_SOURCE
+BRITTLE↔LIQUID   BRITTLE↔GAS
 ```
 
 Enforced by Pydantic validators on `CreatorOutput`. Violations trigger `ModelRetry` with feedback to the LLM, not hard failures.
 
 ## Rule System
 
-50 `InteractionRule` definitions in `engine/rules_data.py`. Each rule specifies:
+59 `InteractionRule` definitions in `engine/rules_data.py`. Each rule specifies:
 - Required tags on object A and/or B
 - `execution_order` (higher fires first)
 - Whether bidirectional (A↔B or only A→B)
@@ -64,7 +65,7 @@ Enforced by Pydantic validators on `CreatorOutput`. Violations trigger `ModelRet
 
 **Chain reactions**: Cascade-eligible rules create emergent gameplay. Igniting one flammable object spreads HEAT_SOURCE to neighbors, which may ignite more flammable objects. Depth-limited to 3 to prevent infinite loops.
 
-**Distance-based interactions**: ~24 of 50 rules are annotated `trigger_mode=FIELD`. These fire both at range (via `TagField`) and on direct contact. The rule declares *whether* an interaction works at distance; `FieldConfig` declares *how far* and *how* for the emitting tag. Separating these concerns avoids duplicating range values across rules that share the same emitting tag.
+**Distance-based interactions**: ~28 of 59 rules are annotated `trigger_mode=FIELD`. These fire both at range (via `TagField`) and on direct contact. The rule declares *whether* an interaction works at distance; `FieldConfig` declares *how far* and *how* for the emitting tag. Separating these concerns avoids duplicating range values across rules that share the same emitting tag.
 
 **Counters exist**: Every powerful interaction has a counter. INSULATING blocks ELECTRIC propagation. REFLECTIVE bounces HEAT_SOURCE. LIQUID extinguishes HEAT_SOURCE. This creates a rock-paper-scissors dynamic.
 
@@ -81,12 +82,15 @@ Enforced by Pydantic validators on `CreatorOutput`. Violations trigger `ModelRet
 | Counter | INSULATING blocks ELECTRIC, REFLECTIVE reflects HEAT_SOURCE/ELECTRIC/acid (reflective_acidic_resist) | No | No |
 | Magnetic/Wind | MAGNETIC + METALLIC → attract, WIND_SOURCE + LIGHT/GAS/FLOATING → push | No | Yes |
 | Environmental | ACIDIC + BREAKABLE → corrode, TOXIC + LIVING → damage | No | Yes (TOXIC) |
+| Brittle/Corroded | BRITTLE + HEAVY → 40 dmg shatter, CORRODED + SHARP → 40 dmg slice | No | No |
+| Glowing | GLOWING + FLAMMABLE → smolder (adds HOT), GLOWING + LIVING → attract | No | Yes |
+| Sticky | STICKY + any → APPLY_SLOW (25%), + LIVING → 2 dmg, + HEAT_SOURCE → fuel | Yes (fuel) | Yes |
 
 ### Field Modes
 
 Rules with `trigger_mode=FIELD` execute via two paths:
-- **Continuous** (WIND_SOURCE, MAGNETIC, STICKY): `apply_central_force()` per physics frame via `TagField._physics_process`. Forces are tuned for per-frame application. STICKY applies `linear_damp=12.0` and a player speed modifier to slow nearby objects to 25%.
-- **Periodic** (HEAT_SOURCE, HOT, ELECTRIC, COLD, TOXIC, LIQUID, HOSTILE, WET): `resolve_collision()` on a 2s timer. Full rule engine evaluation, subject to the 0.5s pair cooldown.
+- **Continuous** (WIND_SOURCE, MAGNETIC, STICKY): Per physics frame via `TagField._physics_process`. WIND_SOURCE/MAGNETIC use `apply_central_force()`. STICKY uses the `sticky_slow` rule's APPLY_SLOW effect to apply damping/speed reduction.
+- **Periodic** (HEAT_SOURCE, HOT, ELECTRIC, COLD, TOXIC, LIQUID, HOSTILE, WET, GLOWING): `resolve_collision()` on a 2s timer. Full rule engine evaluation, subject to the 0.5s pair cooldown.
 
 ### Wildcard Rules
 
