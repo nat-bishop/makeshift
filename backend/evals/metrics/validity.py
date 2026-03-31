@@ -1,7 +1,7 @@
 """Deterministic validity evaluator — no LLM call.
 
 Checks structural correctness of CreatorOutputSpec against
-game rules: contradictions, behavior parsing, count limits, etc.
+game rules: contradictions, signature parsing, count limits, etc.
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ class ValidityEvaluator(Evaluator[str, str, object]):
     """Deterministic checks on structured output correctness.
 
     JSON parse failure is catastrophic (score 0.0). Other checks
-    are severity-weighted: structural issues (tags, behaviors)
+    are severity-weighted: structural issues (tags, signature)
     weigh more than cosmetic ones (name length).
     """
 
@@ -35,7 +35,7 @@ class ValidityEvaluator(Evaluator[str, str, object]):
         "valid_tag_enums": 2,
         "tag_count": 1,
         "no_contradictions": 2,
-        "behaviors_parse": 2,
+        "signature_parse": 2,
         "name_length": 1,
         "visual_desc_length": 1,
     })
@@ -62,7 +62,7 @@ class ValidityEvaluator(Evaluator[str, str, object]):
         if "valid_tag_enums" not in checks:
             checks["valid_tag_enums"] = True
 
-        # 3. Tag count (2-6)
+        # 3. Tag count (1-4)
         checks["tag_count"] = 1 <= len(raw_tags) <= 4
 
         # 4. No contradictions
@@ -72,16 +72,16 @@ class ValidityEvaluator(Evaluator[str, str, object]):
         else:
             checks["no_contradictions"] = False
 
-        # 5. Behaviors parse
-        raw_behaviors = data.get("behaviors", [])
-        all_parse = True
-        for b in raw_behaviors:
+        # 5. Signature parses (if present)
+        signature = data.get("signature")
+        if signature is not None:
             try:
-                parse_behavior_string(str(b))
+                parse_behavior_string(str(signature))
+                checks["signature_parse"] = True
             except (BehaviorParseError, ValueError, Exception):
-                all_parse = False
-                break
-        checks["behaviors_parse"] = all_parse
+                checks["signature_parse"] = False
+        else:
+            checks["signature_parse"] = True  # None is valid (no signature)
 
         # 6. Name length (1-3 words)
         name = data.get("name", "")

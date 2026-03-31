@@ -16,7 +16,8 @@ class ParsedOutput(BaseModel):
 
     name: str
     tags: list[str]
-    behaviors: list[str]
+    signature: str | None = None
+    resolved_behaviors: list[str] = []
     size_category: str
     visual_description: str
 

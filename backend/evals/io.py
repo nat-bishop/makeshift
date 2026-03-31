@@ -51,6 +51,45 @@ def _extract_failure_retry_info(
     return retries, retry_errors
 
 
+def _resolve_behaviors(tags: list[str], signature: str | None) -> list[str]:
+    """Resolve tag-implied + signature behaviors into display strings."""
+    from app.models.behaviors import BehaviorParseError, expand_behavior_spec, parse_behavior_string
+    from app.models.tag_behaviors import resolve_implied_behaviors
+    from app.models.tags import Tag
+
+    parsed_tags: list[Tag] = []
+    for t in tags:
+        try:
+            parsed_tags.append(Tag(t))
+        except (ValueError, KeyError):
+            continue
+
+    explicit = None
+    if signature:
+        try:
+            explicit = expand_behavior_spec(parse_behavior_string(signature))
+        except (BehaviorParseError, ValueError):
+            pass
+
+    resolved = resolve_implied_behaviors(parsed_tags, explicit)
+
+    # Format back to readable strings
+    lines: list[str] = []
+    for b in resolved:
+        parts = [b.trigger.value, b.action.value]
+        if b.target.value != "SELF":
+            parts.append(b.target.value)
+        line = " -> ".join(parts)
+        if b.tags_to_apply:
+            # Already encoded in action via parametric syntax
+            pass
+        if b.trigger_tag:
+            parts[0] = f"{b.trigger.value}({b.trigger_tag.value})"
+            line = " -> ".join(parts)
+        lines.append(line)
+    return lines
+
+
 def _parse_output(raw: str) -> ParsedOutput | None:
     """Parse a CreatorOutputSpec JSON string into structured fields."""
     try:
@@ -58,10 +97,13 @@ def _parse_output(raw: str) -> ParsedOutput | None:
     except (json.JSONDecodeError, TypeError):
         return None
     vd = data.get("visual_descriptor", {})
+    tags = data.get("tags", [])
+    signature = data.get("signature")
     return ParsedOutput(
         name=data.get("name", ""),
-        tags=data.get("tags", []),
-        behaviors=data.get("behaviors", []),
+        tags=tags,
+        signature=signature,
+        resolved_behaviors=_resolve_behaviors(tags, signature),
         size_category=vd.get("size_category", "unknown") if isinstance(vd, dict) else "unknown",
         visual_description=(
             vd.get("visual_description", "") if isinstance(vd, dict) else ""

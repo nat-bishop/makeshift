@@ -85,7 +85,7 @@ Enforced by Pydantic validators on `CreatorOutput`. Violations trigger `ModelRet
 ### Field Modes
 
 Rules with `trigger_mode=FIELD` execute via two paths:
-- **Continuous** (WIND_SOURCE, MAGNETIC, GLOWING, STICKY): `apply_central_force()` per physics frame via `TagField._physics_process`. Forces are tuned for per-frame application. STICKY applies `linear_damp=12.0` and a player speed modifier to slow nearby objects to 25%.
+- **Continuous** (WIND_SOURCE, MAGNETIC, STICKY): `apply_central_force()` per physics frame via `TagField._physics_process`. Forces are tuned for per-frame application. STICKY applies `linear_damp=12.0` and a player speed modifier to slow nearby objects to 25%.
 - **Periodic** (HEAT_SOURCE, HOT, ELECTRIC, COLD, TOXIC, LIQUID, HOSTILE, WET): `resolve_collision()` on a 2s timer. Full rule engine evaluation, subject to the 0.5s pair cooldown.
 
 ### Wildcard Rules

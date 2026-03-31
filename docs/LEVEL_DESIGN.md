@@ -690,7 +690,7 @@ const SANDBOX_SEEDS: Array[Dictionary] = [
             {
                 "trigger": "ON_DAMAGED",
                 "action": "MOVE_AWAY",
-                "target": "NEAREST_OBJECT",
+                "target": "CONTACT_BODY",
                 "speed": "FAST",
             },
         ],

@@ -132,7 +132,6 @@ Static class. Maps field-emitting tags to range category and mode:
 |-----|-------|------|
 | WIND_SOURCE | FAR (192px) | continuous |
 | MAGNETIC | MEDIUM (96px) | continuous |
-| GLOWING | MEDIUM (96px) | continuous |
 | STICKY | CLOSE (64px) | continuous (damp, not force) |
 | HEAT_SOURCE | CLOSE (64px) | periodic |
 | HOT | CLOSE (64px) | periodic |

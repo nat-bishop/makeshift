@@ -60,6 +60,18 @@ type: project
 **Why:** Stale "planned feature" docs actively mislead. If it's not in the code, it's not in the docs.
 **How to apply:** When reviewing docs for completeness, cross-check enum values against BehaviorExecutor match statements to find unimplemented cases before documenting them.
 
+## Tag/behavior system overhaul (2026-03-30)
+
+- ARCHITECTURE.md rule count in the `RuleResolver` intro line must match the actual rule count in `rules_data.py`. After this overhaul: 50 rules (was 53). The "24 of N" FIELD annotation count is approximate — only update the total.
+- ARCHITECTURE.md physics table drifts when tags are removed. SLIPPERY was removed but its row persisted. After any tag pruning, cross-check `tag_physics_map.gd` against the physics table.
+- `FieldConfig.FIELD_TAGS` is the authoritative source for which tags are continuous vs periodic and at what range. ARCHITECTURE.md Field System table and GAME_DESIGN.md Field Modes section must match it. GLOWING was removed from FIELD_TAGS but persisted in both docs.
+- `BehaviorTarget` enum: `NEAREST_OBJECT` was never a valid value. Docs and level blueprints that use it are stale. Valid targets: SELF, NEAREST_LIVING, NEAREST_PLAYER, CONTACT_BODY.
+- LEVEL_DESIGN.md blueprint tags must use current tag names. After renames (CORROSIVE→ACIDIC, CONDUCTING→METALLIC) and pruning (SOLID, FLEXIBLE, SLIPPERY removed), ALL blueprint examples need updating — there are many instances across Levels 1-5 and Sandbox. `SOLID` was especially pervasive as it was included reflexively in almost all old blueprints.
+- GAME_DESIGN.md "Pruned tags / Renamed" line had the old-name pairs backwards ("ACIDIC → ACIDIC, METALLIC → METALLIC"). Always write it as old→new.
+- Behavior limit in ARCHITECTURE.md pipeline step 4 and behavior system section must match the LLM constraint: was "0-3 behaviors" (old list model), now "0-1 signature behavior" (string field).
+
+**How to apply:** After any tag/rule system change, check: (1) rule count in resolver intro, (2) physics table rows vs `tag_physics_map.gd`, (3) FieldConfig table vs `field_config.gd`, (4) BehaviorTarget enum members vs `behaviors.py`, (5) all blueprint examples in LEVEL_DESIGN.md for old tag names.
+
 ## EnvironmentBody pattern (2026-03-29)
 
 - New node types that are "almost like GameObject but not quite" belong in the CLAUDE.md Key systems paragraph (non-autoload systems) with a dense summary, and get a full section in ARCHITECTURE.md. The LEVEL_DESIGN.md checklist had prerequisite items that needed marking done.
