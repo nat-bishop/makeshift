@@ -16,6 +16,8 @@ const COLORS: Dictionary = {
 	"FLOATING": Color("#88DDFF"),
 	"GLOWING": Color("#FFD700"),
 	"WET": Color("#4499DD"),
+	"BRITTLE": Color("#AADDFF"),
+	"CORRODED": Color("#887744"),
 }
 const DEFAULT: Color = Color("#AAAAAA")
 const HEAL: Color = Color("#44FF88")

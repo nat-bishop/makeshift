@@ -30,7 +30,7 @@ var _damage_flash_timer: float = 0.0
 var _dead: bool = false
 var _knockback: Vector2 = Vector2.ZERO
 var _speed_modifier: float = 1.0
-var _sticky_slow_count: int = 0
+var _slow_count: int = 0
 
 @onready var _anim_sprite: AnimatedSprite2D = $AnimatedSprite2D
 
@@ -211,13 +211,13 @@ func _decay_knockback(delta: float) -> void:
 
 
 func apply_speed_modifier(factor: float) -> void:
-	_sticky_slow_count += 1
+	_slow_count += 1
 	_speed_modifier = factor
 
 
 func clear_speed_modifier() -> void:
-	_sticky_slow_count = max(0, _sticky_slow_count - 1)
-	if _sticky_slow_count == 0:
+	_slow_count = max(0, _slow_count - 1)
+	if _slow_count == 0:
 		_speed_modifier = 1.0
 
 

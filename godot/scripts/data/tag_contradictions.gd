@@ -17,6 +17,8 @@ const PAIRS: Array[Array] = [
 	["HEAT_SOURCE", "FLAMMABLE"],
 	["WET", "MOLTEN"],
 	["WET", "HEAT_SOURCE"],
+	["BRITTLE", "LIQUID"],
+	["BRITTLE", "GAS"],
 ]
 
 static var _lookup: Dictionary = {}  # tag -> Array[String] of contradicting tags

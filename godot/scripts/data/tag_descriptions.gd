@@ -37,6 +37,9 @@ const DESCRIPTIONS: Dictionary = {
 	"GLOWING": "Emits soft light.",
 	"METALLIC": "Conducts electricity and heat, attracted by magnets.",
 	"INSULATING": "Blocks electrical transfer.",
+	# Internal-only (rule-applied)
+	"BRITTLE": "Frozen fragility. Shatters on heavy or sharp impact.",
+	"CORRODED": "Acid-weakened. Vulnerable to physical force.",
 }
 
 

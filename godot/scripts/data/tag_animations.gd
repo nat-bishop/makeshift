@@ -28,6 +28,10 @@ const COLOR_SHIFT: Dictionary = {
 		"r_offset": -1.0, "g_offset": -1.0, "b_offset": 1.0,
 		"amplitude": 0.05, "speed": 2.5,
 	},
+	"CORRODED": {
+		"r_offset": -0.5, "g_offset": 0.5, "b_offset": -1.0,
+		"amplitude": 0.04, "speed": 1.5,
+	},
 }
 
 # Random color flash (timer-based, overrides color when active)
@@ -45,6 +49,7 @@ const FLASH: Dictionary = {
 # Random position noise (per-frame randf offset)
 const JITTER: Dictionary = {
 	"EXPLOSIVE": { "intensity": 1.5 },
+	"BRITTLE": { "intensity": 0.5 },
 }
 
 

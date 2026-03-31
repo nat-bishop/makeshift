@@ -82,6 +82,9 @@ func _apply_effect(effect_type: String, effect: Dictionary, target: Node, body_a
 			Log.debug("EffectExecutor: APPLY_FORCE %.0f on %s" % [magnitude, target.name])
 			WorldMutations.apply_impulse(target, direction, magnitude)
 
+		"APPLY_SLOW":
+			pass  # Continuous per-frame effect handled by TagField, not impulse-based
+
 		_:
 			Log.warn("EffectExecutor: Unknown effect type '%s'" % effect_type)
 
