@@ -41,10 +41,11 @@ Don't write a signature behavior for things tags already do.
 The signature behavior is for ONE unique action that makes this specific object unusual — \
 ranged attacks, healing, tag mutation, or reactive transformations. Most objects don't need one.
 
-## Tags (pick 1-4)
+## Tags (pick 2-4 — use all your slots)
 
 **Physical State:**
-- LIQUID — fluid, extinguishes fire, spreads WET to nearby objects, freezes via COLD
+- LIQUID — fluid like water or lava. Extinguishes fire, spreads WET, freezes via COLD. \
+NOT for solid objects that are wet or slimy — use WET instead.
 - GAS — ultra-light, dispersed by wind, ionized by electricity into plasma
 - RIGID — hard, unyielding (higher durability: 200 HP)
 - HEAVY — resists force, hard to push, immune to wind, crushes breakable things
@@ -81,7 +82,8 @@ burns living. Resisted by REFLECTIVE.
 resists fire. Applied automatically by nearby LIQUID objects.
 
 **Special:**
-- LIVING — a creature or organism. HOSTILE creatures chase; non-HOSTILE ones wander.
+- LIVING — a biological creature or organism (NOT machines, vehicles, or tools). \
+HOSTILE creatures chase; non-HOSTILE ones wander.
 - METALLIC — conducts electricity and heat, attracted by magnets, dissolved by acid
 - INSULATING — blocks electricity and heat propagation (powerful defensive modifier)
 - HOSTILE — aggressive danger aura: deals damage + knockback at close range. \
@@ -91,8 +93,8 @@ Two HOSTILE objects clash and fight each other. HOSTILE + LIVING auto-chases.
 HEAVY↔LIGHT, LIQUID↔RIGID, GAS↔RIGID, GAS↔HEAVY, LIQUID↔GAS, \
 METALLIC↔INSULATING, WET↔MOLTEN, WET↔HEAT_SOURCE
 
-Think about gameplay: what can the player DO with this object? Favor tags that create \
-chain reactions and interactions. Every tag should earn its slot.
+Most objects should have 3-4 tags. Each tag creates interaction surfaces with other objects. \
+Think: what can this burn, freeze, shock, dissolve, push, or stick to?
 
 ## Signature Behavior (optional — most objects don't need one)
 
@@ -101,7 +103,7 @@ Objects without a signature still interact richly through tags and rules alone.
 
 **When to add a signature:**
 - Ranged attack: a dragon breathes fire, a turret shoots projectiles
-- Healing: a mushroom heals nearby creatures
+- Healing: a mushroom heals whoever kicks it
 - Tag mutation: an ice wall freezes things on contact (adds FROZEN tag)
 - Reactive transformation: a bee swarm explodes when set on fire
 
@@ -137,34 +139,56 @@ distinctive features. Describe the object itself, not a scene or environment.
 ## Examples
 
 "fire sword" →
-  name: "Fire Sword", tags: [RIGID, SHARP, HEAT_SOURCE], signature: null
-  SHARP cuts on contact. HEAT_SOURCE ignites flammable targets. No signature needed — it's a weapon.
+  name: "Fire Sword", tags: [RIGID, SHARP, HEAT_SOURCE, FLAMMABLE], signature: null
+  SHARP cuts on contact. HEAT_SOURCE ignites targets. FLAMMABLE means the sword itself \
+  catches fire from other sources — chain reactions! No signature needed.
 
-"fire-breathing dragon" →
-  name: "Fire Dragon", tags: [LIVING, HOSTILE, HEAT_SOURCE, HEAVY]
-  signature: "ON_PROXIMITY -> SPAWN_PROJECTILE -> NEAREST_LIVING, power=high"
-  HOSTILE + LIVING auto-chases. HEAT_SOURCE ignites. Signature adds ranged fire breath.
+"campfire" →
+  name: "Campfire", tags: [HEAT_SOURCE, FLAMMABLE, LIGHT], signature: "ON_PROXIMITY -> HEAL -> NEAREST_LIVING, power=low"
+  HEAT_SOURCE ignites nearby flammable objects. FLAMMABLE means the fire can spread to it too. \
+  LIGHT means wind pushes it. Signature adds unique healing aura that tags can't provide.
 
-"angry bee swarm" →
-  name: "Bee Swarm", tags: [LIVING, LIGHT, FLAMMABLE, HOSTILE]
-  signature: "ON_TAG_ADDED(HEAT_SOURCE) -> EXPLODE"
-  Chain reaction: fire adds HEAT_SOURCE via rules → triggers EXPLODE signature.
+"acid spider" →
+  name: "Acid Spider", tags: [LIVING, HOSTILE, ACIDIC], signature: "ON_PROXIMITY -> SPAWN_PROJECTILE -> NEAREST_LIVING, power=medium"
+  HOSTILE + LIVING auto-chases and flees when hurt. ACIDIC dissolves on contact. \
+  Signature adds ranged acid spit — the one thing tags can't do.
 
-"healing mushroom" →
-  name: "Healing Shroom", tags: [LIVING]
-  signature: "ON_PROXIMITY -> HEAL -> NEAREST_LIVING"
-  LIVING makes it wander. Signature adds healing aura. Minimal tags, clear purpose.
+"death flower" →
+  name: "Toxic Bloom", tags: [RIGID, BREAKABLE, TOXIC], signature: "ON_DAMAGED -> EXPLODE"
+  Looks harmless. TOXIC poisons nearby creatures. BREAKABLE makes it fragile. \
+  Signature: when destroyed, explodes into a toxic cloud. A trap disguised as a flower.
 
 "ice wall" →
-  name: "Ice Wall", tags: [RIGID, FROZEN, HEAVY]
-  signature: "ON_CONTACT -> ADD_TAGS(FROZEN)"
-  Signature freezes things on contact (adds FROZEN tag). Tags handle durability and physics.
+  name: "Ice Wall", tags: [RIGID, FROZEN, HEAVY], signature: "ON_CONTACT -> ADD_TAGS(FROZEN)"
+  FROZEN makes surfaces slippery, HEAVY makes it immovable. Signature freezes \
+  things on contact — spreading ice beyond what tags alone do.
 
-"guard dog" →
-  name: "Guard Dog", tags: [LIVING, SHARP, HOSTILE, RIGID]
-  signature: null
-  HOSTILE + LIVING auto-chases. SHARP cuts on contact. HOSTILE field damages nearby. \
-  No signature needed — tags fully express the concept.\
+"wooden chair" →
+  name: "Oak Chair", tags: [RIGID, BREAKABLE, FLAMMABLE, LIGHT], signature: null
+  A simple mundane object — but 4 tags make it interactive. BREAKABLE means swords \
+  and explosions destroy it. FLAMMABLE means fire burns it. LIGHT means wind blows it. \
+  No signature needed for furniture.
+
+"cowardly slime" →
+  name: "Scaredy Slime", tags: [LIVING, WET, LIQUID], signature: "ON_PROXIMITY -> MOVE_AWAY -> NEAREST_LIVING, power=high"
+  LIVING implies wander, but signature OVERRIDES it with flee behavior — personality! \
+  WET + LIQUID spread wetness and interact with electricity and cold.
+
+## Common Mistakes
+
+DON'T use LIQUID for solid objects. A banana is not a liquid. A rope is not a liquid. \
+LIQUID means the object flows like water. Use WET if something is damp.
+
+DON'T use LIVING for machines or vehicles. A helicopter is not alive. A jetpack is not alive. \
+LIVING means a biological creature. For machines that move, use a signature behavior.
+
+DON'T make signatures that duplicate what tags do. If the object has HOSTILE + LIVING, \
+it already chases — don't add a MOVE_TOWARD signature. If it has EXPLOSIVE, it already \
+detonates — don't add an EXPLODE signature.
+
+DON'T use only 1-2 tags when more would create interactions. A wooden barrel with just \
+[RIGID] misses BREAKABLE (can be smashed), FLAMMABLE (can burn), HEAVY (resists wind). \
+Every tag creates new gameplay possibilities.\
 """
 
 _agent: Agent[None, CreatorOutputSpec] | None = None

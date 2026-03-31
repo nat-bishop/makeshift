@@ -120,6 +120,13 @@ _ALL_MOVEMENT_ACTIONS: frozenset[BehaviorAction] = frozenset(
     {BehaviorAction.MOVE_TOWARD, BehaviorAction.MOVE_AWAY, BehaviorAction.PATROL}
 )
 
+# Auto-correct common hallucinated targets (avoids wasting a retry)
+_TARGET_AUTO_CORRECTIONS: dict[str, BehaviorTarget] = {
+    "NEAREST_OBJECT": BehaviorTarget.NEAREST_LIVING,
+    "NEAREST_ENEMY": BehaviorTarget.NEAREST_LIVING,
+    "NEAREST_CREATURE": BehaviorTarget.NEAREST_LIVING,
+}
+
 # Triggers that support CONTACT_BODY target
 _CONTACT_BODY_TRIGGERS: frozenset[BehaviorTrigger] = frozenset(
     {
@@ -441,17 +448,33 @@ def parse_behavior_string(s: str) -> BehaviorSpec:
     trigger = _parse_enum(trigger_raw, BehaviorTrigger, "trigger")
     trigger_tag = _parse_tag(trigger_args[0]) if trigger_args else None
 
-    # --- Action ---
-    action_raw, action_args = _parse_parametric(parts[1])
+    # --- Action (strip trailing kwargs like ", power=high" in 2-part form) ---
+    power = Power.MEDIUM
+    action_segment = parts[1]
+    if len(parts) == 2 and "," in action_segment and "(" not in action_segment:
+        # e.g., "EXPLODE, power=high" — split out kwargs before parsing action
+        segments = [seg.strip() for seg in action_segment.split(",")]
+        action_segment = segments[0]
+        for seg in segments[1:]:
+            if "=" in seg:
+                key, val = seg.split("=", 1)
+                if key.strip().lower() == "power":
+                    power = _parse_enum(val.strip(), Power, "power")
+
+    action_raw, action_args = _parse_parametric(action_segment)
     action = _parse_enum(action_raw, BehaviorAction, "action")
     tags_to_apply = [_parse_tag(a) for a in action_args] if action_args else None
 
     # --- Target + kwargs ---
-    power = Power.MEDIUM
     if len(parts) == 3:
         segments = [seg.strip() for seg in parts[2].split(",")]
         target_str = segments[0]
-        target = _parse_enum(target_str, BehaviorTarget, "target")
+        # Auto-correct common hallucinated targets
+        target_upper = target_str.strip().upper()
+        if target_upper in _TARGET_AUTO_CORRECTIONS:
+            target = _TARGET_AUTO_CORRECTIONS[target_upper]
+        else:
+            target = _parse_enum(target_str, BehaviorTarget, "target")
         for seg in segments[1:]:
             if "=" not in seg:
                 continue
