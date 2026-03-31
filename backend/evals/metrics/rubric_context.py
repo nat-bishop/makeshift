@@ -11,6 +11,16 @@ from app.models.tags import LLM_VISIBLE_TAGS
 
 _LLM_TAG_NAMES = sorted(t.value for t in LLM_VISIBLE_TAGS)
 
+# Rules the LLM designer can actually target — exclude rules that require
+# internal-only tags (HOT, GLOWING, BRITTLE, CORRODED) since the judge
+# would otherwise penalize designs for not using tags the LLM can't pick.
+_LLM_VISIBLE_RULES = [
+    rule
+    for rule in ALL_RULES
+    if all(t in LLM_VISIBLE_TAGS for t in rule.tags_required_a)
+    and (not rule.tags_required_b or all(t in LLM_VISIBLE_TAGS for t in rule.tags_required_b))
+]
+
 
 def get_tag_list_string() -> str:
     """Comma-separated list of LLM-visible Tag values."""
@@ -18,11 +28,20 @@ def get_tag_list_string() -> str:
 
 
 def get_rules_summary_string() -> str:
-    """One-liner per rule: 'Name: TAG_A + TAG_B (bidirectional)'."""
+    """One-liner per rule: 'Name: TAG_A + TAG_B (bidirectional)'.
+
+    Only includes rules involving LLM-visible tags so the judge
+    doesn't penalize designs for missing internal-only tags.
+    """
     lines: list[str] = []
-    for rule in ALL_RULES:
+    for rule in _LLM_VISIBLE_RULES:
         tags_a = " + ".join(t.value for t in rule.tags_required_a)
         tags_b = " + ".join(t.value for t in rule.tags_required_b) or "(any)"
         direction = "bidirectional" if rule.bidirectional else "one-way"
         lines.append(f"- {rule.name}: {tags_a} + {tags_b} ({direction})")
     return "\n".join(lines)
+
+
+def get_visible_rule_count() -> int:
+    """Number of rules visible to the LLM judge."""
+    return len(_LLM_VISIBLE_RULES)

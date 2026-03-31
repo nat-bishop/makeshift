@@ -79,13 +79,21 @@ class TestCreatorOutput:
                 visual_descriptor=_make_visual(),
             )
 
-    def test_single_tag_valid(self) -> None:
+    def test_single_tag_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            CreatorOutput(
+                name="Rock",
+                tags=[Tag.RIGID],
+                visual_descriptor=_make_visual(),
+            )
+
+    def test_two_tags_valid(self) -> None:
         out = CreatorOutput(
             name="Rock",
-            tags=[Tag.RIGID],
+            tags=[Tag.RIGID, Tag.HEAVY],
             visual_descriptor=_make_visual(),
         )
-        assert len(out.tags) == 1
+        assert len(out.tags) == 2
 
     def test_empty_tags_raises(self) -> None:
         with pytest.raises(ValidationError):

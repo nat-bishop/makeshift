@@ -11,6 +11,7 @@ from pydantic_evals.evaluators import LLMJudge
 from evals.metrics.interaction_surface import InteractionSurfaceEvaluator
 from evals.metrics.living_movement import HasSignatureEvaluator
 from evals.metrics.rubric_context import get_rules_summary_string, get_tag_list_string
+from evals.metrics.tag_recall import TagRecallEvaluator
 from evals.metrics.validity import ValidityEvaluator
 
 _TAG_LIST = get_tag_list_string()
@@ -116,7 +117,9 @@ RUBRICS: dict[str, str] = {
     ),
 }
 
-METRIC_NAMES: list[str] = ["Validity", "Interaction Surface", "Has Signature", *RUBRICS.keys()]
+METRIC_NAMES: list[str] = [
+    "Validity", "Tag Recall", "Interaction Surface", "Has Signature", *RUBRICS.keys()
+]
 
 
 def make_judge(name: str) -> LLMJudge:
@@ -133,6 +136,7 @@ def default_evaluators() -> list:
     """Build the standard set of evaluators for creator agent evals."""
     return [
         ValidityEvaluator(),
+        TagRecallEvaluator(),
         InteractionSurfaceEvaluator(),
         HasSignatureEvaluator(),
         *(make_judge(name) for name in RUBRICS),

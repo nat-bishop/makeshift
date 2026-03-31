@@ -39,7 +39,7 @@ async def test_fallback_on_llm_error() -> None:
     with patch("app.creator.agent._get_agent", return_value=_mock_agent_error()):
         bp = await create_object("fire sword")
     assert bp.name == "Mysterious Fire Sword"
-    assert bp.tags == [Tag.RIGID]
+    assert bp.tags == [Tag.RIGID, Tag.BREAKABLE]
 
 
 async def test_fallback_name_two_words() -> None:

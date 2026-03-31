@@ -17,7 +17,7 @@ from evals.models import EvalRunResult
 ALL_TAGS = sorted(t.value for t in LLM_VISIBLE_TAGS)
 
 # Metrics that use 0-1 scale (formatted as .2f)
-_SCORE_METRICS = {"Validity", "Faithfulness", "Gameplay Quality", "Sprite Prompt"}
+_SCORE_METRICS = {"Validity", "Tag Recall", "Faithfulness", "Gameplay Quality", "Sprite Prompt"}
 # Metrics with special formatting
 _COUNT_METRICS = {"Interaction Surface", "Has Signature"}
 
@@ -39,7 +39,7 @@ def _section_overview(result: EvalRunResult) -> str:
     """Run metadata and average scores."""
     ts = result.timestamp.strftime("%Y-%m-%d %H:%M UTC")
     # Stable ordering for score metrics
-    score_order = ["Validity", "Faithfulness", "Gameplay Quality", "Sprite Prompt"]
+    score_order = ["Validity", "Tag Recall", "Faithfulness", "Gameplay Quality", "Sprite Prompt"]
     lines = [
         f"# Eval: {result.name}",
         "",
@@ -229,7 +229,7 @@ def _section_category_scores(result: EvalRunResult) -> str:
     if not cat_scores:
         return ""
 
-    metrics = ["Validity", "Faithfulness", "Gameplay Quality", "Sprite Prompt"]
+    metrics = ["Validity", "Tag Recall", "Faithfulness", "Gameplay Quality", "Sprite Prompt"]
     header = "| Category | " + " | ".join(metrics) + " | n |"
     sep = "|----------|" + "|".join("-" * (len(m) + 2) for m in metrics) + "|---|"
 
@@ -282,7 +282,7 @@ def _section_cases(result: EvalRunResult) -> str:
 
         # Scores line
         score_parts = []
-        for m in ("Validity", "Faithfulness", "Gameplay Quality", "Sprite Prompt"):
+        for m in ("Validity", "Tag Recall", "Faithfulness", "Gameplay Quality", "Sprite Prompt"):
             if m in case.scores:
                 score_parts.append(f"{m} {_fmt_score(m, case.scores[m])}")
         surface = case.scores.get("Interaction Surface")
@@ -291,7 +291,7 @@ def _section_cases(result: EvalRunResult) -> str:
         lines.append(f"**Scores:** {' | '.join(score_parts)}")
 
         # Reasons for imperfect scores only
-        for m in ("Faithfulness", "Gameplay Quality", "Sprite Prompt"):
+        for m in ("Tag Recall", "Faithfulness", "Gameplay Quality", "Sprite Prompt"):
             score = case.scores.get(m, 1.0)
             reason = case.reasons.get(m, "")
             if score < 1.0 and reason:

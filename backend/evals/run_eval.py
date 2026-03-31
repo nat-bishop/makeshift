@@ -48,6 +48,12 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Comma-separated case names to filter (default: all)",
     )
+    parser.add_argument(
+        "--repeat",
+        type=int,
+        default=1,
+        help="Run each case N times for judge variance calibration (default: 1)",
+    )
     return parser.parse_args()
 
 
@@ -75,10 +81,17 @@ async def main():
     else:
         dataset = build_dataset(evaluators=default_evaluators())
 
-    print(f"\nRunning {len(dataset.cases)} eval cases — variant '{variant}', name '{run_name}'...")
+    repeat = args.repeat
+    repeat_msg = f", repeat={repeat}" if repeat > 1 else ""
+    print(
+        f"\nRunning {len(dataset.cases)} eval cases — "
+        f"variant '{variant}', name '{run_name}'{repeat_msg}..."
+    )
 
     agent = make_agent(PROMPT_VARIANTS[variant])
-    report = await dataset.evaluate(make_task(agent), name=run_name, max_concurrency=8)
+    report = await dataset.evaluate(
+        make_task(agent), name=run_name, max_concurrency=8, repeat=repeat,
+    )
 
     # Print pydantic-evals report
     report.print(include_input=True, include_reasons=True)

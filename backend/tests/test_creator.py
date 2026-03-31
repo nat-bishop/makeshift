@@ -42,7 +42,7 @@ def test_fallback_object_structure():
     vd = make_visual()
     fallback = CreatorOutput(
         name="Mysterious Fire Sword",
-        tags=[Tag.RIGID],
+        tags=[Tag.RIGID, Tag.SHARP],
         visual_descriptor=vd,
     )
     bp = GameObjectBlueprint(
@@ -71,8 +71,8 @@ def test_fallback_object_is_valid_creator_output() -> None:
     """The fallback object used when LLM fails should validate as CreatorOutput."""
     co = CreatorOutput(
         name="Mysterious Object",
-        tags=[Tag.RIGID],
+        tags=[Tag.RIGID, Tag.BREAKABLE],
         visual_descriptor=make_visual(),
     )
     assert co.name == "Mysterious Object"
-    assert len(co.tags) == 1
+    assert len(co.tags) == 2

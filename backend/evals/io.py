@@ -75,9 +75,7 @@ def _resolve_behaviors(tags: list[str], signature: str | None) -> list[str]:
     # Format back to readable strings
     lines: list[str] = []
     for b in resolved:
-        parts = [b.trigger.value, b.action.value]
-        if b.target.value != "SELF":
-            parts.append(b.target.value)
+        parts = [b.trigger.value, b.action.value, b.target.value]
         line = " -> ".join(parts)
         if b.tags_to_apply:
             # Already encoded in action via parametric syntax

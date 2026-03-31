@@ -119,6 +119,7 @@ Objects without a signature still interact richly through tags and rules alone.
 Triggers: ALWAYS, ON_TIMER, ON_PROXIMITY, ON_CONTACT, ON_DAMAGED, ON_HEALTH_LOW, ON_TAG_ADDED(TAG)
 Actions: MOVE_TOWARD, MOVE_AWAY, SPAWN_PROJECTILE, EXPLODE, HEAL, ADD_TAGS(TAG1, TAG2), SELF_DESTRUCT
 Targets (optional — auto-inferred when omitted): SELF, NEAREST_LIVING, NEAREST_PLAYER
+ADD_TAGS and ON_TAG_ADDED only accept tags from the tag list above — no custom or invented tags.
 Power (optional, default "medium"): low, medium, high
 
 Target is auto-inferred: ON_CONTACT/ON_DAMAGED → the colliding body, \
@@ -188,7 +189,14 @@ detonates — don't add an EXPLODE signature.
 
 DON'T use only 1-2 tags when more would create interactions. A wooden barrel with just \
 [RIGID] misses BREAKABLE (can be smashed), FLAMMABLE (can burn), HEAVY (resists wind). \
-Every tag creates new gameplay possibilities.\
+Every tag creates new gameplay possibilities.
+
+DON'T write multiple signatures — only ONE is allowed. No semicolons or commas to chain them.
+
+DON'T use SELF as a target for MOVE_TOWARD or MOVE_AWAY — you can't move toward yourself. \
+Use NEAREST_LIVING or NEAREST_PLAYER.
+
+DON'T forget the tag in ON_TAG_ADDED — write ON_TAG_ADDED(HEAT_SOURCE), not ON_TAG_ADDED alone.\
 """
 
 _agent: Agent[None, CreatorOutputSpec] | None = None
@@ -278,7 +286,7 @@ async def create_object(description: str) -> GameObjectBlueprint:
         fallback_name = " ".join(w.capitalize() for w in words[:2]) if words else "Object"
         spec = CreatorOutputSpec(
             name=f"Mysterious {fallback_name}",
-            tags=[Tag.RIGID],
+            tags=[Tag.RIGID, Tag.BREAKABLE],
             visual_descriptor=VisualDescriptor(
                 visual_description="a mysterious glowing gray stone cube with sparkling flecks",
                 size_category="medium",

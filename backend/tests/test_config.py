@@ -29,7 +29,7 @@ def _settings(**kwargs: Any) -> Settings:
 
 def test_load_known_model_profile():
     profile = _load_model_profile("Qwen/Qwen3.5-35B-A3B-FP8")
-    assert profile["temperature"] == 1.0
+    assert profile["temperature"] == 0.8
     assert profile["top_k"] == 20
     assert profile["presence_penalty"] == 1.5
 
@@ -49,7 +49,7 @@ def test_profile_applies_when_no_env_override():
     """Profile values should fill in fields not explicitly set in env."""
     s = _settings(llm_model="Qwen/Qwen3.5-35B-A3B-FP8")
     _apply_profile(s)
-    assert s.llm_temperature == 1.0
+    assert s.llm_temperature == 0.8
     assert s.llm_top_p == 0.95
     assert s.llm_top_k == 20
     assert s.llm_min_p == 0.0
@@ -63,7 +63,7 @@ def test_profile_always_wins_over_env(monkeypatch: pytest.MonkeyPatch) -> None:
     s = _settings(llm_model="Qwen/Qwen3.5-35B-A3B-FP8")
     _apply_profile(s)
     # profile wins — env var ignored
-    assert s.llm_temperature == 1.0
+    assert s.llm_temperature == 0.8
     assert s.llm_top_p == 0.95
 
 

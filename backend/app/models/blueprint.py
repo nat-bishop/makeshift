@@ -41,7 +41,7 @@ class VisualDescriptor(BaseModel):
 
 class CreatorOutput(BaseModel):
     name: str
-    tags: list[Tag] = Field(min_length=1, max_length=4)
+    tags: list[Tag] = Field(min_length=2, max_length=4)
     visual_descriptor: VisualDescriptor
 
     @field_validator("name")
