@@ -87,10 +87,10 @@ class TestRulesStructuralValidation:
         for rule in ALL_RULES:
             assert rule.name.strip(), f"Rule {rule.rule_id} has empty name"
 
-    def test_all_rules_have_positive_priority(self):
+    def test_all_rules_have_positive_execution_order(self):
         for rule in ALL_RULES:
-            assert rule.priority > 0, (
-                f"Rule {rule.rule_id} has non-positive priority: {rule.priority}"
+            assert rule.execution_order > 0, (
+                f"Rule {rule.rule_id} has non-positive execution_order: {rule.execution_order}"
             )
 
 

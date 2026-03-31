@@ -4,8 +4,8 @@ class_name BehaviorMaps
 ## Maps categorical behavior parameters to numeric engine values.
 ## All values chosen to produce balanced gameplay within the behavior budget system.
 
-# --- Trigger priority (lower number = higher priority for movement conflict) ---
-const TRIGGER_PRIORITY := {
+# --- Movement rank (lower number = wins movement conflict within a single object) ---
+const MOVEMENT_RANK := {
 	"ON_HEALTH_LOW": 1,
 	"ON_TAG_ADDED": 2,
 	"ON_DAMAGED": 3,
@@ -96,8 +96,8 @@ const INTERVAL_IS_ONCE := {
 }
 
 # --- Parent tag → projectile payload tag ---
-# --- Duration (seconds) for tags added by behavior actions ---
-const BEHAVIOR_TAG_DURATION: float = 10.0
+# --- Duration (seconds) for tags added dynamically by effects or behaviors ---
+const DYNAMIC_TAG_DURATION: float = 10.0
 
 # --- Parent tag → projectile payload tag ---
 const PAYLOAD_TAG_MAP := {

@@ -36,8 +36,8 @@ def show_report(report):
     report.print(include_input=True, include_reasons=True)
 
     result = report_to_result(report, VARIANT, settings.llm_model)
-    path = save_result(result)
-    print(f"\nResults saved to {path}")
+    run_dir = save_result(result)
+    print(f"\nResults saved to {run_dir}")
 
     print_distribution_report(result)
 

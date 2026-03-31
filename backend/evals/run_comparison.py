@@ -26,15 +26,15 @@ from evals.models import EvalRunResult
 
 
 def load_or_find(name_or_path: str) -> EvalRunResult:
-    """Load a result by file path or find the latest by run name."""
+    """Load a result by directory path or find the latest by run name."""
     path = Path(name_or_path)
-    if path.exists() and path.suffix == ".json":
+    if path.is_dir() and (path / "result.json").exists():
         return load_result(path)
 
-    # Treat as a run name — find latest result file
+    # Treat as a run name — find latest result
     found = find_latest(name_or_path)
     if found is None:
-        print(f"Error: no result file found for '{name_or_path}'")
+        print(f"Error: no result found for '{name_or_path}'")
         sys.exit(1)
     print(f"  Loading {found}")
     return load_result(found)
@@ -98,26 +98,37 @@ def print_wilcoxon(result_a: EvalRunResult, result_b: EvalRunResult) -> None:
     print()
 
 
+def _col_width(metric: str) -> int:
+    """Column width varies by metric name length."""
+    return max(10, len(metric) + 2)
+
+
 def print_summary(result: EvalRunResult) -> None:
     """Print a quick score summary table from a saved result."""
     print(f"\n{'Case':<40} ", end="")
+    total_width = 40
     for m in METRIC_NAMES:
-        print(f"{m:>10}", end="")
+        w = _col_width(m)
+        print(f"{m:>{w}}", end="")
+        total_width += w
     print(f"{'Retries':>8}")
-    print("-" * (40 + 10 * len(METRIC_NAMES) + 8))
+    total_width += 8
+    print("-" * total_width)
 
     for c in result.cases:
         print(f"{c.case:<40} ", end="")
         for m in METRIC_NAMES:
+            w = _col_width(m)
             val = c.scores.get(m, 0.0)
-            print(f"{val:>10.2f}", end="")
+            print(f"{val:>{w}.2f}", end="")
         print(f"{c.retries:>8}")
 
     # Averages
-    print("-" * (40 + 10 * len(METRIC_NAMES) + 8))
+    print("-" * total_width)
     print(f"{'Averages':<40} ", end="")
     for m in METRIC_NAMES:
-        print(f"{result.mean_scores.get(m, 0.0):>10.3f}", end="")
+        w = _col_width(m)
+        print(f"{result.mean_scores.get(m, 0.0):>{w}.3f}", end="")
     total_retries = sum(c.retries for c in result.cases)
     print(f"{total_retries:>8}")
     print()

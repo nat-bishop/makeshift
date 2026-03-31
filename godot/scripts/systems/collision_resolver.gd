@@ -29,14 +29,16 @@ func resolve_collision(body_a: Node, body_b: Node, cascade_depth: int = 0, trigg
 		Log.debug("CollisionResolver: Cascade depth exceeded for %s vs %s" % [body_a.name, body_b.name])
 		return
 
-	# Build cooldown key from sorted IDs
+	# Build cooldown key from sorted IDs + trigger mode.
+	# FIELD and CONTACT interactions cool down independently so a periodic
+	# field tick doesn't block a physical collision (and vice versa).
 	var id_a: String = _get_body_id(body_a)
 	var id_b: String = _get_body_id(body_b)
 	var pair_key: String
 	if id_a < id_b:
-		pair_key = "%s:%s" % [id_a, id_b]
+		pair_key = "%s:%s:%s" % [id_a, id_b, trigger_mode_filter]
 	else:
-		pair_key = "%s:%s" % [id_b, id_a]
+		pair_key = "%s:%s:%s" % [id_b, id_a, trigger_mode_filter]
 
 	# Check cooldown
 	var now: float = Time.get_ticks_msec() / 1000.0
@@ -45,8 +47,8 @@ func resolve_collision(body_a: Node, body_b: Node, cascade_depth: int = 0, trigg
 			return
 
 	# Get tags from bodies
-	var tags_a: Array = _get_body_tags(body_a)
-	var tags_b: Array = _get_body_tags(body_b)
+	var tags_a: Array = TagColors.get_body_tags(body_a)
+	var tags_b: Array = TagColors.get_body_tags(body_b)
 
 	if tags_a.is_empty() and tags_b.is_empty():
 		return
@@ -83,8 +85,8 @@ func resolve_collision(body_a: Node, body_b: Node, cascade_depth: int = 0, trigg
 
 	# Check for cascade
 	if any_cascade_eligible and cascade_depth < MAX_CASCADE_DEPTH:
-		var tags_a_after: Array = _get_body_tags(body_a)
-		var tags_b_after: Array = _get_body_tags(body_b)
+		var tags_a_after: Array = TagColors.get_body_tags(body_a)
+		var tags_b_after: Array = TagColors.get_body_tags(body_b)
 		var a_changed: bool = not _arrays_equal(tags_a_before, tags_a_after)
 		var b_changed: bool = not _arrays_equal(tags_b_before, tags_b_after)
 
@@ -138,14 +140,6 @@ func _get_body_id(body: Node) -> String:
 	if body.has_method("get_object_id"):
 		return body.get_object_id()
 	return str(body.get_instance_id())
-
-
-func _get_body_tags(body: Node) -> Array:
-	if body.has_method("get_effective_tags"):
-		return body.get_effective_tags()
-	if body.has_method("get_tags"):
-		return body.get_tags()
-	return []
 
 
 func _arrays_equal(a: Array, b: Array) -> bool:

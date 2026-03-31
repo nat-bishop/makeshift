@@ -49,17 +49,17 @@ uv run pytest -k "test_name"              # single test by name
 
 **Backend** (`backend/app/`): FastAPI application with these key subsystems:
 
-- **Object creation pipeline** (`creator/agent.py` → `routers/objects.py` → `images/pipeline.py` → `ws/handler.py`): Player text → PydanticAI agent (Gemini) → `CreatorOutput` (tags + behaviors) → immediate JSON response (blueprint + `budget_remaining`) → background Gemini sprite generation → WebSocket `sprite_ready` delivery. See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for full pipeline flow.
+- **Object creation pipeline** (`creator/agent.py` → `routers/objects.py` → `images/pipeline.py` → `ws/handler.py`): Player text → PydanticAI agent (Gemini) → `CreatorOutput` (tags + behaviors) → immediate JSON response (blueprint + `budget_remaining`) → background sprite generation → WebSocket `sprite_ready` delivery. See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for full pipeline flow.
 
-- **Tag system** (`models/tags.py`): 32 `Tag` StrEnum values, 7 categories, power costs 1-5, budget of 10. 17 contradiction pairs enforced via `ModelRetry`. Tags define what objects *are* — physics, interactions, and durability. WET (cost 1, Environmental): damp/soaked — freezes easier near COLD, amplifies ELECTRIC (45 dmg vs 30), resists fire, dries near HEAT_SOURCE; applied by LIQUID objects (15s duration); contradicts MOLTEN + HEAT_SOURCE; low friction (0.1). HOSTILE (cost 2, Special): danger aura field (CLOSE, periodic) — 20 dmg + knockback (150 force vs LIVING, 100 vs BREAKABLE); HOSTILE + HOSTILE clash deals 15 dmg to both + 120 force. See [GAME_DESIGN.md](docs/GAME_DESIGN.md) for design rationale.
+- **Tag system** (`models/tags.py`): 32 `Tag` StrEnum values, 7 categories. 17 contradiction pairs enforced via `ModelRetry`. Tags define what objects *are* — physics, interactions, and durability. WET (Environmental): damp/soaked — freezes easier near COLD, amplifies ELECTRIC (45 dmg vs 30), resists fire, dries near HEAT_SOURCE; applied by LIQUID objects (15s duration); contradicts MOLTEN + HEAT_SOURCE; low friction (0.1). HOSTILE (Special): danger aura field (CLOSE, periodic) — 20 dmg + knockback (150 force vs LIVING, 100 vs BREAKABLE); HOSTILE + HOSTILE clash deals 15 dmg to both + 120 force. See [GAME_DESIGN.md](docs/GAME_DESIGN.md) for design rationale.
 
-- **Behavior system** (`models/behaviors.py`, `models/blueprint.py`): 0-3 behaviors per object. Each behavior: trigger (9 types) + action (11 types) + target (5 types) + optional condition + categorical params (intensity, range, speed, interval). Budget of 8, separate from tag budget. Tags handle all contact damage (SHARP, HEAT_SOURCE, HOSTILE, etc.) — DEAL_DAMAGE was removed from behavior actions to eliminate double-triggering. ADD_TAGS/REMOVE_TAGS are the key bridge between behaviors and the rule engine. See [ARCHITECTURE.md](docs/ARCHITECTURE.md) and [GAME_DESIGN.md](docs/GAME_DESIGN.md) for full detail.
+- **Behavior system** (`models/behaviors.py`, `models/blueprint.py`): 0-3 behaviors per object. Each behavior: trigger (9 types) + action (11 types) + target (5 types) + categorical params (intensity, range, speed, interval). No per-object budget — behaviors are free within the 0-3 limit. Tags handle all contact damage (SHARP, HEAT_SOURCE, HOSTILE, etc.) — DEAL_DAMAGE was removed from behavior actions to eliminate double-triggering. ADD_TAGS/REMOVE_TAGS are the key bridge between behaviors and the rule engine. See [ARCHITECTURE.md](docs/ARCHITECTURE.md) and [GAME_DESIGN.md](docs/GAME_DESIGN.md) for full detail.
 
-- **Rule engine** (`engine/resolver.py`, `engine/rules_data.py`): `RuleResolver` — two-tier matching (O(1) pair index + O(n) wildcard scan). 53 rules, 24 annotated `trigger_mode=TriggerMode.FIELD`. `TriggerMode` StrEnum (CONTACT | FIELD) on `InteractionRule` — default CONTACT. Mirrored client-side in Godot's `RuleEngine` autoload.
+- **Rule engine** (`engine/resolver.py`, `engine/rules_data.py`): `RuleResolver` — two-tier matching (O(1) pair index + O(n) wildcard scan). 53 rules, 24 annotated `trigger_mode=TriggerMode.FIELD`. `InteractionRule.execution_order` (int, higher fires first). `TriggerMode` StrEnum (CONTACT | FIELD) on `InteractionRule` — default CONTACT. Mirrored client-side in Godot's `RuleEngine` autoload.
 
 - **Image pipeline** (`images/pipeline.py`, `images/gemini_client.py`, `images/local_image.py`): Lazy singletons (`get_generate_image()`, `get_remove_bg()`). Three backends via `IMAGE_BACKEND`: gemini, local (SGLang FLUX), fal. All → bg removal → crop to 512×512 → cache by SHA-256(prompt). Prompt template in `pipeline.py`. Standalone via `make cli-sprite`.
 
-- **Session persistence** (`sessions/manager.py`): aiosqlite, 2 tables (sessions, objects). Budget: $1.00 at $0.041/object.
+- **Session persistence** (`sessions/manager.py`): aiosqlite, 2 tables (sessions, objects). Session financial budget: $1.00 at $0.041/object.
 
 - **WebSocket** (`ws/handler.py`): Per-session multi-client broadcast. Messages: sprite_ready, sprite_failed, error, ping/pong.
 
@@ -83,9 +83,11 @@ uv run pytest -k "test_name"              # single test by name
 | `PhysicsApplicator` | `scenes/game_object/physics_applicator.gd` | Tag→physics mapping. Mass = `tag_mass × size_mass_multiplier` |
 | `PhysicsComposer` | `scripts/systems/physics_composer.gd` | Size multipliers (tiny 0.25×…huge 10×), `DEFAULT_DAMPING=0.5`, resolves mass/friction/bounce/damping by tag priority |
 | `BehaviorExecutor` | `scripts/systems/behavior_executor.gd` | Per-object autonomous behavior runtime. Disables after 5 consecutive errors |
-| `BehaviorMaps` | `scripts/data/behavior_maps.gd` | Categorical→numeric value mappings for behavior params |
+| `BehaviorMaps` | `scripts/data/behavior_maps.gd` | Categorical→numeric value mappings for behavior params. `DYNAMIC_TAG_DURATION=10s` (unified duration for cascade/behavior-added tags) |
 | `TagField` | `scripts/systems/tag_field.gd` | Per-object Area2D field: continuous per-frame forces + periodic 2s rule eval |
 | `FieldConfig` | `scripts/data/field_config.gd` | Maps field-emitting tags → range category + mode |
+| `TagDecay` | `scripts/systems/tag_decay.gd` | Node component managing temporary-tag timers for `GameObject` and `EnvironmentBody`. Extracted from both to avoid duplication |
+| `TagContradictions` | `scripts/data/tag_contradictions.gd` | Runtime mirror of backend `TAG_CONTRADICTIONS`. Used by `WorldMutations.apply_add_tag()` to auto-remove contradictory tags |
 | `EnvironmentBody` | `scenes/environment_body/environment_body.gd` | StaticBody2D tagged hazard (acid, fire). Indestructible (no `take_damage`/`heal`). `solid=false` → pass-through; FROZEN makes solid |
 | `DebugLabel` | `scripts/ui/debug_label.gd` | Floating overlay (name, durability, tags, behaviors). Driven by `GameManager.debug_mode` |
 
@@ -107,7 +109,7 @@ uv run pytest -k "test_name"              # single test by name
 
 ## Data Model Flow
 
-`CreatorOutput` (LLM output: name, tags, behaviors, `visual_descriptor`) → `GameObjectBlueprint` (adds id, computed `power_cost`/`behavior_cost`/`starting_durability`) → `WorldObject` (adds position, session context) → persisted as `objects` table row. `VisualDescriptor` has 2 fields: `visual_description: str` (free text, used only for sprite prompt) and `size_category: Literal["tiny","small","medium","large","huge"]` (used client-side for world display size). Behaviors stored in existing `blueprint_json` column — no schema changes.
+`CreatorOutput` (LLM output: name, tags, behaviors, `visual_descriptor`) → `GameObjectBlueprint` (adds id, computed `starting_durability`) → `WorldObject` (adds position, session context) → persisted as `objects` table row. `VisualDescriptor` has 2 fields: `visual_description: str` (free text, used only for sprite prompt) and `size_category: Literal["tiny","small","medium","large","huge"]` (used client-side for world display size). Behaviors stored in existing `blueprint_json` column — no schema changes.
 
 ## Environment
 
@@ -147,18 +149,20 @@ Requires `.env` file (see `.env.example`):
 - `@computed_field` properties require `# type: ignore[prop-decorator]` — mypy still doesn't support decorators above `@property`
 - WebSocket connection rejected with close code 4004 if session doesn't exist
 - Sprite cache keyed by SHA-256 hash of the image prompt (first 16 hex chars), not object ID — identical prompts share sprites. Controlled by `SPRITE_CACHE_ENABLED` setting.
-- LLM outputs behaviors as string notation (`TRIGGER -> ACTION -> TARGET, power=POWER`), parsed by `parse_behavior_string()` in `models/behaviors.py`. Parametric syntax: `ON_TAG_ADDED(TAG)`, `ADD_TAGS(TAG1, TAG2)`. `ModelRetry` for LLM correction lives in `CreatorOutputSpec.check_behavior_budget()`, not on `BehaviorSpec` (which uses `ValueError`).
-- `CONTACT_BODY` behavior target is only valid with `ON_CONTACT`, `ON_DAMAGED`, or `ON_PROXIMITY` triggers — enforced by `ValueError` on both `BehaviorSpec` and `Behavior`, surfaced as `ModelRetry` in `CreatorOutputSpec.check_behavior_budget()`
+- LLM outputs behaviors as string notation (`TRIGGER -> ACTION -> TARGET, power=POWER`), parsed by `parse_behavior_string()` in `models/behaviors.py`. Parametric syntax: `ON_TAG_ADDED(TAG)`, `ADD_TAGS(TAG1, TAG2)`. `BehaviorSpec` uses `ValueError` for validation errors; `CreatorOutputSpec.check_behaviors` raises `ModelRetry` on parse failures.
+- `CONTACT_BODY` behavior target is only valid with `ON_CONTACT`, `ON_DAMAGED`, or `ON_PROXIMITY` triggers — enforced by `ValueError` on both `BehaviorSpec` and `Behavior`
 - `creator/agent.py` SYSTEM_PROMPT tag descriptions reflect interaction rules from `engine/rules_data.py` — if rules change, update tag descriptions in the prompt to match
 - `BehaviorExecutor` disables itself after 5 consecutive action errors to prevent runaway behavior on bad LLM output
-- Behavior-added tags (via `ADD_TAGS` action) have a 10s duration; they auto-remove via decay timer in `GameObject.add_tag()`
-- Movement conflicts resolved by fixed trigger priority: `ON_HEALTH_LOW` > `ON_TAG_ADDED` > `ON_DAMAGED` > `ON_CONTACT` > `ON_PROXIMITY` > `ON_TIMER` > `ALWAYS`
+- Behavior-added tags (via `ADD_TAGS` action) have a 10s duration (`BehaviorMaps.DYNAMIC_TAG_DURATION`); decay managed by the `TagDecay` child node (shared by `GameObject` and `EnvironmentBody`)
+- Movement conflicts resolved by `BehaviorMaps.MOVEMENT_RANK` (lower = higher priority): `ON_HEALTH_LOW` > `ON_TAG_ADDED` > `ON_DAMAGED` > `ON_CONTACT` > `ON_PROXIMITY` > `ON_TIMER` > `ALWAYS`
 - `ObjectVisual.set_sprite()` is guarded by `_sprite_applied: bool` — prevents double application when cache hit races with late `sprite_ready`. Sets texture + scale directly (no tween)
 - `body_entered` collision handling is deferred via `call_deferred("_resolve_deferred", body)` — resolving collisions directly in the signal callback crashes Godot with "Can't change state while flushing queries" because resolution can chain into `add_tag` → `_reapply_physics` → new shapes
+- Collision cooldown key includes the `trigger_mode_filter` suffix (e.g., `"idA:idB:FIELD"` vs `"idA:idB:"`), so FIELD and CONTACT interactions cool down independently — a periodic field tick won't block a physical collision between the same pair
+- `WorldMutations.apply_add_tag()` auto-removes contradictory tags before adding (e.g., adding HEAT_SOURCE removes WET). Uses `TagContradictions.get_contradictions()` — runtime mirror of the backend contradiction list
 - Backend autoload uses `127.0.0.1` not `localhost` — avoids DNS resolution delays and IPv6 fallback issues on some systems
 - In Godot 4.3+, assigning an untyped `Array` (e.g. from JSON parsing) to a typed `Array[Dictionary]` or `Array[String]` silently fails — the typed array rejects the source and remains empty. Use untyped `Array` or iterate-and-append. Pattern: `game_object.gd` tags use manual iterate/append; `behavior_executor.gd` `_behaviors` uses untyped `Array`.
 - `TagField` is lazily created by `game_object.gd`: created at `init_from_blueprint()` if field tags are present, or on first `add_tag()` that introduces a field tag. This means fire-spread (rule adds HEAT_SOURCE) or WET propagation (LIQUID adds WET) automatically promotes a non-field object into a field emitter.
-- Continuous field rules (`WIND_SOURCE`, `MAGNETIC`, `GLOWING`, `STICKY`) use `apply_central_force()` per physics frame — `force_magnitude` tuned for per-frame, not impulse. Periodic rules fire on 2s timer; first tick immediate via `call_deferred`.
+- Continuous field rules (`WIND_SOURCE`, `MAGNETIC`, `GLOWING`) use `apply_central_force()` per physics frame — `force_magnitude` tuned for per-frame, not impulse. `STICKY` is also continuous but handled separately in `TagField._apply_sticky_slow()` — applies `linear_damp=12.0` to RigidBody2D objects and a `STICKY_SPEED_FACTOR=0.25` to the player (not via rule effects). Periodic rules fire on 2s timer; first tick immediate via `call_deferred`.
 - DOT timer replacement (`WorldMutations.apply_dot`): must `stop()` + `remove_child()` before `queue_free()` — `queue_free()` alone leaves the node until end-of-frame, causing Godot to auto-rename the replacement (appending `@2`).
 - `Backend` autoload has `process_mode = PROCESS_MODE_ALWAYS` — it must process during pause (creation panel pauses the game, but WebSocket keepalive and sprite delivery must continue).
 - `EnvironmentBody` periodic tick: `solid=false` uses no trigger_mode filter (ALL rules — being inside non-solid = continuous contact); `solid=true` filters to FIELD only (CONTACT fires via `body_entered`). Player detected via env body's own FieldArea (`move_and_slide` doesn't trigger `body_entered` on other bodies).

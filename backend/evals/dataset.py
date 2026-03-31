@@ -2,7 +2,7 @@
 
 Designed to mimic real player input — a mix of terse keywords,
 full sentences, mundane objects, wild ideas, and adversarial edge cases.
-50 cases covering all 31 tags, 9 behavior triggers, and 11 actions.
+80 cases covering all 32 tags, 9 behavior triggers, and 11 actions.
 """
 
 from __future__ import annotations
@@ -499,6 +499,300 @@ EVAL_CASES: list[CreatorCase] = [
             category="defensive",
             expected_tags=["SOLID", "FLEXIBLE", "INSULATING"],
             notes="Tests INSULATING. Player explicitly naming the mechanic.",
+        ),
+    ),
+    # =========================================================================
+    # Vehicles / transport — core Scribblenauts category, totally missing above
+    # =========================================================================
+    Case(
+        name="helicopter",
+        inputs="helicopter",
+        metadata=CaseMeta(
+            category="vehicle",
+            expected_tags=["SOLID", "FLOATING", "WIND_SOURCE"],
+            notes="Terse single word. Classic Scribblenauts vehicle. Tests FLOATING + WIND_SOURCE in non-combat.",
+        ),
+    ),
+    Case(
+        name="hot air balloon",
+        inputs="a hot air balloon that slowly floats upward",
+        metadata=CaseMeta(
+            category="vehicle",
+            expected_tags=["SOLID", "LIGHT", "FLOATING"],
+            notes="Full sentence. Tests FLOATING + LIGHT for gentle lift. HEAT_SOURCE plausible but expensive.",
+        ),
+    ),
+    Case(
+        name="jetpack",
+        inputs="a jetpack you can strap on to fly around",
+        metadata=CaseMeta(
+            category="vehicle",
+            expected_tags=["SOLID", "LIGHT"],
+            notes="Player expects flight behavior (ALWAYS -> APPLY_FORCE SELF). Wearable framing.",
+        ),
+    ),
+    Case(
+        name="wooden raft",
+        inputs="a wooden raft for floating across water",
+        metadata=CaseMeta(
+            category="vehicle",
+            expected_tags=["SOLID", "FLOATING", "FLAMMABLE"],
+            notes="Practical water-crossing. Tests FLOATING + FLAMMABLE from 'wooden'.",
+        ),
+    ),
+    # =========================================================================
+    # Traversal — platforms, climbing aids, movement tools
+    # =========================================================================
+    Case(
+        name="rope",
+        inputs="a long rope for climbing",
+        metadata=CaseMeta(
+            category="traversal",
+            expected_tags=["SOLID", "FLEXIBLE", "LIGHT"],
+            notes="Tests FLEXIBLE in utility context. Minimal budget object.",
+        ),
+    ),
+    Case(
+        name="bridge",
+        inputs="a sturdy wooden bridge",
+        metadata=CaseMeta(
+            category="traversal",
+            expected_tags=["SOLID", "RIGID", "FLAMMABLE"],
+            notes="Structural object. No behaviors expected — pure tags. Classic Scribblenauts solution.",
+        ),
+    ),
+    Case(
+        name="trampoline",
+        inputs="trampoline",
+        metadata=CaseMeta(
+            category="traversal",
+            expected_tags=["SOLID", "BOUNCY"],
+            notes="Terse. Tests BOUNCY for fun/traversal, not combat. ON_CONTACT -> APPLY_FORCE plausible.",
+        ),
+    ),
+    Case(
+        name="ladder",
+        inputs="a tall ladder",
+        metadata=CaseMeta(
+            category="traversal",
+            expected_tags=["SOLID", "RIGID", "LIGHT"],
+            notes="Simple structural traversal. Tests that 'tall' maps to large size, not huge.",
+        ),
+    ),
+    Case(
+        name="parachute",
+        inputs="a parachute that slows you down when falling",
+        metadata=CaseMeta(
+            category="traversal",
+            expected_tags=["SOLID", "FLEXIBLE", "LIGHT", "FLOATING"],
+            notes="Tests FLOATING + FLEXIBLE + LIGHT combo. Slow-fall mechanic.",
+        ),
+    ),
+    # =========================================================================
+    # Tools — non-weapon, non-combat utility objects
+    # =========================================================================
+    Case(
+        name="giant fan",
+        inputs="a big fan that blows things around",
+        metadata=CaseMeta(
+            category="utility",
+            expected_tags=["SOLID", "WIND_SOURCE"],
+            notes="Tests WIND_SOURCE as inanimate utility, not a creature. Should be large size.",
+        ),
+    ),
+    Case(
+        name="torch",
+        inputs="a wooden torch to light up dark areas",
+        metadata=CaseMeta(
+            category="utility",
+            expected_tags=["SOLID", "GLOWING", "HOT"],
+            notes="HEAT_SOURCE contradicts FLAMMABLE, so HOT + GLOWING is the right combo. Practical light.",
+        ),
+    ),
+    Case(
+        name="umbrella",
+        inputs="an umbrella to block stuff falling from above",
+        metadata=CaseMeta(
+            category="utility",
+            expected_tags=["SOLID", "LIGHT", "RIGID"],
+            notes="Simple protective tool. Tests minimal-tag defensive object.",
+        ),
+    ),
+    Case(
+        name="treasure chest",
+        inputs="a locked treasure chest",
+        metadata=CaseMeta(
+            category="utility",
+            expected_tags=["SOLID", "RIGID", "HEAVY"],
+            notes="Container archetype. Tests non-combat HEAVY + RIGID. No behaviors expected.",
+        ),
+    ),
+    # =========================================================================
+    # Nature — non-hostile environmental objects
+    # =========================================================================
+    Case(
+        name="tree",
+        inputs="a big oak tree",
+        metadata=CaseMeta(
+            category="nature",
+            expected_tags=["SOLID", "HEAVY", "RIGID", "FLAMMABLE"],
+            notes="Plant, not creature. Tests if LIVING is used for vegetation. FLAMMABLE from 'oak'.",
+        ),
+    ),
+    Case(
+        name="ice block",
+        inputs="a block of ice",
+        metadata=CaseMeta(
+            category="nature",
+            expected_tags=["SOLID", "FROZEN", "RIGID", "SLIPPERY"],
+            notes="Tests FROZEN + SLIPPERY in non-combat physics context. Should melt near HEAT_SOURCE.",
+        ),
+    ),
+    Case(
+        name="puddle",
+        inputs="a puddle of water on the ground",
+        metadata=CaseMeta(
+            category="nature",
+            expected_tags=["LIQUID", "COLD", "WET"],
+            notes="Tests WET tag. Small/tiny size. Non-hostile environmental object.",
+        ),
+    ),
+    # =========================================================================
+    # Helpful creatures — non-hostile LIVING objects
+    # =========================================================================
+    Case(
+        name="pegasus",
+        inputs="a pegasus that can fly",
+        metadata=CaseMeta(
+            category="creature",
+            expected_tags=["LIVING", "LIGHT", "FLOATING"],
+            notes="Non-hostile flying creature. Tests LIVING + FLOATING without combat behaviors.",
+        ),
+    ),
+    Case(
+        name="pack mule",
+        inputs="a mule that follows you around and carries stuff",
+        metadata=CaseMeta(
+            category="creature",
+            expected_tags=["LIVING", "HEAVY"],
+            notes="Follower creature. ALWAYS -> MOVE_TOWARD NEAREST_PLAYER. Non-hostile utility.",
+        ),
+    ),
+    # =========================================================================
+    # Food / consumables — player expects interaction via contact or kick
+    # =========================================================================
+    Case(
+        name="health potion",
+        inputs="a healing potion",
+        metadata=CaseMeta(
+            category="consumable",
+            expected_tags=["LIQUID"],
+            notes="Classic RPG item. ON_CONTACT -> HEAL -> CONTACT_BODY. Minimal tags.",
+        ),
+    ),
+    Case(
+        name="apple",
+        inputs="an apple",
+        metadata=CaseMeta(
+            category="consumable",
+            expected_tags=["SOLID", "LIGHT"],
+            notes="Terse food item. Tests minimal object with possible HEAL on contact.",
+        ),
+    ),
+    # =========================================================================
+    # Problem-framed — player describes the need, not the object
+    # =========================================================================
+    Case(
+        name="something to fly",
+        inputs="I need something that lets me fly",
+        metadata=CaseMeta(
+            category="problem",
+            expected_tags=["FLOATING", "LIGHT"],
+            notes="Player names the problem, not the solution. Tests creative interpretation.",
+        ),
+    ),
+    Case(
+        name="gap crosser",
+        inputs="something to get across a big gap",
+        metadata=CaseMeta(
+            category="problem",
+            expected_tags=["SOLID", "RIGID"],
+            notes="Problem-framed. Should produce bridge/platform/plank. Tests practical creativity.",
+        ),
+    ),
+    Case(
+        name="lava protection",
+        inputs="how do I not die in lava",
+        metadata=CaseMeta(
+            category="problem",
+            expected_tags=["SOLID", "INSULATING"],
+            notes="Question format. Expects fireproof/insulating object. Tests extraction from question.",
+        ),
+    ),
+    # =========================================================================
+    # Prompt style edge cases — messy, excited, vague, comparative
+    # =========================================================================
+    Case(
+        name="helecopter",
+        inputs="helecopter",
+        metadata=CaseMeta(
+            category="adversarial",
+            expected_tags=["SOLID", "FLOATING", "WIND_SOURCE"],
+            notes="Common misspelling. Should still produce a helicopter. Complements 'fiar swrod'.",
+        ),
+    ),
+    Case(
+        name="parashoot",
+        inputs="parashoot so i dont fall",
+        metadata=CaseMeta(
+            category="adversarial",
+            expected_tags=["SOLID", "FLEXIBLE", "LIGHT", "FLOATING"],
+            notes="Phonetic misspelling + context. Tests typo tolerance on utility objects.",
+        ),
+    ),
+    Case(
+        name="trampoline excited",
+        inputs="TRAMPOLINE!!! the bounciest one ever",
+        metadata=CaseMeta(
+            category="adversarial",
+            expected_tags=["SOLID", "BOUNCY"],
+            notes="All caps + exclamation + superlative. Tests noise filtering with enthusiasm.",
+        ),
+    ),
+    Case(
+        name="rocket enthusiast",
+        inputs="dude make me a rocket ship that goes ZOOM straight up into the sky",
+        metadata=CaseMeta(
+            category="adversarial",
+            expected_tags=["SOLID", "LIGHT", "EXPLOSIVE"],
+            notes="Enthusiastic slang + onomatopoeia. Tests extraction from hype.",
+        ),
+    ),
+    Case(
+        name="idk something cool",
+        inputs="idk just make something cool",
+        metadata=CaseMeta(
+            category="adversarial",
+            expected_tags=["SOLID"],
+            notes="Maximally unhelpful. Tests creative freedom with zero guidance.",
+        ),
+    ),
+    Case(
+        name="big thing",
+        inputs="just a really big heavy thing",
+        metadata=CaseMeta(
+            category="adversarial",
+            expected_tags=["SOLID", "HEAVY"],
+            notes="Vague but has physics hints. Should be huge size. Tests size + tag from adjectives.",
+        ),
+    ),
+    Case(
+        name="drone",
+        inputs="like a helicopter but way smaller, like a drone",
+        metadata=CaseMeta(
+            category="adversarial",
+            expected_tags=["SOLID", "FLOATING", "LIGHT"],
+            notes="Comparison-framed input. Tests concept modification (helicopter -> small/light).",
         ),
     ),
 ]

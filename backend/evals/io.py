@@ -162,26 +162,45 @@ def report_to_result(
     )
 
 
-def save_result(result: EvalRunResult) -> Path:
-    """Save an EvalRunResult as timestamped JSON and return the path."""
-    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+def _run_dir(result: EvalRunResult) -> Path:
+    """Get the per-run directory for a result: results/{timestamp}_{name}/."""
     ts = result.timestamp.strftime("%Y%m%d_%H%M%S")
-    path = RESULTS_DIR / f"{ts}_{result.name}.json"
+    run_dir = RESULTS_DIR / f"{ts}_{result.name}"
+    run_dir.mkdir(parents=True, exist_ok=True)
+    return run_dir
+
+
+def save_result(result: EvalRunResult) -> Path:
+    """Save an EvalRunResult as JSON inside a per-run directory."""
+    run_dir = _run_dir(result)
+    path = run_dir / "result.json"
     path.write_text(result.model_dump_json(indent=2))
-    return path
+
+    # Also save markdown report
+    from evals.markdown_report import generate_markdown_report
+
+    md_path = run_dir / "report.md"
+    md_path.write_text(generate_markdown_report(result), encoding="utf-8")
+
+    return run_dir
 
 
 def load_result(path: Path) -> EvalRunResult:
-    """Load an EvalRunResult from a JSON file."""
-    return EvalRunResult.model_validate_json(path.read_text())
+    """Load an EvalRunResult from a run directory."""
+    return EvalRunResult.model_validate_json((path / "result.json").read_text())
 
 
 def find_latest(name: str | None = None) -> Path | None:
-    """Find the most recent result file, optionally filtered by run name."""
+    """Find the most recent result directory, optionally filtered by run name."""
     if not RESULTS_DIR.exists():
         return None
-    files = sorted(RESULTS_DIR.glob("*.json"), reverse=True)
-    for f in files:
-        if name is None or f.stem.endswith(f"_{name}"):
-            return f
+
+    dirs = sorted(
+        [d for d in RESULTS_DIR.iterdir() if d.is_dir() and (d / "result.json").exists()],
+        key=lambda d: d.name,
+        reverse=True,
+    )
+    for d in dirs:
+        if name is None or d.name.endswith(f"_{name}"):
+            return d
     return None

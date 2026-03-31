@@ -5,9 +5,16 @@ Provides deterministic validity checks and LLM-as-judge scoring.
 
 from __future__ import annotations
 
+from app.engine.rules_data import ALL_RULES
 from pydantic_evals.evaluators import LLMJudge
 
+from evals.metrics.interaction_surface import InteractionSurfaceEvaluator
+from evals.metrics.living_movement import LivingMovementEvaluator
+from evals.metrics.rubric_context import get_rules_summary_string, get_tag_list_string
 from evals.metrics.validity import ValidityEvaluator
+
+_TAG_LIST = get_tag_list_string()
+_RULES_SUMMARY = get_rules_summary_string()
 
 RUBRICS: dict[str, str] = {
     "Faithfulness": (
@@ -28,24 +35,19 @@ RUBRICS: dict[str, str] = {
         "- 0.0: The design bears no meaningful relationship to the player's description.\n\n"
         "Focus on: Does the name match the concept? Do the tags reflect the object's "
         "core physical nature? Do the behaviors match what the player described or "
-        "implied? Does the visual description match the tags and name?"
+        "implied? Does the visual description match the tags and name?\n\n"
+        f"VALID TAGS (only these 32 exist — no others):\n{_TAG_LIST}\n\n"
+        "Do NOT penalize the design for missing tags that don't exist in this list "
+        "(e.g., there is no EDIBLE, FOOD, WOODEN, or METAL tag)."
     ),
     "Gameplay Quality": (
         "You are evaluating a game object design for a 2D physics sandbox where objects "
         "interact through a TAG SYSTEM. Tags create automatic interactions — this is "
-        "the core of the game's emergent gameplay. Here are the key tag interactions:\n\n"
-        "TAG INTERACTIONS (automatic, no behaviors needed):\n"
-        "- HEAT_SOURCE ignites FLAMMABLE objects on contact (fire spreads!)\n"
-        "- ELECTRIC propagates through CONDUCTING objects (chain lightning!)\n"
-        "- WIND_SOURCE pushes LIGHT objects continuously at range\n"
-        "- MAGNETIC attracts CONDUCTING objects at range\n"
-        "- CORROSIVE dissolves materials on contact\n"
-        "- FROZEN makes surfaces slippery; COLD freezes LIQUID on contact\n"
-        "- SHARP deals cut damage on contact\n"
-        "- HOSTILE deals blunt physical damage on contact\n"
-        "- STICKY creates physical joints on contact (things stick together!)\n"
-        "- EXPLOSIVE detonates from heat or electricity for massive area damage\n"
-        "- REFLECTIVE bounces back heat and electricity\n\n"
+        "the core of the game's emergent gameplay.\n\n"
+        f"VALID TAGS:\n{_TAG_LIST}\n\n"
+        f"COMPLETE TAG INTERACTION RULES ({len(ALL_RULES)} rules — "
+        "these fire automatically, no behaviors needed):\n"
+        f"{_RULES_SUMMARY}\n\n"
         "BEHAVIORS (0-3 per object) make objects autonomous:\n"
         "- Movement: MOVE_TOWARD, MOVE_AWAY, PATROL\n"
         "- Combat: SPAWN_PROJECTILE, EXPLODE, APPLY_FORCE\n"
@@ -104,11 +106,13 @@ RUBRICS: dict[str, str] = {
         "the tags significantly.\n"
         "- 0.0: Empty, nonsensical, or completely unrelated to the object.\n\n"
         "The description should describe the object itself (shape, material, color), "
-        "not a scene or environment. It should be 1-2 sentences."
+        "not a scene or environment. It should be 1-2 sentences.\n\n"
+        f"VALID TAGS:\n{_TAG_LIST}\n"
+        "Verify the visual description is consistent with the assigned tags."
     ),
 }
 
-METRIC_NAMES: list[str] = ["Validity", *RUBRICS.keys()]
+METRIC_NAMES: list[str] = ["Validity", "Interaction Surface", "Living Movement", *RUBRICS.keys()]
 
 
 def make_judge(name: str) -> LLMJudge:
@@ -125,5 +129,7 @@ def default_evaluators() -> list:
     """Build the standard set of evaluators for creator agent evals."""
     return [
         ValidityEvaluator(),
+        InteractionSurfaceEvaluator(),
+        LivingMovementEvaluator(),
         *(make_judge(name) for name in RUBRICS),
     ]

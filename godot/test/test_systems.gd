@@ -198,7 +198,7 @@ func _test_rule_engine() -> void:
 				{"effect_type": "ADD_TAG", "target": "b", "tag": "HOT"},
 				{"effect_type": "DAMAGE", "target": "b", "damage_amount": 10.0, "tick_interval": 1.0, "tick_duration": 5.0, "message": "catches fire"},
 			],
-			"priority": 5,
+			"execution_order": 5,
 			"bidirectional": false,
 			"cascade_eligible": true,
 		},
@@ -211,7 +211,7 @@ func _test_rule_engine() -> void:
 				{"effect_type": "ADD_TAG", "target": "b", "tag": "RIGID"},
 				{"effect_type": "REMOVE_TAG", "target": "b", "tag": "LIQUID", "message": "freezes"},
 			],
-			"priority": 3,
+			"execution_order": 3,
 			"bidirectional": false,
 		},
 		{
@@ -222,7 +222,7 @@ func _test_rule_engine() -> void:
 				{"effect_type": "DAMAGE", "target": "b", "damage_amount": 30.0},
 				{"effect_type": "ADD_TAG", "target": "b", "tag": "ELECTRIC", "message": "zaps"},
 			],
-			"priority": 4,
+			"execution_order": 4,
 			"bidirectional": true,
 		},
 		{
@@ -230,7 +230,7 @@ func _test_rule_engine() -> void:
 			"tags_required_a": ["EXPLOSIVE"],
 			"tags_required_b": [],
 			"effects": [{"effect_type": "DAMAGE", "target": "both", "damage_amount": 50}],
-			"priority": 10,
+			"execution_order": 10,
 			"bidirectional": false,
 		},
 	]
@@ -254,7 +254,7 @@ func _test_rule_engine() -> void:
 	# Priority ordering
 	var multi: Array = _rule_engine.find_matching_rules(["HEAT_SOURCE", "COLD"], ["FLAMMABLE", "LIQUID"])
 	_assert("multi-match returns 2 rules", multi.size() == 2)
-	_assert("higher priority first", multi[0].get("priority", 0) > multi[1].get("priority", 0))
+	_assert("higher execution_order first", multi[0].get("execution_order", 0) > multi[1].get("execution_order", 0))
 
 	# Partial mismatch
 	var partial: Array = _rule_engine.find_matching_rules(["HEAT_SOURCE"], ["SOLID"])
@@ -723,7 +723,7 @@ func _test_collision_resolver() -> void:
 			{"effect_type": "ADD_TAG", "target": "b", "tag": "HOT"},
 			{"effect_type": "DAMAGE", "target": "b", "damage_amount": 10.0, "tick_interval": 1.0, "tick_duration": 5.0, "message": "burns"},
 		],
-		"priority": 5,
+		"execution_order": 5,
 		"bidirectional": false,
 		"cascade_eligible": false,
 	}])

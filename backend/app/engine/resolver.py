@@ -1,4 +1,4 @@
-"""Rule engine: two-tier index (pair O(1) + wildcard O(n)) with priority sorting."""
+"""Rule engine: two-tier index (pair O(1) + wildcard O(n)) with execution_order sorting."""
 
 import structlog
 
@@ -37,7 +37,7 @@ class RuleResolver:
                             (self._pair_index.setdefault(tb, {}).setdefault(ta, []).append(rule))
 
     def find_matching_rules(self, tags_a: set[Tag], tags_b: set[Tag]) -> list[InteractionRule]:
-        """Find all rules matching the two tag sets, sorted by priority descending."""
+        """Find all rules matching the two tag sets, sorted by execution_order descending."""
         matched: dict[str, InteractionRule] = {}
 
         # Pair index lookup - O(|tags_a| * |tags_b|) with O(1) per pair
@@ -73,7 +73,7 @@ class RuleResolver:
             if forward or reverse:
                 matched[rule.rule_id] = rule
 
-        result = sorted(matched.values(), key=lambda r: r.priority, reverse=True)
+        result = sorted(matched.values(), key=lambda r: r.execution_order, reverse=True)
         if result:
             logger.debug(
                 "rules_matched",

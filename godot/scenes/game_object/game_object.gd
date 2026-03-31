@@ -4,7 +4,7 @@ var object_id: String = ""
 var tags: Array[String] = []
 var blueprint: Dictionary = {}
 var current_durability: int = 150
-var _decay_timers: Dictionary = {}  # tag name -> Timer
+var _tag_decay: TagDecay = null
 var _behavior_executor: Node = null
 var _tag_field: Node = null
 
@@ -24,6 +24,10 @@ func _ready() -> void:
 func init_from_blueprint(bp: Dictionary) -> void:
 	blueprint = bp
 	object_id = bp.get("id", "")
+
+	_tag_decay = TagDecay.new()
+	_tag_decay.name = "TagDecay"
+	add_child(_tag_decay)
 	var raw_tags: Array = bp.get("tags", [])
 	tags.clear()
 	for tag in raw_tags:
@@ -133,20 +137,13 @@ func add_tag(tag: String, duration: float = 0.0) -> void:
 		elif FieldConfig.has_any_field_tag(tags):
 			_create_tag_field(tags)
 	if duration > 0.0:
-		_cancel_decay_timer(tag)
-		var timer := Timer.new()
-		timer.wait_time = duration
-		timer.one_shot = true
-		timer.timeout.connect(_on_decay_timer_expired.bind(tag))
-		add_child(timer)
-		timer.start()
-		_decay_timers[tag] = timer
+		_tag_decay.set_decay(tag, duration)
 	if is_new:
 		Log.debug("GameObject: '%s' tags now: %s" % [blueprint.get("name", object_id), tags])
 
 
 func remove_tag(tag: String) -> void:
-	_cancel_decay_timer(tag)
+	_tag_decay.cancel(tag)
 	if tag not in tags:
 		return
 	Log.debug("GameObject: '%s' -tag %s" % [blueprint.get("name", object_id), tag])
@@ -156,17 +153,6 @@ func remove_tag(tag: String) -> void:
 	object_visual.refresh_tag_visuals(tags)
 	if _tag_field != null:
 		_tag_field.on_tags_changed(tags)
-
-
-func _on_decay_timer_expired(tag: String) -> void:
-	Log.debug("GameObject: Decay timer expired for tag '%s' on '%s'" % [tag, blueprint.get("name", object_id)])
-	remove_tag(tag)
-
-
-func _cancel_decay_timer(tag: String) -> void:
-	if tag in _decay_timers and is_instance_valid(_decay_timers[tag]):
-		_decay_timers[tag].queue_free()
-		_decay_timers.erase(tag)
 
 
 func get_cascade_neighbors() -> Array:
@@ -196,7 +182,7 @@ func fire_behavior_trigger(trigger_name: String, source: Node = null) -> void:
 
 
 func _on_body_entered(body: Node) -> void:
-	if not body.has_method("get_tags") and not body.has_method("get_effective_tags"):
+	if not TagColors.is_taggable(body):
 		return
 	# Defer to avoid "Can't change state while flushing queries" —
 	# collision resolution can chain to add_tag → _reapply_physics → new shapes.

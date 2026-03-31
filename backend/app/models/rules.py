@@ -16,7 +16,7 @@ class InteractionRule(BaseModel):
     name: str
     tags_required_a: set[Tag]
     tags_required_b: set[Tag]  # empty set = wildcard (matches any)
-    priority: int
+    execution_order: int  # higher = executes first; all matching rules fire regardless
     bidirectional: bool
     cascade_eligible: bool
     effects: list[Effect]

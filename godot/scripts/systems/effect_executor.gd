@@ -5,13 +5,10 @@ extends Node
 # All effects are expressed as 5 primitives: DAMAGE, HEAL, ADD_TAG, REMOVE_TAG, APPLY_FORCE.
 
 
-## Duration (seconds) for tags added during cascade propagation (depth > 0).
-const CASCADE_TAG_DURATION: float = 10.0
-
 func execute(rule: Dictionary, body_a: Node, body_b: Node, cascade_depth: int = 0) -> void:
 	var effects: Array = rule.get("effects", [])
 	var last_message: String = ""
-	var tag_duration: float = CASCADE_TAG_DURATION if cascade_depth > 0 else 0.0
+	var tag_duration: float = BehaviorMaps.DYNAMIC_TAG_DURATION if cascade_depth > 0 else 0.0
 	Log.debug("EffectExecutor: Executing rule '%s' (%d effects, cascade_depth=%d)" % [rule.get("rule_id", "?"), effects.size(), cascade_depth])
 	for effect in effects:
 		if effect is not Dictionary:
@@ -28,8 +25,8 @@ func execute(rule: Dictionary, body_a: Node, body_b: Node, cascade_depth: int = 
 			last_message = msg
 
 	if last_message != "":
-		var tags_a: Array = _get_tags(body_a)
-		var tags_b: Array = _get_tags(body_b)
+		var tags_a: Array = TagColors.get_body_tags(body_a)
+		var tags_b: Array = TagColors.get_body_tags(body_b)
 		var collision_pos: Vector2 = _get_collision_position(body_a, body_b)
 		EventBus.interaction_triggered.emit(
 			body_a.name, tags_a, body_b.name, tags_b, last_message, collision_pos
@@ -43,7 +40,7 @@ func _apply_effect(effect_type: String, effect: Dictionary, target: Node, body_a
 			var tick_interval: float = effect.get("tick_interval", 0.0)
 			var tick_dur: float = effect.get("tick_duration", 0.0)
 			var source: Node = body_a if target == body_b else body_b
-			var element_color: Color = _derive_element_color(source, Color.WHITE)
+			var element_color: Color = TagColors.derive_element_color(source)
 			if tick_interval > 0.0 and tick_dur > 0.0:
 				Log.info("EffectExecutor: DOT %.0f on %s (every %.1fs for %.1fs)" % [amount, target.name, tick_interval, tick_dur])
 				WorldMutations.apply_dot(target, amount, tick_interval, tick_dur, element_color)
@@ -106,23 +103,7 @@ func _get_targets(effect: Dictionary, body_a: Node, body_b: Node) -> Array[Node]
 	return targets
 
 
-func _get_tags(body: Node) -> Array:
-	if body.has_method("get_effective_tags"):
-		return body.get_effective_tags()
-	if body.has_method("get_tags"):
-		return body.get_tags()
-	return []
-
-
 func _get_collision_position(body_a: Node, body_b: Node) -> Vector2:
 	if body_a is Node2D and body_b is Node2D:
 		return (body_a.global_position + body_b.global_position) / 2.0
 	return Vector2.ZERO
-
-
-func _derive_element_color(source: Node, fallback: Color) -> Color:
-	var source_tags: Array = _get_tags(source)
-	for tag in source_tags:
-		if tag in TagColors.COLORS:
-			return TagColors.COLORS[tag]
-	return fallback

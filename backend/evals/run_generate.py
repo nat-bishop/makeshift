@@ -67,8 +67,8 @@ async def main() -> None:
     report.print(include_input=True)
 
     result = report_to_result(report, variant, settings.llm_model)
-    path = save_result(result)
-    print(f"\nResults saved to {path}")
+    run_dir = save_result(result)
+    print(f"\nResults saved to {run_dir}")
 
 
 if __name__ == "__main__":

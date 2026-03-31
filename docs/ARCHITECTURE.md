@@ -53,10 +53,10 @@ Full flow from player input to world-placed object with sprite:
 
 1. **Player types description** → `ObjectCreationPanel` sends text to `Backend.create_object()`
 2. **HTTP POST** → `POST /api/sessions/{id}/objects` with `{"description": "..."}`
-3. **Budget check** → `SessionManager.get_budget_info()` verifies remaining budget (rejects with 402 if exhausted)
-4. **LLM agent** → `creator.agent.create_object()` runs PydanticAI agent (Gemini 3.1 Flash Lite Preview, 3 retries). Validators enforce: 1-3 word name, 2-6 tags, no contradictions, tag budget ≤ 10, 0-3 behaviors, behavior budget ≤ 8. Falls back to generic "Mysterious {description}" on failure
-5. **Blueprint construction** → `GameObjectBlueprint` adds UUID, computed fields: `power_cost`, `behavior_cost`, `starting_durability`
-6. **Atomic persist** → `reserve_budget()` + `save_object()` charge $0.041 and save blueprint (including behaviors)
+3. **Budget reserve** → `SessionManager.reserve_budget()` atomically charges $0.041 upfront (rejects with 402 if budget exceeded)
+4. **LLM agent** → `creator.agent.create_object()` runs PydanticAI agent (Gemini 3.1 Flash Lite Preview, 3 retries). Validators enforce: 1-3 word name, 2-6 tags, no contradictions, 0-3 behaviors. Falls back to generic "Mysterious {description}" on failure
+5. **Blueprint construction** → `GameObjectBlueprint` adds UUID, computed field: `starting_durability`
+6. **Persist** → `save_object()` saves blueprint (including behaviors) to the `objects` table
 7. **Immediate response** → Client receives blueprint JSON (with behaviors) + `budget_remaining`. `EventBus.creation_requested` was emitted on submit — `Game` starts a `MaterializeEffect` at the spawn point (paper scraps coalesce over 1.2s, then idle-bob)
 8. **Background sprite generation** → `asyncio.Task` held in module-level `_background_tasks` set (prevents GC). Runs image pipeline (see below)
 9. **WebSocket delivery** → `send_sprite_ready()` broadcasts `{sprite_url}` to all session clients → Godot fetches PNG via HTTP → decodes to `ImageTexture` → `EventBus.sprite_ready` emitted
@@ -99,7 +99,7 @@ Full flow from player input to world-placed object with sprite:
 
 ### Backend: `engine/resolver.py`
 
-`RuleResolver` builds a two-tier index at init from 47 `InteractionRule` definitions:
+`RuleResolver` builds a two-tier index at init from 53 `InteractionRule` definitions:
 
 **Pair index** (O(1) lookup): Nested dict `tag_a → tag_b → [rules]`. For bidirectional rules, both `(a,b)` and `(b,a)` entries are created.
 
@@ -108,9 +108,9 @@ Full flow from player input to world-placed object with sprite:
 **Matching algorithm** (`find_matching_rules`):
 1. For each tag pair `(ta, tb)` where `ta ∈ tags_a` and `tb ∈ tags_b`: check pair index, verify full tag subset inclusion
 2. Scan wildcard rules for subset matches
-3. Deduplicate by `rule_id`, sort by priority descending
+3. Deduplicate by `rule_id`, sort by `execution_order` descending
 
-**`TriggerMode`** (`models/rules.py`): StrEnum — `CONTACT` (default) | `FIELD`. 18 of 47 rules are annotated `trigger_mode=TriggerMode.FIELD`. FIELD rules also fire on contact — `trigger_mode` is purely a filter used client-side by `TagField` and `CollisionResolver.resolve_collision(trigger_mode_filter=...)`.
+**`TriggerMode`** (`models/rules.py`): StrEnum — `CONTACT` (default) | `FIELD`. 24 of 53 rules are annotated `trigger_mode=TriggerMode.FIELD`. FIELD rules also fire on contact — `trigger_mode` is purely a filter used client-side by `TagField` and `CollisionResolver.resolve_collision(trigger_mode_filter=...)`.
 
 ### Godot: `autoloads/rule_engine.gd`
 
@@ -133,12 +133,15 @@ Static class. Maps field-emitting tags to range category and mode:
 | WIND_SOURCE | FAR (192px) | continuous |
 | MAGNETIC | MEDIUM (96px) | continuous |
 | GLOWING | MEDIUM (96px) | continuous |
+| STICKY | CLOSE (64px) | continuous (damp, not force) |
 | HEAT_SOURCE | CLOSE (64px) | periodic |
 | HOT | CLOSE (64px) | periodic |
 | ELECTRIC | CLOSE (64px) | periodic |
 | COLD | CLOSE (64px) | periodic |
 | TOXIC | MEDIUM (96px) | periodic |
 | LIQUID | CLOSE (64px) | periodic |
+| HOSTILE | CLOSE (64px) | periodic |
+| WET | CLOSE (64px) | periodic |
 
 `PERIODIC_INTERVAL = 2.0s`. Range categories: CLOSE=64px, MEDIUM=96px, FAR=192px.
 
@@ -165,7 +168,7 @@ add_tag(tag)  [dynamic, e.g. fire spread adds HEAT_SOURCE]
 
 **Continuous mode** (`_physics_process`): For each body overlapping the Area2D, applies `APPLY_FORCE` effects from pre-cached continuous rules directly via `apply_central_force()`. Per-tag center-to-center distance check (1.5× range margin to account for shape overlap).
 
-**Periodic mode** (`_on_periodic_tick`): Every 2s, calls `CollisionResolver.resolve_collision(owner, body, 0, "FIELD")` for each overlapping body in range. The `"FIELD"` filter makes `CollisionResolver` skip CONTACT-only rules. Pair cooldown (0.5s) prevents the same rule firing twice in quick succession via both contact and field paths.
+**Periodic mode** (`_on_periodic_tick`): Every 2s, calls `CollisionResolver.resolve_collision(owner, body, 0, "FIELD")` for each overlapping body in range. The `"FIELD"` filter makes `CollisionResolver` skip CONTACT-only rules. Cooldown key includes the trigger mode suffix (`"id_a:id_b:FIELD"`) — FIELD and CONTACT cooldowns are independent, preventing a periodic tick from blocking a physical collision between the same pair.
 
 **Detection geometry**: Shape-vs-shape Area2D overlap — accounts for object sizes automatically. One Area2D per field object at max range across all field tags (not one per tag).
 
@@ -173,9 +176,9 @@ add_tag(tag)  [dynamic, e.g. fire spread adds HEAT_SOURCE]
 
 Field-ignited objects become new field sources. When a rule adds HEAT_SOURCE (e.g., ignition), `game_object.gd` lazy-creates a `TagField` on that object. Each field periodic tick starts at `cascade_depth=0`, allowing unbounded propagation over time. The depth-3 cap per tick prevents instant chain explosions — fire spreads one step per 2s period.
 
-### STICKY joint (`collision_resolver.gd`)
+### STICKY slow field (`tag_field.gd`)
 
-On direct contact (`cascade_depth == 0`), if either body has STICKY tag, `CollisionResolver._check_sticky_joint()` creates a `PinJoint2D` (softness=0.1) pinning the two bodies together. Joint is added as a child of body_a. Auto-cleans when either body is destroyed via `tree_exiting` signal; `_on_sticky_body_freed` also disconnects the stale signal on the surviving body and erases the entry from `_sticky_joints`. STICKY is contact-only — no field range.
+STICKY uses `TagField._apply_sticky_slow()` instead of joint-based pinning. Per physics frame, bodies within CLOSE range (64px) have `linear_damp` raised to `STICKY_DAMP=12.0` (tracked in `_sticky_damped` dict so original damping is restored on exit). The player receives `apply_speed_modifier(0.25)` — 25% speed — via duck-typed interface. Bodies and the player are restored when they leave the field or when the STICKY tag is removed. This approach is handled entirely within `TagField`; `CollisionResolver` has no STICKY-specific logic.
 
 ## Behavior System
 
@@ -190,23 +193,17 @@ Each `Behavior` is a flat Pydantic record:
 | `trigger` | `BehaviorTrigger` | ALWAYS, ON_TIMER, ON_PROXIMITY, ON_CONTACT, ON_DAMAGED, ON_HEALTH_LOW, ON_TAG_ADDED, ON_CREATE, ON_DESTROY |
 | `action` | `BehaviorAction` | MOVE_TOWARD, MOVE_AWAY, PATROL, APPLY_FORCE, ATTRACT, SPAWN_PROJECTILE, EXPLODE, HEAL, ADD_TAGS, REMOVE_TAGS, SELF_DESTRUCT |
 | `target` | `BehaviorTarget` | SELF, NEAREST_OBJECT, NEAREST_LIVING, NEAREST_PLAYER, CONTACT_BODY |
-| `condition` | `BehaviorCondition \| None` | Optional gate: HAS_TAG, NOT_HAS_TAG, TARGET_HAS_TAG |
 | `intensity` | `Intensity` | MINIMAL, LOW, MEDIUM, HIGH, EXTREME (default MEDIUM) |
 | `range` | `BehaviorRange` | TOUCH, CLOSE, MEDIUM, FAR (default MEDIUM) |
 | `speed` | `Speed` | SLOW, MEDIUM, FAST, VERY_FAST (default MEDIUM) |
 | `interval` | `Interval` | ONCE_SHORT, ONCE_MEDIUM, ONCE_LONG, SLOW, MEDIUM, FAST (default MEDIUM) |
-| `message` | `str \| None` | Optional player-facing string (max 60 chars), emitted via EventBus |
 | `tags_to_apply` | `list[Tag] \| None` | Required for ADD_TAGS/REMOVE_TAGS |
 | `trigger_tag` | `Tag \| None` | Required for ON_TAG_ADDED — which tag to watch |
 
-### Budget
+### Limits
 
-- Behavior budget: 8 per object (separate from tag budget of 10)
-- `cost = max(floor, action_base_cost + intensity_modifier)`
-- Action costs: SELF_DESTRUCT=1, most actions=2, SPAWN_PROJECTILE/EXPLODE=3
-- Intensity modifiers: MINIMAL=-1, LOW/MEDIUM=0, HIGH=+1, EXTREME=+2
-- SPAWN_PROJECTILE and EXPLODE have a cost floor of 2
-- Enforced by `check_behavior_budget` field validator on `CreatorOutput` (raises `ModelRetry`)
+- Max 3 behaviors per object, max 6 tags (enforced by Pydantic `max_length`)
+- No per-object behavior or tag budget — removed in favor of simpler LLM constraints
 
 ### Godot Runtime (`godot/scripts/systems/behavior_executor.gd`)
 
@@ -221,7 +218,7 @@ init_from_blueprint()
 _physics_process(delta)
   ├─ Update target cache every 0.3s (NEAREST_* targets)
   ├─ Collect triggered behaviors: ALWAYS, ON_PROXIMITY (distance check), ON_HEALTH_LOW
-  ├─ Sort by TRIGGER_PRIORITY (movement conflict resolution)
+  ├─ Sort by MOVEMENT_RANK (movement conflict resolution)
   └─ Execute behaviors:
        ├─ Non-movement: always execute (subject to cooldown)
        └─ Movement (MOVE_TOWARD/MOVE_AWAY/PATROL): only highest-priority trigger wins per frame
@@ -253,7 +250,8 @@ on_tag_added(tag)  # called by GameObject.add_tag()
 | `SPEED_MAX` | SLOW=60, MEDIUM=120, FAST=200, VERY_FAST=300 |
 | `SPEED_FORCE` | SLOW=200, MEDIUM=400, FAST=600, VERY_FAST=800 |
 | `INTERVAL_SECONDS` | ONCE_SHORT=1.0, ONCE_MEDIUM=3.0, SLOW=3.0, MEDIUM=1.5, FAST=0.75 |
-| `TRIGGER_PRIORITY` | ON_HEALTH_LOW=1 … ALWAYS=7 (lower = higher priority) |
+| `MOVEMENT_RANK` | ON_HEALTH_LOW=1 … ALWAYS=7 (lower = higher priority) |
+| `DYNAMIC_TAG_DURATION` | 10.0s — unified duration for all dynamically-added tags (cascade or behavior) |
 | `PAYLOAD_TAG_MAP` | HEAT_SOURCE→HOT, ELECTRIC→ELECTRIC, TOXIC→TOXIC, CORROSIVE→CORROSIVE, FROZEN→COLD |
 
 ### Projectile System (`godot/scenes/projectile/`)
@@ -285,14 +283,13 @@ Object A (HEAT_SOURCE) collides with Object B (EXPLOSIVE)
 body_entered signal (from GameObject)
   └─ call_deferred("_resolve_deferred", body)   # deferred to avoid physics flush crash
        └─ resolve_collision(body_a, body_b, cascade_depth=0, trigger_mode_filter="")
-            ├─ Cooldown check: pair key "id_a:id_b" (sorted), skip if < 0.5s
-            ├─ Extract tags: get_effective_tags() (player) or get_tags() (object)
+            ├─ Cooldown check: pair key "id_a:id_b:trigger_mode_filter" (sorted), skip if < 0.5s
+            ├─ Extract tags: TagColors.get_body_tags() (duck-typed: effective_tags/get_tags)
             ├─ RuleEngine.find_matching_rules(tags_a, tags_b)
             ├─ Filter by trigger_mode_filter if non-empty (e.g., "FIELD" from TagField)
             ├─ Record tags_before snapshot
             ├─ For each matched rule: EffectExecutor.execute(rule, body_a, body_b)
             ├─ Set cooldown timestamp
-            ├─ STICKY check (cascade_depth==0 only): _check_sticky_joint()
             └─ Cascade check (if any rule was cascade_eligible):
             ├─ Compare tags_before vs tags_after
             └─ If changed: _cascade_to_neighbors(body, depth + 1)
@@ -302,7 +299,9 @@ body_entered signal (from GameObject)
 
 **Constants**: `COOLDOWN_TIME = 0.5s`, `MAX_CASCADE_DEPTH = 3`, `CASCADE_RADIUS = 96px`. Cooldowns cleaned up every 5s.
 
-**`trigger_mode_filter`**: When `"FIELD"`, only rules with `trigger_mode == "FIELD"` are executed. Contact-originated calls pass `""` (no filter), so ALL rules (including FIELD) fire on contact. The pair cooldown prevents double-firing within 0.5s when the same pair interacts via both paths.
+**`trigger_mode_filter`**: When `"FIELD"`, only rules with `trigger_mode == "FIELD"` are executed. Contact-originated calls pass `""` (no filter), so ALL rules (including FIELD) fire on contact. Cooldown key includes the filter string — FIELD and CONTACT interactions cool down independently.
+
+**Behavior cascade**: `BehaviorExecutor._apply_tags()` snapshots tags before mutation, then calls `CollisionResolver.resolve_collision(target, neighbor, 1)` for each neighbor if tags changed. Starting at depth 1 (not 0) avoids double-counting the behavior mutation itself as a cascade origin.
 
 ### Effect Executor & World Mutations
 
@@ -325,6 +324,19 @@ body_entered signal (from GameObject)
 ### WorldMutations
 
 `scripts/systems/world_mutations.gd` — static `RefCounted` class. All game-state mutations (damage, heal, tag add/remove, impulse, DOT) route through it. Single codepath shared by `EffectExecutor`, `BehaviorExecutor`, `projectile.gd`, and level scripts. Guards against invalid targets with `has_method`/`is RigidBody2D` checks before acting.
+
+`apply_add_tag()` auto-removes contradictory tags before adding by querying `TagContradictions.get_contradictions()`. For example, adding HEAT_SOURCE removes WET first. This mirrors the backend's `TAG_CONTRADICTIONS` list at runtime.
+
+### TagDecay
+
+`scripts/systems/tag_decay.gd` — Node child shared by `GameObject` and `EnvironmentBody`. Manages per-tag decay timers. `set_decay(tag, duration)` starts a one-shot timer; `cancel(tag)` clears it. On expiry, calls `get_parent().remove_tag(tag)`. Previously the decay logic was duplicated in both host classes; `TagDecay` extracts it.
+
+### TagColors (utilities)
+
+`scripts/data/tag_colors.gd` also contains three static utility functions used system-wide:
+- `get_body_tags(body)` — duck-typed: calls `get_effective_tags()` (player), `get_tags()` (objects/env), or returns `[]`
+- `derive_element_color(body)` — returns first tag color from `COLORS` dict, or white
+- `is_taggable(body)` — `true` if body has either tag-accessor method
 
 ## EnvironmentBody
 
@@ -355,7 +367,7 @@ Non-solid uses no filter because being inside the substance is semantically equi
 **Tag reactivity**:
 - FROZEN → `collision_layer` promoted to OBJECTS (non-solid becomes walkable frozen surface); visual tinted blue-white. Reverts when FROZEN removed.
 - Periodic timer created/destroyed dynamically as field tags are added/removed (same as `TagField._rebuild()`).
-- Temporary tags: same decay timer pattern as `game_object.gd` — `_decay_timers` dict, `_cancel_decay_timer()` on re-add.
+- Temporary tags: managed by a `TagDecay` child node (shared pattern with `game_object.gd`) — `TagDecay.set_decay(tag, duration)` / `cancel(tag)`.
 
 **Level creation helpers** (all on `BaseLevel`):
 - `_create_env_body(pos, size, tags, color, id, solid)` — pos is top-left corner, body positioned at `pos + size/2` (same convention as `_create_platform`)
@@ -403,7 +415,7 @@ Tag mutations (via `add_tag`/`remove_tag`) trigger `_reapply_physics()` to recal
 
 ### Session Lifecycle
 
-1. **Create** (`POST /api/sessions`): New UUID, 15 seed objects saved via batch insert. Response includes seed blueprints, all rules, and WebSocket URL
+1. **Create** (`POST /api/sessions`): New UUID, empty session. Response includes all rules and WebSocket URL. Seed objects are defined client-side in level scripts, not persisted at session creation
 2. **Restore** (`GET /api/sessions/{id}`): Full load — session row + objects
 3. **Sync** (`PUT /api/sessions/{id}/sync`): Partial update — only provided fields are written. Client syncs every 10s via `Backend._on_sync_timer()` when `_state_dirty` flag is set
 

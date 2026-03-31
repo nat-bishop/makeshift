@@ -186,7 +186,7 @@ func _physics_process(_delta: float) -> void:
 			if dist > range_px * 1.5:  # generous margin for shape overlap
 				continue
 
-			var body_tags: Array = _get_body_tags(body)
+			var body_tags: Array = TagColors.get_body_tags(body)
 			if body_tags.is_empty():
 				continue
 
@@ -239,7 +239,7 @@ func _on_periodic_tick() -> void:
 	for body in _field_area.get_overlapping_bodies():
 		if body == _owner_body or not is_instance_valid(body):
 			continue
-		if not body.has_method("get_tags") and not body.has_method("get_effective_tags"):
+		if not TagColors.is_taggable(body):
 			continue
 		# Per-tag range check for periodic fields
 		var dist: float = owner_pos.distance_to(body.global_position)
@@ -247,13 +247,6 @@ func _on_periodic_tick() -> void:
 			continue
 		CollisionResolver.resolve_collision(_owner_body, body, 0, "FIELD")
 
-
-func _get_body_tags(body: Node) -> Array:
-	if body.has_method("get_effective_tags"):
-		return body.get_effective_tags()
-	if body.has_method("get_tags"):
-		return body.get_tags()
-	return []
 
 
 func _has_all(tags: Array, required: Array) -> bool:

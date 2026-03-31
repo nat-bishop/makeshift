@@ -70,7 +70,7 @@ func find_matching_rules(tags_a: Array, tags_b: Array) -> Array:
 			matched[rule.get("rule_id", "")] = rule
 
 	var result: Array = matched.values()
-	result.sort_custom(func(a, b): return a.get("priority", 0) > b.get("priority", 0))
+	result.sort_custom(func(a, b): return a.get("execution_order", 0) > b.get("execution_order", 0))
 	return result
 
 

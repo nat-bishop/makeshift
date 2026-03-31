@@ -18,7 +18,7 @@ var _visual: ColorRect
 var _initial_color: Color
 var _field_area: Area2D
 var _periodic_timer: Timer
-var _decay_timers: Dictionary = {}  # tag name -> Timer
+var _tag_decay: TagDecay = null
 
 const FIELD_MARGIN: float = 32.0
 const PERIODIC_INTERVAL: float = 2.0
@@ -29,6 +29,11 @@ func init_env(id: String, init_tags: Array, size: Vector2, color: Color, solid: 
 	tags.clear()
 	for tag in init_tags:
 		tags.append(str(tag))
+
+	_tag_decay = TagDecay.new()
+	_tag_decay.name = "TagDecay"
+	add_child(_tag_decay)
+
 	_solid = solid
 	_initially_solid = solid
 	_initial_color = color
@@ -87,18 +92,11 @@ func add_tag(tag: String, duration: float = 0.0) -> void:
 		Log.debug("EnvironmentBody: '%s' +tag %s%s" % [env_id, tag, " (%.1fs)" % duration if duration > 0.0 else ""])
 		_on_tags_changed()
 	if duration > 0.0:
-		_cancel_decay_timer(tag)
-		var timer := Timer.new()
-		timer.wait_time = duration
-		timer.one_shot = true
-		timer.timeout.connect(_on_decay_timer_expired.bind(tag))
-		add_child(timer)
-		timer.start()
-		_decay_timers[tag] = timer
+		_tag_decay.set_decay(tag, duration)
 
 
 func remove_tag(tag: String) -> void:
-	_cancel_decay_timer(tag)
+	_tag_decay.cancel(tag)
 	if tag not in tags:
 		return
 	Log.debug("EnvironmentBody: '%s' -tag %s" % [env_id, tag])
@@ -158,7 +156,7 @@ func _on_periodic_tick() -> void:
 	for body in _field_area.get_overlapping_bodies():
 		if body == self or not is_instance_valid(body):
 			continue
-		if not body.has_method("get_tags") and not body.has_method("get_effective_tags"):
+		if not TagColors.is_taggable(body):
 			continue
 		# Non-solid: no trigger_mode filter — ALL rules fire (CONTACT + FIELD).
 		# Being inside the substance is semantically continuous contact.
@@ -167,12 +165,3 @@ func _on_periodic_tick() -> void:
 		CollisionResolver.resolve_collision(self, body, 0, filter)
 
 
-func _on_decay_timer_expired(tag: String) -> void:
-	Log.debug("EnvironmentBody: Decay timer expired for tag '%s' on '%s'" % [tag, env_id])
-	remove_tag(tag)
-
-
-func _cancel_decay_timer(tag: String) -> void:
-	if tag in _decay_timers and is_instance_valid(_decay_timers[tag]):
-		_decay_timers[tag].queue_free()
-		_decay_timers.erase(tag)

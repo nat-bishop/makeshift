@@ -26,6 +26,14 @@ static func apply_add_tag(target: Node, tag: String, duration: float = 0.0) -> v
 	if not target.has_method("add_tag"):
 		Log.debug("WorldMutations: %s has no add_tag method, skipping" % target.name)
 		return
+	# Auto-remove contradictory tags (e.g., adding HEAT_SOURCE removes WET)
+	var contras: Array = TagContradictions.get_contradictions(tag)
+	if not contras.is_empty() and target.has_method("remove_tag"):
+		var body_tags: Array = TagColors.get_body_tags(target)
+		for contra in contras:
+			if contra in body_tags:
+				Log.debug("WorldMutations: Removing contradictory tag %s before adding %s to %s" % [contra, tag, target.name])
+				target.remove_tag(contra)
 	Log.debug("WorldMutations: apply_add_tag %s to %s%s" % [tag, target.name, " (%.1fs)" % duration if duration > 0.0 else ""])
 	target.add_tag(tag, duration)
 
@@ -53,6 +61,9 @@ static func apply_impulse(target: Node, direction: Vector2, magnitude: float) ->
 static func apply_dot(target: Node, damage_per_tick: float, tick_interval: float, duration: float, element_color: Color = Color.WHITE) -> void:
 	if not target.has_method("take_damage"):
 		Log.debug("WorldMutations: %s has no take_damage method, skipping DOT" % target.name)
+		return
+	if tick_interval <= 0.0 or duration <= 0.0:
+		Log.warn("WorldMutations: Invalid DOT params interval=%.2f duration=%.2f on %s, skipping" % [tick_interval, duration, target.name])
 		return
 	Log.debug("WorldMutations: DOT on %s (%.1f dmg every %.1fs for %.1fs)" % [target.name, damage_per_tick, tick_interval, duration])
 

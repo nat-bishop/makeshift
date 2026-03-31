@@ -1,4 +1,4 @@
-"""Tests for rule engine: resolver indexing, matching, priority sorting."""
+"""Tests for rule engine: resolver indexing, matching, execution_order sorting."""
 
 from app.engine.resolver import RuleResolver
 from app.engine.rules_data import ALL_RULES
@@ -21,7 +21,7 @@ def _make_rule(
     name: str = "Test Rule",
     tags_required_a: set[Tag] | None = None,
     tags_required_b: set[Tag] | None = None,
-    priority: int = 10,
+    execution_order: int = 10,
     bidirectional: bool = True,
     cascade_eligible: bool = False,
     effects: list[Effect] | None = None,
@@ -31,7 +31,7 @@ def _make_rule(
         name=name,
         tags_required_a=(tags_required_a if tags_required_a is not None else {Tag.HEAT_SOURCE}),
         tags_required_b=(tags_required_b if tags_required_b is not None else {Tag.FLAMMABLE}),
-        priority=priority,
+        execution_order=execution_order,
         bidirectional=bidirectional,
         cascade_eligible=cascade_eligible,
         effects=effects if effects is not None else _DEFAULT_EFFECTS,
@@ -90,9 +90,9 @@ class TestRuleResolver:
         matches = resolver.find_matching_rules({Tag.SOLID}, {Tag.RIGID})
         assert len(matches) == 0
 
-    def test_priority_sorting(self):
-        low = _make_rule(rule_id="low", priority=5)
-        high = _make_rule(rule_id="high", priority=15)
+    def test_execution_order_sorting(self):
+        low = _make_rule(rule_id="low", execution_order=5)
+        high = _make_rule(rule_id="high", execution_order=15)
         resolver = RuleResolver([low, high])
         matches = resolver.find_matching_rules({Tag.HEAT_SOURCE}, {Tag.FLAMMABLE})
         assert len(matches) == 2

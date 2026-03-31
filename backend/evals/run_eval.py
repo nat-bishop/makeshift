@@ -85,8 +85,8 @@ async def main():
 
     # Convert and save
     result = report_to_result(report, variant, settings.llm_model, name=run_name)
-    path = save_result(result)
-    print(f"\nResults saved to {path}")
+    run_dir = save_result(result)
+    print(f"\nResults saved to {run_dir}")
 
     # Distribution stats
     print_distribution_report(result)

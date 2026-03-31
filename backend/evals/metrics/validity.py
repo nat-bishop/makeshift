@@ -37,6 +37,7 @@ class ValidityEvaluator(Evaluator[str, str, object]):
         "no_contradictions": 2,
         "behaviors_parse": 2,
         "name_length": 1,
+        "visual_desc_length": 1,
     })
 
     def evaluate(self, ctx: EvaluatorContext[str, str, object]) -> dict[str, EvaluationReason]:
@@ -86,6 +87,11 @@ class ValidityEvaluator(Evaluator[str, str, object]):
         name = data.get("name", "")
         words = str(name).strip().split()
         checks["name_length"] = 1 <= len(words) <= 3
+
+        # 7. Visual description length (>=40 chars for sprite generation)
+        vd = data.get("visual_descriptor", {})
+        visual_desc = vd.get("visual_description", "") if isinstance(vd, dict) else ""
+        checks["visual_desc_length"] = len(visual_desc) >= 40
 
         # Weighted scoring
         weighted_passed = sum(

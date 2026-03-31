@@ -106,7 +106,7 @@ func _physics_process(delta: float) -> void:
 	var best_movement_priority := 999
 
 	for trigger_type in _TICK_TRIGGERS:
-		var priority: int = BehaviorMaps.TRIGGER_PRIORITY.get(trigger_type, 99)
+		var priority: int = BehaviorMaps.MOVEMENT_RANK.get(trigger_type, 99)
 		for i in _behaviors_by_trigger.get(trigger_type, []):
 			if i in _disabled_behaviors:
 				continue
@@ -300,10 +300,7 @@ func _update_target_cache() -> void:
 # --- Action implementations ---
 
 func _get_owner_element_color() -> Color:
-	for tag in _owner_body.tags:
-		if tag in TagColors.COLORS:
-			return TagColors.COLORS[tag]
-	return Color.WHITE
+	return TagColors.derive_element_color(_owner_body)
 
 
 
@@ -418,6 +415,7 @@ func _apply_explode(range_tier: String, intensity: String) -> void:
 			continue
 		WorldMutations.apply_damage(body, damage)
 		if body is Node2D:
+			EventBus.effect_applied.emit("DAMAGE", damage, _get_owner_element_color(), body.global_position)
 			var dir: Vector2 = (body.global_position - _owner_body.global_position).normalized()
 			WorldMutations.apply_impulse(body, dir, force)
 
@@ -431,18 +429,23 @@ func _apply_tags(target: Node, tags_list, add: bool) -> bool:
 	if tags_list == null or not (tags_list is Array):
 		return false
 
+	# Snapshot tags before mutation for cascade check
+	var tags_before: Array = TagColors.get_body_tags(target).duplicate()
+
 	if add:
 		for tag in tags_list:
-			WorldMutations.apply_add_tag(target, tag, BehaviorMaps.BEHAVIOR_TAG_DURATION)
+			WorldMutations.apply_add_tag(target, tag, BehaviorMaps.DYNAMIC_TAG_DURATION)
 	else:
 		for tag in tags_list:
 			WorldMutations.apply_remove_tag(target, tag)
 
-	# Trigger cascade after tag mutation
-	if target.has_method("get_cascade_neighbors"):
+	# Cascade only if tags actually changed (mirrors CollisionResolver logic).
+	# Start at depth 1 since the behavior mutation itself is the first step.
+	var tags_after: Array = TagColors.get_body_tags(target)
+	if tags_before != tags_after and target.has_method("get_cascade_neighbors"):
 		for neighbor in target.get_cascade_neighbors():
 			if is_instance_valid(neighbor):
-				CollisionResolver.resolve_collision(target, neighbor, 0)
+				CollisionResolver.resolve_collision(target, neighbor, 1)
 
 	return true
 
