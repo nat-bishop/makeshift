@@ -114,8 +114,7 @@ def print_distribution_report(result: EvalRunResult) -> None:
     reason_counts: Counter[str] = Counter()
     for case in result.cases:
         for err in case.retry_errors:
-            truncated = err[:60] + "..." if len(err) > 60 else err
-            reason_counts[truncated] += 1
+            reason_counts[err] += 1
     if reason_counts:
         print("\n  Retry Reasons:")
         for reason, count in reason_counts.most_common():

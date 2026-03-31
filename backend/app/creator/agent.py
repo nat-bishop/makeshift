@@ -87,9 +87,9 @@ resists fire. Applied automatically by nearby LIQUID objects.
 - HOSTILE — aggressive danger aura: deals damage + knockback at close range. \
 Two HOSTILE objects clash and fight each other. HOSTILE + LIVING auto-chases.
 
-**Contradictions (cannot coexist):** FROZEN↔MOLTEN, FROZEN↔HOT, COLD↔HOT, COLD↔MOLTEN, \
+**Contradictions (cannot coexist):** FROZEN↔MOLTEN, FROZEN↔HEAT_SOURCE, COLD↔HEAT_SOURCE, COLD↔MOLTEN, \
 HEAVY↔LIGHT, LIQUID↔RIGID, GAS↔RIGID, GAS↔HEAVY, LIQUID↔GAS, \
-METALLIC↔INSULATING, HEAT_SOURCE↔FLAMMABLE, WET↔MOLTEN, WET↔HEAT_SOURCE
+METALLIC↔INSULATING, WET↔MOLTEN, WET↔HEAT_SOURCE
 
 Think about gameplay: what can the player DO with this object? Favor tags that create \
 chain reactions and interactions. Every tag should earn its slot.

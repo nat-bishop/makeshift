@@ -106,7 +106,6 @@ TAG_CONTRADICTIONS: list[frozenset[Tag]] = [
     frozenset({Tag.GAS, Tag.HEAVY}),
     frozenset({Tag.LIQUID, Tag.GAS}),
     frozenset({Tag.METALLIC, Tag.INSULATING}),
-    frozenset({Tag.HEAT_SOURCE, Tag.FLAMMABLE}),
     frozenset({Tag.WET, Tag.MOLTEN}),
     frozenset({Tag.WET, Tag.HEAT_SOURCE}),
     frozenset({Tag.BRITTLE, Tag.LIQUID}),
