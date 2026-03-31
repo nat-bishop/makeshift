@@ -7,14 +7,14 @@ so rubrics stay in sync with the codebase.
 from __future__ import annotations
 
 from app.engine.rules_data import ALL_RULES
-from app.models.tags import Tag
+from app.models.tags import LLM_VISIBLE_TAGS
 
-_ALL_TAG_NAMES = [t.value for t in Tag]
+_LLM_TAG_NAMES = sorted(t.value for t in LLM_VISIBLE_TAGS)
 
 
 def get_tag_list_string() -> str:
-    """Comma-separated list of all valid Tag enum values."""
-    return ", ".join(_ALL_TAG_NAMES)
+    """Comma-separated list of LLM-visible Tag values."""
+    return ", ".join(_LLM_TAG_NAMES)
 
 
 def get_rules_summary_string() -> str:

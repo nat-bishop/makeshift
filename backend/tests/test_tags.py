@@ -7,8 +7,8 @@ from app.models.tags import (
 
 
 def test_tag_count():
-    """There should be exactly 29 tags."""
-    assert len(Tag) == 29
+    """There should be exactly 31 tags (27 LLM-visible + 4 internal)."""
+    assert len(Tag) == 31
 
 
 def test_contradiction_pairs_are_frozensets_of_two():
@@ -20,8 +20,8 @@ def test_contradiction_pairs_are_frozensets_of_two():
 
 
 def test_contradiction_count():
-    """There should be exactly 13 contradiction pairs."""
-    assert len(TAG_CONTRADICTIONS) == 13
+    """There should be exactly 15 contradiction pairs."""
+    assert len(TAG_CONTRADICTIONS) == 15
 
 
 def test_no_self_contradictions():
@@ -39,3 +39,25 @@ def test_wet_contradictions():
     pairs = {frozenset(p) for p in TAG_CONTRADICTIONS}
     assert frozenset({Tag.WET, Tag.MOLTEN}) in pairs
     assert frozenset({Tag.WET, Tag.HEAT_SOURCE}) in pairs
+
+
+def test_brittle_contradictions():
+    pairs = {frozenset(p) for p in TAG_CONTRADICTIONS}
+    assert frozenset({Tag.BRITTLE, Tag.LIQUID}) in pairs
+    assert frozenset({Tag.BRITTLE, Tag.GAS}) in pairs
+
+
+def test_internal_tags_not_llm_visible():
+    from app.models.tags import LLM_VISIBLE_TAGS
+
+    assert Tag.HOT not in LLM_VISIBLE_TAGS
+    assert Tag.GLOWING not in LLM_VISIBLE_TAGS
+    assert Tag.BRITTLE not in LLM_VISIBLE_TAGS
+    assert Tag.CORRODED not in LLM_VISIBLE_TAGS
+
+
+def test_auto_corrections_for_internal_tags():
+    from app.models.tags import TAG_AUTO_CORRECTIONS
+
+    assert TAG_AUTO_CORRECTIONS["BRITTLE"] == Tag.FROZEN
+    assert TAG_AUTO_CORRECTIONS["CORRODED"] == Tag.ACIDIC

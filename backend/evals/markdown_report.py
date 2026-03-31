@@ -10,11 +10,11 @@ from collections import Counter, defaultdict
 from statistics import median
 
 from app.models.behaviors import BehaviorParseError, parse_behavior_string
-from app.models.tags import Tag
+from app.models.tags import LLM_VISIBLE_TAGS
 
 from evals.models import EvalRunResult
 
-ALL_TAGS = [t.value for t in Tag]
+ALL_TAGS = sorted(t.value for t in LLM_VISIBLE_TAGS)
 
 # Metrics that use 0-1 scale (formatted as .2f)
 _SCORE_METRICS = {"Validity", "Faithfulness", "Gameplay Quality", "Sprite Prompt"}

@@ -128,7 +128,7 @@ class TestRuleResolver:
 
 class TestAllRules:
     def test_all_rules_loaded(self):
-        assert len(ALL_RULES) == 50
+        assert len(ALL_RULES) == 59
 
     def test_all_rules_have_unique_ids(self):
         ids = [r.rule_id for r in ALL_RULES]
@@ -327,3 +327,41 @@ class TestAllRules:
         )
         rule_ids = [m.rule_id for m in matches]
         assert "heat_flammable_ignite" not in rule_ids
+
+    def test_freeze_creates_brittle(self):
+        """Freeze rules should add BRITTLE tag."""
+        rule_map = {r.rule_id: r for r in ALL_RULES}
+        for rule_id in ("cold_liquid_freeze", "wet_cold_freeze", "cold_molten_freeze"):
+            rule = rule_map[rule_id]
+            added_tags = [e.tag for e in rule.effects if e.effect_type == EffectType.ADD_TAG]
+            assert Tag.BRITTLE in added_tags, f"{rule_id} should add BRITTLE"
+
+    def test_acid_creates_corroded(self):
+        """Acid rules on metallic/rigid should add CORRODED tag."""
+        rule_map = {r.rule_id: r for r in ALL_RULES}
+        for rule_id in ("acidic_metallic_dissolve", "acidic_rigid_weaken"):
+            rule = rule_map[rule_id]
+            added_tags = [e.tag for e in rule.effects if e.effect_type == EffectType.ADD_TAG]
+            assert Tag.CORRODED in added_tags, f"{rule_id} should add CORRODED"
+
+    def test_heat_metallic_adds_glowing(self):
+        """Heat conduction through metal should add GLOWING."""
+        rule_map = {r.rule_id: r for r in ALL_RULES}
+        rule = rule_map["heat_metallic_transfer"]
+        added_tags = [e.tag for e in rule.effects if e.effect_type == EffectType.ADD_TAG]
+        assert Tag.GLOWING in added_tags
+
+    def test_sticky_slow_is_wildcard(self):
+        """sticky_slow should match any B-side tags."""
+        resolver = RuleResolver(ALL_RULES)
+        matches = resolver.find_matching_rules({Tag.STICKY}, {Tag.RIGID})
+        rule_ids = [m.rule_id for m in matches]
+        assert "sticky_slow" in rule_ids
+
+    def test_sticky_slow_has_apply_slow_effect(self):
+        rule_map = {r.rule_id: r for r in ALL_RULES}
+        rule = rule_map["sticky_slow"]
+        effect_types = [e.effect_type for e in rule.effects]
+        assert EffectType.APPLY_SLOW in effect_types
+        slow_effect = next(e for e in rule.effects if e.effect_type == EffectType.APPLY_SLOW)
+        assert slow_effect.slow_factor == 0.25

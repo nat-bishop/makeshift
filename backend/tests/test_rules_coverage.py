@@ -74,6 +74,10 @@ class TestRulesStructuralValidation:
             "heat_metallic_transfer",
             "cold_metallic_transfer",
             "toxic_gas_cloud",
+            "glowing_flammable_smolder",
+            "glowing_living_attract",
+            "sticky_slow",
+            "sticky_living_struggle",
         }
         rule_map = {r.rule_id: r for r in ALL_RULES}
         for rule_id in expected_field_ids:
@@ -153,4 +157,39 @@ class TestUncoveredInteractions:
     def test_explosive_electric_detonate(self):
         self._assert_rule_matches(
             {Tag.EXPLOSIVE}, {Tag.ELECTRIC}, "explosive_electric_detonate"
+        )
+
+    # --- BRITTLE rules ---
+    def test_brittle_heavy_shatter(self):
+        self._assert_rule_matches({Tag.BRITTLE}, {Tag.HEAVY}, "brittle_heavy_shatter")
+
+    def test_brittle_sharp_crack(self):
+        self._assert_rule_matches({Tag.BRITTLE}, {Tag.SHARP}, "brittle_sharp_crack")
+
+    # --- CORRODED rules ---
+    def test_corroded_heavy_crush(self):
+        self._assert_rule_matches({Tag.CORRODED}, {Tag.HEAVY}, "corroded_heavy_crush")
+
+    def test_corroded_sharp_slice(self):
+        self._assert_rule_matches({Tag.CORRODED}, {Tag.SHARP}, "corroded_sharp_slice")
+
+    # --- GLOWING rules ---
+    def test_glowing_flammable_smolder(self):
+        self._assert_rule_matches(
+            {Tag.GLOWING}, {Tag.FLAMMABLE}, "glowing_flammable_smolder"
+        )
+
+    def test_glowing_living_attract(self):
+        self._assert_rule_matches({Tag.GLOWING}, {Tag.LIVING}, "glowing_living_attract")
+
+    # --- STICKY rules ---
+    def test_sticky_slow_wildcard(self):
+        self._assert_rule_matches({Tag.STICKY}, {Tag.RIGID, Tag.HEAVY}, "sticky_slow")
+
+    def test_sticky_living_struggle(self):
+        self._assert_rule_matches({Tag.STICKY}, {Tag.LIVING}, "sticky_living_struggle")
+
+    def test_sticky_heat_fuel(self):
+        self._assert_rule_matches(
+            {Tag.STICKY}, {Tag.HEAT_SOURCE}, "sticky_heat_fuel"
         )

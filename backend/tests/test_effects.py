@@ -7,7 +7,7 @@ from app.models.tags import Tag
 
 class TestEffectTypeEnum:
     def test_member_count(self):
-        assert len(EffectType) == 5
+        assert len(EffectType) == 6
 
     @pytest.mark.parametrize(
         "member, expected_value",
@@ -17,6 +17,7 @@ class TestEffectTypeEnum:
             (EffectType.ADD_TAG, "ADD_TAG"),
             (EffectType.REMOVE_TAG, "REMOVE_TAG"),
             (EffectType.APPLY_FORCE, "APPLY_FORCE"),
+            (EffectType.APPLY_SLOW, "APPLY_SLOW"),
         ],
     )
     def test_str_values(self, member: EffectType, expected_value: str):
@@ -132,3 +133,15 @@ class TestEffectDefaults:
             tag=Tag.FROZEN,
         )
         assert effect.damage_amount is None
+
+    def test_slow_factor_defaults_to_none(self):
+        effect = Effect(effect_type=EffectType.DAMAGE, target=EffectTarget.B)
+        assert effect.slow_factor is None
+
+    def test_apply_slow_effect(self):
+        effect = Effect(
+            effect_type=EffectType.APPLY_SLOW,
+            target=EffectTarget.B,
+            slow_factor=0.25,
+        )
+        assert effect.slow_factor == 0.25

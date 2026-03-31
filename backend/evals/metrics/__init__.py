@@ -36,7 +36,7 @@ RUBRICS: dict[str, str] = {
         "Focus on: Does the name match the concept? Do the tags reflect the object's "
         "core physical nature? Do the behaviors match what the player described or "
         "implied? Does the visual description match the tags and name?\n\n"
-        f"VALID TAGS (only these 32 exist — no others):\n{_TAG_LIST}\n\n"
+        f"VALID TAGS (only these exist — no others):\n{_TAG_LIST}\n\n"
         "Do NOT penalize the design for missing tags that don't exist in this list "
         "(e.g., there is no EDIBLE, FOOD, WOODEN, or METAL tag)."
     ),
