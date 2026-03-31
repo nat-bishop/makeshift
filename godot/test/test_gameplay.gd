@@ -201,8 +201,8 @@ func _test_full_interaction_chain() -> void:
 	var root = get_root()
 
 	# Create torch and wooden plank
-	var torch = _make_mock_body("torch", ["SOLID", "HEAT_SOURCE", "HOT"], 80.0)
-	var plank = _make_mock_body("plank", ["SOLID", "FLAMMABLE", "BREAKABLE"], 50.0)
+	var torch = _make_mock_body("torch", ["RIGID", "HEAT_SOURCE", "HOT"], 80.0)
+	var plank = _make_mock_body("plank", ["RIGID", "FLAMMABLE", "BREAKABLE"], 50.0)
 	root.add_child(torch)
 	root.add_child(plank)
 
@@ -226,7 +226,7 @@ func _test_full_interaction_chain() -> void:
 
 	# Now the plank (on fire) is itself a HEAT_SOURCE
 	# It should be able to ignite another flammable object
-	var plank2 = _make_mock_body("plank2", ["SOLID", "FLAMMABLE"], 50.0)
+	var plank2 = _make_mock_body("plank2", ["RIGID", "FLAMMABLE"], 50.0)
 	root.add_child(plank2)
 	_collision_resolver.clear_cooldowns()
 	_collision_resolver.resolve_collision(plank, plank2)
@@ -242,7 +242,7 @@ func _test_full_interaction_chain() -> void:
 
 	# Explosive wildcard
 	var bomb = _make_mock_body("bomb", ["EXPLOSIVE"], 10.0)
-	var bystander = _make_mock_body("bystander", ["SOLID"], 100.0)
+	var bystander = _make_mock_body("bystander", ["RIGID"], 100.0)
 	root.add_child(bomb)
 	root.add_child(bystander)
 	_collision_resolver.clear_cooldowns()

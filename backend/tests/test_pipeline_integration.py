@@ -6,19 +6,18 @@ import io
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
-import pytest
-from PIL import Image
-
 import app.images.pipeline as pipeline
+import pytest
 from app.images.pipeline import (
+    SpriteResult,
     build_prompt,
     generate_sprite,
     generate_static_sprite,
     get_cached_sprite_path,
-    SpriteResult,
 )
 from app.models.blueprint import GameObjectBlueprint, VisualDescriptor
 from app.models.tags import Tag
+from PIL import Image
 
 
 @pytest.fixture(autouse=True)
@@ -44,7 +43,7 @@ def _make_blueprint(id: str = "test-id", name: str = "Test Object") -> GameObjec
         id=id,
         name=name,
         description="test",
-        tags=[Tag.SOLID, Tag.RIGID],
+        tags=[Tag.RIGID, Tag.HEAVY],
         visual_descriptor=VisualDescriptor(
             visual_description="a gray cube", size_category="medium"
         ),

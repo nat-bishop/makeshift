@@ -109,6 +109,7 @@ async def _run_llm(description: str, timer: Timer) -> Any:
     from app.creator.agent import _get_agent
     from app.models.behaviors import expand_behavior_spec, parse_behavior_string
     from app.models.blueprint import GameObjectBlueprint
+    from app.models.tag_behaviors import resolve_implied_behaviors
 
     agent = _get_agent()
     prompt = f"Create a game object for: {description}"
@@ -126,7 +127,10 @@ async def _run_llm(description: str, timer: Timer) -> Any:
         f"{usage.input_tokens} input, {usage.output_tokens} output tokens, {tok_s} tok/s",
     )
 
-    behaviors = [expand_behavior_spec(parse_behavior_string(b)) for b in spec.behaviors]
+    explicit = None
+    if spec.signature:
+        explicit = expand_behavior_spec(parse_behavior_string(spec.signature))
+    behaviors = resolve_implied_behaviors(spec.tags, explicit)
     return GameObjectBlueprint(
         id=str(uuid.uuid4()),
         name=spec.name,

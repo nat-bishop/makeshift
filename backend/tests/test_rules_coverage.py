@@ -61,19 +61,18 @@ class TestRulesStructuralValidation:
             "heat_frozen_melt",
             "liquid_heat_extinguish",
             "cold_liquid_freeze",
-            "electric_conducting_electrify",
+            "electric_metallic_electrify",
             "electric_liquid_electrify",
             "wind_light_push",
             "wind_gas_disperse",
-            "magnetic_conducting_attract",
+            "magnetic_metallic_attract",
             "toxic_living_damage",
             "cold_molten_freeze",
             "magnetic_magnetic_attract",
-            "glowing_living_attract",
             "wind_floating_launch",
             "hot_living_burn",
-            "heat_conducting_transfer",
-            "cold_conducting_transfer",
+            "heat_metallic_transfer",
+            "cold_metallic_transfer",
             "toxic_gas_cloud",
         }
         rule_map = {r.rule_id: r for r in ALL_RULES}
@@ -112,9 +111,9 @@ class TestUncoveredInteractions:
     def test_toxic_living_damage(self):
         self._assert_rule_matches({Tag.TOXIC}, {Tag.LIVING}, "toxic_living_damage")
 
-    def test_magnetic_conducting_attract(self):
+    def test_magnetic_metallic_attract(self):
         self._assert_rule_matches(
-            {Tag.MAGNETIC}, {Tag.CONDUCTING}, "magnetic_conducting_attract"
+            {Tag.MAGNETIC}, {Tag.METALLIC}, "magnetic_metallic_attract"
         )
 
     def test_sharp_living_cut(self):
@@ -134,8 +133,8 @@ class TestUncoveredInteractions:
     def test_molten_flammable_ignite(self):
         self._assert_rule_matches({Tag.MOLTEN}, {Tag.FLAMMABLE}, "molten_flammable_ignite")
 
-    def test_corrosive_rigid_weaken(self):
-        self._assert_rule_matches({Tag.CORROSIVE}, {Tag.RIGID}, "corrosive_rigid_weaken")
+    def test_acidic_rigid_weaken(self):
+        self._assert_rule_matches({Tag.ACIDIC}, {Tag.RIGID}, "acidic_rigid_weaken")
 
     def test_bouncy_rigid_extrabounce(self):
         self._assert_rule_matches({Tag.BOUNCY}, {Tag.RIGID}, "bouncy_rigid_extrabounce")
@@ -143,16 +142,13 @@ class TestUncoveredInteractions:
     def test_heat_liquid_evaporate(self):
         self._assert_rule_matches({Tag.HEAT_SOURCE}, {Tag.LIQUID}, "heat_liquid_evaporate")
 
-    def test_slippery_heavy_slide(self):
-        self._assert_rule_matches({Tag.SLIPPERY}, {Tag.HEAVY}, "slippery_heavy_slide")
-
-    def test_heat_conducting_transfer(self):
+    def test_heat_metallic_transfer(self):
         self._assert_rule_matches(
-            {Tag.HEAT_SOURCE}, {Tag.CONDUCTING}, "heat_conducting_transfer"
+            {Tag.HEAT_SOURCE}, {Tag.METALLIC}, "heat_metallic_transfer"
         )
 
-    def test_cold_conducting_transfer(self):
-        self._assert_rule_matches({Tag.COLD}, {Tag.CONDUCTING}, "cold_conducting_transfer")
+    def test_cold_metallic_transfer(self):
+        self._assert_rule_matches({Tag.COLD}, {Tag.METALLIC}, "cold_metallic_transfer")
 
     def test_explosive_electric_detonate(self):
         self._assert_rule_matches(

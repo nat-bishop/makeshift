@@ -10,7 +10,6 @@ const BOBBING: Dictionary = {
 # Rotation oscillation (rotation sine wave)
 const SWAYING: Dictionary = {
 	"WIND_SOURCE": { "amplitude": 0.1, "speed": 4.0 },
-	"FLEXIBLE":    { "amplitude": 0.06, "speed": 1.2 },
 }
 
 # Uniform scale pulse (scale sine wave around base)
@@ -96,7 +95,7 @@ const PARTICLES: Dictionary = {
 		"scale_min": 2.0, "scale_max": 3.0,
 		"gravity": Vector2(0, -10),
 	},
-	"CORROSIVE": {
+	"ACIDIC": {
 		"color": Color(0.7, 0.3, 1.0, 0.7),
 		"amount": 3,
 		"direction": Vector2(0, 1),

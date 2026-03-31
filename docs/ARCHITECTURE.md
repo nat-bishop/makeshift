@@ -54,7 +54,7 @@ Full flow from player input to world-placed object with sprite:
 1. **Player types description** → `ObjectCreationPanel` sends text to `Backend.create_object()`
 2. **HTTP POST** → `POST /api/sessions/{id}/objects` with `{"description": "..."}`
 3. **Budget reserve** → `SessionManager.reserve_budget()` atomically charges $0.041 upfront (rejects with 402 if budget exceeded)
-4. **LLM agent** → `creator.agent.create_object()` runs PydanticAI agent (Gemini 3.1 Flash Lite Preview, 3 retries). Validators enforce: 1-3 word name, 2-6 tags, no contradictions, 0-3 behaviors. Falls back to generic "Mysterious {description}" on failure
+4. **LLM agent** → `creator.agent.create_object()` runs PydanticAI agent (Gemini 3.1 Flash Lite Preview, 3 retries). Validators enforce: 1-3 word name, 1-4 tags, no contradictions, 0-1 signature behavior. Falls back to generic "Mysterious {description}" on failure
 5. **Blueprint construction** → `GameObjectBlueprint` adds UUID, computed field: `starting_durability`
 6. **Persist** → `save_object()` saves blueprint (including behaviors) to the `objects` table
 7. **Immediate response** → Client receives blueprint JSON (with behaviors) + `budget_remaining`. `EventBus.creation_requested` was emitted on submit — `Game` starts a `MaterializeEffect` at the spawn point (paper scraps coalesce over 1.2s, then idle-bob)
@@ -99,7 +99,7 @@ Full flow from player input to world-placed object with sprite:
 
 ### Backend: `engine/resolver.py`
 
-`RuleResolver` builds a two-tier index at init from 53 `InteractionRule` definitions:
+`RuleResolver` builds a two-tier index at init from 50 `InteractionRule` definitions:
 
 **Pair index** (O(1) lookup): Nested dict `tag_a → tag_b → [rules]`. For bidirectional rules, both `(a,b)` and `(b,a)` entries are created.
 
@@ -110,7 +110,7 @@ Full flow from player input to world-placed object with sprite:
 2. Scan wildcard rules for subset matches
 3. Deduplicate by `rule_id`, sort by `execution_order` descending
 
-**`TriggerMode`** (`models/rules.py`): StrEnum — `CONTACT` (default) | `FIELD`. 24 of 53 rules are annotated `trigger_mode=TriggerMode.FIELD`. FIELD rules also fire on contact — `trigger_mode` is purely a filter used client-side by `TagField` and `CollisionResolver.resolve_collision(trigger_mode_filter=...)`.
+**`TriggerMode`** (`models/rules.py`): StrEnum — `CONTACT` (default) | `FIELD`. ~24 of 50 rules are annotated `trigger_mode=TriggerMode.FIELD`. FIELD rules also fire on contact — `trigger_mode` is purely a filter used client-side by `TagField` and `CollisionResolver.resolve_collision(trigger_mode_filter=...)`.
 
 ### Godot: `autoloads/rule_engine.gd`
 
@@ -182,7 +182,7 @@ STICKY uses `TagField._apply_sticky_slow()` instead of joint-based pinning. Per 
 
 ## Behavior System
 
-Objects carry 0-3 autonomous behaviors defined at creation time. Tags = what objects *are*; behaviors = what objects *do*. The two systems are additive and independent.
+Objects carry 0+ behaviors: tag-implied (automatic) + 0-1 LLM-authored signature behavior. Tags = what objects *are*; behaviors = what objects *do*. The two systems are additive and independent.
 
 ### Data Model (`backend/app/models/behaviors.py`)
 
@@ -192,7 +192,7 @@ Each `Behavior` is a flat Pydantic record:
 |-------|------|--------|
 | `trigger` | `BehaviorTrigger` | ALWAYS, ON_TIMER, ON_PROXIMITY, ON_CONTACT, ON_DAMAGED, ON_HEALTH_LOW, ON_TAG_ADDED, ON_CREATE, ON_DESTROY |
 | `action` | `BehaviorAction` | MOVE_TOWARD, MOVE_AWAY, PATROL, APPLY_FORCE, ATTRACT, SPAWN_PROJECTILE, EXPLODE, HEAL, ADD_TAGS, REMOVE_TAGS, SELF_DESTRUCT |
-| `target` | `BehaviorTarget` | SELF, NEAREST_OBJECT, NEAREST_LIVING, NEAREST_PLAYER, CONTACT_BODY |
+| `target` | `BehaviorTarget` | SELF, NEAREST_LIVING, NEAREST_PLAYER, CONTACT_BODY |
 | `intensity` | `Intensity` | MINIMAL, LOW, MEDIUM, HIGH, EXTREME (default MEDIUM) |
 | `range` | `BehaviorRange` | TOUCH, CLOSE, MEDIUM, FAR (default MEDIUM) |
 | `speed` | `Speed` | SLOW, MEDIUM, FAST, VERY_FAST (default MEDIUM) |
@@ -202,8 +202,8 @@ Each `Behavior` is a flat Pydantic record:
 
 ### Limits
 
-- Max 3 behaviors per object, max 6 tags (enforced by Pydantic `max_length`)
-- No per-object behavior or tag budget — removed in favor of simpler LLM constraints
+- Max 1 signature behavior per object (LLM-authored), max 4 tags (enforced by Pydantic `max_length`)
+- Tag-implied behaviors (HOSTILE+LIVING→chase+flee, LIVING→wander, EXPLOSIVE→detonate) are added automatically — not in LLM output
 
 ### Godot Runtime (`godot/scripts/systems/behavior_executor.gd`)
 
@@ -252,12 +252,12 @@ on_tag_added(tag)  # called by GameObject.add_tag()
 | `INTERVAL_SECONDS` | ONCE_SHORT=1.0, ONCE_MEDIUM=3.0, SLOW=3.0, MEDIUM=1.5, FAST=0.75 |
 | `MOVEMENT_RANK` | ON_HEALTH_LOW=1 … ALWAYS=7 (lower = higher priority) |
 | `DYNAMIC_TAG_DURATION` | 10.0s — unified duration for all dynamically-added tags (cascade or behavior) |
-| `PAYLOAD_TAG_MAP` | HEAT_SOURCE→HOT, ELECTRIC→ELECTRIC, TOXIC→TOXIC, CORROSIVE→CORROSIVE, FROZEN→COLD |
+| `PAYLOAD_TAG_MAP` | HEAT_SOURCE→HOT, ELECTRIC→ELECTRIC, TOXIC→TOXIC, ACIDIC→ACIDIC, FROZEN→COLD |
 
 ### Projectile System (`godot/scenes/projectile/`)
 
 `SPAWN_PROJECTILE` action spawns a `RigidBody2D` projectile scene. Properties:
-- Base tags: `[SOLID, LIGHT, BREAKABLE]` plus one payload tag inherited from parent (via `PAYLOAD_TAG_MAP`)
+- Base tags: `[LIGHT, BREAKABLE]` plus one payload tag inherited from parent (via `PAYLOAD_TAG_MAP`)
 - Gravity scale 0 (straight-line flight), speed 250 px/s, lifetime 2.5s auto-destroy
 - On contact: deals damage directly, then calls `CollisionResolver.resolve_collision()` so payload tag participates in rule engine (e.g., HOT projectile ignites FLAMMABLE target)
 - Ignores its source object to prevent self-hit
@@ -391,7 +391,6 @@ Non-solid uses no filter because being inside the substance is semantically equi
 | FLOATING | — | -0.5 | — | — | 1.5 |
 | GAS | — | — | 0.0 | 0.0 | 4.0 |
 | LIQUID | — | 1.0 | 0.0 | 0.0 | 2.0 |
-| SLIPPERY | — | — | 0.05 | — | — |
 | STICKY | — | — | 2.0 | — | — |
 | BOUNCY | — | — | 0.2 | 0.9 | — |
 | Default | 1.0 | 1.0 | 0.5 | 0.0 | 0.5 |

@@ -20,7 +20,7 @@ from app.config import settings
 from pydantic_evals import Dataset
 
 from evals.conftest import make_agent, make_task
-from evals.dataset import EVAL_CASES, build_dataset
+from evals.dataset import EVAL_CASES
 from evals.io import report_to_result, save_result
 from evals.prompts import PROMPT_VARIANTS
 

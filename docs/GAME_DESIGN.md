@@ -4,45 +4,45 @@
 
 "Scribblenauts meets Terraria" — a 2D physics sandbox where players type text descriptions to create game objects. An LLM (Gemini) interprets descriptions into tagged blueprints with visual descriptors and autonomous behaviors. Gemini image generation produces sprites. Objects interact through a tag-based rule system and behavior system, enabling emergent puzzle-solving: fire melts ice, a dragon patrols and breathes fire, a time bomb explodes after a delay.
 
-Tags define what an object *is*; behaviors define what it *does*. Each object gets 2-6 tags and 0-3 behaviors — enough to express a rich concept while keeping LLM output focused.
+Tags define what an object *is*; behaviors define what it *does*. Each object gets 1-4 tags and an optional signature behavior — enough to express a rich concept while keeping LLM output focused. Common behaviors (chase, flee, wander, detonate) are tag-implied and don't need explicit authoring.
 
 ## Tag System
 
-32 tags across 7 categories. Tags are the atomic unit of the entire game — they drive physics, interactions, and durability.
+27 tags across 7 categories (+ 2 internal-only). Tags are the atomic unit of the entire game — they drive physics, interactions, durability, and implied behaviors.
 
 ### Categories
 
 | Category | Tags |
 |----------|------|
-| Physical State | SOLID, LIQUID, GAS, RIGID, FLEXIBLE, HEAVY, LIGHT |
-| Temperature | FROZEN, COLD, HOT, MOLTEN |
+| Physical State | LIQUID, GAS, RIGID, HEAVY, LIGHT |
+| Temperature | FROZEN, COLD, MOLTEN |
 | Energy | FLAMMABLE, HEAT_SOURCE, ELECTRIC, MAGNETIC, EXPLOSIVE |
-| Surface | SHARP, STICKY, SLIPPERY, REFLECTIVE |
+| Surface | SHARP, STICKY, REFLECTIVE |
 | Mechanical | BOUNCY, BREAKABLE |
-| Environmental | FLOATING, WIND_SOURCE, CORROSIVE, TOXIC, WET |
-| Special | LIVING, GLOWING, CONDUCTING, INSULATING, HOSTILE |
+| Environmental | FLOATING, WIND_SOURCE, ACIDIC, TOXIC, WET |
+| Special | LIVING, METALLIC, INSULATING, HOSTILE |
+| Internal-only | HOT (rule-applied burn), GLOWING (legacy, unused) |
+
+**Pruned tags**: SOLID (82% filler, 0 rules — implicit default), FLEXIBLE (1 unintuitive rule), SLIPPERY (0% generated, overlaps FROZEN physics). **Renamed**: CORROSIVE→ACIDIC, CONDUCTING→METALLIC (LLM-friendly names boost generation accuracy).
 
 WET (Environmental) is a state tag applied automatically by nearby LIQUID objects (15s duration). It amplifies interactions: ELECTRIC shock deals 45 dmg instead of 30, freezing occurs faster near COLD, and fire is resisted. Contradicts MOLTEN and HEAT_SOURCE. Physics effect: linear friction 0.1 (slippery when wet). Field tag (CLOSE, periodic).
 
 HOSTILE (Special) is a danger-aura field tag — it deals 20 damage + knockback (150 force vs LIVING, 100 vs BREAKABLE) to everything in CLOSE range on a 2s tick. HOSTILE + HOSTILE clash rule deals 15 dmg to both sides + 120 force. This makes hostile objects into area-denial threats rather than simple contact hazards. Tags handle all contact damage; behaviors handle autonomous proactive actions.
 
-STICKY (Surface) is a continuous field tag (CLOSE range) that slows everything nearby to 25% speed — applying `linear_damp=12.0` to RigidBody2D objects and a speed modifier to the player. Area denial trap mechanic. Contradicts SLIPPERY and REFLECTIVE.
+STICKY (Surface) is a continuous field tag (CLOSE range) that slows everything nearby to 25% speed — applying `linear_damp=12.0` to RigidBody2D objects and a speed modifier to the player. Area denial trap mechanic.
 
-REFLECTIVE (Surface) bounces heat, electricity, and resists acid — the `reflective_corrosive_resist` rule removes CORROSIVE from the attacker on contact.
+REFLECTIVE (Surface) bounces heat, electricity, and resists acid — the `reflective_acidic_resist` rule removes ACIDIC from the attacker on contact.
 
-GLOWING (Special) attracts LIVING things: attraction force per physics frame (continuous field, MEDIUM range).
+EXPLOSIVE is the highest-impact single tag: area damage on heat or electricity contact. Tag-implied behavior: detonates when damaged (ON_DAMAGED → EXPLODE). The LLM can override the trigger via the signature behavior.
 
-EXPLOSIVE is the highest-impact single tag: area damage on heat or electricity contact. The EXPLODE behavior action achieves similar results with more trigger control, but requires a behavior slot.
-
-### Contradiction Pairs (17)
+### Contradiction Pairs (13)
 
 Tags that can't coexist on the same object:
 
 ```
 FROZEN↔MOLTEN    FROZEN↔HOT        COLD↔HOT         COLD↔MOLTEN
 HEAVY↔LIGHT      LIQUID↔RIGID      GAS↔RIGID        GAS↔HEAVY
-SOLID↔LIQUID     SOLID↔GAS         LIQUID↔GAS       STICKY↔SLIPPERY
-CONDUCTING↔INSULATING              REFLECTIVE↔STICKY
+LIQUID↔GAS       METALLIC↔INSULATING
 HEAT_SOURCE↔FLAMMABLE              WET↔MOLTEN       WET↔HEAT_SOURCE
 ```
 
@@ -50,7 +50,7 @@ Enforced by Pydantic validators on `CreatorOutput`. Violations trigger `ModelRet
 
 ## Rule System
 
-53 `InteractionRule` definitions in `engine/rules_data.py`. Each rule specifies:
+50 `InteractionRule` definitions in `engine/rules_data.py`. Each rule specifies:
 - Required tags on object A and/or B
 - `execution_order` (higher fires first)
 - Whether bidirectional (A↔B or only A→B)
@@ -64,7 +64,7 @@ Enforced by Pydantic validators on `CreatorOutput`. Violations trigger `ModelRet
 
 **Chain reactions**: Cascade-eligible rules create emergent gameplay. Igniting one flammable object spreads HEAT_SOURCE to neighbors, which may ignite more flammable objects. Depth-limited to 3 to prevent infinite loops.
 
-**Distance-based interactions**: 24 of 53 rules are annotated `trigger_mode=FIELD`. These fire both at range (via `TagField`) and on direct contact. The rule declares *whether* an interaction works at distance; `FieldConfig` declares *how far* and *how* for the emitting tag. Separating these concerns avoids duplicating range values across rules that share the same emitting tag.
+**Distance-based interactions**: ~24 of 50 rules are annotated `trigger_mode=FIELD`. These fire both at range (via `TagField`) and on direct contact. The rule declares *whether* an interaction works at distance; `FieldConfig` declares *how far* and *how* for the emitting tag. Separating these concerns avoids duplicating range values across rules that share the same emitting tag.
 
 **Counters exist**: Every powerful interaction has a counter. INSULATING blocks ELECTRIC propagation. REFLECTIVE bounces HEAT_SOURCE. LIQUID extinguishes HEAT_SOURCE. This creates a rock-paper-scissors dynamic.
 
@@ -74,13 +74,13 @@ Enforced by Pydantic validators on `CreatorOutput`. Violations trigger `ModelRet
 |----------|--------------|----------|--------|
 | Fire/Heat | HEAT_SOURCE + FLAMMABLE → ignite, + FROZEN → melt, LIQUID + HEAT_SOURCE → extinguish | Yes (ignite) | Yes |
 | Temperature | COLD + LIQUID → freeze, COLD + MOLTEN → solidify, HOT + LIVING → burn | No | Yes |
-| Electricity | ELECTRIC + CONDUCTING → electrify + propagate, + LIQUID → electrify, + FLAMMABLE → spark ignition, + GAS → ionize plasma | Yes (conduction, spark, ionize) | Yes (conduction, liquid, gas) |
+| Electricity | ELECTRIC + METALLIC → electrify + propagate, + LIQUID → electrify, + FLAMMABLE → spark ignition, + GAS → ionize plasma | Yes (conduction, spark, ionize) | Yes (conduction, liquid, gas) |
 | Physical | SHARP + BREAKABLE → damage, HEAVY + BREAKABLE → damage, BOUNCY + RIGID → bounce | No | No |
 | Hostile | HOSTILE + BREAKABLE/LIVING → 20 dmg + knockback (field, periodic), HOSTILE + HOSTILE → 15 dmg + 120 force | No | Yes |
 | WET | LIQUID → adds WET (15s), WET + ELECTRIC → 45 dmg, WET + COLD → faster freeze, HEAT_SOURCE → removes WET | No | Yes (LIQUID, WET) |
-| Counter | INSULATING blocks ELECTRIC, REFLECTIVE reflects HEAT_SOURCE/ELECTRIC/acid (reflective_corrosive_resist) | No | No |
-| Magnetic/Wind | MAGNETIC + CONDUCTING → attract, WIND_SOURCE + LIGHT/GAS/FLOATING → push | No | Yes |
-| Environmental | CORROSIVE + BREAKABLE → corrode, TOXIC + LIVING → damage | No | Yes (TOXIC) |
+| Counter | INSULATING blocks ELECTRIC, REFLECTIVE reflects HEAT_SOURCE/ELECTRIC/acid (reflective_acidic_resist) | No | No |
+| Magnetic/Wind | MAGNETIC + METALLIC → attract, WIND_SOURCE + LIGHT/GAS/FLOATING → push | No | Yes |
+| Environmental | ACIDIC + BREAKABLE → corrode, TOXIC + LIVING → damage | No | Yes (TOXIC) |
 
 ### Field Modes
 
@@ -94,27 +94,34 @@ Rules with empty `tags_required_b` match any second object. Used for uncondition
 
 ## Behavior System
 
-Behaviors make objects autonomous. Tags define *what an object is*; behaviors define *what it does on its own*. The two systems are additive and independent — any object can have both, either, or neither.
+Two layers: **tag-implied behaviors** (automatic) and an optional **signature behavior** (LLM-authored).
 
-### Design Philosophy
+### Tag-Implied Behaviors
 
-**Flat records, not behavior trees.** Each behavior is a single trigger→action→target record with optional parameters. This is intentional: it keeps LLM output predictable and debuggable. Complex behavior (guard that retreats when hurt, then heals and re-engages) requires multiple behavior records, which is transparent and slot-constrained.
+Common patterns are derived from tags at blueprint creation — no LLM authoring needed:
 
-**Categorical parameters, not numeric.** Behaviors use named tiers (MINIMAL/LOW/MEDIUM/HIGH/EXTREME) rather than raw numbers. This lets the LLM describe intent ("intense fire") without guessing engine values, and lets the implementation tune those values without touching the data model.
+| Tag Combination | Implied Behavior |
+|---|---|
+| HOSTILE + LIVING | Chase nearest living (ALWAYS → MOVE_TOWARD) |
+| HOSTILE + LIVING | Flee when hurt (ON_HEALTH_LOW → MOVE_AWAY) |
+| LIVING (no HOSTILE) | Wander (ALWAYS → PATROL) |
+| EXPLOSIVE | Detonate when damaged (ON_DAMAGED → EXPLODE) |
 
-### Vocabulary Summary
+### Signature Behavior
 
-9 triggers: ALWAYS, ON_TIMER, ON_PROXIMITY, ON_CONTACT, ON_DAMAGED, ON_HEALTH_LOW, ON_TAG_ADDED, ON_CREATE, ON_DESTROY
+One optional LLM-authored behavior per object — the unique "twist" that makes this object different from others with the same tags. Format: `TRIGGER -> ACTION` or `TRIGGER -> ACTION -> TARGET, power=POWER`. Targets auto-inferred when omitted.
 
-11 actions: MOVE_TOWARD, MOVE_AWAY, PATROL, APPLY_FORCE, ATTRACT, SPAWN_PROJECTILE, EXPLODE, HEAL, ADD_TAGS, REMOVE_TAGS, SELF_DESTRUCT
+If the signature shares a trigger with an implied behavior, it overrides that specific implied behavior (per-trigger, not all-or-nothing). Other implied behaviors survive.
 
-5 targets: SELF, NEAREST_OBJECT, NEAREST_LIVING, NEAREST_PLAYER, CONTACT_BODY
+### LLM Vocabulary
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for implementation details (numeric mappings, projectile system).
+7 triggers: ALWAYS, ON_TIMER, ON_PROXIMITY, ON_CONTACT, ON_DAMAGED, ON_HEALTH_LOW, ON_TAG_ADDED(TAG)
 
-### Behavior Limits
+7 actions: MOVE_TOWARD, MOVE_AWAY, SPAWN_PROJECTILE, EXPLODE, HEAL, ADD_TAGS, SELF_DESTRUCT
 
-Max 3 behaviors per object. There is no per-object behavior budget — the slot limit keeps objects focused without requiring LLM arithmetic.
+3 targets: SELF, NEAREST_LIVING, NEAREST_PLAYER (+ CONTACT_BODY auto-inferred for contact triggers)
+
+Engine-internal actions (PATROL, APPLY_FORCE, ATTRACT, REMOVE_TAGS) and triggers (ON_CREATE, ON_DESTROY) exist for tag-implied behaviors but are not in the LLM vocabulary.
 
 ### Composing Tags and Behaviors
 
@@ -122,31 +129,29 @@ The tag and behavior systems interact through `ON_TAG_ADDED` triggers. This brid
 
 - Rule engine adds HOT to a bomb → ON_TAG_ADDED(HOT) triggers EXPLODE
 - Rule engine ignites an object → ON_TAG_ADDED(HEAT_SOURCE) triggers MOVE_AWAY from heat
-- Behavior adds ELECTRIC tag → rule engine propagates it to CONDUCTING neighbors
-
-This makes the two systems composable without tight coupling.
+- Behavior adds ELECTRIC tag → rule engine propagates it to METALLIC neighbors
 
 ### Design Examples
 
 **Dragon** (aggressor):
-- Tags: LIVING, HEAT_SOURCE, HOT, HEAVY, HOSTILE
-- Behavior 1: ALWAYS → MOVE_TOWARD → NEAREST_LIVING, power=medium
-- Behavior 2: ON_PROXIMITY → SPAWN_PROJECTILE → NEAREST_LIVING, power=high
-- HOSTILE field aura handles melee-range damage + knockback automatically; SPAWN_PROJECTILE handles ranged.
+- Tags: LIVING, HOSTILE, HEAT_SOURCE, HEAVY
+- Signature: ON_PROXIMITY → SPAWN_PROJECTILE → NEAREST_LIVING, power=high
+- Implied: chase (HOSTILE+LIVING), flee when hurt (HOSTILE+LIVING). Signature adds ranged fire breath.
 
 **Time Bomb** (delayed threat):
 - Tags: EXPLOSIVE, RIGID, BREAKABLE
-- Behavior 1: ON_TIMER → EXPLODE → SELF, power=high
+- Signature: ON_TIMER → SELF_DESTRUCT
+- Implied: detonate on damage (EXPLOSIVE). Signature adds timed detonation as alternative trigger.
 
 **Guard Dog** (reactive defender):
-- Tags: LIVING, SHARP, HOSTILE, RIGID. SHARP and HOSTILE together handle contact damage via rules.
-- Behavior 1: ALWAYS → PATROL → SELF, power=medium
-- Behavior 2: ON_PROXIMITY → MOVE_TOWARD → NEAREST_LIVING, power=high
+- Tags: LIVING, SHARP, HOSTILE, RIGID
+- Signature: null
+- Implied: chase (HOSTILE+LIVING), flee when hurt. SHARP cuts on contact, HOSTILE field damages nearby. Tags fully express this object.
 
 **Reactive Bomb** (tag-triggered via rule engine):
 - Tags: EXPLOSIVE, FLAMMABLE, BREAKABLE
-- Behavior 1: ON_TAG_ADDED(HOT) → EXPLODE → SELF, power=high
-- Note: The EXPLOSIVE tag would also fire via rule engine when HOT is added — omit EXPLOSIVE and rely purely on the behavior for greater control over timing.
+- Signature: ON_TAG_ADDED(HEAT_SOURCE) → EXPLODE
+- Fire adds HEAT_SOURCE via rules → triggers signature EXPLODE. Overrides the implied ON_DAMAGED detonation with a more specific trigger.
 
 ## Player Controls
 
@@ -199,8 +204,8 @@ During placement, the HUD hint changes to "Click: Place | Esc: Cancel".
 | Cost per object | $0.041 (LLM ~$0.001 + image ~$0.04) |
 | Session budget | $1.00 (default, configurable) |
 | Max objects per session | ~24 |
-| Tags per object | 2-6 (enforced by LLM validator) |
-| Behaviors per object | 0-3 (enforced by LLM validator) |
+| Tags per object | 1-4 (enforced by LLM validator) |
+| Signature behavior | 0-1 (optional, enforced by LLM validator) |
 | Name length | 1-3 words (enforced by LLM validator) |
 
 
@@ -212,15 +217,14 @@ Starting durability depends on tags:
 |-----|-----------|
 | BREAKABLE | 50 |
 | RIGID | 200 |
-| FLEXIBLE | 100 |
-| Default (none of above) | 150 |
+| Default (neither) | 150 |
 
-Priority: BREAKABLE checked first, then RIGID, then FLEXIBLE, then default.
+Priority: BREAKABLE checked first, then RIGID, then default.
 
 **Damage-over-time (DOT)** — rule-defined; applied via DAMAGE effect with `tick_interval`/`tick_duration` fields:
 - Ignition (HEAT_SOURCE + FLAMMABLE): 10 dmg/s for 5s (50 total)
 - Spark ignition (ELECTRIC + FLAMMABLE): 8 dmg/s for 3s (24 total); also adds HEAT_SOURCE + HOT
-- Corrosion (CORROSIVE + BREAKABLE): 15 dmg/s for 3s (45 total)
+- Corrosion (ACIDIC + BREAKABLE): 15 dmg/s for 3s (45 total)
 
 DOT does not stack — a new DOT on an already-burning object replaces the existing one.
 

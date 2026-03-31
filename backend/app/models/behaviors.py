@@ -12,6 +12,7 @@ class BehaviorParseError(ValueError):
 
 
 class BehaviorTrigger(StrEnum):
+    # LLM-visible triggers
     ALWAYS = "ALWAYS"
     ON_TIMER = "ON_TIMER"
     ON_PROXIMITY = "ON_PROXIMITY"
@@ -19,30 +20,52 @@ class BehaviorTrigger(StrEnum):
     ON_DAMAGED = "ON_DAMAGED"
     ON_HEALTH_LOW = "ON_HEALTH_LOW"
     ON_TAG_ADDED = "ON_TAG_ADDED"
+    # Engine-internal (not in LLM vocab, used by tag-implied behaviors)
     ON_CREATE = "ON_CREATE"
     ON_DESTROY = "ON_DESTROY"
 
 
+LLM_VISIBLE_TRIGGERS: frozenset[BehaviorTrigger] = frozenset(BehaviorTrigger) - {
+    BehaviorTrigger.ON_CREATE,
+    BehaviorTrigger.ON_DESTROY,
+}
+
+
 class BehaviorAction(StrEnum):
+    # LLM-visible actions
     MOVE_TOWARD = "MOVE_TOWARD"
     MOVE_AWAY = "MOVE_AWAY"
-    PATROL = "PATROL"
-    APPLY_FORCE = "APPLY_FORCE"
-    ATTRACT = "ATTRACT"
     SPAWN_PROJECTILE = "SPAWN_PROJECTILE"
     EXPLODE = "EXPLODE"
     HEAL = "HEAL"
     ADD_TAGS = "ADD_TAGS"
-    REMOVE_TAGS = "REMOVE_TAGS"
     SELF_DESTRUCT = "SELF_DESTRUCT"
+    # Engine-internal (not in LLM vocab, used by tag-implied behaviors)
+    PATROL = "PATROL"
+    APPLY_FORCE = "APPLY_FORCE"
+    ATTRACT = "ATTRACT"
+    REMOVE_TAGS = "REMOVE_TAGS"
+
+
+LLM_VISIBLE_ACTIONS: frozenset[BehaviorAction] = frozenset(BehaviorAction) - {
+    BehaviorAction.PATROL,
+    BehaviorAction.APPLY_FORCE,
+    BehaviorAction.ATTRACT,
+    BehaviorAction.REMOVE_TAGS,
+}
 
 
 class BehaviorTarget(StrEnum):
     SELF = "SELF"
-    NEAREST_OBJECT = "NEAREST_OBJECT"
     NEAREST_LIVING = "NEAREST_LIVING"
     NEAREST_PLAYER = "NEAREST_PLAYER"
+    # Internal-only: auto-inferred from contact triggers, not in LLM vocab
     CONTACT_BODY = "CONTACT_BODY"
+
+
+LLM_VISIBLE_TARGETS: frozenset[BehaviorTarget] = frozenset(BehaviorTarget) - {
+    BehaviorTarget.CONTACT_BODY
+}
 
 
 class Intensity(StrEnum):
@@ -84,7 +107,7 @@ class Power(StrEnum):
 
 # Actions that always target SELF (client ignores the target field)
 _SELF_ONLY_ACTIONS: frozenset[BehaviorAction] = frozenset(
-    {BehaviorAction.SELF_DESTRUCT, BehaviorAction.EXPLODE}
+    {BehaviorAction.SELF_DESTRUCT, BehaviorAction.EXPLODE, BehaviorAction.PATROL}
 )
 
 # Movement actions that need a real target (target=SELF produces a zero vector)
@@ -92,7 +115,7 @@ _DIRECTIONAL_MOVEMENT_ACTIONS: frozenset[BehaviorAction] = frozenset(
     {BehaviorAction.MOVE_TOWARD, BehaviorAction.MOVE_AWAY}
 )
 
-# All movement actions (including PATROL which ignores target)
+# All movement actions (including engine-internal PATROL)
 _ALL_MOVEMENT_ACTIONS: frozenset[BehaviorAction] = frozenset(
     {BehaviorAction.MOVE_TOWARD, BehaviorAction.MOVE_AWAY, BehaviorAction.PATROL}
 )
@@ -108,12 +131,43 @@ _CONTACT_BODY_TRIGGERS: frozenset[BehaviorTrigger] = frozenset(
 
 
 # ---------------------------------------------------------------------------
+# Target auto-inference — infer target from trigger + action when omitted
+# ---------------------------------------------------------------------------
+
+_TRIGGER_DEFAULT_TARGETS: dict[BehaviorTrigger, BehaviorTarget] = {
+    BehaviorTrigger.ON_CONTACT: BehaviorTarget.CONTACT_BODY,
+    BehaviorTrigger.ON_DAMAGED: BehaviorTarget.CONTACT_BODY,
+    BehaviorTrigger.ON_PROXIMITY: BehaviorTarget.NEAREST_LIVING,
+    BehaviorTrigger.ALWAYS: BehaviorTarget.NEAREST_LIVING,
+    BehaviorTrigger.ON_TIMER: BehaviorTarget.SELF,
+    BehaviorTrigger.ON_HEALTH_LOW: BehaviorTarget.SELF,
+    BehaviorTrigger.ON_TAG_ADDED: BehaviorTarget.SELF,
+    BehaviorTrigger.ON_CREATE: BehaviorTarget.SELF,
+    BehaviorTrigger.ON_DESTROY: BehaviorTarget.SELF,
+}
+
+
+def infer_target(
+    trigger: BehaviorTrigger, action: BehaviorAction
+) -> BehaviorTarget:
+    """Infer the best target when the LLM omits one."""
+    if action in _SELF_ONLY_ACTIONS:
+        return BehaviorTarget.SELF
+    default = _TRIGGER_DEFAULT_TARGETS.get(trigger, BehaviorTarget.NEAREST_LIVING)
+    if action in _DIRECTIONAL_MOVEMENT_ACTIONS and default == BehaviorTarget.SELF:
+        return BehaviorTarget.NEAREST_LIVING
+    return default
+
+
+# ---------------------------------------------------------------------------
 # Shared validation helpers — used by both Behavior and BehaviorSpec.
 # Return an error message string if invalid, None if OK.
 # ---------------------------------------------------------------------------
 
 
-def _check_trigger_tag(trigger: BehaviorTrigger, trigger_tag: Tag | None) -> str | None:
+def _check_trigger_tag(
+    trigger: BehaviorTrigger, trigger_tag: Tag | None
+) -> str | None:
     if trigger == BehaviorTrigger.ON_TAG_ADDED:
         if trigger_tag is None:
             return "ON_TAG_ADDED trigger requires trigger_tag to specify which tag to watch."
@@ -122,24 +176,30 @@ def _check_trigger_tag(trigger: BehaviorTrigger, trigger_tag: Tag | None) -> str
     return None
 
 
-def _check_tags_to_apply(action: BehaviorAction, tags_to_apply: list[Tag] | None) -> str | None:
+def _check_tags_to_apply(
+    action: BehaviorAction, tags_to_apply: list[Tag] | None
+) -> str | None:
     if action in {BehaviorAction.ADD_TAGS, BehaviorAction.REMOVE_TAGS} and not tags_to_apply:
         return f"{action} action requires tags_to_apply to specify which tags."
     return None
 
 
-def _check_self_only_action(action: BehaviorAction, target: BehaviorTarget) -> str | None:
+def _check_self_only_action(
+    action: BehaviorAction, target: BehaviorTarget
+) -> str | None:
     if action in _SELF_ONLY_ACTIONS and target != BehaviorTarget.SELF:
         return f"{action} always affects this object. target must be SELF."
     return None
 
 
-def _check_movement_target(action: BehaviorAction, target: BehaviorTarget) -> str | None:
+def _check_movement_target(
+    action: BehaviorAction, target: BehaviorTarget
+) -> str | None:
     if action in _DIRECTIONAL_MOVEMENT_ACTIONS and target == BehaviorTarget.SELF:
         return (
             f"{action} needs a target to move toward/away from. "
             f"SELF is not valid. "
-            f"Use NEAREST_OBJECT, NEAREST_LIVING, NEAREST_PLAYER, or CONTACT_BODY."
+            f"Use NEAREST_LIVING or NEAREST_PLAYER."
         )
     return None
 
@@ -155,7 +215,9 @@ def _check_contact_body_trigger(
     return None
 
 
-def _check_destroy_movement(trigger: BehaviorTrigger, action: BehaviorAction) -> str | None:
+def _check_destroy_movement(
+    trigger: BehaviorTrigger, action: BehaviorAction
+) -> str | None:
     if trigger == BehaviorTrigger.ON_DESTROY and action in _ALL_MOVEMENT_ACTIONS:
         return (
             f"ON_DESTROY cannot use movement actions ({action}). "
@@ -245,7 +307,7 @@ class BehaviorSpec(BaseModel):
 
     trigger: BehaviorTrigger
     action: BehaviorAction
-    target: BehaviorTarget = BehaviorTarget.NEAREST_OBJECT
+    target: BehaviorTarget = BehaviorTarget.NEAREST_LIVING
     power: Power = Power.MEDIUM
     trigger_tag: Tag | None = None
     tags_to_apply: list[Tag] | None = None
@@ -288,12 +350,7 @@ class BehaviorSpec(BaseModel):
 
 
 def expand_behavior_spec(spec: BehaviorSpec) -> Behavior:
-    """Expand a simplified BehaviorSpec into a full Behavior with deterministic mappings.
-
-    BehaviorSpec validators enforce action/target/trigger compatibility before this
-    function is called. This function only maps power to granular parameters.
-    The Behavior model validators (ValueError) serve as a safety net.
-    """
+    """Expand a simplified BehaviorSpec into a full Behavior with deterministic mappings."""
     return Behavior(
         trigger=spec.trigger,
         action=spec.action,
@@ -320,7 +377,6 @@ _E = TypeVar("_E", bound=StrEnum)
 def _parse_enum(value: str, enum_cls: type[_E], label: str) -> _E:
     """Look up a StrEnum member by value (case-insensitive)."""
     stripped = value.strip()
-    # Try as-is, then uppercase, then lowercase (covers Power's lowercase values)
     for candidate in (stripped, stripped.upper(), stripped.lower()):
         try:
             return enum_cls(candidate)
@@ -357,17 +413,17 @@ def parse_behavior_string(s: str) -> BehaviorSpec:
     Format: TRIGGER -> ACTION -> TARGET, power=POWER
     Parametric: ON_TAG_ADDED(TAG), ADD_TAGS(TAG1, TAG2), REMOVE_TAGS(TAG1, TAG2)
 
+    Target is optional — auto-inferred from trigger when omitted.
+
     Raises BehaviorParseError for format issues. BehaviorSpec validators raise
     ValueError for semantic issues (e.g. EXPLODE with non-SELF target).
     """
     s = s.strip()
-    # Strip outer braces — LLM may echo {behavior} from prompt examples
     if s.startswith("{") and s.endswith("}"):
         s = s[1:-1].strip()
     if not s:
         raise BehaviorParseError("Empty behavior string.")
 
-    # Normalize ASCII arrow to unicode
     s = s.replace("->", "\u2192")
     parts = [p.strip() for p in s.split("\u2192")]
 
@@ -404,13 +460,8 @@ def parse_behavior_string(s: str) -> BehaviorSpec:
             val = val.strip()
             if key == "power":
                 power = _parse_enum(val, Power, "power")
-            # Unknown kwargs silently ignored — LLM may produce extra params
     else:
-        # 2-part: default target based on action
-        if action in _SELF_ONLY_ACTIONS:
-            target = BehaviorTarget.SELF
-        else:
-            target = BehaviorTarget.NEAREST_OBJECT
+        target = infer_target(trigger, action)
 
     return BehaviorSpec(
         trigger=trigger,

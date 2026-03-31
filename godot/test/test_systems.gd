@@ -217,7 +217,7 @@ func _test_rule_engine() -> void:
 		{
 			"rule_id": "electric",
 			"tags_required_a": ["ELECTRIC"],
-			"tags_required_b": ["CONDUCTING"],
+			"tags_required_b": ["METALLIC"],
 			"effects": [
 				{"effect_type": "DAMAGE", "target": "b", "damage_amount": 30.0},
 				{"effect_type": "ADD_TAG", "target": "b", "tag": "ELECTRIC", "message": "zaps"},
@@ -243,11 +243,11 @@ func _test_rule_engine() -> void:
 	_assert("fire rule id correct", fire[0].get("rule_id", "") == "fire")
 
 	# No match
-	var none: Array = _rule_engine.find_matching_rules(["SOLID"], ["RIGID"])
-	_assert("no match for SOLID+RIGID", none.is_empty())
+	var none: Array = _rule_engine.find_matching_rules(["RIGID"], ["BOUNCY"])
+	_assert("no match for RIGID+BOUNCY", none.is_empty())
 
 	# Bidirectional
-	var bidir: Array = _rule_engine.find_matching_rules(["CONDUCTING"], ["ELECTRIC"])
+	var bidir: Array = _rule_engine.find_matching_rules(["METALLIC"], ["ELECTRIC"])
 	_assert("bidirectional match (reversed)", bidir.size() == 1)
 	_assert("bidirectional rule id correct", bidir[0].get("rule_id", "") == "electric")
 
@@ -257,7 +257,7 @@ func _test_rule_engine() -> void:
 	_assert("higher execution_order first", multi[0].get("execution_order", 0) > multi[1].get("execution_order", 0))
 
 	# Partial mismatch
-	var partial: Array = _rule_engine.find_matching_rules(["HEAT_SOURCE"], ["SOLID"])
+	var partial: Array = _rule_engine.find_matching_rules(["HEAT_SOURCE"], ["RIGID"])
 	_assert("no match when b-tags miss required", partial.is_empty())
 
 	# Wildcard match
@@ -266,7 +266,7 @@ func _test_rule_engine() -> void:
 	_assert("wildcard rule id", wild[0].get("rule_id", "") == "wild_explosive")
 
 	# Wildcard does not match if tags_a missing
-	var no_wild: Array = _rule_engine.find_matching_rules(["SOLID"], ["ANYTHING"])
+	var no_wild: Array = _rule_engine.find_matching_rules(["RIGID"], ["ANYTHING"])
 	_assert("wildcard skips if tags_a miss", no_wild.is_empty())
 
 	# Wildcard + pair match simultaneously
@@ -542,7 +542,7 @@ func _test_effect_executor() -> void:
 
 	# --- ADD_TAG (now one effect per tag) ---
 	var a7 = _make_mock_body("src7", [])
-	var b7 = _make_mock_body("tgt7", ["SOLID"])
+	var b7 = _make_mock_body("tgt7", ["RIGID"])
 	root.add_child(a7)
 	root.add_child(b7)
 	ee.execute({"effects": [
@@ -584,7 +584,7 @@ func _test_effect_executor() -> void:
 
 	# --- ELECTRIFY (decomposed: DAMAGE + ADD_TAG) ---
 	var a10 = _make_mock_body("src10", ["ELECTRIC"])
-	var b10 = _make_mock_body("tgt10", ["CONDUCTING"])
+	var b10 = _make_mock_body("tgt10", ["METALLIC"])
 	root.add_child(a10)
 	root.add_child(b10)
 	ee.execute({"effects": [
@@ -597,8 +597,8 @@ func _test_effect_executor() -> void:
 	b10.free()
 
 	# --- Target routing: "a" ---
-	var ta = _make_mock_body("target_a", ["SOLID"])
-	var tb = _make_mock_body("target_b", ["SOLID"])
+	var ta = _make_mock_body("target_a", ["RIGID"])
+	var tb = _make_mock_body("target_b", ["RIGID"])
 	root.add_child(ta)
 	root.add_child(tb)
 	ee.execute({"effects": [{"effect_type": "DAMAGE", "target": "a", "damage_amount": 10.0, "message": ""}]}, ta, tb)
@@ -608,8 +608,8 @@ func _test_effect_executor() -> void:
 	tb.free()
 
 	# --- Target routing: "both" ---
-	var ba = _make_mock_body("both_a", ["SOLID"])
-	var bb = _make_mock_body("both_b", ["SOLID"])
+	var ba = _make_mock_body("both_a", ["RIGID"])
+	var bb = _make_mock_body("both_b", ["RIGID"])
 	root.add_child(ba)
 	root.add_child(bb)
 	ee.execute({"effects": [{"effect_type": "DAMAGE", "target": "both", "damage_amount": 5.0, "message": ""}]}, ba, bb)
@@ -755,13 +755,13 @@ func _test_collision_resolver() -> void:
 
 	# No-match collision
 	_collision_resolver.clear_cooldowns()
-	var body_c = _make_mock_body("rock", ["SOLID"])
-	var body_d = _make_mock_body("dirt", ["SOLID"])
+	var body_c = _make_mock_body("rock", ["RIGID"])
+	var body_d = _make_mock_body("dirt", ["RIGID"])
 	root.add_child(body_c)
 	root.add_child(body_d)
 	_collision_resolver.resolve_collision(body_c, body_d)
-	_assert("no-match: c unchanged", body_c.get("tags") == ["SOLID"])
-	_assert("no-match: d unchanged", body_d.get("tags") == ["SOLID"])
+	_assert("no-match: c unchanged", body_c.get("tags") == ["RIGID"])
+	_assert("no-match: d unchanged", body_d.get("tags") == ["RIGID"])
 	body_c.free()
 	body_d.free()
 
@@ -797,14 +797,14 @@ func _test_game_object() -> void:
 	# interface. This validates the behavior that EffectExecutor/CollisionResolver
 	# depend on.
 
-	var go = _make_mock_body("test_001", ["SOLID", "HEAVY"], 100.0)
-	go.set("blueprint", {"id": "test_001", "tags": ["SOLID", "HEAVY"], "visual_descriptor": {}})
+	var go = _make_mock_body("test_001", ["RIGID", "HEAVY"], 100.0)
+	go.set("blueprint", {"id": "test_001", "tags": ["RIGID", "HEAVY"], "visual_descriptor": {}})
 	root.add_child(go)
 
 	# Core API
 	_assert("get_object_id()", go.get_object_id() == "test_001")
-	_assert("get_tags()", go.get_tags() == ["SOLID", "HEAVY"])
-	_assert("get_effective_tags()", go.get_effective_tags() == ["SOLID", "HEAVY"])
+	_assert("get_tags()", go.get_tags() == ["RIGID", "HEAVY"])
+	_assert("get_effective_tags()", go.get_effective_tags() == ["RIGID", "HEAVY"])
 
 	# Tag mutation
 	go.add_tag("FLAMMABLE")
@@ -823,7 +823,7 @@ func _test_game_object() -> void:
 	_assert("take_damage logs damage", go.get("damage_log").size() == 1)
 
 	# has_tag
-	_assert("has_tag(SOLID)", go.has_tag("SOLID"))
+	_assert("has_tag(RIGID)", go.has_tag("RIGID"))
 	_assert("not has_tag(HEAVY)", not go.has_tag("HEAVY"))
 
 	go.free()

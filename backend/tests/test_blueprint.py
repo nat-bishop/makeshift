@@ -4,7 +4,6 @@ import pytest
 from app.models.blueprint import (
     DURABILITY_BREAKABLE,
     DURABILITY_DEFAULT,
-    DURABILITY_FLEXIBLE,
     DURABILITY_RIGID,
     CreatorOutput,
     GameObjectBlueprint,
@@ -39,7 +38,7 @@ class TestCreatorOutput:
     def test_valid_creation(self) -> None:
         out = CreatorOutput(
             name="Test Object",
-            tags=[Tag.SOLID, Tag.RIGID],
+            tags=[Tag.RIGID, Tag.HEAVY],
             visual_descriptor=_make_visual(),
         )
         assert out.name == "Test Object"
@@ -50,7 +49,7 @@ class TestCreatorOutput:
         with pytest.raises(ModelRetry):
             CreatorOutput(
                 name="Bad Object",
-                tags=[Tag.FROZEN, Tag.HOT],
+                tags=[Tag.FROZEN, Tag.MOLTEN],
                 visual_descriptor=_make_visual(),
             )
 
@@ -64,29 +63,29 @@ class TestCreatorOutput:
         assert len(out.tags) == 3
 
     def test_multiple_contradictions(self) -> None:
-        """SOLID + LIQUID is a contradiction."""
+        """RIGID + LIQUID is a contradiction."""
         with pytest.raises(ModelRetry):
             CreatorOutput(
                 name="Impossible",
-                tags=[Tag.SOLID, Tag.LIQUID],
+                tags=[Tag.RIGID, Tag.LIQUID],
                 visual_descriptor=_make_visual(),
             )
 
-    def test_sticky_slippery_contradiction(self) -> None:
+    def test_metallic_insulating_contradiction(self) -> None:
         with pytest.raises(ModelRetry):
             CreatorOutput(
                 name="Impossible",
-                tags=[Tag.STICKY, Tag.SLIPPERY],
+                tags=[Tag.METALLIC, Tag.INSULATING],
                 visual_descriptor=_make_visual(),
             )
 
-    def test_too_few_tags_raises(self) -> None:
-        with pytest.raises(ValidationError):
-            CreatorOutput(
-                name="Lonely",
-                tags=[Tag.SOLID],
-                visual_descriptor=_make_visual(),
-            )
+    def test_single_tag_valid(self) -> None:
+        out = CreatorOutput(
+            name="Rock",
+            tags=[Tag.RIGID],
+            visual_descriptor=_make_visual(),
+        )
+        assert len(out.tags) == 1
 
     def test_empty_tags_raises(self) -> None:
         with pytest.raises(ValidationError):
@@ -101,14 +100,12 @@ class TestCreatorOutput:
             CreatorOutput(
                 name="Overloaded",
                 tags=[
-                    Tag.SOLID,
                     Tag.RIGID,
                     Tag.LIGHT,
                     Tag.COLD,
-                    Tag.SLIPPERY,
                     Tag.BREAKABLE,
                     Tag.FLAMMABLE,
-                ],  # 7 tags, all cost 1, under budget but over count
+                ],  # 5 tags, over max of 4
                 visual_descriptor=_make_visual(),
             )
 
@@ -116,7 +113,7 @@ class TestCreatorOutput:
         with pytest.raises(ModelRetry):
             CreatorOutput(
                 name="The Great Big Sword",
-                tags=[Tag.SOLID, Tag.RIGID],
+                tags=[Tag.RIGID, Tag.HEAVY],
                 visual_descriptor=_make_visual(),
             )
 
@@ -124,14 +121,14 @@ class TestCreatorOutput:
         with pytest.raises(ModelRetry):
             CreatorOutput(
                 name="",
-                tags=[Tag.SOLID, Tag.RIGID],
+                tags=[Tag.RIGID, Tag.HEAVY],
                 visual_descriptor=_make_visual(),
             )
 
     def test_name_stripped(self) -> None:
         out = CreatorOutput(
             name="  Fire Sword  ",
-            tags=[Tag.SOLID, Tag.RIGID],
+            tags=[Tag.RIGID, Tag.HEAVY],
             visual_descriptor=_make_visual(),
         )
         assert out.name == "Fire Sword"
@@ -150,23 +147,19 @@ class TestGameObjectBlueprint:
             id=id,
             name=name,
             description=description,
-            tags=tags if tags is not None else [Tag.SOLID, Tag.RIGID],
+            tags=tags if tags is not None else [Tag.RIGID, Tag.HEAVY],
             visual_descriptor=(
                 visual_descriptor if visual_descriptor is not None else _make_visual()
             ),
         )
 
     def test_durability_breakable(self) -> None:
-        bp = self._make_blueprint(tags=[Tag.SOLID, Tag.BREAKABLE])
+        bp = self._make_blueprint(tags=[Tag.RIGID, Tag.BREAKABLE])
         assert bp.starting_durability == DURABILITY_BREAKABLE
 
     def test_durability_rigid(self) -> None:
-        bp = self._make_blueprint(tags=[Tag.SOLID, Tag.RIGID])
+        bp = self._make_blueprint(tags=[Tag.RIGID, Tag.HEAVY])
         assert bp.starting_durability == DURABILITY_RIGID
-
-    def test_durability_flexible(self) -> None:
-        bp = self._make_blueprint(tags=[Tag.SOLID, Tag.FLEXIBLE])
-        assert bp.starting_durability == DURABILITY_FLEXIBLE
 
     def test_durability_default(self) -> None:
         bp = self._make_blueprint(tags=[Tag.LIQUID, Tag.HEAVY])
@@ -174,10 +167,10 @@ class TestGameObjectBlueprint:
 
     def test_durability_breakable_takes_precedence(self) -> None:
         """BREAKABLE check comes first, even if RIGID is also present."""
-        bp = self._make_blueprint(tags=[Tag.SOLID, Tag.RIGID, Tag.BREAKABLE])
+        bp = self._make_blueprint(tags=[Tag.RIGID, Tag.BREAKABLE])
         assert bp.starting_durability == DURABILITY_BREAKABLE
 
     def test_serialization_includes_computed_fields(self) -> None:
-        bp = self._make_blueprint(tags=[Tag.SOLID, Tag.RIGID])
+        bp = self._make_blueprint(tags=[Tag.RIGID, Tag.HEAVY])
         data = bp.model_dump(mode="json")
         assert "starting_durability" in data

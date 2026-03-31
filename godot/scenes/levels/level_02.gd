@@ -6,7 +6,7 @@ extends BaseLevel
 const TURRET_BLUEPRINT := {
 	"id": "turret_level02",
 	"name": "Sentry Turret",
-	"tags": ["SOLID", "RIGID", "HEAVY", "HEAT_SOURCE"],
+	"tags": ["RIGID", "HEAVY", "HEAT_SOURCE"],
 	"starting_durability": 200,
 	"visual_descriptor": {
 		"visual_description": "a mechanical sentry turret with a rotating barrel mounted on a tripod base",
@@ -33,7 +33,7 @@ const TURRET_BLUEPRINT := {
 const BARRICADE_BLUEPRINT := {
 	"id": "barricade_level02",
 	"name": "Wooden Barricade",
-	"tags": ["SOLID", "RIGID", "FLAMMABLE", "BREAKABLE"],
+	"tags": ["RIGID", "FLAMMABLE", "BREAKABLE"],
 	"starting_durability": 50,
 	"visual_descriptor": {
 		"visual_description": "a tall wooden barricade made of thick planks nailed together",
@@ -44,7 +44,7 @@ const BARRICADE_BLUEPRINT := {
 const SHIELD_BLUEPRINT := {
 	"id": "shield_level02",
 	"name": "Metal Shield",
-	"tags": ["SOLID", "RIGID", "REFLECTIVE", "CONDUCTING"],
+	"tags": ["RIGID", "REFLECTIVE", "METALLIC"],
 	"starting_durability": 200,
 	"visual_descriptor": {
 		"visual_description": "a polished metal tower shield with riveted edges",

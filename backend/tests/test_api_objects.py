@@ -27,7 +27,7 @@ def _make_blueprint() -> GameObjectBlueprint:
         id=str(uuid.uuid4()),
         name="Fire Sword",
         description="a fire sword",
-        tags=[Tag.SOLID, Tag.RIGID, Tag.SHARP, Tag.HEAT_SOURCE],
+        tags=[Tag.RIGID, Tag.SHARP, Tag.HEAT_SOURCE],
         visual_descriptor=VisualDescriptor(
             visual_description="a curved steel sword with a fiery red blade wreathed in flames",
             size_category="medium",

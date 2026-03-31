@@ -6,11 +6,10 @@ import io
 from collections.abc import Iterator
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-from PIL import Image
-
 import app.images.gemini_client as gemini_client
+import pytest
 from app.images.gemini_client import _ensure_png, generate_image
+from PIL import Image
 
 
 def _make_png_bytes() -> bytes:

@@ -6,7 +6,7 @@ extends BaseLevel
 const CRATE_BLUEPRINT := {
 	"id": "crate_level01",
 	"name": "Wooden Crate",
-	"tags": ["SOLID", "RIGID", "FLAMMABLE", "BREAKABLE"],
+	"tags": ["RIGID", "FLAMMABLE", "BREAKABLE"],
 	"starting_durability": 50,
 	"visual_descriptor": {
 		"visual_description": "a small wooden shipping crate with planks and nails",
@@ -33,7 +33,7 @@ func _build_terrain() -> void:
 	_create_platform(Vector2(880, 568), Vector2(16, 128))
 	_create_env_body(
 		Vector2(400, 632), Vector2(480, 48),
-		["CORROSIVE", "TOXIC", "LIQUID"],
+		["ACIDIC", "TOXIC", "LIQUID"],
 		Color(0.2, 0.9, 0.1, 0.8), "acid_pool", false
 	)
 	_create_kill_zone(Vector2(400, 700), Vector2(480, 64))

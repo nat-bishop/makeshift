@@ -31,7 +31,7 @@ Current game objects (`GameObject`, extends `RigidBody2D`) are designed for play
 
 The rule system is fully duck-typed — CollisionResolver checks `has_method("get_tags")`, WorldMutations checks `has_method("take_damage")` before applying damage. An env object that implements `get_tags()` / `add_tag()` / `remove_tag()` but NOT `take_damage()` participates in rules (triggers effects on other objects) while being indestructible.
 
-**Player detection:** Game objects detect env bodies via `body_entered` (RigidBody2D contacts StaticBody2D). But the player is a CharacterBody2D using `move_and_slide()`, which doesn't emit `body_entered`. Env objects need an Area2D child that detects player entry and routes through `CollisionResolver.resolve_collision()` for rule-based damage (e.g., `toxic_living_damage`, `corrosive_living_damage`).
+**Player detection:** Game objects detect env bodies via `body_entered` (RigidBody2D contacts StaticBody2D). But the player is a CharacterBody2D using `move_and_slide()`, which doesn't emit `body_entered`. Env objects need an Area2D child that detects player entry and routes through `CollisionResolver.resolve_collision()` for rule-based damage (e.g., `toxic_living_damage`, `acidic_living_damage`).
 
 ### 4. No antagonistic objects in any level
 
@@ -69,7 +69,7 @@ Spawn (128, 536)                                              Goal (1100, 536)
 |  plat  |                                                  |  plat   |
 +--------+                                                  +---------+
           |  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  |
-          |  ~~~~ ACID POOL (env: CORROSIVE+TOXIC+LIQUID) ~|
+          |  ~~~~ ACID POOL (env: ACIDIC+TOXIC+LIQUID) ~~~~|
           |  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  |
           +------------------------------------------------+
                          pit floor (below acid)
@@ -89,7 +89,7 @@ The gap is ~480px — too wide to jump (player covers ~200px horizontal in a jum
 const WOODEN_CRATE_BLUEPRINT := {
     "id": "crate_01",
     "name": "Wooden Crate",
-    "tags": ["SOLID", "RIGID", "FLAMMABLE", "BREAKABLE"],
+    "tags": ["RIGID", "FLAMMABLE", "BREAKABLE"],
     "visual_descriptor": {
         "visual_description": "a small wooden shipping crate with rope handles",
         "size_category": "small",
@@ -98,7 +98,7 @@ const WOODEN_CRATE_BLUEPRINT := {
 # Placed at Vector2(280, 536), not frozen — kickable (no HEAVY tag)
 # Durability: 50 (BREAKABLE)
 # Purpose: DEMONSTRATION OBJECT. Kick it into the acid pit.
-#   corrosive_breakable_corrode fires: 15 dmg/s for 3s = 45 dmg.
+#   acidic_breakable_corrode fires: 15 dmg/s for 3s = 45 dmg.
 #   The crate visibly takes damage and nearly dies (50 HP - 45 = 5 HP).
 #   Teaches the player: "BREAKABLE things dissolve in acid."
 # Too small to use as a stepping stone (small = 64px collision vs 480px gap).
@@ -108,19 +108,19 @@ const WOODEN_CRATE_BLUEPRINT := {
 
 ```gdscript
 # Acid pool — environment body (StaticBody2D with tags, no durability)
-# Tags: ["CORROSIVE", "TOXIC", "LIQUID"]
+# Tags: ["ACIDIC", "TOXIC", "LIQUID"]
 # Visual: green ColorRect with slight transparency
 # Area2D child detects player entry → CollisionResolver for rule-based damage
 #
 # Tag interactions when objects contact the acid:
-#   corrosive_breakable_corrode: BREAKABLE objects take 15 dmg/s for 3s
-#   corrosive_rigid_weaken: RIGID objects take 10 dmg/s for 3s
-#   corrosive_conducting_dissolve: CONDUCTING objects take 20 dmg/s for 3s
-#   corrosive_living_damage: Player takes 20 dmg on contact
+#   acidic_breakable_corrode: BREAKABLE objects take 15 dmg/s for 3s
+#   acidic_rigid_weaken: RIGID objects take 10 dmg/s for 3s
+#   acidic_metallic_dissolve: METALLIC objects take 20 dmg/s for 3s
+#   acidic_living_damage: Player takes 20 dmg on contact
 #   toxic_living_damage: Player takes 10 dmg on contact (via TOXIC field)
 #
 # Player counter-play (if add_tag/remove_tag supported):
-#   cold_liquid_freeze: COLD object near acid → acid gains FROZEN+RIGID+SOLID,
+#   cold_liquid_freeze: COLD object near acid → acid gains FROZEN+RIGID,
 #     loses LIQUID. Frozen acid becomes a safe walkable surface!
 #   heat_liquid_evaporate: HEAT_SOURCE near acid → acid loses LIQUID, gains GAS.
 #     Acid evaporates but becomes toxic gas (TOXIC+GAS → toxic_gas_cloud spreads).
@@ -130,20 +130,20 @@ const WOODEN_CRATE_BLUEPRINT := {
 
 | Rule | Trigger | What happens |
 |------|---------|-------------|
-| `corrosive_breakable_corrode` | CORROSIVE (acid) + BREAKABLE (crate/bridge) | 15 dmg/s for 3s = 45 total. Kills 50 HP BREAKABLE objects. |
-| `corrosive_rigid_weaken` | CORROSIVE (acid) + RIGID (bridge) | 10 dmg/s for 3s = 30 total. 200 HP RIGID objects survive. |
-| `corrosive_conducting_dissolve` | CORROSIVE (acid) + CONDUCTING (metal bridge) | 20 dmg/s for 3s = 60 total. 200 HP RIGID+CONDUCTING objects survive. |
+| `acidic_breakable_corrode` | ACIDIC (acid) + BREAKABLE (crate/bridge) | 15 dmg/s for 3s = 45 total. Kills 50 HP BREAKABLE objects. |
+| `acidic_rigid_weaken` | ACIDIC (acid) + RIGID (bridge) | 10 dmg/s for 3s = 30 total. 200 HP RIGID objects survive. |
+| `acidic_metallic_dissolve` | ACIDIC (acid) + METALLIC (metal bridge) | 20 dmg/s for 3s = 60 total. 200 HP RIGID+METALLIC objects survive. |
 | `toxic_living_damage` | TOXIC (acid) + LIVING (player) | 10 dmg if player falls in. |
-| `corrosive_living_damage` | CORROSIVE (acid) + LIVING (player) | 20 dmg if player falls in. |
+| `acidic_living_damage` | ACIDIC (acid) + LIVING (player) | 20 dmg if player falls in. |
 | `cold_liquid_freeze` | COLD (created) + LIQUID (acid) | Freezes acid solid — safe to walk on! (if env supports tag mutation) |
 
 ### Solution Paths
 
-1. **Create a durable bridge** (intended learning path): Type "stone bridge", "metal beam", "iron plank" — anything the LLM tags as RIGID without BREAKABLE. Place across the gap. The acid's `corrosive_rigid_weaken` rule fires (10 dmg/s for 3s = 30 dmg) but the bridge has 200 HP and survives. Walk across.
+1. **Create a durable bridge** (intended learning path): Type "stone bridge", "metal beam", "iron plank" — anything the LLM tags as RIGID without BREAKABLE. Place across the gap. The acid's `acidic_rigid_weaken` rule fires (10 dmg/s for 3s = 30 dmg) but the bridge has 200 HP and survives. Walk across.
 
-2. **Learn from failure first**: Type "wooden bridge" or "plank" — likely gets BREAKABLE. Place it. `corrosive_breakable_corrode` fires: 15 dmg/s for 3s = 45 dmg. The bridge has 50 HP. It nearly dies — player can sprint across if fast, but the bridge disintegrates behind them. This teaches: material matters. Next creation: pick something sturdier.
+2. **Learn from failure first**: Type "wooden bridge" or "plank" — likely gets BREAKABLE. Place it. `acidic_breakable_corrode` fires: 15 dmg/s for 3s = 45 dmg. The bridge has 50 HP. It nearly dies — player can sprint across if fast, but the bridge disintegrates behind them. This teaches: material matters. Next creation: pick something sturdier.
 
-3. **Freeze the acid** (advanced): Type "ice block" or "frozen orb" — anything with COLD tag. Place it in/near the acid. `cold_liquid_freeze` fires: acid gains FROZEN+RIGID+SOLID, loses LIQUID. The acid becomes a frozen surface — walk across! Elegant solution that uses the rule system creatively. (Requires env objects to support tag mutation.)
+3. **Freeze the acid** (advanced): Type "ice block" or "frozen orb" — anything with COLD tag. Place it in/near the acid. `cold_liquid_freeze` fires: acid gains FROZEN+RIGID, loses LIQUID. The acid becomes a frozen surface — walk across! Elegant solution that uses the rule system creatively. (Requires env objects to support tag mutation.)
 
 4. **Evaporate the acid** (risky): Create HEAT_SOURCE near acid. `heat_liquid_evaporate` removes LIQUID, adds GAS. Acid becomes toxic gas. `toxic_gas_cloud` might spread the TOXIC tag. Clears the liquid but creates a new problem. Teaches that interactions have consequences.
 
@@ -159,8 +159,8 @@ const WOODEN_CRATE_BLUEPRINT := {
 
 ### Edge Cases
 
-- If the bridge is both BREAKABLE and RIGID, BREAKABLE takes priority for durability (50 HP). The corrosive_breakable_corrode rule fires (requires BREAKABLE on target). Bridge dies fast.
-- CONDUCTING bridges (metal) take more corrosion damage (20 dmg/s vs 10 dmg/s for RIGID-only). Still survives at 200 HP, but takes more wear. Interesting nuance.
+- If the bridge is both BREAKABLE and RIGID, BREAKABLE takes priority for durability (50 HP). The acidic_breakable_corrode rule fires (requires BREAKABLE on target). Bridge dies fast.
+- METALLIC bridges (metal) take more corrosion damage (20 dmg/s vs 10 dmg/s for RIGID-only). Still survives at 200 HP, but takes more wear. Interesting nuance.
 - If player creates something FLOATING over the acid, it doesn't touch the acid — no corrosion. But FLOATING objects can't support the player (player is CharacterBody2D walking on StaticBody2D/RigidBody2D surfaces, FLOATING objects have negative gravity and drift upward).
 - Freezing the acid: if the COLD object is small, it might only freeze the area near it. The freeze rule removes LIQUID tag — if this is on the entire env body, ALL the acid freezes. If env objects support partial coverage, only some freezes. Implementation detail.
 
@@ -191,7 +191,7 @@ Pedestal:      pos=(620, 340)    size=(128, 60)
 const SENTRY_BLUEPRINT := {
     "id": "sentry_01",
     "name": "Sentry Turret",
-    "tags": ["SOLID", "RIGID", "HEAVY", "HEAT_SOURCE"],
+    "tags": ["RIGID", "HEAVY", "HEAT_SOURCE"],
     "visual_descriptor": {
         "visual_description": "a mechanical turret with a rotating cannon barrel mounted on a metal base",
         "size_category": "medium",
@@ -215,7 +215,7 @@ const SENTRY_BLUEPRINT := {
 }
 # Placed at Vector2(684, 300), not frozen — patrols on pedestal
 # Durability: 200 (RIGID). HEAVY so kicks do damage but no knockback.
-# Projectiles: base tags [SOLID, LIGHT, BREAKABLE] + payload HOT (from HEAT_SOURCE via PAYLOAD_TAG_MAP).
+# Projectiles: base tags [LIGHT, BREAKABLE] + payload HOT (from HEAT_SOURCE via PAYLOAD_TAG_MAP).
 #   Speed 250 px/s, durability 15, lifetime 2.5s.
 #   Projectile hits player: behavior deals MEDIUM damage (20) + hot_living_burn rule (5 dmg) = 25 per hit.
 # Behaviors: 2 of 3 slots used.
@@ -223,7 +223,7 @@ const SENTRY_BLUEPRINT := {
 const BARRICADE_BLUEPRINT := {
     "id": "barricade_01",
     "name": "Wooden Barricade",
-    "tags": ["SOLID", "RIGID", "FLAMMABLE", "BREAKABLE"],
+    "tags": ["RIGID", "FLAMMABLE", "BREAKABLE"],
     "visual_descriptor": {
         "visual_description": "a tall wooden barricade made of rough planks nailed together",
         "size_category": "large",
@@ -238,7 +238,7 @@ const BARRICADE_BLUEPRINT := {
 const SHIELD_BLUEPRINT := {
     "id": "shield_01",
     "name": "Metal Shield",
-    "tags": ["SOLID", "RIGID", "REFLECTIVE", "CONDUCTING"],
+    "tags": ["RIGID", "REFLECTIVE", "METALLIC"],
     "visual_descriptor": {
         "visual_description": "a polished metal shield with a reflective surface",
         "size_category": "medium",
@@ -247,7 +247,7 @@ const SHIELD_BLUEPRINT := {
 # Placed at Vector2(350, 368), not frozen — kickable (no HEAVY tag)
 # Durability: 200 (RIGID).
 # REFLECTIVE → reflective_heat_reflect deals 10 dmg back to HEAT_SOURCE on contact.
-# CONDUCTING adds interaction options (electric conduction, magnetic attraction).
+# METALLIC adds interaction options (electric conduction, magnetic attraction).
 ```
 
 ### Rules Exercised
@@ -328,7 +328,7 @@ Pipes rest on tiny ledges forming a vertical chain. The battery is on the main f
 const METAL_DOOR_BLUEPRINT := {
     "id": "metal_door_01",
     "name": "Metal Door",
-    "tags": ["SOLID", "RIGID", "HEAVY", "CONDUCTING", "BREAKABLE"],
+    "tags": ["RIGID", "HEAVY", "METALLIC", "BREAKABLE"],
     "visual_descriptor": {
         "visual_description": "a thick reinforced metal door with rivets and a heavy lock",
         "size_category": "large",
@@ -336,13 +336,13 @@ const METAL_DOOR_BLUEPRINT := {
 }
 # Placed at Vector2(800, 150), frozen in place — blocks the goal area
 # Durability: 50 (BREAKABLE takes priority over RIGID)
-# CONDUCTING so it participates in electrical chains
+# METALLIC so it participates in electrical chains
 # BREAKABLE so explosion destroys it
 
 const TNT_BLUEPRINT := {
     "id": "tnt_01",
     "name": "TNT Barrel",
-    "tags": ["SOLID", "RIGID", "EXPLOSIVE", "BREAKABLE", "FLAMMABLE"],
+    "tags": ["RIGID", "EXPLOSIVE", "BREAKABLE", "FLAMMABLE"],
     "visual_descriptor": {
         "visual_description": "a red barrel marked with TNT and a fuse on top",
         "size_category": "medium",
@@ -356,7 +356,7 @@ const TNT_BLUEPRINT := {
 const PIPE_BLUEPRINT := {
     "id": "metal_pipe",
     "name": "Metal Pipe",
-    "tags": ["SOLID", "RIGID", "CONDUCTING"],
+    "tags": ["RIGID", "METALLIC"],
     "visual_descriptor": {
         "visual_description": "a straight copper pipe section with green patina",
         "size_category": "small",
@@ -370,7 +370,7 @@ const PIPE_BLUEPRINT := {
 const BATTERY_BLUEPRINT := {
     "id": "battery_01",
     "name": "Battery",
-    "tags": ["SOLID", "RIGID", "ELECTRIC", "CONDUCTING"],
+    "tags": ["RIGID", "ELECTRIC", "METALLIC"],
     "visual_descriptor": {
         "visual_description": "a large industrial battery with positive and negative terminals",
         "size_category": "medium",
@@ -378,7 +378,7 @@ const BATTERY_BLUEPRINT := {
 }
 # Placed at Vector2(420, 568), not frozen — kickable (not HEAVY)
 # Gap to pipe1: ~130px. Cascade radius 96px. Just out of range.
-# Player must bridge the gap with a CONDUCTING object.
+# Player must bridge the gap with a METALLIC object.
 ```
 
 ### Chain Reaction Sequence
@@ -387,25 +387,25 @@ The cascade depth limit is 3, so instant cascade only reaches pipe2. The remaini
 
 | Time | Event |
 |------|-------|
-| 0s | Player places CONDUCTING bridge. Battery contact → cascade: bridge → pipe1 → pipe2 (depth 3, limit reached). |
-| 2s | Pipe2's periodic field tick → `electric_conducting_electrify` on pipe3 (new chain, depth 0). |
+| 0s | Player places METALLIC bridge. Battery contact → cascade: bridge → pipe1 → pipe2 (depth 3, limit reached). |
+| 2s | Pipe2's periodic field tick → `electric_metallic_electrify` on pipe3 (new chain, depth 0). |
 | 4s | Pipe3's field → electrifies pipe4. |
 | 6s | Pipe4's field → hits TNT. `explosive_electric_detonate` fires. TNT destroyed (99999 dmg). 500 force impulse. |
 | 6s | TNT cascade: `explosive_breakable_destroy` fires on metal door → 99999 dmg. Door destroyed. Path cleared. |
 
 ### Solution Paths
 
-1. **Bridge the gap** (intended): Create "copper wire", "metal rod", "iron chain" — anything CONDUCTING. Place between battery and pipe1. Watch electricity climb the chain over ~6 seconds.
+1. **Bridge the gap** (intended): Create "copper wire", "metal rod", "iron chain" — anything METALLIC. Place between battery and pipe1. Watch electricity climb the chain over ~6 seconds.
 
 2. **Direct ignition**: Create HEAT_SOURCE and climb to TNT level. Place next to TNT. `explosive_heat_detonate` fires. Requires two creations (climbing + ignition). More expensive.
 
-3. **Corrosive destruction**: Create "acid" (CORROSIVE). Place near door. `corrosive_breakable_corrode` → 15 dmg/s for 3s = 45 dmg on 50 HP door. Nearly kills it; a few kicks finish. Bypasses the chain entirely.
+3. **Acid destruction**: Create "acid" (ACIDIC). Place near door. `acidic_breakable_corrode` → 15 dmg/s for 3s = 45 dmg on 50 HP door. Nearly kills it; a few kicks finish. Bypasses the chain entirely.
 
 4. **Kick the battery**: Battery is kickable (not HEAVY). Kick it toward pipe1. If it lands within 96px, the chain starts without creating anything. Requires precision — fun speedrun path.
 
 ### Edge Cases
 
-- If player creates a CONDUCTING+BREAKABLE object as the bridge, `electric_breakable_damage` (30 dmg) might destroy it (50 HP BREAKABLE) before cascade completes. RIGID CONDUCTING objects are safer.
+- If player creates a METALLIC+BREAKABLE object as the bridge, `electric_breakable_damage` (30 dmg) might destroy it (50 HP BREAKABLE) before cascade completes. RIGID METALLIC objects are safer.
 - Player near electrified pipes: `electric_living_shock` → 30 dmg. Stay at ground level.
 - Battery kicked too far past pipe1: still works if it lands near any pipe.
 
@@ -439,7 +439,7 @@ Three rooms connected by narrow corridors. Each room has one behavioral "creatur
 const TOXIC_SLIME_BLUEPRINT := {
     "id": "toxic_slime_01",
     "name": "Toxic Slime",
-    "tags": ["SOLID", "FLEXIBLE", "TOXIC", "LIVING", "BOUNCY"],
+    "tags": ["BOUNCY", "TOXIC", "LIVING"],
     "visual_descriptor": {
         "visual_description": "a bubbling green slime creature leaving a trail of toxic residue",
         "size_category": "medium",
@@ -460,13 +460,13 @@ const TOXIC_SLIME_BLUEPRINT := {
         },
     ],
 }
-# Durability: 100 (FLEXIBLE). Patrols corridor, chases player on proximity.
+# Durability: 150 (default — no BREAKABLE or RIGID). Patrols corridor, chases player on proximity.
 # TOXIC field (MEDIUM range=96px, periodic 2s): toxic_living_damage → 10 dmg to player.
 # BOUNCY so it rebounds off walls.
 # Behaviors: 2 of 3 slots used.
 ```
 
-**Solutions:** Kick it repeatedly (10 dmg each, 100 HP = 10 kicks). Create SHARP/CORROSIVE objects to deal damage. Sprint past during patrol gap. Create a barrier to block it.
+**Solutions:** Kick it repeatedly (10 dmg each, 150 HP = 15 kicks). Create SHARP/ACIDIC objects to deal damage. Sprint past during patrol gap. Create a barrier to block it.
 
 ### Room 2: Fire Guardian
 
@@ -474,7 +474,7 @@ const TOXIC_SLIME_BLUEPRINT := {
 const FIRE_GUARDIAN_BLUEPRINT := {
     "id": "fire_guardian_01",
     "name": "Fire Guardian",
-    "tags": ["SOLID", "RIGID", "HEAVY", "HEAT_SOURCE", "HOT"],
+    "tags": ["RIGID", "HEAVY", "HEAT_SOURCE", "HOT"],
     "visual_descriptor": {
         "visual_description": "a stone gargoyle with flames pouring from its mouth",
         "size_category": "medium",
@@ -502,7 +502,7 @@ const FIRE_GUARDIAN_BLUEPRINT := {
 const MAGNET_PILLAR_BLUEPRINT := {
     "id": "magnet_pillar",
     "name": "Magnetic Pillar",
-    "tags": ["SOLID", "RIGID", "HEAVY", "MAGNETIC"],
+    "tags": ["RIGID", "HEAVY", "MAGNETIC"],
     "visual_descriptor": {
         "visual_description": "a tall iron pillar crackling with magnetic energy",
         "size_category": "large",
@@ -513,13 +513,13 @@ const MAGNET_PILLAR_BLUEPRINT := {
 const METAL_DEBRIS_BLUEPRINT := {
     "id": "metal_debris",
     "name": "Metal Fragment",
-    "tags": ["SOLID", "RIGID", "CONDUCTING", "SHARP"],
+    "tags": ["RIGID", "METALLIC", "SHARP"],
     "visual_descriptor": {
         "visual_description": "a jagged metal fragment with sharp edges",
         "size_category": "small",
     },
 }
-# 4-5 instances scattered in corridor. CONDUCTING → pulled by MAGNETIC field.
+# 4-5 instances scattered in corridor. METALLIC → pulled by MAGNETIC field.
 # SHARP → sharp_living_cut (25 dmg) on player contact.
 ```
 
@@ -537,9 +537,9 @@ Vertical tower with 3 locked gates. Each gate has a different trigger mechanism:
 - Rules: `heat_flammable_ignite` (cascade) → `explosive_heat_detonate`.
 - Player creates HEAT_SOURCE to light the fuse.
 
-**Gate 2 (middle):** CONDUCTING wire chain → electricity reaches explosive charge.
-- Rules: `electric_conducting_electrify` (cascade) → `explosive_electric_detonate`.
-- Player bridges a gap with CONDUCTING object.
+**Gate 2 (middle):** METALLIC wire chain → electricity reaches explosive charge.
+- Rules: `electric_metallic_electrify` (cascade) → `explosive_electric_detonate`.
+- Player bridges a gap with METALLIC object.
 
 **Gate 3 (top):** FROZEN ice dam holding a HEAVY boulder above the gate lock.
 - Rules: `heat_frozen_melt` → gravity → `heavy_breakable_crush`.
@@ -581,7 +581,7 @@ const SANDBOX_SEEDS: Array[Dictionary] = [
     {
         "id": "sandbox_torch",
         "name": "Torch",
-        "tags": ["SOLID", "RIGID", "HEAT_SOURCE", "HOT", "GLOWING", "LIGHT"],
+        "tags": ["RIGID", "HEAT_SOURCE", "HOT", "LIGHT"],
         "visual_descriptor": {
             "visual_description": "a wooden torch with a bright orange flame",
             "size_category": "small",
@@ -591,7 +591,7 @@ const SANDBOX_SEEDS: Array[Dictionary] = [
     {
         "id": "sandbox_ice",
         "name": "Ice Block",
-        "tags": ["SOLID", "RIGID", "FROZEN", "COLD", "SLIPPERY", "BREAKABLE"],
+        "tags": ["RIGID", "FROZEN", "COLD", "BREAKABLE"],
         "visual_descriptor": {
             "visual_description": "a block of clear blue ice",
             "size_category": "medium",
@@ -601,7 +601,7 @@ const SANDBOX_SEEDS: Array[Dictionary] = [
     {
         "id": "sandbox_battery",
         "name": "Battery",
-        "tags": ["SOLID", "RIGID", "ELECTRIC", "CONDUCTING"],
+        "tags": ["RIGID", "ELECTRIC", "METALLIC"],
         "visual_descriptor": {
             "visual_description": "a car battery with metal terminals",
             "size_category": "small",
@@ -611,7 +611,7 @@ const SANDBOX_SEEDS: Array[Dictionary] = [
     {
         "id": "sandbox_crate",
         "name": "Wooden Crate",
-        "tags": ["SOLID", "RIGID", "FLAMMABLE", "BREAKABLE"],
+        "tags": ["RIGID", "FLAMMABLE", "BREAKABLE"],
         "visual_descriptor": {
             "visual_description": "a wooden shipping crate with rope handles",
             "size_category": "medium",
@@ -621,7 +621,7 @@ const SANDBOX_SEEDS: Array[Dictionary] = [
     {
         "id": "sandbox_tnt",
         "name": "TNT",
-        "tags": ["SOLID", "RIGID", "EXPLOSIVE", "FLAMMABLE", "BREAKABLE"],
+        "tags": ["RIGID", "EXPLOSIVE", "FLAMMABLE", "BREAKABLE"],
         "visual_descriptor": {
             "visual_description": "a bundle of dynamite sticks with a fuse",
             "size_category": "small",
@@ -631,7 +631,7 @@ const SANDBOX_SEEDS: Array[Dictionary] = [
     {
         "id": "sandbox_fan",
         "name": "Fan",
-        "tags": ["SOLID", "RIGID", "WIND_SOURCE", "LIGHT"],
+        "tags": ["RIGID", "WIND_SOURCE", "LIGHT"],
         "visual_descriptor": {
             "visual_description": "a large industrial fan with spinning blades",
             "size_category": "medium",
@@ -641,7 +641,7 @@ const SANDBOX_SEEDS: Array[Dictionary] = [
     {
         "id": "sandbox_magnet",
         "name": "Magnet",
-        "tags": ["SOLID", "RIGID", "MAGNETIC", "HEAVY"],
+        "tags": ["RIGID", "MAGNETIC", "HEAVY"],
         "visual_descriptor": {
             "visual_description": "a large red horseshoe magnet",
             "size_category": "medium",
@@ -651,7 +651,7 @@ const SANDBOX_SEEDS: Array[Dictionary] = [
     {
         "id": "sandbox_metal_plate",
         "name": "Metal Plate",
-        "tags": ["SOLID", "RIGID", "HEAVY", "CONDUCTING"],
+        "tags": ["RIGID", "HEAVY", "METALLIC"],
         "visual_descriptor": {
             "visual_description": "a flat steel plate with a brushed finish",
             "size_category": "medium",
@@ -661,7 +661,7 @@ const SANDBOX_SEEDS: Array[Dictionary] = [
     {
         "id": "sandbox_acid",
         "name": "Acid Puddle",
-        "tags": ["LIQUID", "TOXIC", "CORROSIVE"],
+        "tags": ["LIQUID", "TOXIC", "ACIDIC"],
         "visual_descriptor": {
             "visual_description": "a bubbling pool of green acid",
             "size_category": "small",
@@ -671,7 +671,7 @@ const SANDBOX_SEEDS: Array[Dictionary] = [
     {
         "id": "sandbox_ball",
         "name": "Rubber Ball",
-        "tags": ["SOLID", "FLEXIBLE", "BOUNCY", "LIGHT"],
+        "tags": ["BOUNCY", "LIGHT"],
         "visual_descriptor": {
             "visual_description": "a bright red rubber ball",
             "size_category": "small",
@@ -681,7 +681,7 @@ const SANDBOX_SEEDS: Array[Dictionary] = [
     {
         "id": "sandbox_critter",
         "name": "Critter",
-        "tags": ["SOLID", "FLEXIBLE", "LIVING", "LIGHT"],
+        "tags": ["LIVING", "LIGHT"],
         "visual_descriptor": {
             "visual_description": "a small furry creature with big eyes",
             "size_category": "tiny",
@@ -735,9 +735,9 @@ const LEVELS: Array[Dictionary] = [
 - [x] Level 2 — `.tscn` updated (spawn/goal positions, objective text)
 - [ ] Level 3 "The Chain Reaction" — `.gd` not yet rewritten
 - [ ] Playtest each solution path
-- [ ] Verify seed object durability values (BREAKABLE=50, RIGID=200, FLEXIBLE=100, default=150)
+- [ ] Verify seed object durability values (BREAKABLE=50, RIGID=200, default=150)
 - [ ] Verify behavior counts are within limits (max 3 per object)
-- [ ] Verify tag costs are within limits (max 10)
+- [ ] Verify tag counts are within limits (max 4 per object)
 - [ ] Test that frozen objects (`freeze=true`) behave correctly with field interactions
 
 ### Sandbox

@@ -2,7 +2,7 @@
 
 Designed to mimic real player input — a mix of terse keywords,
 full sentences, mundane objects, wild ideas, and adversarial edge cases.
-80 cases covering all 32 tags, 9 behavior triggers, and 11 actions.
+80 cases covering all 29 tags, 9 behavior triggers, and 11 actions.
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="rock",
         metadata=CaseMeta(
             category="mundane",
-            expected_tags=["SOLID", "RIGID", "HEAVY"],
+            expected_tags=["RIGID", "HEAVY"],
             notes="The simplest possible input. Should still produce a valid, playable object.",
         ),
     ),
@@ -41,7 +41,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="wooden chair",
         metadata=CaseMeta(
             category="mundane",
-            expected_tags=["SOLID", "RIGID", "FLAMMABLE"],
+            expected_tags=["RIGID", "FLAMMABLE"],
             notes="Everyday furniture. Tests if FLAMMABLE gets picked up from 'wooden'.",
         ),
     ),
@@ -51,7 +51,7 @@ EVAL_CASES: list[CreatorCase] = [
         metadata=CaseMeta(
             category="mundane",
             expected_tags=["LIQUID", "COLD"],
-            notes="Container + liquid. Interesting tagging challenge — is it SOLID or LIQUID?",
+            notes="Container + liquid. Interesting tagging challenge — water dominates the concept.",
         ),
     ),
     Case(
@@ -59,8 +59,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="banana",
         metadata=CaseMeta(
             category="mundane",
-            expected_tags=["SOLID", "LIGHT", "SLIPPERY"],
-            notes="Meme object. Tests if SLIPPERY gets picked up from banana association.",
+            expected_tags=["LIGHT"],
+            notes="Meme object. Lightweight throwable food item.",
         ),
     ),
     Case(
@@ -68,7 +68,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a glass bottle, like an empty potion bottle that breaks easily",
         metadata=CaseMeta(
             category="mundane",
-            expected_tags=["SOLID", "RIGID", "BREAKABLE"],
+            expected_tags=["RIGID", "BREAKABLE"],
             notes="Tests BREAKABLE from 'breaks easily'. Player framing as game item.",
         ),
     ),
@@ -77,8 +77,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a glowing piece of coal fresh out of a fire, still super hot to the touch",
         metadata=CaseMeta(
             category="mundane",
-            expected_tags=["SOLID", "HOT", "GLOWING"],
-            notes="Tests HOT(2) distinct from HEAT_SOURCE(3). Sensory description.",
+            expected_tags=["HEAT_SOURCE"],
+            notes="Hot ember. HEAT_SOURCE from 'super hot'. GLOWING is internal-only (rule-applied).",
         ),
     ),
     Case(
@@ -86,7 +86,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a massive boulder the size of a house that just crushes anything in its path",
         metadata=CaseMeta(
             category="mundane",
-            expected_tags=["SOLID", "HEAVY", "RIGID"],
+            expected_tags=["HEAVY", "RIGID"],
             notes="Tests 'huge' size category. Player implying damage-on-contact from mass.",
         ),
     ),
@@ -95,8 +95,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="the worlds smallest pebble",
         metadata=CaseMeta(
             category="mundane",
-            expected_tags=["SOLID", "LIGHT"],
-            notes="Tests 'tiny' size. Minimal budget (cost 2). Superlative phrasing.",
+            expected_tags=["LIGHT"],
+            notes="Tests 'tiny' size. Minimal budget. Superlative phrasing.",
         ),
     ),
     # =========================================================================
@@ -107,7 +107,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="fire sword",
         metadata=CaseMeta(
             category="weapon",
-            expected_tags=["SOLID", "SHARP", "HEAT_SOURCE"],
+            expected_tags=["SHARP", "HEAT_SOURCE"],
             notes="Baseline in-prompt example.",
         ),
     ),
@@ -116,7 +116,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="sword",
         metadata=CaseMeta(
             category="weapon",
-            expected_tags=["SOLID", "SHARP"],
+            expected_tags=["SHARP"],
             notes="Bare minimum single word. Tests defaults when given nothing to work with.",
         ),
     ),
@@ -125,7 +125,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="time bomb that blows up after a few seconds",
         metadata=CaseMeta(
             category="weapon",
-            expected_tags=["SOLID", "EXPLOSIVE"],
+            expected_tags=["EXPLOSIVE"],
             notes="Player expects ON_TIMER -> EXPLODE. Tests behavior trigger selection.",
         ),
     ),
@@ -134,7 +134,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a missile that locks onto the nearest enemy and chases them down, like those heat seeking ones from movies",
         metadata=CaseMeta(
             category="weapon",
-            expected_tags=["SOLID", "EXPLOSIVE"],
+            expected_tags=["EXPLOSIVE"],
             notes="Tests MOVE_TOWARD -> NEAREST_LIVING. Pop culture framing.",
         ),
     ),
@@ -143,7 +143,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a bouncy ball but its like possessed or something, it just keeps bouncing around faster and faster and if it hits you it really hurts",
         metadata=CaseMeta(
             category="weapon",
-            expected_tags=["SOLID", "BOUNCY", "LIGHT"],
+            expected_tags=["BOUNCY", "LIGHT"],
             notes="Tests BOUNCY tag with HOSTILE for contact damage. Comedic escalation.",
         ),
     ),
@@ -152,7 +152,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a firework that goes off the second you place it",
         metadata=CaseMeta(
             category="weapon",
-            expected_tags=["SOLID", "EXPLOSIVE", "LIGHT"],
+            expected_tags=["EXPLOSIVE", "LIGHT"],
             notes="Tests ON_CREATE trigger. Player describing instant activation.",
         ),
     ),
@@ -164,7 +164,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="explosive barrel",
         metadata=CaseMeta(
             category="trap",
-            expected_tags=["SOLID", "FLAMMABLE", "EXPLOSIVE"],
+            expected_tags=["FLAMMABLE", "EXPLOSIVE"],
             notes="Classic chain-reaction setup. EXPLOSIVE=5 budget pressure.",
         ),
     ),
@@ -173,8 +173,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a crystal ball that just floats there and looks pretty but if anything bumps into it it shatters into a million sharp pieces and everything nearby gets cut up",
         metadata=CaseMeta(
             category="trap",
-            expected_tags=["SOLID", "BREAKABLE", "SHARP", "GLOWING", "FLOATING"],
-            notes="Long description with ON_DAMAGED -> EXPLODE. Tests BREAKABLE + SHARP.",
+            expected_tags=["BREAKABLE", "SHARP", "FLOATING"],
+            notes="Long description with ON_DAMAGED -> EXPLODE. Tests BREAKABLE + SHARP. GLOWING is internal-only.",
         ),
     ),
     Case(
@@ -203,8 +203,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a little spider that spits acid at you if you get too close",
         metadata=CaseMeta(
             category="creature",
-            expected_tags=["LIVING", "CORROSIVE"],
-            notes="Explicit behavior hint. Should map to ON_PROXIMITY -> SPAWN_PROJECTILE or CORROSIVE tag.",
+            expected_tags=["LIVING", "ACIDIC"],
+            notes="Explicit behavior hint. Should map to ON_PROXIMITY -> SPAWN_PROJECTILE or ACIDIC tag.",
         ),
     ),
     Case(
@@ -239,8 +239,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="one of those deep sea jellyfish that glows in the dark and shocks anything that gets close to its tentacles",
         metadata=CaseMeta(
             category="creature",
-            expected_tags=["LIVING", "ELECTRIC", "GLOWING"],
-            notes="Nature reference. Tests ELECTRIC(4)+LIVING(3)+GLOWING(2)=9. ELECTRIC tag handles shock damage.",
+            expected_tags=["LIVING", "ELECTRIC"],
+            notes="Nature reference. Tests ELECTRIC(4)+LIVING(3)=7. GLOWING is internal-only (rule-applied).",
         ),
     ),
     Case(
@@ -266,8 +266,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a golem made entirely out of mirrors, it reflects everything back at you - fire, lightning, whatever you throw at it bounces right back",
         metadata=CaseMeta(
             category="creature",
-            expected_tags=["SOLID", "LIVING", "REFLECTIVE", "RIGID"],
-            notes="Tests REFLECTIVE(2)+LIVING(3)+SOLID(1)+RIGID(1)=7. Defensive creature.",
+            expected_tags=["LIVING", "REFLECTIVE", "RIGID"],
+            notes="Tests REFLECTIVE(2)+LIVING(3)+RIGID(1)=6. Defensive creature.",
         ),
     ),
     Case(
@@ -275,8 +275,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a living vine that reaches out and wraps around things nearby, pulling them in closer like a lasso",
         metadata=CaseMeta(
             category="creature",
-            expected_tags=["LIVING", "FLEXIBLE", "STICKY"],
-            notes="Tests FLEXIBLE + STICKY. ON_PROXIMITY -> ATTRACT or APPLY_FORCE.",
+            expected_tags=["LIVING", "STICKY"],
+            notes="Tests STICKY trapping. ON_PROXIMITY -> ATTRACT or APPLY_FORCE.",
         ),
     ),
     Case(
@@ -284,7 +284,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a little slime creature thats really scared of everything, the moment anything comes near it just books it in the other direction as fast as it can",
         metadata=CaseMeta(
             category="creature",
-            expected_tags=["LIVING", "SLIPPERY"],
+            expected_tags=["LIVING", "LIGHT"],
             notes="Tests MOVE_AWAY behavior. Long narrative emphasizing flee mechanic.",
         ),
     ),
@@ -293,7 +293,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="an egg that looks totally normal but when its about to break it suddenly bursts into flames and a firebird comes out, or at least thats the idea",
         metadata=CaseMeta(
             category="creature",
-            expected_tags=["SOLID", "LIVING"],
+            expected_tags=["LIVING"],
             notes="Tests ON_HEALTH_LOW -> ADD_TAGS(HEAT_SOURCE). Player hedging ('thats the idea').",
         ),
     ),
@@ -302,8 +302,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a little robot that just walks back and forth guarding an area, and if it spots you it starts shooting",
         metadata=CaseMeta(
             category="creature",
-            expected_tags=["SOLID", "LIVING"],
-            notes="Tests PATROL + ON_PROXIMITY -> SPAWN_PROJECTILE. Multi-behavior creature.",
+            expected_tags=["LIVING", "METALLIC"],
+            notes="Tests PATROL + ON_PROXIMITY -> SPAWN_PROJECTILE. Multi-behavior creature. Robot implies METALLIC.",
         ),
     ),
     Case(
@@ -323,8 +323,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="the sun",
         metadata=CaseMeta(
             category="abstract",
-            expected_tags=["HEAT_SOURCE", "GLOWING"],
-            notes="Absurdly large concept. Tests how it gets scoped into a game object.",
+            expected_tags=["HEAT_SOURCE", "EXPLOSIVE"],
+            notes="Absurdly large concept. Tests how it gets scoped into a game object. GLOWING is internal-only.",
         ),
     ),
     Case(
@@ -341,8 +341,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="sadness",
         metadata=CaseMeta(
             category="abstract",
-            expected_tags=["GLOWING"],
-            notes="Pure abstract emotion. No obvious physical form. Tests creative mapping.",
+            expected_tags=[],
+            notes="Pure abstract emotion. No obvious physical form. Tests creative mapping. No predictable tags.",
         ),
     ),
     Case(
@@ -350,7 +350,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="that one boulder from indiana jones",
         metadata=CaseMeta(
             category="abstract",
-            expected_tags=["SOLID", "HEAVY", "RIGID"],
+            expected_tags=["HEAVY", "RIGID"],
             notes="Pop culture reference. Should produce a large rolling boulder.",
         ),
     ),
@@ -371,8 +371,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a thing",
         metadata=CaseMeta(
             category="adversarial",
-            expected_tags=["SOLID"],
-            notes="Maximally vague input. Should still produce something valid and interesting.",
+            expected_tags=[],
+            notes="Maximally vague input. Should still produce something valid and interesting. No predictable tags.",
         ),
     ),
     Case(
@@ -380,7 +380,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a wall that literally nothing can break, like at all",
         metadata=CaseMeta(
             category="adversarial",
-            expected_tags=["SOLID", "RIGID", "HEAVY"],
+            expected_tags=["RIGID", "HEAVY"],
             notes="Player asking for OP object with emphasis style. Tests budget constraints.",
         ),
     ),
@@ -389,7 +389,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="fiar swrod",
         metadata=CaseMeta(
             category="adversarial",
-            expected_tags=["SOLID", "SHARP", "HEAT_SOURCE"],
+            expected_tags=["SHARP", "HEAT_SOURCE"],
             notes="Deliberate typo of 'fire sword'. Tests LLM's typo tolerance.",
         ),
     ),
@@ -398,7 +398,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="hey can you make me like a shield or something? nothing fancy just something to block stuff",
         metadata=CaseMeta(
             category="adversarial",
-            expected_tags=["SOLID", "RIGID"],
+            expected_tags=["RIGID"],
             notes="Question format, conversational. Tests extraction from casual speech.",
         ),
     ),
@@ -407,8 +407,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="ok so I want like a really cool sword right, it should be super sharp and glow like a lightsaber and maybe be on fire or something idk, oh and make it big, like really big, biggest sword youve ever seen",
         metadata=CaseMeta(
             category="adversarial",
-            expected_tags=["SOLID", "SHARP", "GLOWING"],
-            notes="Long rambling with contradictory size demands. Tests feature extraction from noise.",
+            expected_tags=["SHARP", "HEAT_SOURCE"],
+            notes="Long rambling with contradictory size demands. Tests feature extraction from noise. GLOWING is internal-only.",
         ),
     ),
     Case(
@@ -428,8 +428,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a cloud that rains acid on everything below it",
         metadata=CaseMeta(
             category="environment",
-            expected_tags=["GAS", "FLOATING", "CORROSIVE"],
-            notes="Environmental hazard. GAS+FLOATING+CORROSIVE. Tag handles acid damage automatically.",
+            expected_tags=["GAS", "FLOATING", "ACIDIC"],
+            notes="Environmental hazard. GAS+FLOATING+ACIDIC. Tag handles acid damage automatically.",
         ),
     ),
     Case(
@@ -437,7 +437,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="an ice shield that freezes stuff when they touch it",
         metadata=CaseMeta(
             category="defensive",
-            expected_tags=["SOLID", "RIGID", "FROZEN"],
+            expected_tags=["RIGID", "FROZEN"],
             notes="Full sentence with mechanic hint. Tests if LLM follows the instruction.",
         ),
     ),
@@ -449,8 +449,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="magnet",
         metadata=CaseMeta(
             category="utility",
-            expected_tags=["SOLID", "MAGNETIC"],
-            notes="Single word, obvious ATTRACT behavior expected.",
+            expected_tags=["MAGNETIC", "METALLIC"],
+            notes="Single word, obvious ATTRACT behavior expected. Magnets are metal.",
         ),
     ),
     Case(
@@ -458,7 +458,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="I want a healing mushroom that heals you when you kick it",
         metadata=CaseMeta(
             category="utility",
-            expected_tags=["LIVING", "SOLID"],
+            expected_tags=["LIVING"],
             notes="Player speaking naturally with 'I want'. ON_DAMAGED -> HEAL -> CONTACT_BODY.",
         ),
     ),
@@ -467,8 +467,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a metal rod that conducts electricity between things, like if you put it between a tesla coil and a robot it would zap the robot",
         metadata=CaseMeta(
             category="utility",
-            expected_tags=["SOLID", "CONDUCTING", "RIGID"],
-            notes="Tests CONDUCTING tag. Player explaining the mechanic they want.",
+            expected_tags=["METALLIC", "RIGID"],
+            notes="Tests METALLIC tag (conducts electricity and heat). Player explaining the mechanic they want.",
         ),
     ),
     Case(
@@ -476,7 +476,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="one of those cartoon spring platforms that launches you way up in the air when you step on it, BOING",
         metadata=CaseMeta(
             category="utility",
-            expected_tags=["SOLID", "BOUNCY"],
+            expected_tags=["BOUNCY"],
             notes="Tests ON_CONTACT -> APPLY_FORCE. Cartoon reference with sound effect.",
         ),
     ),
@@ -485,8 +485,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="just a regular campfire, you know, logs burning, keeps you warm, maybe heals you a little if you stand near it",
         metadata=CaseMeta(
             category="utility",
-            expected_tags=["SOLID", "HEAT_SOURCE", "GLOWING"],
-            notes="Tests field-based healing behavior. ON_PROXIMITY -> HEAL.",
+            expected_tags=["HEAT_SOURCE", "FLAMMABLE"],
+            notes="Tests field-based healing behavior. ON_PROXIMITY -> HEAL. GLOWING is internal-only (rule-applied).",
         ),
     ),
     # =========================================================================
@@ -497,8 +497,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="armor made of rubber so electricity cant hurt you when youre wearing it, like an insulator",
         metadata=CaseMeta(
             category="defensive",
-            expected_tags=["SOLID", "FLEXIBLE", "INSULATING"],
-            notes="Tests INSULATING. Player explicitly naming the mechanic.",
+            expected_tags=["BOUNCY", "INSULATING"],
+            notes="Tests INSULATING. Player explicitly naming the mechanic. Rubber maps to BOUNCY.",
         ),
     ),
     # =========================================================================
@@ -509,7 +509,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="helicopter",
         metadata=CaseMeta(
             category="vehicle",
-            expected_tags=["SOLID", "FLOATING", "WIND_SOURCE"],
+            expected_tags=["FLOATING", "WIND_SOURCE"],
             notes="Terse single word. Classic Scribblenauts vehicle. Tests FLOATING + WIND_SOURCE in non-combat.",
         ),
     ),
@@ -518,7 +518,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a hot air balloon that slowly floats upward",
         metadata=CaseMeta(
             category="vehicle",
-            expected_tags=["SOLID", "LIGHT", "FLOATING"],
+            expected_tags=["LIGHT", "FLOATING"],
             notes="Full sentence. Tests FLOATING + LIGHT for gentle lift. HEAT_SOURCE plausible but expensive.",
         ),
     ),
@@ -527,7 +527,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a jetpack you can strap on to fly around",
         metadata=CaseMeta(
             category="vehicle",
-            expected_tags=["SOLID", "LIGHT"],
+            expected_tags=["LIGHT"],
             notes="Player expects flight behavior (ALWAYS -> APPLY_FORCE SELF). Wearable framing.",
         ),
     ),
@@ -536,7 +536,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a wooden raft for floating across water",
         metadata=CaseMeta(
             category="vehicle",
-            expected_tags=["SOLID", "FLOATING", "FLAMMABLE"],
+            expected_tags=["FLOATING", "FLAMMABLE"],
             notes="Practical water-crossing. Tests FLOATING + FLAMMABLE from 'wooden'.",
         ),
     ),
@@ -548,8 +548,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a long rope for climbing",
         metadata=CaseMeta(
             category="traversal",
-            expected_tags=["SOLID", "FLEXIBLE", "LIGHT"],
-            notes="Tests FLEXIBLE in utility context. Minimal budget object.",
+            expected_tags=["LIGHT", "FLAMMABLE"],
+            notes="Minimal budget object. Rope is light and flammable.",
         ),
     ),
     Case(
@@ -557,7 +557,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a sturdy wooden bridge",
         metadata=CaseMeta(
             category="traversal",
-            expected_tags=["SOLID", "RIGID", "FLAMMABLE"],
+            expected_tags=["RIGID", "FLAMMABLE"],
             notes="Structural object. No behaviors expected — pure tags. Classic Scribblenauts solution.",
         ),
     ),
@@ -566,7 +566,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="trampoline",
         metadata=CaseMeta(
             category="traversal",
-            expected_tags=["SOLID", "BOUNCY"],
+            expected_tags=["BOUNCY"],
             notes="Terse. Tests BOUNCY for fun/traversal, not combat. ON_CONTACT -> APPLY_FORCE plausible.",
         ),
     ),
@@ -575,7 +575,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a tall ladder",
         metadata=CaseMeta(
             category="traversal",
-            expected_tags=["SOLID", "RIGID", "LIGHT"],
+            expected_tags=["RIGID", "LIGHT"],
             notes="Simple structural traversal. Tests that 'tall' maps to large size, not huge.",
         ),
     ),
@@ -584,8 +584,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a parachute that slows you down when falling",
         metadata=CaseMeta(
             category="traversal",
-            expected_tags=["SOLID", "FLEXIBLE", "LIGHT", "FLOATING"],
-            notes="Tests FLOATING + FLEXIBLE + LIGHT combo. Slow-fall mechanic.",
+            expected_tags=["LIGHT", "FLOATING"],
+            notes="Tests FLOATING + LIGHT combo. Slow-fall mechanic.",
         ),
     ),
     # =========================================================================
@@ -596,7 +596,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a big fan that blows things around",
         metadata=CaseMeta(
             category="utility",
-            expected_tags=["SOLID", "WIND_SOURCE"],
+            expected_tags=["WIND_SOURCE"],
             notes="Tests WIND_SOURCE as inanimate utility, not a creature. Should be large size.",
         ),
     ),
@@ -605,8 +605,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a wooden torch to light up dark areas",
         metadata=CaseMeta(
             category="utility",
-            expected_tags=["SOLID", "GLOWING", "HOT"],
-            notes="HEAT_SOURCE contradicts FLAMMABLE, so HOT + GLOWING is the right combo. Practical light.",
+            expected_tags=["HEAT_SOURCE", "LIGHT"],
+            notes="HEAT_SOURCE for fire. GLOWING is internal-only (rule-applied). Practical light source.",
         ),
     ),
     Case(
@@ -614,7 +614,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="an umbrella to block stuff falling from above",
         metadata=CaseMeta(
             category="utility",
-            expected_tags=["SOLID", "LIGHT", "RIGID"],
+            expected_tags=["LIGHT", "RIGID"],
             notes="Simple protective tool. Tests minimal-tag defensive object.",
         ),
     ),
@@ -623,7 +623,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a locked treasure chest",
         metadata=CaseMeta(
             category="utility",
-            expected_tags=["SOLID", "RIGID", "HEAVY"],
+            expected_tags=["RIGID", "HEAVY"],
             notes="Container archetype. Tests non-combat HEAVY + RIGID. No behaviors expected.",
         ),
     ),
@@ -635,7 +635,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a big oak tree",
         metadata=CaseMeta(
             category="nature",
-            expected_tags=["SOLID", "HEAVY", "RIGID", "FLAMMABLE"],
+            expected_tags=["HEAVY", "RIGID", "FLAMMABLE"],
             notes="Plant, not creature. Tests if LIVING is used for vegetation. FLAMMABLE from 'oak'.",
         ),
     ),
@@ -644,8 +644,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a block of ice",
         metadata=CaseMeta(
             category="nature",
-            expected_tags=["SOLID", "FROZEN", "RIGID", "SLIPPERY"],
-            notes="Tests FROZEN + SLIPPERY in non-combat physics context. Should melt near HEAT_SOURCE.",
+            expected_tags=["FROZEN", "RIGID"],
+            notes="Tests FROZEN in non-combat physics context. FROZEN implies slippery surface. Should melt near HEAT_SOURCE.",
         ),
     ),
     Case(
@@ -695,7 +695,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="an apple",
         metadata=CaseMeta(
             category="consumable",
-            expected_tags=["SOLID", "LIGHT"],
+            expected_tags=["LIGHT"],
             notes="Terse food item. Tests minimal object with possible HEAL on contact.",
         ),
     ),
@@ -716,7 +716,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="something to get across a big gap",
         metadata=CaseMeta(
             category="problem",
-            expected_tags=["SOLID", "RIGID"],
+            expected_tags=["RIGID"],
             notes="Problem-framed. Should produce bridge/platform/plank. Tests practical creativity.",
         ),
     ),
@@ -725,7 +725,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="how do I not die in lava",
         metadata=CaseMeta(
             category="problem",
-            expected_tags=["SOLID", "INSULATING"],
+            expected_tags=["INSULATING"],
             notes="Question format. Expects fireproof/insulating object. Tests extraction from question.",
         ),
     ),
@@ -737,7 +737,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="helecopter",
         metadata=CaseMeta(
             category="adversarial",
-            expected_tags=["SOLID", "FLOATING", "WIND_SOURCE"],
+            expected_tags=["FLOATING", "WIND_SOURCE"],
             notes="Common misspelling. Should still produce a helicopter. Complements 'fiar swrod'.",
         ),
     ),
@@ -746,7 +746,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="parashoot so i dont fall",
         metadata=CaseMeta(
             category="adversarial",
-            expected_tags=["SOLID", "FLEXIBLE", "LIGHT", "FLOATING"],
+            expected_tags=["LIGHT", "FLOATING"],
             notes="Phonetic misspelling + context. Tests typo tolerance on utility objects.",
         ),
     ),
@@ -755,7 +755,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="TRAMPOLINE!!! the bounciest one ever",
         metadata=CaseMeta(
             category="adversarial",
-            expected_tags=["SOLID", "BOUNCY"],
+            expected_tags=["BOUNCY"],
             notes="All caps + exclamation + superlative. Tests noise filtering with enthusiasm.",
         ),
     ),
@@ -764,7 +764,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="dude make me a rocket ship that goes ZOOM straight up into the sky",
         metadata=CaseMeta(
             category="adversarial",
-            expected_tags=["SOLID", "LIGHT", "EXPLOSIVE"],
+            expected_tags=["LIGHT", "EXPLOSIVE"],
             notes="Enthusiastic slang + onomatopoeia. Tests extraction from hype.",
         ),
     ),
@@ -773,8 +773,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="idk just make something cool",
         metadata=CaseMeta(
             category="adversarial",
-            expected_tags=["SOLID"],
-            notes="Maximally unhelpful. Tests creative freedom with zero guidance.",
+            expected_tags=[],
+            notes="Maximally unhelpful. Tests creative freedom with zero guidance. No predictable tags.",
         ),
     ),
     Case(
@@ -782,7 +782,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="just a really big heavy thing",
         metadata=CaseMeta(
             category="adversarial",
-            expected_tags=["SOLID", "HEAVY"],
+            expected_tags=["HEAVY"],
             notes="Vague but has physics hints. Should be huge size. Tests size + tag from adjectives.",
         ),
     ),
@@ -791,7 +791,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="like a helicopter but way smaller, like a drone",
         metadata=CaseMeta(
             category="adversarial",
-            expected_tags=["SOLID", "FLOATING", "LIGHT"],
+            expected_tags=["FLOATING", "LIGHT"],
             notes="Comparison-framed input. Tests concept modification (helicopter -> small/light).",
         ),
     ),

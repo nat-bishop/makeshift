@@ -23,7 +23,6 @@ const PERIODIC_INTERVAL: float = 2.0
 const FIELD_TAGS := {
 	"WIND_SOURCE":  {"range": "FAR",    "mode": "continuous"},
 	"MAGNETIC":     {"range": "MEDIUM", "mode": "continuous"},
-	"GLOWING":      {"range": "MEDIUM", "mode": "continuous"},
 	"HEAT_SOURCE":  {"range": "CLOSE",  "mode": "periodic"},
 	"HOT":          {"range": "CLOSE",  "mode": "periodic"},
 	"ELECTRIC":     {"range": "CLOSE",  "mode": "periodic"},

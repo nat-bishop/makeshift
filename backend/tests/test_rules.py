@@ -43,7 +43,7 @@ class TestRuleResolver:
         rule = _make_rule()
         resolver = RuleResolver([rule])
         matches = resolver.find_matching_rules(
-            {Tag.HEAT_SOURCE, Tag.SOLID}, {Tag.FLAMMABLE, Tag.BREAKABLE}
+            {Tag.HEAT_SOURCE, Tag.RIGID}, {Tag.FLAMMABLE, Tag.BREAKABLE}
         )
         assert len(matches) == 1
         assert matches[0].rule_id == "test_rule"
@@ -59,7 +59,7 @@ class TestRuleResolver:
         resolver = RuleResolver([rule])
         # Reversed: b has HEAT_SOURCE, a has FLAMMABLE
         matches = resolver.find_matching_rules(
-            {Tag.FLAMMABLE, Tag.SOLID}, {Tag.HEAT_SOURCE, Tag.RIGID}
+            {Tag.FLAMMABLE, Tag.RIGID}, {Tag.HEAT_SOURCE, Tag.RIGID}
         )
         assert len(matches) == 1
 
@@ -77,7 +77,7 @@ class TestRuleResolver:
             bidirectional=False,
         )
         resolver = RuleResolver([rule])
-        matches = resolver.find_matching_rules({Tag.STICKY, Tag.SOLID}, {Tag.RIGID, Tag.HEAVY})
+        matches = resolver.find_matching_rules({Tag.STICKY, Tag.RIGID}, {Tag.RIGID, Tag.HEAVY})
         assert len(matches) == 1
 
     def test_wildcard_no_match_wrong_a(self):
@@ -87,7 +87,7 @@ class TestRuleResolver:
             bidirectional=False,
         )
         resolver = RuleResolver([rule])
-        matches = resolver.find_matching_rules({Tag.SOLID}, {Tag.RIGID})
+        matches = resolver.find_matching_rules({Tag.RIGID}, {Tag.RIGID})
         assert len(matches) == 0
 
     def test_execution_order_sorting(self):
@@ -128,7 +128,7 @@ class TestRuleResolver:
 
 class TestAllRules:
     def test_all_rules_loaded(self):
-        assert len(ALL_RULES) == 53
+        assert len(ALL_RULES) == 50
 
     def test_all_rules_have_unique_ids(self):
         ids = [r.rule_id for r in ALL_RULES]
@@ -165,10 +165,10 @@ class TestAllRules:
         resolver = RuleResolver(ALL_RULES)
         # INSULATING on B-side should block electric rules
         matches = resolver.find_matching_rules(
-            {Tag.ELECTRIC}, {Tag.CONDUCTING, Tag.INSULATING}
+            {Tag.ELECTRIC}, {Tag.METALLIC, Tag.INSULATING}
         )
         rule_ids = [m.rule_id for m in matches]
-        assert "electric_conducting_electrify" not in rule_ids
+        assert "electric_metallic_electrify" not in rule_ids
 
     def test_insulating_blocks_heat(self):
         resolver = RuleResolver(ALL_RULES)
@@ -200,10 +200,10 @@ class TestAllRules:
         resolver = RuleResolver(ALL_RULES)
         # INSULATING should not block non-electric/heat/cold rules
         matches = resolver.find_matching_rules(
-            {Tag.CORROSIVE}, {Tag.BREAKABLE, Tag.INSULATING}
+            {Tag.ACIDIC}, {Tag.BREAKABLE, Tag.INSULATING}
         )
         rule_ids = [m.rule_id for m in matches]
-        assert "corrosive_breakable_corrode" in rule_ids
+        assert "acidic_breakable_corrode" in rule_ids
 
     def test_electric_flammable_spark(self):
         resolver = RuleResolver(ALL_RULES)
@@ -279,16 +279,16 @@ class TestAllRules:
         effect_types = [e.effect_type for e in rule.effects]
         assert EffectType.APPLY_FORCE in effect_types
 
-    def test_reflective_corrosive_resist(self):
+    def test_reflective_acidic_resist(self):
         resolver = RuleResolver(ALL_RULES)
-        matches = resolver.find_matching_rules({Tag.REFLECTIVE}, {Tag.CORROSIVE})
+        matches = resolver.find_matching_rules({Tag.REFLECTIVE}, {Tag.ACIDIC})
         rule_ids = [m.rule_id for m in matches]
-        assert "reflective_corrosive_resist" in rule_ids
+        assert "reflective_acidic_resist" in rule_ids
 
     def test_liquid_wet_spread(self):
         """LIQUID wildcard rule should match against any tags_b."""
         resolver = RuleResolver(ALL_RULES)
-        matches = resolver.find_matching_rules({Tag.LIQUID}, {Tag.SOLID, Tag.RIGID})
+        matches = resolver.find_matching_rules({Tag.LIQUID}, {Tag.RIGID, Tag.HEAVY})
         rule_ids = [m.rule_id for m in matches]
         assert "liquid_wet_spread" in rule_ids
 

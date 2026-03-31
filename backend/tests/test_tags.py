@@ -7,8 +7,8 @@ from app.models.tags import (
 
 
 def test_tag_count():
-    """There should be exactly 32 tags."""
-    assert len(Tag) == 32
+    """There should be exactly 29 tags."""
+    assert len(Tag) == 29
 
 
 def test_contradiction_pairs_are_frozensets_of_two():
@@ -20,8 +20,8 @@ def test_contradiction_pairs_are_frozensets_of_two():
 
 
 def test_contradiction_count():
-    """There should be exactly 17 contradiction pairs."""
-    assert len(TAG_CONTRADICTIONS) == 17
+    """There should be exactly 13 contradiction pairs."""
+    assert len(TAG_CONTRADICTIONS) == 13
 
 
 def test_no_self_contradictions():

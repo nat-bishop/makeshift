@@ -46,7 +46,7 @@ def _make_blueprint(obj_id: str = "test-obj-1", name: str = "Test Rock") -> Game
         id=obj_id,
         name=name,
         description="A simple test rock",
-        tags=[Tag.SOLID, Tag.RIGID],
+        tags=[Tag.RIGID, Tag.HEAVY],
         visual_descriptor=VisualDescriptor(
             visual_description="a small gray stone rock",
             size_category="small",

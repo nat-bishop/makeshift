@@ -133,11 +133,6 @@ ALL_RULES: list[InteractionRule] = [
                 tag=Tag.RIGID,
             ),
             Effect(
-                effect_type=EffectType.ADD_TAG,
-                target=EffectTarget.B,
-                tag=Tag.SOLID,
-            ),
-            Effect(
                 effect_type=EffectType.REMOVE_TAG,
                 target=EffectTarget.B,
                 tag=Tag.LIQUID,
@@ -174,12 +169,12 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 7. ELECTRIC + CONDUCTING → ELECTRIFY (cascade)
+    # 7. ELECTRIC + METALLIC → ELECTRIFY (cascade)
     InteractionRule(
-        rule_id="electric_conducting_electrify",
+        rule_id="electric_metallic_electrify",
         name="Electrical Conduction",
         tags_required_a={Tag.ELECTRIC},
-        tags_required_b={Tag.CONDUCTING},
+        tags_required_b={Tag.METALLIC},
         execution_order=12,
         bidirectional=True,
         cascade_eligible=True,
@@ -195,6 +190,11 @@ ALL_RULES: list[InteractionRule] = [
                 effect_type=EffectType.ADD_TAG,
                 target=EffectTarget.B,
                 tag=Tag.ELECTRIC,
+            ),
+            Effect(
+                effect_type=EffectType.ADD_TAG,
+                target=EffectTarget.B,
+                tag=Tag.GLOWING,
                 message="Electricity arcs through! 30 damage.",
             ),
         ],
@@ -220,15 +220,20 @@ ALL_RULES: list[InteractionRule] = [
                 effect_type=EffectType.ADD_TAG,
                 target=EffectTarget.B,
                 tag=Tag.ELECTRIC,
+            ),
+            Effect(
+                effect_type=EffectType.ADD_TAG,
+                target=EffectTarget.B,
+                tag=Tag.GLOWING,
                 message="The liquid becomes electrified! 30 damage.",
             ),
         ],
     ),
-    # 9. CORROSIVE + BREAKABLE → CORRODE
+    # 9. ACIDIC + BREAKABLE → CORRODE
     InteractionRule(
-        rule_id="corrosive_breakable_corrode",
-        name="Corrosion",
-        tags_required_a={Tag.CORROSIVE},
+        rule_id="acidic_breakable_corrode",
+        name="Acid Corrosion",
+        tags_required_a={Tag.ACIDIC},
         tags_required_b={Tag.BREAKABLE},
         execution_order=8,
         bidirectional=False,
@@ -282,12 +287,12 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 12. MAGNETIC + CONDUCTING → attract
+    # 12. MAGNETIC + METALLIC → attract
     InteractionRule(
-        rule_id="magnetic_conducting_attract",
+        rule_id="magnetic_metallic_attract",
         name="Magnetic Attraction",
         tags_required_a={Tag.MAGNETIC},
-        tags_required_b={Tag.CONDUCTING},
+        tags_required_b={Tag.METALLIC},
         execution_order=6,
         bidirectional=True,
         cascade_eligible=False,
@@ -350,11 +355,6 @@ ALL_RULES: list[InteractionRule] = [
         tags_blocked_by={Tag.INSULATING},
         trigger_mode=TriggerMode.FIELD,
         effects=[
-            Effect(
-                effect_type=EffectType.ADD_TAG,
-                target=EffectTarget.B,
-                tag=Tag.SOLID,
-            ),
             Effect(
                 effect_type=EffectType.ADD_TAG,
                 target=EffectTarget.B,
@@ -432,11 +432,11 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 19. CORROSIVE + RIGID → weaken
+    # 19. ACIDIC + RIGID → weaken
     InteractionRule(
-        rule_id="corrosive_rigid_weaken",
-        name="Structural Corrosion",
-        tags_required_a={Tag.CORROSIVE},
+        rule_id="acidic_rigid_weaken",
+        name="Acid Weakening",
+        tags_required_a={Tag.ACIDIC},
         tags_required_b={Tag.RIGID},
         execution_order=7,
         bidirectional=False,
@@ -575,11 +575,11 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 26. CORROSIVE + LIVING → poison damage
+    # 26. ACIDIC + LIVING → poison damage
     InteractionRule(
-        rule_id="corrosive_living_damage",
+        rule_id="acidic_living_damage",
         name="Acid Burn",
-        tags_required_a={Tag.CORROSIVE},
+        tags_required_a={Tag.ACIDIC},
         tags_required_b={Tag.LIVING},
         execution_order=10,
         bidirectional=True,
@@ -609,25 +609,6 @@ ALL_RULES: list[InteractionRule] = [
                 target=EffectTarget.BOTH,
                 force_magnitude=-30.0,
                 message="Magnets snap together!",
-            ),
-        ],
-    ),
-    # 28. GLOWING + LIVING → attract attention (no damage, flavor)
-    InteractionRule(
-        rule_id="glowing_living_attract",
-        name="Bioluminescent Lure",
-        tags_required_a={Tag.GLOWING},
-        tags_required_b={Tag.LIVING},
-        execution_order=2,
-        bidirectional=True,
-        cascade_eligible=False,
-        trigger_mode=TriggerMode.FIELD,
-        effects=[
-            Effect(
-                effect_type=EffectType.APPLY_FORCE,
-                target=EffectTarget.B,
-                force_magnitude=-15.0,
-                message="Drawn to the light...",
             ),
         ],
     ),
@@ -714,30 +695,12 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 33. SLIPPERY + HEAVY → slide
+    # 34. ACIDIC + METALLIC → dissolve metal
     InteractionRule(
-        rule_id="slippery_heavy_slide",
-        name="Heavy Slide",
-        tags_required_a={Tag.SLIPPERY},
-        tags_required_b={Tag.HEAVY},
-        execution_order=4,
-        bidirectional=True,
-        cascade_eligible=False,
-        effects=[
-            Effect(
-                effect_type=EffectType.APPLY_FORCE,
-                target=EffectTarget.B,
-                force_magnitude=120.0,
-                message="Slides on the slippery surface!",
-            ),
-        ],
-    ),
-    # 34. CORROSIVE + CONDUCTING → dissolve metal
-    InteractionRule(
-        rule_id="corrosive_conducting_dissolve",
+        rule_id="acidic_metallic_dissolve",
         name="Metal Dissolution",
-        tags_required_a={Tag.CORROSIVE},
-        tags_required_b={Tag.CONDUCTING},
+        tags_required_a={Tag.ACIDIC},
+        tags_required_b={Tag.METALLIC},
         execution_order=9,
         bidirectional=False,
         cascade_eligible=False,
@@ -859,30 +822,12 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 38. FLEXIBLE + SHARP → resist cutting
+    # 39. HEAT_SOURCE + METALLIC → heat transfer
     InteractionRule(
-        rule_id="flexible_sharp_resist",
-        name="Flex Resist",
-        tags_required_a={Tag.FLEXIBLE},
-        tags_required_b={Tag.SHARP},
-        execution_order=9,
-        bidirectional=False,
-        cascade_eligible=False,
-        effects=[
-            Effect(
-                effect_type=EffectType.DAMAGE,
-                target=EffectTarget.A,
-                damage_amount=10.0,
-                message="Flexible material absorbs some of the cut. 10 damage.",
-            ),
-        ],
-    ),
-    # 39. HEAT_SOURCE + CONDUCTING → heat transfer
-    InteractionRule(
-        rule_id="heat_conducting_transfer",
+        rule_id="heat_metallic_transfer",
         name="Heat Conduction",
         tags_required_a={Tag.HEAT_SOURCE},
-        tags_required_b={Tag.CONDUCTING},
+        tags_required_b={Tag.METALLIC},
         execution_order=8,
         bidirectional=True,
         cascade_eligible=True,
@@ -897,12 +842,12 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 40. COLD + CONDUCTING → cold transfer
+    # 40. COLD + METALLIC → cold transfer
     InteractionRule(
-        rule_id="cold_conducting_transfer",
+        rule_id="cold_metallic_transfer",
         name="Cold Conduction",
         tags_required_a={Tag.COLD},
-        tags_required_b={Tag.CONDUCTING},
+        tags_required_b={Tag.METALLIC},
         execution_order=8,
         bidirectional=True,
         cascade_eligible=True,
@@ -1028,7 +973,7 @@ ALL_RULES: list[InteractionRule] = [
             Effect(
                 effect_type=EffectType.ADD_TAG,
                 target=EffectTarget.B,
-                tag=Tag.HOT,
+                tag=Tag.HEAT_SOURCE,
             ),
             Effect(
                 effect_type=EffectType.DAMAGE,
@@ -1068,12 +1013,12 @@ ALL_RULES: list[InteractionRule] = [
     # =========================================================================
     # REFLECTIVE expansion
     # =========================================================================
-    # 47. REFLECTIVE + CORROSIVE → resist acid
+    # 47. REFLECTIVE + ACIDIC → resist acid
     InteractionRule(
-        rule_id="reflective_corrosive_resist",
+        rule_id="reflective_acidic_resist",
         name="Acid Resistance",
         tags_required_a={Tag.REFLECTIVE},
-        tags_required_b={Tag.CORROSIVE},
+        tags_required_b={Tag.ACIDIC},
         execution_order=12,
         bidirectional=True,
         cascade_eligible=False,
@@ -1081,7 +1026,7 @@ ALL_RULES: list[InteractionRule] = [
             Effect(
                 effect_type=EffectType.REMOVE_TAG,
                 target=EffectTarget.B,
-                tag=Tag.CORROSIVE,
+                tag=Tag.ACIDIC,
                 message="Acid slides off the reflective surface!",
             ),
         ],
@@ -1143,11 +1088,6 @@ ALL_RULES: list[InteractionRule] = [
                 effect_type=EffectType.ADD_TAG,
                 target=EffectTarget.A,
                 tag=Tag.FROZEN,
-            ),
-            Effect(
-                effect_type=EffectType.ADD_TAG,
-                target=EffectTarget.A,
-                tag=Tag.SOLID,
             ),
             Effect(
                 effect_type=EffectType.ADD_TAG,

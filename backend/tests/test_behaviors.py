@@ -47,7 +47,7 @@ def _make_behavior(**kwargs: object) -> Behavior:
 def _make_spec(**kwargs: object) -> BehaviorSpec:
     defaults: dict[str, object] = {
         "trigger": BehaviorTrigger.ALWAYS,
-        "action": BehaviorAction.PATROL,
+        "action": BehaviorAction.HEAL,
     }
     defaults.update(kwargs)
     return BehaviorSpec(**defaults)  # type: ignore[arg-type]
@@ -126,7 +126,7 @@ class TestActionTargetValidation:
                 trigger=BehaviorTrigger.ON_TAG_ADDED,
                 trigger_tag=Tag.HOT,
                 action=BehaviorAction.EXPLODE,
-                target=BehaviorTarget.NEAREST_OBJECT,
+                target=BehaviorTarget.NEAREST_LIVING,
             )
 
     def test_move_toward_rejects_self_target(self) -> None:
@@ -172,8 +172,8 @@ class TestBehaviorSpec:
     def test_basic_spec(self) -> None:
         s = _make_spec()
         assert s.trigger == BehaviorTrigger.ALWAYS
-        assert s.action == BehaviorAction.PATROL
-        assert s.target == BehaviorTarget.NEAREST_OBJECT
+        assert s.action == BehaviorAction.HEAL
+        assert s.target == BehaviorTarget.NEAREST_LIVING
         assert s.power == "medium"
 
     def test_trigger_tag_required_for_on_tag_added(self) -> None:
@@ -211,7 +211,7 @@ class TestBehaviorSpec:
                 trigger=BehaviorTrigger.ON_TAG_ADDED,
                 trigger_tag=Tag.HOT,
                 action=BehaviorAction.EXPLODE,
-                target=BehaviorTarget.NEAREST_OBJECT,
+                target=BehaviorTarget.NEAREST_LIVING,
             )
 
     def test_self_destruct_rejects_non_self_target(self) -> None:
@@ -352,9 +352,9 @@ class TestParseBehaviorString:
         assert s.action == BehaviorAction.EXPLODE
         assert s.target == BehaviorTarget.SELF
 
-    def test_2_part_non_self_defaults_to_nearest_object(self) -> None:
-        s = parse_behavior_string("ALWAYS → PATROL")
-        assert s.target == BehaviorTarget.NEAREST_OBJECT
+    def test_2_part_movement_defaults_to_nearest_living(self) -> None:
+        s = parse_behavior_string("ALWAYS → MOVE_TOWARD")
+        assert s.target == BehaviorTarget.NEAREST_LIVING
 
     def test_curly_brace_stripping(self) -> None:
         s = parse_behavior_string("{ON_CONTACT → HEAL → CONTACT_BODY}")
@@ -413,7 +413,7 @@ class TestParseBehaviorString:
     # Semantic errors caught by BehaviorSpec validators
     def test_explode_non_self_target_raises_validation(self) -> None:
         with pytest.raises(ValidationError):
-            parse_behavior_string("ON_TAG_ADDED(HOT) → EXPLODE → NEAREST_OBJECT")
+            parse_behavior_string("ON_TAG_ADDED(HOT) → EXPLODE → NEAREST_LIVING")
 
     def test_on_destroy_movement_raises_validation(self) -> None:
         with pytest.raises(ValidationError):
@@ -438,50 +438,36 @@ class TestParseBehaviorString:
 
 
 class TestCreatorOutputSpec:
-    def test_no_behaviors_valid(self) -> None:
+    def test_no_signature_valid(self) -> None:
         out = CreatorOutputSpec(
-            name="Rock", tags=[Tag.SOLID, Tag.RIGID], behaviors=[], visual_descriptor=_make_visual()
+            name="Rock", tags=[Tag.RIGID, Tag.HEAVY], visual_descriptor=_make_visual()
         )
-        assert out.behaviors == []
+        assert out.signature is None
 
-    def test_valid_behavior_strings(self) -> None:
+    def test_valid_signature(self) -> None:
         out = CreatorOutputSpec(
             name="Fire Sword",
-            tags=[Tag.SOLID, Tag.RIGID, Tag.SHARP, Tag.HEAT_SOURCE],
-            behaviors=["ON_CONTACT → HEAL → CONTACT_BODY"],
+            tags=[Tag.RIGID, Tag.SHARP, Tag.HEAT_SOURCE],
+            signature="ON_CONTACT → HEAL → CONTACT_BODY",
             visual_descriptor=_make_visual(),
         )
-        assert out.behaviors == ["ON_CONTACT → HEAL → CONTACT_BODY"]
+        assert out.signature == "ON_CONTACT → HEAL → CONTACT_BODY"
 
-    def test_many_high_power_behaviors_valid(self) -> None:
-        """Without budget, multiple high-power behaviors should pass."""
-        out = CreatorOutputSpec(
-            name="Overpowered",
-            tags=[Tag.SOLID, Tag.RIGID],
-            behaviors=[
-                "ALWAYS → SPAWN_PROJECTILE → NEAREST_OBJECT, power=high",
-                "ON_PROXIMITY → SPAWN_PROJECTILE → NEAREST_OBJECT, power=high",
-                "ON_TIMER → EXPLODE → SELF, power=high",
-            ],
-            visual_descriptor=_make_visual(),
-        )
-        assert len(out.behaviors) == 3
-
-    def test_invalid_behavior_string_raises_model_retry(self) -> None:
-        with pytest.raises(ModelRetry, match="Invalid behavior"):
+    def test_invalid_signature_raises_model_retry(self) -> None:
+        with pytest.raises(ModelRetry, match="Invalid signature"):
             CreatorOutputSpec(
                 name="Bad",
-                tags=[Tag.SOLID, Tag.RIGID],
-                behaviors=["not a valid behavior"],
+                tags=[Tag.RIGID, Tag.HEAVY],
+                signature="not a valid behavior",
                 visual_descriptor=_make_visual(),
             )
 
     def test_semantic_error_raises_model_retry(self) -> None:
-        with pytest.raises(ModelRetry, match="Invalid behavior"):
+        with pytest.raises(ModelRetry, match="Invalid signature"):
             CreatorOutputSpec(
                 name="Bad",
-                tags=[Tag.SOLID, Tag.RIGID],
-                behaviors=["ALWAYS → MOVE_TOWARD → SELF"],
+                tags=[Tag.RIGID, Tag.HEAVY],
+                signature="ALWAYS → MOVE_TOWARD → SELF",
                 visual_descriptor=_make_visual(),
             )
 
@@ -489,14 +475,16 @@ class TestCreatorOutputSpec:
 class TestCreatorOutputBehaviors:
     def test_no_behaviors_valid(self) -> None:
         out = CreatorOutput(
-            name="Rock", tags=[Tag.SOLID, Tag.RIGID], visual_descriptor=_make_visual()
+            name="Rock", tags=[Tag.RIGID, Tag.HEAVY], visual_descriptor=_make_visual()
         )
-        assert out.behaviors == []
+        assert out.name == "Rock"
 
-    def test_behaviors_within_budget_valid(self) -> None:
-        out = CreatorOutput(
+    def test_blueprint_behaviors_valid(self) -> None:
+        bp = GameObjectBlueprint(
+            id="test",
             name="Guard Dog",
-            tags=[Tag.LIVING, Tag.SOLID, Tag.FLEXIBLE],
+            description="a guard dog",
+            tags=[Tag.LIVING, Tag.BOUNCY],
             behaviors=[
                 Behavior(
                     trigger=BehaviorTrigger.ALWAYS,
@@ -507,11 +495,13 @@ class TestCreatorOutputBehaviors:
             ],
             visual_descriptor=_make_visual(),
         )
-        assert len(out.behaviors) == 1
+        assert len(bp.behaviors) == 1
 
-    def test_dragon_example_valid(self) -> None:
-        out = CreatorOutput(
+    def test_dragon_blueprint_valid(self) -> None:
+        bp = GameObjectBlueprint(
+            id="test",
             name="Fire Dragon",
+            description="a fire dragon",
             tags=[Tag.LIVING, Tag.HEAT_SOURCE, Tag.HOT],
             behaviors=[
                 Behavior(
@@ -531,12 +521,14 @@ class TestCreatorOutputBehaviors:
             ],
             visual_descriptor=_make_visual(),
         )
-        assert len(out.behaviors) == 2
+        assert len(bp.behaviors) == 2
 
-    def test_reactive_bomb_example_valid(self) -> None:
-        out = CreatorOutput(
+    def test_reactive_bomb_blueprint_valid(self) -> None:
+        bp = GameObjectBlueprint(
+            id="test",
             name="Reactive Bomb",
-            tags=[Tag.EXPLOSIVE, Tag.SOLID, Tag.FLAMMABLE],
+            description="a reactive bomb",
+            tags=[Tag.EXPLOSIVE, Tag.BREAKABLE, Tag.FLAMMABLE],
             behaviors=[
                 Behavior(
                     trigger=BehaviorTrigger.ON_TAG_ADDED,
@@ -548,7 +540,7 @@ class TestCreatorOutputBehaviors:
             ],
             visual_descriptor=_make_visual(),
         )
-        assert len(out.behaviors) == 1
+        assert len(bp.behaviors) == 1
 
 
 class TestGameObjectBlueprintBehaviors:
@@ -557,7 +549,7 @@ class TestGameObjectBlueprintBehaviors:
             id="test",
             name="Bomb",
             description="a bomb",
-            tags=[Tag.EXPLOSIVE, Tag.SOLID],
+            tags=[Tag.EXPLOSIVE, Tag.BREAKABLE],
             behaviors=[
                 Behavior(
                     trigger=BehaviorTrigger.ON_TIMER,

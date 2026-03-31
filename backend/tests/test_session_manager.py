@@ -49,7 +49,7 @@ def _make_blueprint(
         id=str(uuid.uuid4()),
         name=name,
         description="test",
-        tags=tags or [Tag.SOLID, Tag.RIGID],
+        tags=tags or [Tag.RIGID, Tag.HEAVY],
         visual_descriptor=VisualDescriptor(
             visual_description="a gray stone cube",
             size_category="medium",

@@ -6,7 +6,7 @@ import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.creator.agent import create_object
-from app.models.blueprint import CreatorOutput, VisualDescriptor
+from app.models.blueprint import CreatorOutputSpec, VisualDescriptor
 from app.models.tags import Tag
 
 
@@ -16,7 +16,7 @@ def _mock_agent_error(error: Exception | None = None) -> MagicMock:
     return agent
 
 
-def _mock_agent_success(output: CreatorOutput) -> MagicMock:
+def _mock_agent_success(output: CreatorOutputSpec) -> MagicMock:
     result = MagicMock()
     result.output = output
     agent = MagicMock()
@@ -24,10 +24,10 @@ def _mock_agent_success(output: CreatorOutput) -> MagicMock:
     return agent
 
 
-def _sample_creator_output() -> CreatorOutput:
-    return CreatorOutput(
+def _sample_creator_output() -> CreatorOutputSpec:
+    return CreatorOutputSpec(
         name="Fire Sword",
-        tags=[Tag.SOLID, Tag.SHARP, Tag.HEAT_SOURCE],
+        tags=[Tag.RIGID, Tag.SHARP, Tag.HEAT_SOURCE],
         visual_descriptor=VisualDescriptor(
             visual_description="a curved steel sword with a fiery red blade wreathed in flames",
             size_category="medium",
@@ -39,7 +39,7 @@ async def test_fallback_on_llm_error() -> None:
     with patch("app.creator.agent._get_agent", return_value=_mock_agent_error()):
         bp = await create_object("fire sword")
     assert bp.name == "Mysterious Fire Sword"
-    assert bp.tags == [Tag.SOLID, Tag.RIGID]
+    assert bp.tags == [Tag.RIGID]
 
 
 async def test_fallback_name_two_words() -> None:
@@ -79,7 +79,7 @@ async def test_success_returns_llm_output() -> None:
     with patch("app.creator.agent._get_agent", return_value=_mock_agent_success(output)):
         bp = await create_object("fire sword")
     assert bp.name == "Fire Sword"
-    assert bp.tags == [Tag.SOLID, Tag.SHARP, Tag.HEAT_SOURCE]
+    assert bp.tags == [Tag.RIGID, Tag.SHARP, Tag.HEAT_SOURCE]
 
 
 async def test_blueprint_has_uuid() -> None:

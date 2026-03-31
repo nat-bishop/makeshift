@@ -16,9 +16,9 @@ if "fal_client" not in sys.modules:
     _fal_stub.submit_async = AsyncMock()  # type: ignore[attr-defined]
     sys.modules["fal_client"] = _fal_stub
 
-import app.images.fal_helpers as fal_helpers  # noqa: E402
-import app.images.local_image as local_image  # noqa: E402
-from app.images.cloud_bg import make_cloud_remover  # noqa: E402
+import app.images.fal_helpers as fal_helpers
+import app.images.local_image as local_image
+from app.images.cloud_bg import make_cloud_remover
 
 
 @pytest.fixture(autouse=True)

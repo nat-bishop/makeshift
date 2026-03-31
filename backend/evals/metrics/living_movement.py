@@ -48,7 +48,7 @@ class LivingMovementEvaluator(Evaluator[str, str, object]):
                 if spec.action in _MOVEMENT_ACTIONS:
                     return {
                         "Living Movement": EvaluationReason(
-                            value=1.0, reason=f"Has {spec.action.value} behavior"
+                            value=1.0, reason=f"Has {spec.action} behavior"
                         )
                     }
             except (BehaviorParseError, ValueError):

@@ -63,7 +63,7 @@ class ValidityEvaluator(Evaluator[str, str, object]):
             checks["valid_tag_enums"] = True
 
         # 3. Tag count (2-6)
-        checks["tag_count"] = 2 <= len(raw_tags) <= 6
+        checks["tag_count"] = 1 <= len(raw_tags) <= 4
 
         # 4. No contradictions
         if checks["valid_tag_enums"]:

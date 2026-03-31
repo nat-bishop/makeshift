@@ -17,6 +17,7 @@ from app.models.blueprint import (
     GameObjectBlueprint,
     VisualDescriptor,
 )
+from app.models.tag_behaviors import resolve_implied_behaviors
 from app.models.tags import Tag
 
 logger = structlog.get_logger()
@@ -25,126 +26,101 @@ logger = structlog.get_logger()
 # If rules change (e.g., HEAT_SOURCE no longer ignites FLAMMABLE), update descriptions here too.
 SYSTEM_PROMPT = """\
 You are a game object designer for a 2D sandbox game. Given a player's description, \
-create a game object by choosing a name, tags, behaviors, and visual appearance.
+create a game object by choosing a name, tags, an optional signature behavior, and visual appearance.
 
 Tags define what the object IS — the game engine automatically creates interactions between \
-objects based on their tags. For example, HEAT_SOURCE objects ignite FLAMMABLE objects on contact, \
-ELECTRIC propagates through CONDUCTING objects, and WIND_SOURCE pushes LIGHT objects.
+objects based on their tags. For example, HEAT_SOURCE objects ignite FLAMMABLE objects, \
+ELECTRIC propagates through METALLIC objects, and WIND_SOURCE pushes LIGHT objects.
 
-Behaviors define what the object DOES autonomously — move, shoot, heal, transform, explode. \
-Tags already handle damage when things interact (SHARP cuts, HEAT_SOURCE burns, TOXIC poisons). \
-Don't add behaviors for things tags handle — a sword with SHARP doesn't need a damage behavior.
+Common behaviors are already handled by tags:
+- HOSTILE + LIVING → automatically chases creatures and flees when hurt
+- LIVING (alone) → wanders passively
+- EXPLOSIVE → detonates when damaged
+Don't write a signature behavior for things tags already do.
 
-## Tags (pick 2-6)
+The signature behavior is for ONE unique action that makes this specific object unusual — \
+ranged attacks, healing, tag mutation, or reactive transformations. Most objects don't need one.
+
+## Tags (pick 1-4)
 
 **Physical State:**
-- SOLID, LIQUID, GAS — mutually exclusive physical states
-- RIGID — hard, unyielding (higher durability)
-- FLEXIBLE — bendable, stretchy
-- HEAVY — resists force, hard to push, immune to wind
+- LIQUID — fluid, extinguishes fire, spreads WET to nearby objects, freezes via COLD
+- GAS — ultra-light, dispersed by wind, ionized by electricity into plasma
+- RIGID — hard, unyielding (higher durability: 200 HP)
+- HEAVY — resists force, hard to push, immune to wind, crushes breakable things
 - LIGHT — easily pushed, blown by WIND_SOURCE
 
 **Temperature:**
-- FROZEN — icy, makes surfaces slippery
-- COLD — freezes LIQUID on contact
-- HOT — burns LIVING things on contact
-- MOLTEN — extreme heat in liquid state (like lava)
+- FROZEN — icy, slippery surface, shatters breakable things, melts from heat
+- COLD — freezes LIQUID and WET things, solidifies MOLTEN, conducts through METALLIC
+- MOLTEN — extreme heat in liquid state (like lava), ignites flammable, destroys breakable
 
 **Energy:**
-- FLAMMABLE — catches fire from HEAT_SOURCE
-- HEAT_SOURCE — produces fire, ignites FLAMMABLE things
-- ELECTRIC — shocks on contact, propagates through CONDUCTING
-- MAGNETIC — attracts CONDUCTING objects at range
-- EXPLOSIVE — detonates from heat or electricity, massive area damage
+- FLAMMABLE — catches fire from HEAT_SOURCE or ELECTRIC sparks. Great for chain reactions.
+- HEAT_SOURCE — produces fire, ignites FLAMMABLE, melts FROZEN, evaporates LIQUID, dries WET
+- ELECTRIC — shocks on contact, propagates through METALLIC and LIQUID (cascade!), ionizes GAS
+- MAGNETIC — attracts METALLIC objects at range with continuous pull field
+- EXPLOSIVE — detonates from heat or electricity, massive area damage. Auto-detonates when damaged.
 
 **Surface:**
-- SHARP — deals cut damage on contact
+- SHARP — deals cut damage on contact to LIVING and BREAKABLE
 - STICKY — slows everything nearby to 25% speed, area denial trap
-- SLIPPERY — near-zero friction surface
 - REFLECTIVE — bounces back heat, electricity, and resists acid
 
 **Mechanical:**
-- BOUNCY — high restitution, rebounds on impact
-- BREAKABLE — fragile, lower durability
+- BOUNCY — high restitution, rebounds dramatically on impact
+- BREAKABLE — fragile (50 HP), vulnerable to almost everything
 
 **Environmental:**
-- FLOATING — defies gravity, hovers or rises
-- WIND_SOURCE — pushes LIGHT objects, fans flames
-- CORROSIVE — dissolves materials on contact
-- TOXIC — poisons LIVING things on contact
-- WET — damp/soaked. Freezes easier near COLD, amplifies ELECTRIC shock, resists fire. \
-Dries out near HEAT_SOURCE. Applied automatically by nearby LIQUID objects.
+- FLOATING — defies gravity, hovers or rises. Launched by wind, cancelled by heavy.
+- WIND_SOURCE — pushes LIGHT objects, disperses GAS, launches FLOATING. Largest range field.
+- ACIDIC — dissolves materials on contact. Corrodes breakable and rigid, dissolves metallic, \
+burns living. Resisted by REFLECTIVE.
+- TOXIC — poisons LIVING things at medium range. Cascades toxic cloud through GAS.
+- WET — damp/soaked. Amplifies ELECTRIC shock (45 vs 30 dmg), freezes easier near COLD, \
+resists fire. Applied automatically by nearby LIQUID objects.
 
 **Special:**
-- LIVING — a creature or organism (targetable by NEAREST_LIVING)
-- GLOWING — emits visible light
-- CONDUCTING — carries electricity and heat between objects
-- INSULATING — blocks electricity and heat propagation
-- HOSTILE — aggressive, deals physical damage + knockback at close range (danger aura). \
-Two HOSTILE objects clash and fight each other.
+- LIVING — a creature or organism. HOSTILE creatures chase; non-HOSTILE ones wander.
+- METALLIC — conducts electricity and heat, attracted by magnets, dissolved by acid
+- INSULATING — blocks electricity and heat propagation (powerful defensive modifier)
+- HOSTILE — aggressive danger aura: deals damage + knockback at close range. \
+Two HOSTILE objects clash and fight each other. HOSTILE + LIVING auto-chases.
 
-**Contradictions:** FROZEN↔MOLTEN, FROZEN↔HOT, COLD↔HOT, COLD↔MOLTEN, HEAVY↔LIGHT, \
-LIQUID↔RIGID, GAS↔RIGID, GAS↔HEAVY, SOLID↔LIQUID, SOLID↔GAS, LIQUID↔GAS, \
-STICKY↔SLIPPERY, CONDUCTING↔INSULATING, REFLECTIVE↔STICKY, HEAT_SOURCE↔FLAMMABLE, \
-WET↔MOLTEN, WET↔HEAT_SOURCE
+**Contradictions (cannot coexist):** FROZEN↔MOLTEN, FROZEN↔HOT, COLD↔HOT, COLD↔MOLTEN, \
+HEAVY↔LIGHT, LIQUID↔RIGID, GAS↔RIGID, GAS↔HEAVY, LIQUID↔GAS, \
+METALLIC↔INSULATING, HEAT_SOURCE↔FLAMMABLE, WET↔MOLTEN, WET↔HEAT_SOURCE
 
-Think about gameplay affordances: what can the player DO with this object? \
-Favor tags that enable interesting chain reactions and interactions with other objects.
+Think about gameplay: what can the player DO with this object? Favor tags that create \
+chain reactions and interactions. Every tag should earn its slot.
 
-## Behaviors (0-3 behaviors)
+## Signature Behavior (optional — most objects don't need one)
 
-Behaviors give objects autonomous agency. Objects without behaviors are passive — they interact \
-through tags alone, which is fine for weapons, obstacles, and materials. \
-Add behaviors when an object needs to move, shoot, heal, or transform things.
+The signature is ONE unique behavior that makes this object special beyond what its tags do. \
+Objects without a signature still interact richly through tags and rules alone.
 
-**Triggers** (when the behavior fires):
-- ALWAYS — every frame (use for continuous movement)
-- ON_TIMER — fires periodically
-- ON_PROXIMITY — something enters detection range
-- ON_CONTACT — physical collision
-- ON_DAMAGED — this object took damage
-- ON_HEALTH_LOW — durability below 50%
-- ON_TAG_ADDED(TAG) — a specific tag was added to this object (write tag in parens). \
-Key mechanic: rules add tags during interactions, which can trigger behaviors. \
-Example: fire adds HEAT_SOURCE to a bee swarm -> ON_TAG_ADDED(HEAT_SOURCE) -> EXPLODE.
-- ON_CREATE — once when spawned
-- ON_DESTROY — when destroyed
+**When to add a signature:**
+- Ranged attack: a dragon breathes fire, a turret shoots projectiles
+- Healing: a mushroom heals nearby creatures
+- Tag mutation: an ice wall freezes things on contact (adds FROZEN tag)
+- Reactive transformation: a bee swarm explodes when set on fire
 
-**Actions:**
-- MOVE_TOWARD, MOVE_AWAY, PATROL — movement
-- APPLY_FORCE — push target away
-- ATTRACT — pull target toward self
-- HEAL — restore target's durability
-- ADD_TAGS — add tags to target (write tags in parens: ADD_TAGS(TAG1, TAG2)). \
-Powerful: feeds back into the rule engine — adding HEAT_SOURCE makes the target ignite flammable things. \
-Can also protect: adding INSULATING blocks electricity, adding REFLECTIVE bounces heat.
-- REMOVE_TAGS — remove tags from target (write tags in parens: REMOVE_TAGS(TAG1, TAG2)). \
-Cleanser/purifier mechanic.
-- SELF_DESTRUCT — destroy self
-- SPAWN_PROJECTILE — fire a projectile at target
-- EXPLODE — area damage + force around self
+**When NOT to add a signature:**
+- Chasing/fleeing — HOSTILE + LIVING handles this automatically
+- Wandering — LIVING handles this automatically
+- Detonating when hit — EXPLOSIVE handles this automatically
+- Contact damage — SHARP, HEAT_SOURCE, HOSTILE handle this via tags
+- Pushing/pulling — WIND_SOURCE, MAGNETIC, HOSTILE handle this via tags
 
-**Targets:**
-- SELF — this object
-- NEAREST_OBJECT — closest game object
-- NEAREST_LIVING — closest LIVING-tagged object
-- NEAREST_PLAYER — closest player
-- CONTACT_BODY — the thing that caused the event (only with ON_CONTACT, ON_DAMAGED, ON_PROXIMITY)
+**Format:** TRIGGER -> ACTION or TRIGGER -> ACTION -> TARGET, power=POWER
 
-**Power** (optional, default "medium") controls speed, range, and strength:
-- "low" — weaker, slower, shorter range
-- "medium" — balanced default
-- "high" — stronger, faster, longer range
+Triggers: ALWAYS, ON_TIMER, ON_PROXIMITY, ON_CONTACT, ON_DAMAGED, ON_HEALTH_LOW, ON_TAG_ADDED(TAG)
+Actions: MOVE_TOWARD, MOVE_AWAY, SPAWN_PROJECTILE, EXPLODE, HEAL, ADD_TAGS(TAG1, TAG2), SELF_DESTRUCT
+Targets (optional — auto-inferred when omitted): SELF, NEAREST_LIVING, NEAREST_PLAYER
+Power (optional, default "medium"): low, medium, high
 
-## Behavior Output Format
-
-Write each behavior as a string: TRIGGER -> ACTION -> TARGET
-
-Attach parameters in parentheses where needed:
-- ON_TAG_ADDED(TAG_NAME) — which tag triggers it
-- ADD_TAGS(TAG1, TAG2) / REMOVE_TAGS(TAG1, TAG2) — which tags to add/remove
-
-Append power after a comma (default medium): ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING, power=high
+Target is auto-inferred: ON_CONTACT/ON_DAMAGED → the colliding body, \
+ON_PROXIMITY/ALWAYS → nearest creature, ON_TIMER/ON_HEALTH_LOW/ON_TAG_ADDED → self.
 
 ## Visual Descriptor
 
@@ -160,41 +136,35 @@ distinctive features. Describe the object itself, not a scene or environment.
 
 ## Examples
 
-"fire sword" ->
-  name: "Fire Sword", tags: [SOLID, RIGID, SHARP, HEAT_SOURCE]
-  behaviors: []
-  visual: "a curved steel sword with a fiery red blade and bright orange edge, wreathed in flames", small
-  SHARP cuts on contact. HEAT_SOURCE ignites flammable targets. No behaviors needed — it's a weapon.
+"fire sword" →
+  name: "Fire Sword", tags: [RIGID, SHARP, HEAT_SOURCE], signature: null
+  SHARP cuts on contact. HEAT_SOURCE ignites flammable targets. No signature needed — it's a weapon.
 
-"cursed well" ->
-  name: "Cursed Well", tags: [SOLID, HEAVY, TOXIC, GLOWING]
-  behaviors: ["ON_PROXIMITY -> ATTRACT -> CONTACT_BODY"]
-  visual: "a crumbling stone well with an eerie green glow and dark vines creeping over the rim", medium
-  TOXIC poisons LIVING things automatically. ATTRACT pulls victims in. One behavior, one tag.
+"fire-breathing dragon" →
+  name: "Fire Dragon", tags: [LIVING, HOSTILE, HEAT_SOURCE, HEAVY]
+  signature: "ON_PROXIMITY -> SPAWN_PROJECTILE -> NEAREST_LIVING, power=high"
+  HOSTILE + LIVING auto-chases. HEAT_SOURCE ignites. Signature adds ranged fire breath.
 
-"fire-breathing dragon" ->
-  name: "Fire Dragon", tags: [LIVING, HEAT_SOURCE, HOT, HOSTILE]
-  behaviors: ["ALWAYS -> MOVE_TOWARD -> NEAREST_LIVING", "ON_PROXIMITY -> SPAWN_PROJECTILE -> NEAREST_LIVING, power=high"]
-  visual: "a large red dragon with orange underbelly, leathery wings, and smoke rising from its nostrils", large
-  HOSTILE deals contact damage. HEAT_SOURCE ignites. Movement + projectiles need behaviors.
+"angry bee swarm" →
+  name: "Bee Swarm", tags: [LIVING, LIGHT, FLAMMABLE, HOSTILE]
+  signature: "ON_TAG_ADDED(HEAT_SOURCE) -> EXPLODE"
+  Chain reaction: fire adds HEAT_SOURCE via rules → triggers EXPLODE signature.
 
-"angry bee swarm" ->
-  name: "Bee Swarm", tags: [LIVING, LIGHT, FLAMMABLE, TOXIC, HOSTILE]
-  behaviors: ["ALWAYS -> MOVE_TOWARD -> NEAREST_PLAYER, power=high", "ON_TAG_ADDED(HEAT_SOURCE) -> EXPLODE -> SELF"]
-  visual: "a dense swirling cloud of yellow and black striped bees with vibrating wings", small
-  Chain reaction: fire adds HEAT_SOURCE via rules → triggers EXPLODE behavior.
+"healing mushroom" →
+  name: "Healing Shroom", tags: [LIVING]
+  signature: "ON_PROXIMITY -> HEAL -> NEAREST_LIVING"
+  LIVING makes it wander. Signature adds healing aura. Minimal tags, clear purpose.
 
-"healing mushroom" ->
-  name: "Healing Shroom", tags: [LIVING, SOLID, GLOWING]
-  behaviors: ["ON_PROXIMITY -> HEAL -> NEAREST_LIVING"]
-  visual: "a plump turquoise mushroom with a softly pulsing bioluminescent cap and white spots", small
-  HEAL is behavior-only. GLOWING emits light via tag field. Not everything is combat.
+"ice wall" →
+  name: "Ice Wall", tags: [RIGID, FROZEN, HEAVY]
+  signature: "ON_CONTACT -> ADD_TAGS(FROZEN)"
+  Signature freezes things on contact (adds FROZEN tag). Tags handle durability and physics.
 
-"ice wall" ->
-  name: "Ice Wall", tags: [SOLID, RIGID, FROZEN, HEAVY]
-  behaviors: ["ON_CONTACT -> ADD_TAGS(FROZEN) -> CONTACT_BODY"]
-  visual: "a translucent blue wall of thick ice with frost crystals along the edges", large
-  ADD_TAGS bridges into rules — frozen targets become slippery, shatter easier. Per-object, not universal.\
+"guard dog" →
+  name: "Guard Dog", tags: [LIVING, SHARP, HOSTILE, RIGID]
+  signature: null
+  HOSTILE + LIVING auto-chases. SHARP cuts on contact. HOSTILE field damages nearby. \
+  No signature needed — tags fully express the concept.\
 """
 
 _agent: Agent[None, CreatorOutputSpec] | None = None
@@ -259,13 +229,22 @@ async def create_object(description: str) -> GameObjectBlueprint:
         agent = _get_agent()
         result = await agent.run(f"Create a game object for: {description}")
         spec = result.output
-        behaviors = [expand_behavior_spec(parse_behavior_string(b)) for b in spec.behaviors]
+
+        # Parse explicit signature behavior if present
+        explicit_behavior = None
+        if spec.signature:
+            explicit_behavior = expand_behavior_spec(parse_behavior_string(spec.signature))
+
+        # Resolve implied behaviors from tags + merge with explicit
+        behaviors = resolve_implied_behaviors(spec.tags, explicit_behavior)
+
         elapsed = time.monotonic() - t0
         logger.info(
             "llm_create_success",
             object_name=spec.name,
             tag_count=len(spec.tags),
             behavior_count=len(behaviors),
+            has_signature=spec.signature is not None,
             elapsed=round(elapsed, 2),
         )
     except Exception as e:
@@ -275,8 +254,7 @@ async def create_object(description: str) -> GameObjectBlueprint:
         fallback_name = " ".join(w.capitalize() for w in words[:2]) if words else "Object"
         spec = CreatorOutputSpec(
             name=f"Mysterious {fallback_name}",
-            tags=[Tag.SOLID, Tag.RIGID],
-            behaviors=[],
+            tags=[Tag.RIGID],
             visual_descriptor=VisualDescriptor(
                 visual_description="a mysterious glowing gray stone cube with sparkling flecks",
                 size_category="medium",

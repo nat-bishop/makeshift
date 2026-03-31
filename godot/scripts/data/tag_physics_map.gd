@@ -76,22 +76,6 @@ const TAG_PHYSICS: Dictionary = {
 		"bounce": 0.0,
 		"damping": 2.0,
 	},
-	"SLIPPERY": {
-		"priority": 5,
-		"mass": -1.0,
-		"gravity": -1.0,
-		"friction": 0.05,
-		"bounce": -1.0,
-		"damping": -1.0,
-	},
-	"FLEXIBLE": {
-		"priority": 4,
-		"mass": -1.0,
-		"gravity": -1.0,
-		"friction": 0.3,
-		"bounce": 0.4,
-		"damping": -1.0,
-	},
 	"RIGID": {
 		"priority": 4,
 		"mass": -1.0,
