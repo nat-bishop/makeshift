@@ -5,7 +5,9 @@ class_name TagContradictions
 
 const PAIRS: Array[Array] = [
 	["FROZEN", "MOLTEN"],
+	["FROZEN", "HEAT_SOURCE"],
 	["FROZEN", "HOT"],
+	["COLD", "HEAT_SOURCE"],
 	["COLD", "HOT"],
 	["COLD", "MOLTEN"],
 	["HEAVY", "LIGHT"],

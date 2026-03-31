@@ -97,7 +97,9 @@ TAG_AUTO_CORRECTIONS: dict[str, Tag] = {
 
 TAG_CONTRADICTIONS: list[frozenset[Tag]] = [
     frozenset({Tag.FROZEN, Tag.MOLTEN}),
+    frozenset({Tag.FROZEN, Tag.HEAT_SOURCE}),
     frozenset({Tag.FROZEN, Tag.HOT}),
+    frozenset({Tag.COLD, Tag.HEAT_SOURCE}),
     frozenset({Tag.COLD, Tag.HOT}),
     frozenset({Tag.COLD, Tag.MOLTEN}),
     frozenset({Tag.HEAVY, Tag.LIGHT}),
