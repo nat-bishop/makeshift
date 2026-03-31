@@ -1,10 +1,7 @@
-"""Tests for the behavior system: enums, model validation, cost calculation, budget enforcement."""
+"""Tests for the behavior system: enums, model validation, parsing, expansion."""
 
 import pytest
 from app.models.behaviors import (
-    BEHAVIOR_ACTION_COSTS,
-    INTENSITY_COST_MODIFIER,
-    SPAWN_EXPLODE_FLOOR,
     Behavior,
     BehaviorAction,
     BehaviorParseError,
@@ -16,8 +13,6 @@ from app.models.behaviors import (
     Interval,
     Power,
     Speed,
-    compute_behavior_cost,
-    compute_spec_cost,
     expand_behavior_spec,
     parse_behavior_string,
 )
@@ -56,46 +51,6 @@ def _make_spec(**kwargs: object) -> BehaviorSpec:
     }
     defaults.update(kwargs)
     return BehaviorSpec(**defaults)  # type: ignore[arg-type]
-
-
-class TestComputeBehaviorCost:
-    def test_basic_action_costs(self) -> None:
-        for action, expected_base in BEHAVIOR_ACTION_COSTS.items():
-            extras: dict = {}
-            if action in {BehaviorAction.ADD_TAGS, BehaviorAction.REMOVE_TAGS}:
-                extras["tags_to_apply"] = [Tag.HOT]
-            if action in {BehaviorAction.MOVE_TOWARD, BehaviorAction.MOVE_AWAY}:
-                extras["target"] = BehaviorTarget.NEAREST_PLAYER
-            b = _make_behavior(action=action, intensity=Intensity.MEDIUM, **extras)
-            assert compute_behavior_cost(b) == max(1, expected_base)
-
-    def test_intensity_modifiers(self) -> None:
-        for intensity, modifier in INTENSITY_COST_MODIFIER.items():
-            b = _make_behavior(action=BehaviorAction.HEAL, intensity=intensity)
-            expected = max(1, 2 + modifier)
-            assert compute_behavior_cost(b) == expected
-
-    def test_spawn_projectile_floor(self) -> None:
-        b = _make_behavior(action=BehaviorAction.SPAWN_PROJECTILE, intensity=Intensity.MINIMAL)
-        cost = compute_behavior_cost(b)
-        assert cost == SPAWN_EXPLODE_FLOOR  # max(2, 3 + (-1)) = max(2, 2) = 2
-
-    def test_explode_floor(self) -> None:
-        b = _make_behavior(action=BehaviorAction.EXPLODE, intensity=Intensity.MINIMAL)
-        cost = compute_behavior_cost(b)
-        assert cost == SPAWN_EXPLODE_FLOOR
-
-    def test_self_destruct_minimal_floors_at_1(self) -> None:
-        b = _make_behavior(action=BehaviorAction.SELF_DESTRUCT, intensity=Intensity.MINIMAL)
-        assert compute_behavior_cost(b) == 1  # max(1, 1 + (-1)) = max(1, 0) = 1
-
-    def test_extreme_spawn_projectile(self) -> None:
-        b = _make_behavior(action=BehaviorAction.SPAWN_PROJECTILE, intensity=Intensity.EXTREME)
-        assert compute_behavior_cost(b) == 5  # max(2, 3 + 2) = 5
-
-    def test_extreme_explode(self) -> None:
-        b = _make_behavior(action=BehaviorAction.EXPLODE, intensity=Intensity.EXTREME)
-        assert compute_behavior_cost(b) == 5
 
 
 class TestBehaviorValidation:
@@ -288,39 +243,6 @@ class TestBehaviorSpec:
                 action=BehaviorAction.MOVE_TOWARD,
                 target=BehaviorTarget.NEAREST_PLAYER,
             )
-
-
-class TestComputeSpecCost:
-    def test_low_medium_same_cost(self) -> None:
-        s_low = _make_spec(action=BehaviorAction.HEAL, power="low")
-        s_med = _make_spec(action=BehaviorAction.HEAL, power="medium")
-        assert compute_spec_cost(s_low) == compute_spec_cost(s_med) == 2
-
-    def test_high_costs_one_more(self) -> None:
-        s_med = _make_spec(action=BehaviorAction.HEAL, power="medium")
-        s_high = _make_spec(action=BehaviorAction.HEAL, power="high")
-        assert compute_spec_cost(s_high) == compute_spec_cost(s_med) + 1
-
-    def test_spawn_projectile_floor(self) -> None:
-        s = _make_spec(action=BehaviorAction.SPAWN_PROJECTILE, power="low")
-        assert compute_spec_cost(s) == 3  # base 3, modifier 0, floor 2 → 3
-
-    def test_spawn_projectile_high(self) -> None:
-        s = _make_spec(action=BehaviorAction.SPAWN_PROJECTILE, power="high")
-        assert compute_spec_cost(s) == 4  # base 3 + 1
-
-    def test_self_destruct_always_1(self) -> None:
-        for power in ("low", "medium", "high"):
-            s = _make_spec(
-                action=BehaviorAction.SELF_DESTRUCT,
-                target=BehaviorTarget.SELF,
-                power=power,
-            )
-            # base 1, high adds 1 → max(1, 2) = 2 for high; otherwise 1
-            if power == "high":
-                assert compute_spec_cost(s) == 2
-            else:
-                assert compute_spec_cost(s) == 1
 
 
 class TestExpandBehaviorSpec:
@@ -531,18 +453,19 @@ class TestCreatorOutputSpec:
         )
         assert out.behaviors == ["ON_CONTACT → HEAL → CONTACT_BODY"]
 
-    def test_behavior_budget_exceeded_raises(self) -> None:
-        with pytest.raises(ModelRetry):
-            CreatorOutputSpec(
-                name="Overpowered",
-                tags=[Tag.SOLID, Tag.RIGID],
-                behaviors=[
-                    "ALWAYS → SPAWN_PROJECTILE → NEAREST_OBJECT, power=high",
-                    "ON_PROXIMITY → SPAWN_PROJECTILE → NEAREST_OBJECT, power=high",
-                    "ON_TIMER → EXPLODE → SELF, power=high",
-                ],
-                visual_descriptor=_make_visual(),
-            )  # 4 + 4 + 4 = 12 > 8
+    def test_many_high_power_behaviors_valid(self) -> None:
+        """Without budget, multiple high-power behaviors should pass."""
+        out = CreatorOutputSpec(
+            name="Overpowered",
+            tags=[Tag.SOLID, Tag.RIGID],
+            behaviors=[
+                "ALWAYS → SPAWN_PROJECTILE → NEAREST_OBJECT, power=high",
+                "ON_PROXIMITY → SPAWN_PROJECTILE → NEAREST_OBJECT, power=high",
+                "ON_TIMER → EXPLODE → SELF, power=high",
+            ],
+            visual_descriptor=_make_visual(),
+        )
+        assert len(out.behaviors) == 3
 
     def test_invalid_behavior_string_raises_model_retry(self) -> None:
         with pytest.raises(ModelRetry, match="Invalid behavior"):
@@ -629,33 +552,6 @@ class TestCreatorOutputBehaviors:
 
 
 class TestGameObjectBlueprintBehaviors:
-    def test_behavior_cost_computed(self) -> None:
-        bp = GameObjectBlueprint(
-            id="test",
-            name="Dragon",
-            description="fire dragon",
-            tags=[Tag.LIVING, Tag.SOLID],
-            behaviors=[
-                Behavior(
-                    trigger=BehaviorTrigger.ALWAYS,
-                    action=BehaviorAction.MOVE_TOWARD,
-                    target=BehaviorTarget.NEAREST_LIVING,
-                ),
-            ],
-            visual_descriptor=_make_visual(),
-        )
-        assert bp.behavior_cost == 2
-
-    def test_behavior_cost_zero_when_empty(self) -> None:
-        bp = GameObjectBlueprint(
-            id="test",
-            name="Rock",
-            description="a rock",
-            tags=[Tag.SOLID, Tag.RIGID],
-            visual_descriptor=_make_visual(),
-        )
-        assert bp.behavior_cost == 0
-
     def test_serialization_round_trip_with_behaviors(self) -> None:
         bp = GameObjectBlueprint(
             id="test",
@@ -676,4 +572,4 @@ class TestGameObjectBlueprintBehaviors:
         data = bp.model_dump(mode="json")
         assert len(data["behaviors"]) == 1
         assert data["behaviors"][0]["trigger"] == "ON_TIMER"
-        assert data["behavior_cost"] == 5
+        assert data["behaviors"][0]["action"] == "EXPLODE"

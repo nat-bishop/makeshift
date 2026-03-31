@@ -6,6 +6,7 @@ Bridges pydantic-evals EvaluationReport to our persistent EvalRunResult format.
 from __future__ import annotations
 
 import json
+import re
 from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
@@ -16,7 +17,38 @@ from evals.conftest import JUDGE_MODEL
 from evals.dataset import CaseMeta
 from evals.models import CaseResult, DatasetInfo, EvalRunResult, ParsedOutput
 
+_RETRY_RE = re.compile(r"Exceeded maximum retries \((\d+)\)")
+
 RESULTS_DIR = Path(__file__).parent / "results"
+
+
+def _extract_failure_retry_info(
+    error_message: str, error_stacktrace: str
+) -> tuple[int, list[str]]:
+    """Extract retry count and errors from a failed case.
+
+    When pydantic-ai exhausts retries, the task function throws before
+    set_eval_attribute() records retry info. We recover what we can
+    from the error message and the chained exception in the stacktrace.
+    """
+    m = _RETRY_RE.search(error_message)
+    if not m:
+        return 0, []
+
+    retries = int(m.group(1))
+
+    # Extract the chained cause — look for the last ModelRetry or ValidationError
+    retry_errors: list[str] = []
+    for line in reversed(error_stacktrace.strip().splitlines()):
+        line = line.strip()
+        if line.startswith("pydantic_ai.exceptions.ModelRetry:"):
+            retry_errors.append(line.split(":", 1)[1].strip())
+            break
+        if "ValidationError:" in line:
+            retry_errors.append(line)
+            break
+
+    return retries, retry_errors
 
 
 def _parse_output(raw: str) -> ParsedOutput | None:
@@ -41,6 +73,7 @@ def report_to_result(
     report: EvaluationReport[str, str, CaseMeta],
     variant: str,
     model: str,
+    name: str | None = None,
 ) -> EvalRunResult:
     """Convert a pydantic-evals EvaluationReport to our EvalRunResult schema."""
     cases: list[CaseResult] = []
@@ -68,6 +101,9 @@ def report_to_result(
 
     for fc in report.failures:
         meta = fc.metadata
+        retries, retry_errors = _extract_failure_retry_info(
+            fc.error_message, fc.error_stacktrace
+        )
         cases.append(CaseResult(
             case=fc.name,
             inputs=fc.inputs,
@@ -79,7 +115,10 @@ def report_to_result(
             scores={},
             reasons={},
             elapsed=0.0,
-            retries=0,
+            retries=retries,
+            retry_errors=retry_errors,
+            trace_id=fc.trace_id,
+            span_id=fc.span_id,
         ))
 
     # Dataset info
@@ -111,6 +150,7 @@ def report_to_result(
     }
 
     return EvalRunResult(
+        name=name or variant,
         variant=variant,
         timestamp=datetime.now(UTC),
         model=model,
@@ -126,7 +166,7 @@ def save_result(result: EvalRunResult) -> Path:
     """Save an EvalRunResult as timestamped JSON and return the path."""
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     ts = result.timestamp.strftime("%Y%m%d_%H%M%S")
-    path = RESULTS_DIR / f"{ts}_{result.variant}.json"
+    path = RESULTS_DIR / f"{ts}_{result.name}.json"
     path.write_text(result.model_dump_json(indent=2))
     return path
 
@@ -136,12 +176,12 @@ def load_result(path: Path) -> EvalRunResult:
     return EvalRunResult.model_validate_json(path.read_text())
 
 
-def find_latest(variant: str | None = None) -> Path | None:
-    """Find the most recent result file, optionally filtered by variant name."""
+def find_latest(name: str | None = None) -> Path | None:
+    """Find the most recent result file, optionally filtered by run name."""
     if not RESULTS_DIR.exists():
         return None
     files = sorted(RESULTS_DIR.glob("*.json"), reverse=True)
     for f in files:
-        if variant is None or f.stem.endswith(f"_{variant}"):
+        if name is None or f.stem.endswith(f"_{name}"):
             return f
     return None

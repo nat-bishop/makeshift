@@ -133,8 +133,7 @@ func _show_reveal(blueprint: Dictionary) -> void:
 	var vd: Dictionary = blueprint.get("visual_descriptor", {})
 	_reveal_size.text = vd.get("size_category", "medium").to_upper()
 
-	var power_cost: int = blueprint.get("power_cost", 0)
-	_reveal_cost.text = "%d / 10" % power_cost
+	_reveal_cost.text = "%d tags" % tags.size()
 
 	# Fade-in and start auto-fade timer
 	_reveal_card.modulate.a = 0.0

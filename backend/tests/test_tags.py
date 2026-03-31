@@ -1,10 +1,7 @@
-"""Tests for the tag system: enum completeness, costs, contradictions, constants."""
+"""Tests for the tag system: enum completeness, contradictions."""
 
-import pytest
 from app.models.tags import (
-    OBJECT_TAG_BUDGET,
     TAG_CONTRADICTIONS,
-    TAG_POWER_COSTS,
     Tag,
 )
 
@@ -12,18 +9,6 @@ from app.models.tags import (
 def test_tag_count():
     """There should be exactly 32 tags."""
     assert len(Tag) == 32
-
-
-def test_every_tag_has_a_cost():
-    """Every tag in the enum must have an entry in TAG_POWER_COSTS."""
-    for tag in Tag:
-        assert tag in TAG_POWER_COSTS, f"{tag} missing from TAG_POWER_COSTS"
-
-
-def test_costs_are_positive_integers():
-    for tag, cost in TAG_POWER_COSTS.items():
-        assert isinstance(cost, int)
-        assert 1 <= cost <= 5, f"{tag} has invalid cost {cost}"
 
 
 def test_contradiction_pairs_are_frozensets_of_two():
@@ -46,24 +31,8 @@ def test_no_self_contradictions():
         assert tags[0] != tags[1]
 
 
-def test_object_tag_budget():
-    assert OBJECT_TAG_BUDGET == 10
-
-
-@pytest.mark.parametrize(
-    ("cost", "expected_count"),
-    [(1, 11), (2, 12), (3, 4), (4, 4), (5, 1)],
-)
-def test_cost_distribution(cost: int, expected_count: int) -> None:
-    actual = [t for t, c in TAG_POWER_COSTS.items() if c == cost]
-    assert len(actual) == expected_count, (
-        f"Cost {cost}: expected {expected_count}, got {len(actual)}"
-    )
-
-
 def test_wet_tag_exists():
     assert Tag.WET in Tag
-    assert TAG_POWER_COSTS[Tag.WET] == 1
 
 
 def test_wet_contradictions():

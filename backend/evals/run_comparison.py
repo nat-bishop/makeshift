@@ -1,15 +1,15 @@
 """Compare saved eval results — no LLM calls.
 
 Usage:
-    # Compare two variants (finds latest result file for each):
-    cd backend && uv run python -m evals.run_comparison --a baseline --b v2
+    # Compare two runs by name (finds latest result file for each):
+    cd backend && uv run python -m evals.run_comparison --a baseline --b added_hostile
 
     # Compare specific files:
     cd backend && uv run python -m evals.run_comparison \
         --a results/20260330_041500_baseline.json \
-        --b results/20260330_042000_v2.json
+        --b results/20260330_042000_added_hostile.json
 
-    # Single variant analysis:
+    # Single run analysis:
     cd backend && uv run python -m evals.run_comparison --a baseline
 """
 
@@ -26,15 +26,15 @@ from evals.models import EvalRunResult
 
 
 def load_or_find(name_or_path: str) -> EvalRunResult:
-    """Load a result by file path or find the latest by variant name."""
+    """Load a result by file path or find the latest by run name."""
     path = Path(name_or_path)
     if path.exists() and path.suffix == ".json":
         return load_result(path)
 
-    # Treat as a variant name — find latest result file
+    # Treat as a run name — find latest result file
     found = find_latest(name_or_path)
     if found is None:
-        print(f"Error: no result file found for variant '{name_or_path}'")
+        print(f"Error: no result file found for '{name_or_path}'")
         sys.exit(1)
     print(f"  Loading {found}")
     return load_result(found)
@@ -42,8 +42,8 @@ def load_or_find(name_or_path: str) -> EvalRunResult:
 
 def print_wilcoxon(result_a: EvalRunResult, result_b: EvalRunResult) -> None:
     """Print Wilcoxon signed-rank test results for each metric."""
-    name_a = result_a.variant
-    name_b = result_b.variant
+    name_a = result_a.name
+    name_b = result_b.name
 
     print(
         f"\n{'Metric':<12} {name_a + ' (mean)':>12} {name_b + ' (mean)':>12} "
@@ -126,10 +126,10 @@ def print_summary(result: EvalRunResult) -> None:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Compare saved eval results")
     parser.add_argument(
-        "--a", required=True, help="First result: variant name or path to JSON file"
+        "--a", required=True, help="First result: run name or path to JSON file"
     )
     parser.add_argument(
-        "--b", default=None, help="Second result: variant name or path to JSON file"
+        "--b", default=None, help="Second result: run name or path to JSON file"
     )
     return parser.parse_args()
 
@@ -140,10 +140,10 @@ def main():
     print(f"\nLoading result A: {args.a}")
     result_a = load_or_find(args.a)
     n = result_a.dataset.total_cases
-    print(f"  Variant: {result_a.variant}, {n} cases, {result_a.timestamp}")
+    print(f"  Name: {result_a.name}, variant: {result_a.variant}, {n} cases, {result_a.timestamp}")
 
     if args.b is None:
-        # Single variant analysis
+        # Single run analysis
         print_summary(result_a)
         print_distribution_report(result_a)
     else:
@@ -151,8 +151,8 @@ def main():
         print(f"\nLoading result B: {args.b}")
         result_b = load_or_find(args.b)
         print(
-            f"  Variant: {result_b.variant}, {result_b.dataset.total_cases} cases, "
-            f"{result_b.timestamp}"
+            f"  Name: {result_b.name}, variant: {result_b.variant}, "
+            f"{result_b.dataset.total_cases} cases, {result_b.timestamp}"
         )
 
         # Validate comparable
@@ -167,18 +167,18 @@ def main():
                 print(f"  Warning: {len(only_b)} cases only in B: {', '.join(sorted(only_b)[:5])}")
 
         # Summary tables
-        print(f"\n--- {result_a.variant} ---")
+        print(f"\n--- {result_a.name} ---")
         print_summary(result_a)
-        print(f"\n--- {result_b.variant} ---")
+        print(f"\n--- {result_b.name} ---")
         print_summary(result_b)
 
         # Statistical comparison
         print_wilcoxon(result_a, result_b)
 
         # Distribution for both
-        print(f"--- Distribution: {result_a.variant} ---")
+        print(f"--- Distribution: {result_a.name} ---")
         print_distribution_report(result_a)
-        print(f"\n--- Distribution: {result_b.variant} ---")
+        print(f"\n--- Distribution: {result_b.name} ---")
         print_distribution_report(result_b)
 
 

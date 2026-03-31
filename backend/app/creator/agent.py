@@ -35,54 +35,52 @@ Behaviors define what the object DOES autonomously — move, shoot, heal, transf
 Tags already handle damage when things interact (SHARP cuts, HEAT_SOURCE burns, TOXIC poisons). \
 Don't add behaviors for things tags handle — a sword with SHARP doesn't need a damage behavior.
 
-## Tags (pick 2-6, budget = 10 points)
-
-Number in parentheses = point cost.
+## Tags (pick 2-6)
 
 **Physical State:**
-- SOLID(1), LIQUID(1), GAS(1) — mutually exclusive physical states
-- RIGID(1) — hard, unyielding (higher durability)
-- FLEXIBLE(1) — bendable, stretchy
-- HEAVY(2) — resists force, hard to push, immune to wind
-- LIGHT(1) — easily pushed, blown by WIND_SOURCE
+- SOLID, LIQUID, GAS — mutually exclusive physical states
+- RIGID — hard, unyielding (higher durability)
+- FLEXIBLE — bendable, stretchy
+- HEAVY — resists force, hard to push, immune to wind
+- LIGHT — easily pushed, blown by WIND_SOURCE
 
 **Temperature:**
-- FROZEN(2) — icy, makes surfaces slippery
-- COLD(1) — freezes LIQUID on contact
-- HOT(2) — burns LIVING things on contact
-- MOLTEN(4) — extreme heat in liquid state (like lava)
+- FROZEN — icy, makes surfaces slippery
+- COLD — freezes LIQUID on contact
+- HOT — burns LIVING things on contact
+- MOLTEN — extreme heat in liquid state (like lava)
 
 **Energy:**
-- FLAMMABLE(1) — catches fire from HEAT_SOURCE
-- HEAT_SOURCE(3) — produces fire, ignites FLAMMABLE things
-- ELECTRIC(4) — shocks on contact, propagates through CONDUCTING
-- MAGNETIC(3) — attracts CONDUCTING objects at range
-- EXPLOSIVE(5) — detonates from heat or electricity, massive area damage
+- FLAMMABLE — catches fire from HEAT_SOURCE
+- HEAT_SOURCE — produces fire, ignites FLAMMABLE things
+- ELECTRIC — shocks on contact, propagates through CONDUCTING
+- MAGNETIC — attracts CONDUCTING objects at range
+- EXPLOSIVE — detonates from heat or electricity, massive area damage
 
 **Surface:**
-- SHARP(2) — deals cut damage on contact
-- STICKY(2) — slows everything nearby to 25% speed, area denial trap
-- SLIPPERY(1) — near-zero friction surface
-- REFLECTIVE(2) — bounces back heat, electricity, and resists acid
+- SHARP — deals cut damage on contact
+- STICKY — slows everything nearby to 25% speed, area denial trap
+- SLIPPERY — near-zero friction surface
+- REFLECTIVE — bounces back heat, electricity, and resists acid
 
 **Mechanical:**
-- BOUNCY(2) — high restitution, rebounds on impact
-- BREAKABLE(1) — fragile, lower durability
+- BOUNCY — high restitution, rebounds on impact
+- BREAKABLE — fragile, lower durability
 
 **Environmental:**
-- FLOATING(2) — defies gravity, hovers or rises
-- WIND_SOURCE(3) — pushes LIGHT objects, fans flames
-- CORROSIVE(4) — dissolves materials on contact
-- TOXIC(4) — poisons LIVING things on contact
-- WET(1) — damp/soaked. Freezes easier near COLD, amplifies ELECTRIC shock, resists fire. \
+- FLOATING — defies gravity, hovers or rises
+- WIND_SOURCE — pushes LIGHT objects, fans flames
+- CORROSIVE — dissolves materials on contact
+- TOXIC — poisons LIVING things on contact
+- WET — damp/soaked. Freezes easier near COLD, amplifies ELECTRIC shock, resists fire. \
 Dries out near HEAT_SOURCE. Applied automatically by nearby LIQUID objects.
 
 **Special:**
-- LIVING(3) — a creature or organism (targetable by NEAREST_LIVING)
-- GLOWING(2) — emits visible light
-- CONDUCTING(2) — carries electricity and heat between objects
-- INSULATING(2) — blocks electricity and heat propagation
-- HOSTILE(2) — aggressive, deals physical damage + knockback at close range (danger aura). \
+- LIVING — a creature or organism (targetable by NEAREST_LIVING)
+- GLOWING — emits visible light
+- CONDUCTING — carries electricity and heat between objects
+- INSULATING — blocks electricity and heat propagation
+- HOSTILE — aggressive, deals physical damage + knockback at close range (danger aura). \
 Two HOSTILE objects clash and fight each other.
 
 **Contradictions:** FROZEN↔MOLTEN, FROZEN↔HOT, COLD↔HOT, COLD↔MOLTEN, HEAVY↔LIGHT, \
@@ -93,7 +91,7 @@ WET↔MOLTEN, WET↔HEAT_SOURCE
 Think about gameplay affordances: what can the player DO with this object? \
 Favor tags that enable interesting chain reactions and interactions with other objects.
 
-## Behaviors (0-3 behaviors, budget = 8 points)
+## Behaviors (0-3 behaviors)
 
 Behaviors give objects autonomous agency. Objects without behaviors are passive — they interact \
 through tags alone, which is fine for weapons, obstacles, and materials. \
@@ -112,19 +110,19 @@ Example: fire adds HEAT_SOURCE to a bee swarm -> ON_TAG_ADDED(HEAT_SOURCE) -> EX
 - ON_CREATE — once when spawned
 - ON_DESTROY — when destroyed
 
-**Actions** with base cost:
-- MOVE_TOWARD(2), MOVE_AWAY(2), PATROL(2) — movement
-- APPLY_FORCE(2) — push target away
-- ATTRACT(2) — pull target toward self
-- HEAL(2) — restore target's durability
-- ADD_TAGS(2) — add tags to target (write tags in parens: ADD_TAGS(TAG1, TAG2)). \
+**Actions:**
+- MOVE_TOWARD, MOVE_AWAY, PATROL — movement
+- APPLY_FORCE — push target away
+- ATTRACT — pull target toward self
+- HEAL — restore target's durability
+- ADD_TAGS — add tags to target (write tags in parens: ADD_TAGS(TAG1, TAG2)). \
 Powerful: feeds back into the rule engine — adding HEAT_SOURCE makes the target ignite flammable things. \
 Can also protect: adding INSULATING blocks electricity, adding REFLECTIVE bounces heat.
-- REMOVE_TAGS(2) — remove tags from target (write tags in parens: REMOVE_TAGS(TAG1, TAG2)). \
+- REMOVE_TAGS — remove tags from target (write tags in parens: REMOVE_TAGS(TAG1, TAG2)). \
 Cleanser/purifier mechanic.
-- SELF_DESTRUCT(1) — destroy self
-- SPAWN_PROJECTILE(3) — fire a projectile at target (min cost 2)
-- EXPLODE(3) — area damage + force around self (min cost 2)
+- SELF_DESTRUCT — destroy self
+- SPAWN_PROJECTILE — fire a projectile at target
+- EXPLODE — area damage + force around self
 
 **Targets:**
 - SELF — this object
@@ -134,9 +132,9 @@ Cleanser/purifier mechanic.
 - CONTACT_BODY — the thing that caused the event (only with ON_CONTACT, ON_DAMAGED, ON_PROXIMITY)
 
 **Power** (optional, default "medium") controls speed, range, and strength:
-- "low" — weaker, slower, shorter range (same base cost)
-- "medium" — balanced default (same base cost)
-- "high" — stronger, faster, longer range (+1 to base cost)
+- "low" — weaker, slower, shorter range
+- "medium" — balanced default
+- "high" — stronger, faster, longer range
 
 ## Behavior Output Format
 
@@ -297,8 +295,8 @@ async def create_object(description: str) -> GameObjectBlueprint:
     logger.debug(
         "blueprint_created",
         object_id=blueprint.id,
-        power_cost=blueprint.power_cost,
-        behavior_cost=blueprint.behavior_cost,
+        tag_count=len(blueprint.tags),
+        behavior_count=len(blueprint.behaviors),
         starting_durability=blueprint.starting_durability,
     )
     return blueprint

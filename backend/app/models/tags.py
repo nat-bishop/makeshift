@@ -43,46 +43,6 @@ class Tag(StrEnum):
     HOSTILE = "HOSTILE"
 
 
-TAG_POWER_COSTS: dict[Tag, int] = {
-    # Cost 1
-    Tag.SOLID: 1,
-    Tag.LIQUID: 1,
-    Tag.GAS: 1,
-    Tag.RIGID: 1,
-    Tag.FLEXIBLE: 1,
-    Tag.LIGHT: 1,
-    Tag.COLD: 1,
-    Tag.FLAMMABLE: 1,
-    Tag.SLIPPERY: 1,
-    Tag.BREAKABLE: 1,
-    Tag.WET: 1,
-    # Cost 2
-    Tag.HEAVY: 2,
-    Tag.FROZEN: 2,
-    Tag.HOT: 2,
-    Tag.SHARP: 2,
-    Tag.STICKY: 2,
-    Tag.REFLECTIVE: 2,
-    Tag.BOUNCY: 2,
-    Tag.FLOATING: 2,
-    Tag.GLOWING: 2,
-    Tag.CONDUCTING: 2,
-    Tag.INSULATING: 2,
-    Tag.HOSTILE: 2,
-    # Cost 3
-    Tag.HEAT_SOURCE: 3,
-    Tag.MAGNETIC: 3,
-    Tag.WIND_SOURCE: 3,
-    Tag.LIVING: 3,
-    # Cost 4
-    Tag.ELECTRIC: 4,
-    Tag.CORROSIVE: 4,
-    Tag.TOXIC: 4,
-    Tag.MOLTEN: 4,
-    # Cost 5
-    Tag.EXPLOSIVE: 5,
-}
-
 TAG_CONTRADICTIONS: list[frozenset[Tag]] = [
     frozenset({Tag.FROZEN, Tag.MOLTEN}),
     frozenset({Tag.FROZEN, Tag.HOT}),
@@ -102,6 +62,4 @@ TAG_CONTRADICTIONS: list[frozenset[Tag]] = [
     frozenset({Tag.WET, Tag.MOLTEN}),
     frozenset({Tag.WET, Tag.HEAT_SOURCE}),
 ]
-
-OBJECT_TAG_BUDGET: int = 10
 

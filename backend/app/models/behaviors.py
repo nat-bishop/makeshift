@@ -82,47 +82,6 @@ class Power(StrEnum):
     HIGH = "high"
 
 
-# --- Cost tables ---
-
-BEHAVIOR_BUDGET: int = 8
-
-BEHAVIOR_ACTION_COSTS: dict[BehaviorAction, int] = {
-    BehaviorAction.SELF_DESTRUCT: 1,
-    BehaviorAction.MOVE_TOWARD: 2,
-    BehaviorAction.MOVE_AWAY: 2,
-    BehaviorAction.PATROL: 2,
-    BehaviorAction.APPLY_FORCE: 2,
-    BehaviorAction.ATTRACT: 2,
-    BehaviorAction.HEAL: 2,
-    BehaviorAction.ADD_TAGS: 2,
-    BehaviorAction.REMOVE_TAGS: 2,
-    BehaviorAction.SPAWN_PROJECTILE: 3,
-    BehaviorAction.EXPLODE: 3,
-}
-
-INTENSITY_COST_MODIFIER: dict[Intensity, int] = {
-    Intensity.MINIMAL: -1,
-    Intensity.LOW: 0,
-    Intensity.MEDIUM: 0,
-    Intensity.HIGH: 1,
-    Intensity.EXTREME: 2,
-}
-
-# Spawn/explode can never cost less than this
-SPAWN_EXPLODE_FLOOR: int = 2
-
-_FLOORED_ACTIONS: frozenset[BehaviorAction] = frozenset(
-    {BehaviorAction.SPAWN_PROJECTILE, BehaviorAction.EXPLODE}
-)
-
-
-def compute_behavior_cost(behavior: "Behavior") -> int:
-    base = BEHAVIOR_ACTION_COSTS[behavior.action]
-    modifier = INTENSITY_COST_MODIFIER[behavior.intensity]
-    floor = SPAWN_EXPLODE_FLOOR if behavior.action in _FLOORED_ACTIONS else 1
-    return max(floor, base + modifier)
-
-
 # Actions that always target SELF (client ignores the target field)
 _SELF_ONLY_ACTIONS: frozenset[BehaviorAction] = frozenset(
     {BehaviorAction.SELF_DESTRUCT, BehaviorAction.EXPLODE}
@@ -326,14 +285,6 @@ class BehaviorSpec(BaseModel):
         if msg := _check_destroy_movement(self.trigger, self.action):
             raise ValueError(msg)
         return self
-
-
-def compute_spec_cost(spec: BehaviorSpec) -> int:
-    """Compute behavior cost from a BehaviorSpec (using power instead of intensity)."""
-    base = BEHAVIOR_ACTION_COSTS[spec.action]
-    modifier = 1 if spec.power == Power.HIGH else 0
-    floor = SPAWN_EXPLODE_FLOOR if spec.action in _FLOORED_ACTIONS else 1
-    return max(floor, base + modifier)
 
 
 def expand_behavior_spec(spec: BehaviorSpec) -> Behavior:

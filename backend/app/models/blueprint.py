@@ -4,17 +4,12 @@ import structlog
 from pydantic import BaseModel, Field, ValidationError, computed_field, field_validator
 
 from app.models.behaviors import (
-    BEHAVIOR_BUDGET,
     Behavior,
     BehaviorParseError,
-    compute_behavior_cost,
-    compute_spec_cost,
     parse_behavior_string,
 )
 from app.models.tags import (
-    OBJECT_TAG_BUDGET,
     TAG_CONTRADICTIONS,
-    TAG_POWER_COSTS,
     Tag,
 )
 
@@ -69,39 +64,6 @@ class CreatorOutput(BaseModel):
                 raise ModelRetry(f"{a.value} and {b.value} cannot coexist. Remove one.")
         return tags
 
-    @field_validator("tags")
-    @classmethod
-    def check_budget(cls, tags: list[Tag]) -> list[Tag]:
-        from pydantic_ai import ModelRetry
-
-        cost = sum(TAG_POWER_COSTS[t] for t in tags)
-        if cost > OBJECT_TAG_BUDGET:
-            logger.debug("llm_retry_budget", cost=cost, budget=OBJECT_TAG_BUDGET)
-            breakdown = ", ".join(f"{t.value}({TAG_POWER_COSTS[t]})" for t in tags)
-            raise ModelRetry(
-                f"Budget {cost}/{OBJECT_TAG_BUDGET}. Tags: {breakdown}. Remove expensive tags."
-            )
-        return tags
-
-    @field_validator("behaviors")
-    @classmethod
-    def check_behavior_budget(cls, behaviors: list[Behavior]) -> list[Behavior]:
-        from pydantic_ai import ModelRetry
-
-        if not behaviors:
-            return behaviors
-        cost = sum(compute_behavior_cost(b) for b in behaviors)
-        if cost > BEHAVIOR_BUDGET:
-            logger.debug("llm_retry_behavior_budget", cost=cost, budget=BEHAVIOR_BUDGET)
-            breakdown = ", ".join(
-                f"{b.action.value}@{b.intensity.value}({compute_behavior_cost(b)})"
-                for b in behaviors
-            )
-            raise ModelRetry(
-                f"Behavior budget {cost}/{BEHAVIOR_BUDGET}. Behaviors: {breakdown}. "
-                f"Remove behaviors or lower intensity."
-            )
-        return behaviors
 
 
 class CreatorOutputSpec(CreatorOutput):
@@ -118,15 +80,14 @@ class CreatorOutputSpec(CreatorOutput):
 
     @field_validator("behaviors")
     @classmethod
-    def check_behavior_budget(cls, behaviors: list[str]) -> list[str]:  # type: ignore[override]
+    def check_behaviors(cls, behaviors: list[str]) -> list[str]:
         from pydantic_ai import ModelRetry
 
         if not behaviors:
             return behaviors
-        parsed = []
         for s in behaviors:
             try:
-                spec = parse_behavior_string(s)
+                parse_behavior_string(s)
             except (BehaviorParseError, ValidationError) as e:
                 logger.debug("llm_retry_behavior_parse", behavior=s, error=str(e))
                 raise ModelRetry(
@@ -134,17 +95,6 @@ class CreatorOutputSpec(CreatorOutput):
                     f"Expected: TRIGGER -> ACTION -> TARGET\n"
                     f"Example: ON_TAG_ADDED(HEAT_SOURCE) -> EXPLODE -> SELF, power=high"
                 ) from e
-            parsed.append(spec)
-        total = sum(compute_spec_cost(s) for s in parsed)
-        if total > BEHAVIOR_BUDGET:
-            logger.debug("llm_retry_behavior_budget", cost=total, budget=BEHAVIOR_BUDGET)
-            breakdown = ", ".join(
-                f"{s.action.value}@{s.power.value}({compute_spec_cost(s)})" for s in parsed
-            )
-            raise ModelRetry(
-                f"Behavior budget {total}/{BEHAVIOR_BUDGET}. Behaviors: {breakdown}. "
-                f"Remove behaviors or lower power."
-            )
         return behaviors
 
 
@@ -155,16 +105,6 @@ class GameObjectBlueprint(BaseModel):
     tags: list[Tag]
     behaviors: list[Behavior] = Field(default_factory=list)
     visual_descriptor: VisualDescriptor
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def power_cost(self) -> int:
-        return sum(TAG_POWER_COSTS[t] for t in self.tags)
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def behavior_cost(self) -> int:
-        return sum(compute_behavior_cost(b) for b in self.behaviors)
 
     @computed_field  # type: ignore[prop-decorator]
     @property

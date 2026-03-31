@@ -28,11 +28,6 @@ def test_system_prompt_contains_all_tags():
         assert tag.value in SYSTEM_PROMPT, f"Tag {tag.value} not in system prompt"
 
 
-def test_system_prompt_mentions_budget():
-    assert "10" in SYSTEM_PROMPT
-    assert "budget" in SYSTEM_PROMPT.lower()
-
-
 def test_system_prompt_mentions_contradictions():
     assert "FROZEN" in SYSTEM_PROMPT
     assert "MOLTEN" in SYSTEM_PROMPT
@@ -54,7 +49,6 @@ def test_fallback_object_structure():
         tags=fallback.tags,
         visual_descriptor=fallback.visual_descriptor,
     )
-    assert bp.power_cost == 2  # SOLID(1) + RIGID(1)
     assert bp.starting_durability == DURABILITY_RIGID
 
 

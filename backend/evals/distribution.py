@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 
-from app.models.behaviors import BehaviorParseError, compute_spec_cost, parse_behavior_string
-from app.models.tags import TAG_POWER_COSTS, Tag
+from app.models.behaviors import BehaviorParseError, parse_behavior_string
+from app.models.tags import Tag
 
 from evals.models import EvalRunResult
 
@@ -24,8 +24,6 @@ def print_distribution_report(result: EvalRunResult) -> None:
     target_counts: Counter[str] = Counter()
     size_counts: Counter[str] = Counter()
     behavior_count_dist: Counter[int] = Counter()
-    tag_budgets: list[float] = []
-    behavior_budgets: list[float] = []
     total = 0
 
     for case in result.cases:
@@ -38,29 +36,19 @@ def print_distribution_report(result: EvalRunResult) -> None:
         for tag in out.tags:
             tag_counts[tag] += 1
 
-        # Tag budget
-        try:
-            cost = sum(TAG_POWER_COSTS.get(Tag(t), 0) for t in out.tags)
-            tag_budgets.append(cost)
-        except (ValueError, KeyError):
-            pass
-
         # Size
         size_counts[out.size_category] += 1
 
         # Behaviors
         behavior_count_dist[len(out.behaviors)] += 1
-        bcost = 0
         for b in out.behaviors:
             try:
                 spec = parse_behavior_string(str(b))
                 trigger_counts[spec.trigger.value] += 1
                 action_counts[spec.action.value] += 1
                 target_counts[spec.target.value] += 1
-                bcost += compute_spec_cost(spec)
             except (BehaviorParseError, ValueError):
                 pass
-        behavior_budgets.append(bcost)
 
     if total == 0:
         print("\n  No parseable outputs for distribution analysis.\n")
@@ -109,17 +97,6 @@ def print_distribution_report(result: EvalRunResult) -> None:
         print("\n  Target Types:")
         for target, count in target_counts.most_common():
             print(f"    {target:<20} {count:>3}")
-
-    # Budget utilization
-    if tag_budgets:
-        avg_tag = sum(tag_budgets) / len(tag_budgets)
-        max_tag = max(tag_budgets)
-        print("\n  Budget Utilization:")
-        print(f"    Tag budget:      avg {avg_tag:.1f}/10, max {max_tag:.0f}/10")
-    if behavior_budgets:
-        avg_beh = sum(behavior_budgets) / len(behavior_budgets)
-        max_beh = max(behavior_budgets)
-        print(f"    Behavior budget: avg {avg_beh:.1f}/8,  max {max_beh:.0f}/8")
 
     # Retry stats
     all_retries = [c.retries for c in result.cases]

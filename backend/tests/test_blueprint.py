@@ -10,7 +10,7 @@ from app.models.blueprint import (
     GameObjectBlueprint,
     VisualDescriptor,
 )
-from app.models.tags import TAG_POWER_COSTS, Tag
+from app.models.tags import Tag
 from pydantic import ValidationError
 from pydantic_ai import ModelRetry
 
@@ -54,23 +54,14 @@ class TestCreatorOutput:
                 visual_descriptor=_make_visual(),
             )
 
-    def test_budget_exceeded_raises(self) -> None:
-        """Tags exceeding budget=10 should raise."""
-        with pytest.raises(ModelRetry):
-            CreatorOutput(
-                name="Expensive",
-                tags=[Tag.EXPLOSIVE, Tag.ELECTRIC, Tag.SHARP],  # 5+4+2=11
-                visual_descriptor=_make_visual(),
-            )
-
-    def test_budget_exactly_10_valid(self) -> None:
-        # SOLID(1) + RIGID(1) + HEAT_SOURCE(3) + HOT(2) + GLOWING(2) + LIGHT(1) = 10
+    def test_high_cost_tags_valid_without_budget(self) -> None:
+        """Without budget, expensive tag combos should pass if count is valid."""
         out = CreatorOutput(
-            name="Torch",
-            tags=[Tag.SOLID, Tag.RIGID, Tag.HEAT_SOURCE, Tag.HOT, Tag.GLOWING, Tag.LIGHT],
+            name="Expensive",
+            tags=[Tag.EXPLOSIVE, Tag.ELECTRIC, Tag.SHARP],
             visual_descriptor=_make_visual(),
         )
-        assert len(out.tags) == 6
+        assert len(out.tags) == 3
 
     def test_multiple_contradictions(self) -> None:
         """SOLID + LIQUID is a contradiction."""
@@ -145,16 +136,6 @@ class TestCreatorOutput:
         )
         assert out.name == "Fire Sword"
 
-    def test_exact_budget_high_cost_tags(self) -> None:
-        """Tags totaling exactly OBJECT_TAG_BUDGET (10) should pass."""
-        # EXPLOSIVE(5) + MOLTEN(4) + BREAKABLE(1) = 10
-        co = CreatorOutput(
-            name="Lava Bomb",
-            tags=[Tag.EXPLOSIVE, Tag.MOLTEN, Tag.BREAKABLE],
-            visual_descriptor=_make_visual(),
-        )
-        assert sum(TAG_POWER_COSTS[t] for t in co.tags) == 10
-
 
 class TestGameObjectBlueprint:
     def _make_blueprint(
@@ -174,10 +155,6 @@ class TestGameObjectBlueprint:
                 visual_descriptor if visual_descriptor is not None else _make_visual()
             ),
         )
-
-    def test_power_cost(self) -> None:
-        bp = self._make_blueprint(tags=[Tag.SOLID, Tag.RIGID, Tag.SHARP])
-        assert bp.power_cost == 4  # 1+1+2
 
     def test_durability_breakable(self) -> None:
         bp = self._make_blueprint(tags=[Tag.SOLID, Tag.BREAKABLE])
@@ -203,5 +180,4 @@ class TestGameObjectBlueprint:
     def test_serialization_includes_computed_fields(self) -> None:
         bp = self._make_blueprint(tags=[Tag.SOLID, Tag.RIGID])
         data = bp.model_dump(mode="json")
-        assert "power_cost" in data
         assert "starting_durability" in data

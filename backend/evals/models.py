@@ -53,9 +53,10 @@ class DatasetInfo(BaseModel):
 
 
 class EvalRunResult(BaseModel):
-    """Top-level result file schema. One file = one variant run."""
+    """Top-level result file schema. One file = one eval run."""
 
     version: int = 1
+    name: str
     variant: str
     timestamp: datetime
     model: str

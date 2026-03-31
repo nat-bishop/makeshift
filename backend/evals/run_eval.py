@@ -1,14 +1,20 @@
 """Creator agent eval runner — runs evals and saves results.
 
 Usage:
-    # Run all cases with default variant:
+    # Run all cases (default variant, name defaults to variant):
     cd backend && uv run python -m evals.run_eval
 
-    # Run a specific variant:
+    # Name an experiment (uses baseline prompt, labels the result):
+    cd backend && uv run python -m evals.run_eval --name added_hostile_remove_damage
+
+    # Run a specific prompt variant:
     cd backend && uv run python -m evals.run_eval --variant v2
 
+    # Both (custom prompt + custom name):
+    cd backend && uv run python -m evals.run_eval --variant v2 --name v2_after_cleanup
+
     # Filter to specific cases:
-    cd backend && uv run python -m evals.run_eval --variant baseline --cases "fire sword,rock"
+    cd backend && uv run python -m evals.run_eval --cases "fire sword,rock"
 """
 
 from __future__ import annotations
@@ -35,6 +41,9 @@ def parse_args() -> argparse.Namespace:
         "--variant", default="baseline", help="Prompt variant name (default: baseline)"
     )
     parser.add_argument(
+        "--name", default=None, help="Experiment name for the result file (default: variant name)"
+    )
+    parser.add_argument(
         "--cases",
         default=None,
         help="Comma-separated case names to filter (default: all)",
@@ -53,6 +62,8 @@ async def main():
         print(f"Error: variant '{variant}' not found. Available: {list(PROMPT_VARIANTS.keys())}")
         sys.exit(1)
 
+    run_name = args.name or variant
+
     # Filter cases
     if args.cases:
         requested = {c.strip().lower() for c in args.cases.split(",")}
@@ -64,16 +75,16 @@ async def main():
     else:
         dataset = build_dataset(evaluators=default_evaluators())
 
-    print(f"\nRunning {len(dataset.cases)} eval cases with variant '{variant}'...")
+    print(f"\nRunning {len(dataset.cases)} eval cases — variant '{variant}', name '{run_name}'...")
 
     agent = make_agent(PROMPT_VARIANTS[variant])
-    report = await dataset.evaluate(make_task(agent), name=variant, max_concurrency=8)
+    report = await dataset.evaluate(make_task(agent), name=run_name, max_concurrency=8)
 
     # Print pydantic-evals report
     report.print(include_input=True, include_reasons=True)
 
     # Convert and save
-    result = report_to_result(report, variant, settings.llm_model)
+    result = report_to_result(report, variant, settings.llm_model, name=run_name)
     path = save_result(result)
     print(f"\nResults saved to {path}")
 
