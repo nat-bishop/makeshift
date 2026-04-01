@@ -15,9 +15,12 @@ static func create_tag_badge(tag: String, font_size: int = 12) -> Label:
 
 static func create_behavior_label(behavior: Dictionary, font_size: int = 12) -> Label:
 	var label := Label.new()
-	label.text = BehaviorDisplay.format_behavior(behavior)
+	var is_implied: bool = behavior.get("implied", false)
+	var prefix: String = "[implied] " if is_implied else "[signature] "
+	label.text = prefix + BehaviorDisplay.format_behavior(behavior)
 	label.add_theme_font_size_override("font_size", font_size)
-	label.add_theme_color_override("font_color", Color(0.75, 0.75, 0.8))
+	var color := Color(0.55, 0.55, 0.6) if is_implied else Color(0.85, 0.85, 0.5)
+	label.add_theme_color_override("font_color", color)
 	return label
 
 

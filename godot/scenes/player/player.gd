@@ -17,6 +17,8 @@ const EFFECTIVE_MASS: float = 0.4  # resistance to external forces — EXTREME (
 const KNOCKBACK_DECAY: float = 800.0  # px/s² — 1000px/s knockback lasts ~1.2s
 const KNOCKBACK_FULL_SUPPRESSION: float = 1000.0  # knockback magnitude for maximum control loss
 const KNOCKBACK_MIN_CONTROL: float = 0.15  # minimum player authority during knockback (15%)
+const BOUNCE_ENERGY: float = 1.2  # springs return 120% energy (they add energy!)
+const BOUNCE_MIN_SPEED: float = 50.0  # ignore micro-bounces
 
 enum State { IDLE, WALK, JUMP, FALL, KICK }
 
@@ -31,7 +33,8 @@ var _dead: bool = false
 var _knockback: Vector2 = Vector2.ZERO
 var _speed_modifier: float = 1.0
 var _slow_count: int = 0
-
+var _pre_slide_velocity: Vector2 = Vector2.ZERO
+var _prev_contacts: Dictionary = {}  # instance_id -> true
 @onready var _anim_sprite: AnimatedSprite2D = $AnimatedSprite2D
 
 
@@ -52,6 +55,7 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	_process_normal_movement(GRAVITY, SPEED, delta)
+	_pre_slide_velocity = velocity
 	move_and_slide()
 	_decay_knockback(delta)
 	if global_position.y > VOID_THRESHOLD and not _dead:
@@ -90,9 +94,19 @@ func _push_rigid_bodies() -> void:
 	for i in get_slide_collision_count():
 		var collision := get_slide_collision(i)
 		var collider := collision.get_collider()
-		if collider is RigidBody2D and collider.has_method("is_passively_pushable") and collider.is_passively_pushable():
-			var push_dir := -collision.get_normal()
-			collider.apply_central_impulse(push_dir * PUSH_FORCE)
+		if collider is RigidBody2D:
+			if collider.has_method("is_passively_pushable") and collider.is_passively_pushable():
+				var push_dir := -collision.get_normal()
+				collider.apply_central_impulse(push_dir * PUSH_FORCE)
+			# Bounce off BOUNCY objects using pre-slide velocity and collision normal
+			if collider.has_method("get_tags") and "BOUNCY" in collider.get_tags():
+				var normal := collision.get_normal()
+				var impact_speed: float = maxf(-_pre_slide_velocity.dot(normal), 0.0)
+				if impact_speed > BOUNCE_MIN_SPEED:
+					velocity = normal * impact_speed * BOUNCE_ENERGY
+			CollisionResolver.resolve_collision(self, collider)
+			if collider.has_method("fire_behavior_trigger"):
+				collider.fire_behavior_trigger("ON_CONTACT", self)
 
 
 func _process_kick(delta: float) -> void:

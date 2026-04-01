@@ -7,11 +7,11 @@ const DEFAULT_BOUNCE: float = 0.0
 const DEFAULT_DAMPING: float = 0.5
 
 const SIZE_TO_PHYSICS: Dictionary = {
-	"tiny": {"sprite": 64, "collision": 32},
-	"small": {"sprite": 96, "collision": 64},
-	"medium": {"sprite": 128, "collision": 96},
-	"large": {"sprite": 192, "collision": 160},
-	"huge": {"sprite": 256, "collision": 224},
+	"tiny": {"sprite": 24, "collision": 16},
+	"small": {"sprite": 44, "collision": 32},
+	"medium": {"sprite": 72, "collision": 56},
+	"large": {"sprite": 120, "collision": 96},
+	"huge": {"sprite": 192, "collision": 160},
 }
 
 const SIZE_MASS_MULTIPLIER: Dictionary = {

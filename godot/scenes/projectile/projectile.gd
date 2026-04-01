@@ -16,7 +16,7 @@ var _has_hit: bool = false
 
 func _ready() -> void:
 	collision_layer = CL.OBJECTS
-	collision_mask = CL.OBJECTS | CL.TERRAIN
+	collision_mask = CL.OBJECTS | CL.TERRAIN | CL.PLAYER
 	contact_monitor = true
 	max_contacts_reported = 1
 	body_entered.connect(_on_body_entered)

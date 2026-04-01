@@ -243,6 +243,7 @@ class Behavior(BaseModel):
     interval: Interval = Interval.MEDIUM
     tags_to_apply: list[Tag] | None = None
     trigger_tag: Tag | None = None
+    implied: bool = False
 
     @model_validator(mode="after")
     def check_trigger_tag(self) -> Self:

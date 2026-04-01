@@ -338,16 +338,16 @@ func _test_physics_composer() -> void:
 
 	# Size data (inline constants matching PhysicsComposer.SIZE_TO_PHYSICS)
 	var size_data: Dictionary = {
-		"tiny": {"sprite": 32, "collision": 16},
-		"small": {"sprite": 48, "collision": 32},
-		"medium": {"sprite": 64, "collision": 48},
-		"large": {"sprite": 96, "collision": 80},
-		"huge": {"sprite": 128, "collision": 112},
+		"tiny": {"sprite": 24, "collision": 16},
+		"small": {"sprite": 44, "collision": 32},
+		"medium": {"sprite": 72, "collision": 56},
+		"large": {"sprite": 120, "collision": 96},
+		"huge": {"sprite": 192, "collision": 160},
 	}
-	_assert("tiny: sprite == 32", size_data["tiny"]["sprite"] == 32)
+	_assert("tiny: sprite == 24", size_data["tiny"]["sprite"] == 24)
 	_assert("tiny: collision == 16", size_data["tiny"]["collision"] == 16)
-	_assert("medium: sprite == 64", size_data["medium"]["sprite"] == 64)
-	_assert("unknown size -> medium default", size_data.get("gigantic", size_data["medium"])["sprite"] == 64)
+	_assert("medium: sprite == 72", size_data["medium"]["sprite"] == 72)
+	_assert("unknown size -> medium default", size_data.get("gigantic", size_data["medium"])["sprite"] == 72)
 
 	# Shape detection (inline constants matching PhysicsComposer)
 	var elongated: Array[String] = ["sword", "plank", "rope", "ladder", "wand", "torch", "fan"]
