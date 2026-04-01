@@ -47,8 +47,8 @@ ranged attacks, healing, tag mutation, or reactive transformations. Most objects
 - GAS — airborne, dispersed substance. Smoke, steam, poison clouds.
 - RIGID — hard, unyielding material (200 HP). Stone, metal, bone, hardwood.
 - HEAVY — dense and massive. Anvils, boulders, safes. Immovable by wind or pushing.
-- LIGHT — very low mass, easily blown around. Feathers, paper, balloons, leaves. Pushed by \
-players, launched by WIND_SOURCE. NOT for sturdy objects that just aren't heavy — a springboard or wooden shield isn't LIGHT.
+- LIGHT — very low mass (not brightness!), easily blown around. Feathers, paper, balloons, \
+leaves. Pushed by players, launched by WIND_SOURCE. NOT for sturdy objects that just aren't heavy — a springboard or wooden shield isn't LIGHT.
 
 **Temperature:**
 - FROZEN — encased in ice or made of ice. Ice blocks, frozen food, frost crystals. Brittle and slippery.

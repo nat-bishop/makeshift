@@ -65,7 +65,7 @@ RUBRICS: dict[str, str] = {
         "You are evaluating a game object design for a 2D physics sandbox where objects "
         "interact through a TAG SYSTEM. Tags create automatic interactions — this is "
         "the core of the game's emergent gameplay.\n\n"
-        f"VALID TAGS (2-4 per object):\n{_TAG_LIST}\n\n"
+        f"VALID TAGS (2-5 per object):\n{_TAG_LIST}\n\n"
         f"COMPLETE TAG INTERACTION RULES ({len(ALL_RULES)} rules — "
         "these fire automatically, no behaviors needed):\n"
         f"{_RULES_SUMMARY}\n\n"
