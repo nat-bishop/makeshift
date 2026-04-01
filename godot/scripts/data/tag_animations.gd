@@ -4,7 +4,7 @@ class_name TagAnimations
 
 # Vertical bob (position.y sine wave)
 const BOBBING: Dictionary = {
-	"FLOATING": { "amplitude": 3.0, "speed": 2.0 },
+	"FLYING": { "amplitude": 3.0, "speed": 2.0 },
 }
 
 # Rotation oscillation (rotation sine wave)

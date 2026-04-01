@@ -27,8 +27,8 @@ class Tag(StrEnum):
     # Mechanical (2)
     BOUNCY = "BOUNCY"
     BREAKABLE = "BREAKABLE"
-    # Environmental (5+1 internal) — CORROSIVE renamed to ACIDIC
-    FLOATING = "FLOATING"
+    # Environmental (5+1 internal) — CORROSIVE renamed to ACIDIC, FLOATING renamed to FLYING
+    FLYING = "FLYING"
     WIND_SOURCE = "WIND_SOURCE"
     ACIDIC = "ACIDIC"
     TOXIC = "TOXIC"
@@ -70,7 +70,7 @@ TAG_DESCRIPTIONS: dict[Tag, str] = {
     Tag.REFLECTIVE: "smooth, mirror-like surface. Shields, mirrors, polished metal",
     Tag.BOUNCY: "elastic, high restitution. Rubber balls, springs, trampolines",
     Tag.BREAKABLE: "fragile, easily destroyed (50 HP). Glass, pottery, eggshells",
-    Tag.FLOATING: "buoyant, defies gravity. Balloons, ghosts, clouds, bubbles",
+    Tag.FLYING: "defies gravity, hovers or flies. Helicopters, birds, drones, balloons, clouds",
     Tag.WIND_SOURCE: "strong air currents. Fans, tornados. Pushes LIGHT, disperses GAS",
     Tag.ACIDIC: "corrosive chemical. Acid pools, chemical waste, digestive fluid",
     Tag.TOXIC: "poisonous substance. Venom, toxic mushrooms, noxious fumes. Cascades through GAS",
@@ -92,6 +92,8 @@ TAG_AUTO_CORRECTIONS: dict[str, Tag] = {
     "GLOWING": Tag.HEAT_SOURCE,  # closest gameplay equivalent
     "BRITTLE": Tag.FROZEN,  # closest LLM-visible equivalent
     "CORRODED": Tag.ACIDIC,  # closest LLM-visible equivalent
+    "FLOATING": Tag.FLYING,  # renamed tag
+    "AIRBORNE": Tag.FLYING,  # common hallucination
 }
 
 

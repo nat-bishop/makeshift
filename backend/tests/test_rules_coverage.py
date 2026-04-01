@@ -69,7 +69,7 @@ class TestRulesStructuralValidation:
             "toxic_living_damage",
             "cold_molten_freeze",
             "magnetic_magnetic_attract",
-            "wind_floating_launch",
+            "wind_flying_launch",
             "hot_living_burn",
             "heat_metallic_transfer",
             "cold_metallic_transfer",

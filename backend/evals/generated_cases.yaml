@@ -100,9 +100,9 @@ cases:
   metadata:
     category: vehicle
     expected_tags:
-    - FLOATING
+    - FLYING
     - METALLIC
-    notes: ALL CAPS pop-culture vehicle testing the floating tag.
+    notes: ALL CAPS pop-culture vehicle testing the flying tag.
   expected_output: null
   evaluators: []
 - name: Bouncy Castle
@@ -207,7 +207,7 @@ cases:
     - FROZEN
     - COLD
     - HEAVY
-    - FLOATING
+    - FLYING
     notes: Full sentence hitting multiple temperature and physical states, testing
       up to the 4-tag limit.
   expected_output: null
@@ -251,7 +251,7 @@ cases:
   metadata:
     category: vehicle
     expected_tags:
-    - FLOATING
+    - FLYING
     - LIGHT
     notes: Rambling thought process ending in a suggestion. Expected to capture floating
       and light weight.
@@ -273,7 +273,7 @@ cases:
     category: nature
     expected_tags:
     - GAS
-    - FLOATING
+    - FLYING
     - ACIDIC
     notes: Question phrasing asking for a specific combination of gas and environmental
       hazard.

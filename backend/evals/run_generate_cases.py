@@ -38,7 +38,7 @@ Energy: FLAMMABLE (catches fire), ELECTRIC (shocks, propagates), MAGNETIC (attra
 EXPLOSIVE (detonates from heat/electricity)
 Surface: SHARP (cut damage), STICKY (slows nearby), REFLECTIVE (bounces heat/electricity)
 Mechanical: BOUNCY (rebounds), BREAKABLE (fragile, 50 HP)
-Environmental: FLOATING (hovers), WIND_SOURCE (pushes light objects), ACIDIC (dissolves), \
+Environmental: FLYING (hovers/flies), WIND_SOURCE (pushes light objects), ACIDIC (dissolves), \
 TOXIC (poisons living), WET (amplifies electric)
 Special: LIVING (creature/organism), METALLIC (conducts), INSULATING (blocks conduction), \
 HOSTILE (aggressive damage aura)

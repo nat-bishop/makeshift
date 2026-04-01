@@ -13,7 +13,7 @@ const COLORS: Dictionary = {
 	"ACIDIC": Color("#AA44FF"),
 	"TOXIC": Color("#AA44FF"),
 	"MAGNETIC": Color("#448888"),
-	"FLOATING": Color("#88DDFF"),
+	"FLYING": Color("#88DDFF"),
 	"GLOWING": Color("#FFD700"),
 	"WET": Color("#4499DD"),
 	"BRITTLE": Color("#AADDFF"),

@@ -54,6 +54,23 @@ _IMPLIED_BEHAVIOR_RULES: list[
             ),
         ],
     ),
+    # FLYING + LIVING (no HOSTILE) → faster aerial patrol
+    (
+        frozenset({Tag.FLYING, Tag.LIVING}),
+        frozenset({Tag.HOSTILE}),
+        [
+            Behavior(
+                trigger=BehaviorTrigger.ALWAYS,
+                action=BehaviorAction.PATROL,
+                target=BehaviorTarget.SELF,
+                speed=Speed.MEDIUM,
+                intensity=Intensity.MEDIUM,
+                range=BehaviorRange.MEDIUM,
+                interval=Interval.MEDIUM,
+                implied=True,
+            ),
+        ],
+    ),
     # LIVING (no HOSTILE) → gentle wander
     (
         frozenset({Tag.LIVING}),

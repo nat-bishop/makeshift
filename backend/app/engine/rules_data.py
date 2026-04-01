@@ -571,12 +571,12 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 25. WIND_SOURCE + FLOATING → launch
+    # 25. WIND_SOURCE + FLYING → launch
     InteractionRule(
-        rule_id="wind_floating_launch",
+        rule_id="wind_flying_launch",
         name="Wind Launch",
         tags_required_a={Tag.WIND_SOURCE},
-        tags_required_b={Tag.FLOATING},
+        tags_required_b={Tag.FLYING},
         execution_order=7,
         bidirectional=False,
         cascade_eligible=False,
@@ -586,7 +586,7 @@ ALL_RULES: list[InteractionRule] = [
                 effect_type=EffectType.APPLY_FORCE,
                 target=EffectTarget.B,
                 force_magnitude=60.0,
-                message="Launched skyward by the wind!",
+                message="Blown off course by the wind!",
             ),
         ],
     ),
@@ -801,11 +801,11 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 36. FLOATING + HEAVY → cancel float
+    # 36. FLYING + HEAVY → cancel flight
     InteractionRule(
-        rule_id="floating_heavy_cancel",
-        name="Weight Anchor",
-        tags_required_a={Tag.FLOATING},
+        rule_id="flying_heavy_cancel",
+        name="Too Heavy to Fly",
+        tags_required_a={Tag.FLYING},
         tags_required_b={Tag.HEAVY},
         execution_order=8,
         bidirectional=True,
@@ -814,8 +814,8 @@ ALL_RULES: list[InteractionRule] = [
             Effect(
                 effect_type=EffectType.REMOVE_TAG,
                 target=EffectTarget.A,
-                tag=Tag.FLOATING,
-                message="Too heavy to float! Sinks down.",
+                tag=Tag.FLYING,
+                message="Too heavy to fly! Crashes down.",
             ),
         ],
     ),

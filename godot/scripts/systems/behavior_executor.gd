@@ -19,6 +19,7 @@ var _timers: Dictionary = {}  # behavior_index -> Timer
 var _one_shot_fired: Dictionary = {}  # behavior_index -> bool (for ONCE intervals)
 var _patrol_direction: float = 1.0  # 1.0 = right, -1.0 = left
 var _patrol_distance: float = 0.0
+var _patrol_bob_time: float = 0.0
 const PATROL_MAX_DISTANCE: float = 200.0
 const TARGET_UPDATE_INTERVAL: float = 0.3
 const MAX_BEHAVIOR_ERRORS: int = 5
@@ -335,7 +336,7 @@ func _apply_movement(target: Node, speed_tier: String, toward: bool) -> bool:
 	if move_dir != Vector2.ZERO:
 		WorldMutations.apply_movement_force(_owner_body, move_dir, max_speed, force_mag)
 
-	# FLOATING objects: also apply vertical force
+	# FLYING objects: also apply vertical force
 	if _owner_body.gravity_scale <= 0.0 and direction.y != 0.0:
 		var vert_dir := Vector2(0.0, signf(direction.y))
 		WorldMutations.apply_movement_force(_owner_body, vert_dir, max_speed, force_mag)
@@ -353,6 +354,10 @@ func _apply_patrol(speed_tier: String) -> void:
 		_patrol_distance = 0.0
 
 	var move_dir := Vector2(_patrol_direction, 0.0)
+	# Airborne objects: add vertical bobbing for natural flight look
+	if _owner_body.gravity_scale <= 0.1:
+		_patrol_bob_time += dt
+		move_dir.y = sin(_patrol_bob_time * 1.5) * 0.3
 	WorldMutations.apply_movement_force(_owner_body, move_dir, max_speed, force_mag)
 
 

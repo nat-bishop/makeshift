@@ -173,7 +173,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a crystal ball that just floats there and looks pretty but if anything bumps into it it shatters into a million sharp pieces and everything nearby gets cut up",
         metadata=CaseMeta(
             category="trap",
-            expected_tags=["BREAKABLE", "SHARP", "FLOATING"],
+            expected_tags=["BREAKABLE", "SHARP", "FLYING"],
             notes="Long description with ON_DAMAGED -> EXPLODE. Tests BREAKABLE + SHARP. GLOWING is internal-only.",
         ),
     ),
@@ -248,8 +248,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a little tornado spirit, its alive and it blows everything around it away, like leaves and small objects just go flying",
         metadata=CaseMeta(
             category="creature",
-            expected_tags=["LIVING", "WIND_SOURCE", "FLOATING"],
-            notes="Tests WIND_SOURCE(3)+LIVING(3)+FLOATING(2)=8. APPLY_FORCE behavior.",
+            expected_tags=["LIVING", "WIND_SOURCE", "FLYING"],
+            notes="Tests WIND_SOURCE(3)+LIVING(3)+FLYING(2)=8. APPLY_FORCE behavior.",
         ),
     ),
     Case(
@@ -416,8 +416,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="something light that floats and definitely isnt heavy at all, like a feather but cooler",
         metadata=CaseMeta(
             category="adversarial",
-            expected_tags=["LIGHT", "FLOATING"],
-            notes="Negation. Tests if LLM avoids HEAVY and picks up LIGHT + FLOATING.",
+            expected_tags=["LIGHT", "FLYING"],
+            notes="Negation. Tests if LLM avoids HEAVY and picks up LIGHT + FLYING.",
         ),
     ),
     # =========================================================================
@@ -428,8 +428,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a cloud that rains acid on everything below it",
         metadata=CaseMeta(
             category="environment",
-            expected_tags=["GAS", "FLOATING", "ACIDIC"],
-            notes="Environmental hazard. GAS+FLOATING+ACIDIC. Tag handles acid damage automatically.",
+            expected_tags=["GAS", "FLYING", "ACIDIC"],
+            notes="Environmental hazard. GAS+FLYING+ACIDIC. Tag handles acid damage automatically.",
         ),
     ),
     Case(
@@ -509,8 +509,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="helicopter",
         metadata=CaseMeta(
             category="vehicle",
-            expected_tags=["FLOATING", "WIND_SOURCE"],
-            notes="Terse single word. Classic Scribblenauts vehicle. Tests FLOATING + WIND_SOURCE in non-combat.",
+            expected_tags=["FLYING", "WIND_SOURCE"],
+            notes="Terse single word. Classic Scribblenauts vehicle. Tests FLYING + WIND_SOURCE in non-combat.",
         ),
     ),
     Case(
@@ -518,8 +518,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a hot air balloon that slowly floats upward",
         metadata=CaseMeta(
             category="vehicle",
-            expected_tags=["LIGHT", "FLOATING"],
-            notes="Full sentence. Tests FLOATING + LIGHT for gentle lift. HEAT_SOURCE plausible but expensive.",
+            expected_tags=["LIGHT", "FLYING"],
+            notes="Full sentence. Tests FLYING + LIGHT for gentle lift. HEAT_SOURCE plausible but expensive.",
         ),
     ),
     Case(
@@ -527,8 +527,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a jetpack you can strap on to fly around",
         metadata=CaseMeta(
             category="vehicle",
-            expected_tags=["LIGHT", "FLOATING"],
-            notes="Jetpacks fly (FLOATING) and are portable (LIGHT). Wearable framing.",
+            expected_tags=["LIGHT", "FLYING"],
+            notes="Jetpacks fly (FLYING) and are portable (LIGHT). Wearable framing.",
         ),
     ),
     Case(
@@ -536,8 +536,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a wooden raft for floating across water",
         metadata=CaseMeta(
             category="vehicle",
-            expected_tags=["FLOATING", "FLAMMABLE"],
-            notes="Practical water-crossing. Tests FLOATING + FLAMMABLE from 'wooden'.",
+            expected_tags=["FLYING", "FLAMMABLE"],
+            notes="Practical water-crossing. Tests FLYING + FLAMMABLE from 'wooden'.",
         ),
     ),
     # =========================================================================
@@ -584,8 +584,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a parachute that slows you down when falling",
         metadata=CaseMeta(
             category="traversal",
-            expected_tags=["LIGHT", "FLOATING"],
-            notes="Tests FLOATING + LIGHT combo. Slow-fall mechanic.",
+            expected_tags=["LIGHT", "FLYING"],
+            notes="Tests FLYING + LIGHT combo. Slow-fall mechanic.",
         ),
     ),
     # =========================================================================
@@ -665,8 +665,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a pegasus that can fly",
         metadata=CaseMeta(
             category="creature",
-            expected_tags=["LIVING", "LIGHT", "FLOATING"],
-            notes="Non-hostile flying creature. Tests LIVING + FLOATING without combat behaviors.",
+            expected_tags=["LIVING", "LIGHT", "FLYING"],
+            notes="Non-hostile flying creature. Tests LIVING + FLYING without combat behaviors.",
         ),
     ),
     Case(
@@ -707,7 +707,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="I need something that lets me fly",
         metadata=CaseMeta(
             category="problem",
-            expected_tags=["FLOATING", "LIGHT"],
+            expected_tags=["FLYING", "LIGHT"],
             notes="Player names the problem, not the solution. Tests creative interpretation.",
         ),
     ),
@@ -737,7 +737,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="helecopter",
         metadata=CaseMeta(
             category="adversarial",
-            expected_tags=["FLOATING", "WIND_SOURCE"],
+            expected_tags=["FLYING", "WIND_SOURCE"],
             notes="Common misspelling. Should still produce a helicopter. Complements 'fiar swrod'.",
         ),
     ),
@@ -746,7 +746,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="parashoot so i dont fall",
         metadata=CaseMeta(
             category="adversarial",
-            expected_tags=["LIGHT", "FLOATING"],
+            expected_tags=["LIGHT", "FLYING"],
             notes="Phonetic misspelling + context. Tests typo tolerance on utility objects.",
         ),
     ),
@@ -791,7 +791,7 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="like a helicopter but way smaller, like a drone",
         metadata=CaseMeta(
             category="adversarial",
-            expected_tags=["FLOATING", "LIGHT"],
+            expected_tags=["FLYING", "LIGHT"],
             notes="Comparison-framed input. Tests concept modification (helicopter -> small/light).",
         ),
     ),

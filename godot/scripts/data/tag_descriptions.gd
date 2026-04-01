@@ -26,7 +26,7 @@ const DESCRIPTIONS: Dictionary = {
 	"BOUNCY": "Springs off surfaces. High restitution.",
 	"BREAKABLE": "Fragile. Low durability.",
 	# Environmental
-	"FLOATING": "Defies gravity. Hovers in place.",
+	"FLYING": "Defies gravity. Hovers or flies.",
 	"WIND_SOURCE": "Generates air currents.",
 	"ACIDIC": "Dissolves materials over time.",
 	"TOXIC": "Poisons living things on contact.",

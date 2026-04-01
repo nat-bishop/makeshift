@@ -30,7 +30,7 @@ RUBRICS: dict[str, str] = {
         "- 0.75: Core concept is captured. ONE of: slightly off tag choice, target "
         "auto-inference imprecision (NEAREST_LIVING vs NEAREST_PLAYER), or a missing "
         "secondary attribute.\n"
-        "- 0.50: Missing a tag that defines the core concept (e.g., no FLOATING for "
+        "- 0.50: Missing a tag that defines the core concept (e.g., no FLYING for"
         "something that flies), OR includes a tag that contradicts the description.\n"
         "- 0.25: Multiple core tags are wrong or missing. The design could describe a "
         "different object entirely.\n"
@@ -52,7 +52,7 @@ RUBRICS: dict[str, str] = {
         'Input: "a parachute that slows you down when falling"\n'
         'Output: name "War Chute", tags [HEAVY, RIGID, SHARP], '
         'signature "ON_PROXIMITY -> DAMAGE"\n'
-        "Why 0.25: A parachute should be LIGHT and FLOATING, not HEAVY and SHARP. "
+        "Why 0.25: A parachute should be LIGHT and FLYING, not HEAVY and SHARP. "
         "The combat signature contradicts the slow-fall concept entirely.\n\n"
         "Focus on: Does the name match the concept? Do the tags reflect the object's "
         "core physical nature? Do the behaviors match what the player described or "

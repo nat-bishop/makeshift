@@ -36,13 +36,13 @@ const TAG_PHYSICS: Dictionary = {
 		"bounce": 0.0,
 		"damping": -1.0,
 	},
-	"FLOATING": {
+	"FLYING": {
 		"priority": 9,
 		"mass": -1.0,
-		"gravity": -0.5,
+		"gravity": 0.0,
 		"friction": -1.0,
 		"bounce": -1.0,
-		"damping": 1.5,
+		"damping": 2.0,
 	},
 	"FROZEN": {
 		"priority": 6,

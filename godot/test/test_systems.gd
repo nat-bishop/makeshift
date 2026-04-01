@@ -332,9 +332,9 @@ func _test_physics_composer() -> void:
 	var bouncy_frozen: Dictionary = _compose_physics(["BOUNCY", "FROZEN"])
 	_assert("same priority friction avg", is_equal_approx(bouncy_frozen["friction"], (0.2 + 0.05) / 2.0))
 
-	# Higher priority wins: FLOATING(9) over HEAVY(8) for gravity
-	var float_heavy: Dictionary = _compose_physics(["FLOATING", "HEAVY"])
-	_assert("FLOATING overrides HEAVY gravity", is_equal_approx(float_heavy["gravity"], -0.5))
+	# Higher priority wins: FLYING(9) over HEAVY(8) for gravity
+	var fly_heavy: Dictionary = _compose_physics(["FLYING", "HEAVY"])
+	_assert("FLYING overrides HEAVY gravity", is_equal_approx(fly_heavy["gravity"], 0.0))
 
 	# Size data (inline constants matching PhysicsComposer.SIZE_TO_PHYSICS)
 	var size_data: Dictionary = {
@@ -431,7 +431,7 @@ func _test_tag_physics_map() -> void:
 	_assert("HEAVY defined", "HEAVY" in TPM.TAG_PHYSICS)
 	_assert("LIGHT defined", "LIGHT" in TPM.TAG_PHYSICS)
 	_assert("BOUNCY defined", "BOUNCY" in TPM.TAG_PHYSICS)
-	_assert("FLOATING defined", "FLOATING" in TPM.TAG_PHYSICS)
+	_assert("FLYING defined", "FLYING" in TPM.TAG_PHYSICS)
 	_assert("FROZEN defined", "FROZEN" in TPM.TAG_PHYSICS)
 	_assert("MOLTEN defined", "MOLTEN" in TPM.TAG_PHYSICS)
 

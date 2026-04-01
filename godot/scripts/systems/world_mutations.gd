@@ -97,7 +97,7 @@ static func friction_compensated(body: RigidBody2D, desired_magnitude: float) ->
 	## force on top to cancel out friction.
 	var grav_scale: float = absf(body.gravity_scale)
 	if grav_scale < 0.1:
-		# Airborne / FLOATING: no ground friction to overcome, just scale by mass
+		# Airborne / FLYING: no ground friction to overcome, just scale by mass
 		return desired_magnitude * body.mass
 	var friction: float = 1.0  # Assume ground default (MAX combine mode)
 	if body.physics_material_override:

@@ -72,7 +72,7 @@ leaves. Pushed by players, launched by WIND_SOURCE. NOT for sturdy objects that 
 - BREAKABLE — fragile, easily destroyed (50 HP). Glass, pottery, eggshells.
 
 **Environmental:**
-- FLOATING — buoyant, defies gravity. Balloons, ghosts, clouds, bubbles.
+- FLYING — defies gravity, hovers or flies. Helicopters, birds, drones, bees, balloons, ghosts, clouds.
 - WIND_SOURCE — produces strong air currents. Fans, tornados, bellows, jet engines. Pushes LIGHT, disperses GAS.
 - ACIDIC — corrosive chemical. Acid pools, chemical waste, digestive fluid.
 - TOXIC — poisonous substance. Venom, toxic mushrooms, noxious fumes. Cascades through GAS.
@@ -106,6 +106,7 @@ Objects without a signature still interact richly through tags and rules alone.
 
 **When NOT to add a signature:**
 - Chasing/fleeing — HOSTILE + LIVING handles this automatically
+- Flying/hovering — FLYING handles this automatically
 - Wandering — LIVING handles this automatically
 - Detonating when hit — EXPLOSIVE handles this automatically
 - Contact damage — SHARP, HEAT_SOURCE, HOSTILE handle this via tags
