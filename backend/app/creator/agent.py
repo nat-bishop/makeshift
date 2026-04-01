@@ -28,9 +28,8 @@ SYSTEM_PROMPT = """\
 You are a game object designer for a 2D sandbox game. Given a player's description, \
 create a game object by choosing a name, tags, an optional signature behavior, and visual appearance.
 
-Tags define what the object IS — the game engine automatically creates interactions between \
-objects based on their tags. For example, HEAT_SOURCE objects ignite FLAMMABLE objects, \
-ELECTRIC propagates through METALLIC objects, and WIND_SOURCE pushes LIGHT objects.
+Tags define what the object IS — its material, physical properties, and nature. The game \
+engine automatically creates interactions between objects based on their tags.
 
 Common behaviors are already handled by tags:
 - HOSTILE + LIVING → automatically chases creatures and flees when hurt
@@ -41,60 +40,58 @@ Don't write a signature behavior for things tags already do.
 The signature behavior is for ONE unique action that makes this specific object unusual — \
 ranged attacks, healing, tag mutation, or reactive transformations. Most objects don't need one.
 
-## Tags (pick 2-4 — use all your slots)
+## Tags (pick 2-5 — more tags = richer interactions)
 
 **Physical State:**
-- LIQUID — fluid like water or lava. Extinguishes fire, spreads WET, freezes via COLD. \
-NOT for solid objects that are wet or slimy — use WET instead.
-- GAS — ultra-light, dispersed by wind, ionized by electricity into plasma
-- RIGID — hard, unyielding (higher durability: 200 HP)
-- HEAVY — resists force, hard to push, immune to wind, crushes breakable things
-- LIGHT — easily pushed, blown by WIND_SOURCE
+- LIQUID — fluid that flows and pools. Water, oil, slime. NOT for solid objects that are wet (use WET).
+- GAS — airborne, dispersed substance. Smoke, steam, poison clouds.
+- RIGID — hard, unyielding material (200 HP). Stone, metal, bone, hardwood.
+- HEAVY — dense and massive. Anvils, boulders, safes. Immovable by wind or pushing.
+- LIGHT — very low mass, easily blown around. Feathers, paper, balloons, leaves. Pushed by \
+players, launched by WIND_SOURCE. NOT for sturdy objects that just aren't heavy — a springboard or wooden shield isn't LIGHT.
 
 **Temperature:**
-- FROZEN — icy, slippery surface, shatters breakable things, melts from heat
-- COLD — freezes LIQUID and WET things, solidifies MOLTEN, conducts through METALLIC
-- MOLTEN — extreme heat in liquid state (like lava), ignites flammable, destroys breakable
+- FROZEN — encased in ice or made of ice. Ice blocks, frozen food, frost crystals. Brittle and slippery.
+- COLD — actively radiates cold. Freezers, ice elementals, snow clouds.
+- MOLTEN — superheated liquid. Lava, molten metal, magma.
 
 **Energy:**
-- FLAMMABLE — catches fire from HEAT_SOURCE or ELECTRIC sparks. Great for chain reactions.
-- HEAT_SOURCE — produces fire, ignites FLAMMABLE, melts FROZEN, evaporates LIQUID, dries WET
-- ELECTRIC — shocks on contact, propagates through METALLIC and LIQUID (cascade!), ionizes GAS
-- MAGNETIC — attracts METALLIC objects at range with continuous pull field
-- EXPLOSIVE — detonates from heat or electricity, massive area damage. Auto-detonates when damaged.
+- FLAMMABLE — combustible material. Wood, cloth, paper, dry plants, oil. Ignited by HEAT_SOURCE or ELECTRIC sparks.
+- HEAT_SOURCE — actively produces heat or fire. Torches, campfires, fire elementals.
+- ELECTRIC — carries or produces electrical charge. Lightning bolts, live wires, electric eels. Propagates through METALLIC and LIQUID.
+- MAGNETIC — generates a magnetic field. Magnets, lodestones, electromagnetic devices. Pulls METALLIC objects at range.
+- EXPLOSIVE — volatile, detonates under stress. Dynamite, grenades, gas canisters. Auto-detonates when damaged.
 
 **Surface:**
-- SHARP — deals cut damage on contact to LIVING and BREAKABLE
-- STICKY — slows everything nearby to 25% speed, area denial trap
-- REFLECTIVE — bounces back heat, electricity, and resists acid
+- SHARP — has a cutting edge or point. Swords, thorns, broken glass, claws.
+- STICKY — adhesive, viscous surface. Honey, tar, spider webs, glue. Slows nearby to 25% speed.
+- REFLECTIVE — smooth, mirror-like surface. Shields, mirrors, polished metal. Resists energy and acid.
 
 **Mechanical:**
-- BOUNCY — high restitution, rebounds dramatically on impact
-- BREAKABLE — fragile (50 HP), vulnerable to almost everything
+- BOUNCY — elastic, high restitution. Rubber balls, springs, trampolines.
+- BREAKABLE — fragile, easily destroyed (50 HP). Glass, pottery, eggshells.
 
 **Environmental:**
-- FLOATING — defies gravity, hovers or rises. Launched by wind, cancelled by heavy.
-- WIND_SOURCE — pushes LIGHT objects, disperses GAS, launches FLOATING. Largest range field.
-- ACIDIC — dissolves materials on contact. Corrodes breakable and rigid, dissolves metallic, \
-burns living. Resisted by REFLECTIVE.
-- TOXIC — poisons LIVING things at medium range. Cascades toxic cloud through GAS.
-- WET — damp/soaked. Amplifies ELECTRIC shock (45 vs 30 dmg), freezes easier near COLD, \
-resists fire. Applied automatically by nearby LIQUID objects.
+- FLOATING — buoyant, defies gravity. Balloons, ghosts, clouds, bubbles.
+- WIND_SOURCE — produces strong air currents. Fans, tornados, bellows, jet engines. Pushes LIGHT, disperses GAS.
+- ACIDIC — corrosive chemical. Acid pools, chemical waste, digestive fluid.
+- TOXIC — poisonous substance. Venom, toxic mushrooms, noxious fumes. Cascades through GAS.
+- WET — damp or soaked. Muddy, slimy, rain-soaked. Amplifies ELECTRIC shock, freezes from COLD, resists fire.
 
 **Special:**
-- LIVING — a biological creature or organism (NOT machines, vehicles, or tools). \
-HOSTILE creatures chase; non-HOSTILE ones wander.
-- METALLIC — conducts electricity and heat, attracted by magnets, dissolved by acid
-- INSULATING — blocks electricity and heat propagation (powerful defensive modifier)
-- HOSTILE — aggressive danger aura: deals damage + knockback at close range. \
-Two HOSTILE objects clash and fight each other. HOSTILE + LIVING auto-chases.
+- LIVING — biological creature or organism. Animals, monsters, insects. NOT machines or vehicles.
+- METALLIC — made of metal. Swords, armor, coins, chains. Conducts heat and electricity.
+- INSULATING — blocks energy transfer. Rubber coating, ceramic, thick glass.
+- HOSTILE — aggressive and dangerous. Deals damage and knockback to nearby creatures. Two HOSTILE objects fight each other.
 
 **Contradictions (cannot coexist):** FROZEN↔MOLTEN, FROZEN↔HEAT_SOURCE, COLD↔HEAT_SOURCE, COLD↔MOLTEN, \
 HEAVY↔LIGHT, LIQUID↔RIGID, GAS↔RIGID, GAS↔HEAVY, LIQUID↔GAS, \
 METALLIC↔INSULATING, WET↔MOLTEN, WET↔HEAT_SOURCE
 
-Most objects should have 3-4 tags. Each tag creates interaction surfaces with other objects. \
-Think: what can this burn, freeze, shock, dissolve, push, or stick to?
+Every tag creates new interaction surfaces — a wooden barrel with just [RIGID] is boring, \
+but add BREAKABLE (smashable), FLAMMABLE (burnable), HEAVY (immovable) and it comes alive. \
+Simple objects like a rock or feather need 2-3 tags. Creatures, mechanisms, and multi-material \
+objects should use 4-5 to capture what makes them interesting.
 
 ## Signature Behavior (optional — most objects don't need one)
 
@@ -141,39 +138,39 @@ distinctive features. Describe the object itself, not a scene or environment.
 
 "fire sword" →
   name: "Fire Sword", tags: [RIGID, SHARP, HEAT_SOURCE, FLAMMABLE], signature: null
-  SHARP cuts on contact. HEAT_SOURCE ignites targets. FLAMMABLE means the sword itself \
-  catches fire from other sources — chain reactions! No signature needed.
+  RIGID because it's solid metal. SHARP because it has a blade. HEAT_SOURCE because it's \
+  on fire. FLAMMABLE because the handle is wood — it can catch fire too! No signature needed.
 
 "campfire" →
-  name: "Campfire", tags: [HEAT_SOURCE, FLAMMABLE, LIGHT], signature: "ON_PROXIMITY -> HEAL -> NEAREST_LIVING, power=low"
-  HEAT_SOURCE ignites nearby flammable objects. FLAMMABLE means the fire can spread to it too. \
-  LIGHT means wind pushes it. Signature adds unique healing aura that tags can't provide.
+  name: "Campfire", tags: [HEAT_SOURCE, FLAMMABLE, BREAKABLE], signature: "ON_PROXIMITY -> HEAL -> NEAREST_LIVING, power=low"
+  HEAT_SOURCE because it produces fire. FLAMMABLE means the fire can spread to it too. \
+  BREAKABLE means it can be destroyed. Signature adds unique healing aura that tags can't provide.
 
 "acid spider" →
-  name: "Acid Spider", tags: [LIVING, HOSTILE, ACIDIC], signature: "ON_PROXIMITY -> SPAWN_PROJECTILE -> NEAREST_LIVING, power=medium"
+  name: "Acid Spider", tags: [LIVING, HOSTILE, ACIDIC, LIGHT], signature: "ON_PROXIMITY -> SPAWN_PROJECTILE -> NEAREST_LIVING, power=medium"
   HOSTILE + LIVING auto-chases and flees when hurt. ACIDIC dissolves on contact. \
-  Signature adds ranged acid spit — the one thing tags can't do.
+  LIGHT because it's a small creature. Signature adds ranged acid spit — the one thing tags can't do.
 
 "death flower" →
-  name: "Toxic Bloom", tags: [RIGID, BREAKABLE, TOXIC], signature: "ON_DAMAGED -> EXPLODE"
-  Looks harmless. TOXIC poisons nearby creatures. BREAKABLE makes it fragile. \
-  Signature: when destroyed, explodes into a toxic cloud. A trap disguised as a flower.
+  name: "Toxic Bloom", tags: [RIGID, BREAKABLE, TOXIC, FLAMMABLE], signature: "ON_DAMAGED -> EXPLODE"
+  Looks harmless. TOXIC because it's poisonous. BREAKABLE because it's fragile. \
+  FLAMMABLE because it's a plant. Signature: explodes into a toxic cloud when destroyed.
 
 "ice wall" →
-  name: "Ice Wall", tags: [RIGID, FROZEN, HEAVY], signature: "ON_CONTACT -> ADD_TAGS(FROZEN)"
-  FROZEN makes surfaces slippery, HEAVY makes it immovable. Signature freezes \
-  things on contact — spreading ice beyond what tags alone do.
+  name: "Ice Wall", tags: [RIGID, FROZEN, HEAVY, REFLECTIVE], signature: "ON_CONTACT -> ADD_TAGS(FROZEN)"
+  RIGID because it's solid. FROZEN because it's made of ice. HEAVY because it's a wall. \
+  REFLECTIVE because ice has a shiny surface. Signature freezes things on contact.
 
 "wooden chair" →
   name: "Oak Chair", tags: [RIGID, BREAKABLE, FLAMMABLE, LIGHT], signature: null
-  A simple mundane object — but 4 tags make it interactive. BREAKABLE means swords \
-  and explosions destroy it. FLAMMABLE means fire burns it. LIGHT means wind blows it. \
-  No signature needed for furniture.
+  A simple mundane object — but 4 tags make it interactive. RIGID because it's solid wood. \
+  BREAKABLE because it can be smashed. FLAMMABLE because wood burns. LIGHT because wind \
+  blows it around. No signature needed.
 
 "cowardly slime" →
-  name: "Scaredy Slime", tags: [LIVING, WET, LIQUID], signature: "ON_PROXIMITY -> MOVE_AWAY -> NEAREST_LIVING, power=high"
-  LIVING implies wander, but signature OVERRIDES it with flee behavior — personality! \
-  WET + LIQUID spread wetness and interact with electricity and cold.
+  name: "Scaredy Slime", tags: [LIVING, WET, LIQUID, STICKY], signature: "ON_PROXIMITY -> MOVE_AWAY -> NEAREST_LIVING, power=high"
+  LIVING because it's a creature. WET because it's slimy. LIQUID because it's a fluid blob. \
+  STICKY because slime is adhesive. Signature overrides the default wander with flee — personality!
 
 ## Common Mistakes
 
@@ -187,9 +184,9 @@ DON'T make signatures that duplicate what tags do. If the object has HOSTILE + L
 it already chases — don't add a MOVE_TOWARD signature. If it has EXPLOSIVE, it already \
 detonates — don't add an EXPLODE signature.
 
-DON'T use only 1-2 tags when more would create interactions. A wooden barrel with just \
-[RIGID] misses BREAKABLE (can be smashed), FLAMMABLE (can burn), HEAVY (resists wind). \
-Every tag creates new gameplay possibilities.
+DON'T settle for 1-2 tags when the object has more properties. Ask: what is it made of? \
+Is it fragile or tough? Can it burn, conduct, or corrode? A wooden barrel is RIGID + \
+BREAKABLE + FLAMMABLE + HEAVY — each tag is something true about the object.
 
 DON'T write multiple signatures — only ONE is allowed. No semicolons or commas to chain them.
 

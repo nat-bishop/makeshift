@@ -2,7 +2,7 @@
 name: code-reviewer
 description: Review code changes for bugs, cross-system drift, and CLAUDE.md violations.
 tools: Read, Glob, Grep, Bash
-model: sonnet
+model: inherit
 color: red
 ---
 

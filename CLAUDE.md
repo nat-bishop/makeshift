@@ -167,6 +167,9 @@ Requires `.env` file (see `.env.example`):
 - DOT timer replacement (`WorldMutations.apply_dot`): must `stop()` + `remove_child()` before `queue_free()` — `queue_free()` alone leaves the node until end-of-frame, causing Godot to auto-rename the replacement (appending `@2`).
 - `Backend` autoload has `process_mode = PROCESS_MODE_ALWAYS` — it must process during pause (creation panel pauses the game, but WebSocket keepalive and sprite delivery must continue).
 - `EnvironmentBody` periodic tick: `solid=false` uses no trigger_mode filter (ALL rules — being inside non-solid = continuous contact); `solid=true` filters to FIELD only (CONTACT fires via `body_entered`). Player detected via env body's own FieldArea (`move_and_slide` doesn't trigger `body_entered` on other bodies).
+- GDScript `:=` type inference fails on Variant-returning functions — `abs()`, `clamp()`, `min()`, `max()`, array/dict element access, `instantiate()` all return Variant. Use explicit type (`var x: float = abs(speed)`) or untyped (`var x = abs(speed)`), never `:=`.
+- `@onready` vars are null before `add_child()` — if a setup method (like `init_from_blueprint()`) runs before the node enters the tree, `@onready` references are null. Store params in plain vars, apply to nodes in `_ready()`.
+- Collision layer bitmask vs UI index — `collision_layer`/`collision_mask` are bitmasks in code, not UI layer numbers. UI Layer 1 = bit 1, Layer 2 = bit 2, Layer 3 = bit 4 (powers of 2). `collision_layer = 4` means UI Layer 3, not Layer 4.
 
 ## Documentation
 

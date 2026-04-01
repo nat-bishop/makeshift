@@ -113,7 +113,8 @@ class TestCreatorOutput:
                     Tag.COLD,
                     Tag.BREAKABLE,
                     Tag.FLAMMABLE,
-                ],  # 5 tags, over max of 4
+                    Tag.WET,
+                ],  # 6 tags, over max of 5
                 visual_descriptor=_make_visual(),
             )
 

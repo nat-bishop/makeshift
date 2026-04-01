@@ -2,14 +2,10 @@ extends Node
 
 const CL = preload("res://scripts/data/collision_layers.gd")
 
-var _cooldowns: Dictionary = {}  # "objA_id:objB_id" -> timestamp
-const COOLDOWN_TIME: float = 0.5
 const MAX_CASCADE_DEPTH: int = 3
 const CASCADE_RADIUS: float = 96.0
-const COOLDOWN_CLEANUP_INTERVAL: float = 5.0
 
 var _effect_executor: Node
-var _cleanup_timer: float = 0.0
 
 
 func _ready() -> void:
@@ -17,21 +13,17 @@ func _ready() -> void:
 	add_child(_effect_executor)
 
 
-func _process(delta: float) -> void:
-	_cleanup_timer += delta
-	if _cleanup_timer >= COOLDOWN_CLEANUP_INTERVAL:
-		_cleanup_timer = 0.0
-		_cleanup_cooldowns()
+func resolve_collision(body_a: Node, body_b: Node, cascade_depth: int = 0, trigger_mode_filter: String = "", _resolved: Dictionary = {}) -> void:
+	# Top-level calls get a fresh dedup dict; cascades inherit the parent's.
+	# (GDScript default Dictionary is shared across calls — same as Python's mutable default.)
+	if cascade_depth == 0:
+		_resolved = {}
 
-
-func resolve_collision(body_a: Node, body_b: Node, cascade_depth: int = 0, trigger_mode_filter: String = "") -> void:
 	if cascade_depth > MAX_CASCADE_DEPTH:
 		Log.debug("CollisionResolver: Cascade depth exceeded for %s vs %s" % [body_a.name, body_b.name])
 		return
 
-	# Build cooldown key from sorted IDs + trigger mode.
-	# FIELD and CONTACT interactions cool down independently so a periodic
-	# field tick doesn't block a physical collision (and vice versa).
+	# Per-chain dedup: same pair can't fire twice in one resolution chain.
 	var id_a: String = _get_body_id(body_a)
 	var id_b: String = _get_body_id(body_b)
 	var pair_key: String
@@ -40,11 +32,9 @@ func resolve_collision(body_a: Node, body_b: Node, cascade_depth: int = 0, trigg
 	else:
 		pair_key = "%s:%s:%s" % [id_b, id_a, trigger_mode_filter]
 
-	# Check cooldown
-	var now: float = Time.get_ticks_msec() / 1000.0
-	if pair_key in _cooldowns:
-		if now - _cooldowns[pair_key] < COOLDOWN_TIME:
-			return
+	if pair_key in _resolved:
+		return
+	_resolved[pair_key] = true
 
 	# Get tags from bodies
 	var tags_a: Array = TagColors.get_body_tags(body_a)
@@ -80,9 +70,6 @@ func resolve_collision(body_a: Node, body_b: Node, cascade_depth: int = 0, trigg
 		if rule.get("cascade_eligible", false):
 			any_cascade_eligible = true
 
-	# Set cooldown
-	_cooldowns[pair_key] = now
-
 	# Check for cascade
 	if any_cascade_eligible and cascade_depth < MAX_CASCADE_DEPTH:
 		var tags_a_after: Array = TagColors.get_body_tags(body_a)
@@ -92,13 +79,13 @@ func resolve_collision(body_a: Node, body_b: Node, cascade_depth: int = 0, trigg
 
 		if a_changed:
 			Log.debug("CollisionResolver: Tags changed on %s, cascading at depth %d" % [body_a.name, cascade_depth + 1])
-			_cascade_to_neighbors(body_a, cascade_depth + 1)
+			_cascade_to_neighbors(body_a, cascade_depth + 1, _resolved)
 		if b_changed:
 			Log.debug("CollisionResolver: Tags changed on %s, cascading at depth %d" % [body_b.name, cascade_depth + 1])
-			_cascade_to_neighbors(body_b, cascade_depth + 1)
+			_cascade_to_neighbors(body_b, cascade_depth + 1, _resolved)
 
 
-func _cascade_to_neighbors(body: Node, cascade_depth: int) -> void:
+func _cascade_to_neighbors(body: Node, cascade_depth: int, _resolved: Dictionary) -> void:
 	if body is not Node2D:
 		return
 
@@ -107,13 +94,13 @@ func _cascade_to_neighbors(body: Node, cascade_depth: int) -> void:
 		for neighbor in neighbors:
 			if not is_instance_valid(neighbor):
 				continue
-			resolve_collision(body, neighbor, cascade_depth)
+			resolve_collision(body, neighbor, cascade_depth, "", _resolved)
 		return
 
-	_cascade_via_space_query(body, cascade_depth)
+	_cascade_via_space_query(body, cascade_depth, _resolved)
 
 
-func _cascade_via_space_query(body: Node2D, cascade_depth: int) -> void:
+func _cascade_via_space_query(body: Node2D, cascade_depth: int, _resolved: Dictionary) -> void:
 	if not body.is_inside_tree():
 		return
 	var space_state := body.get_world_2d().direct_space_state
@@ -133,7 +120,7 @@ func _cascade_via_space_query(body: Node2D, cascade_depth: int) -> void:
 			continue
 		if not is_instance_valid(neighbor):
 			continue
-		resolve_collision(body, neighbor, cascade_depth)
+		resolve_collision(body, neighbor, cascade_depth, "", _resolved)
 
 
 func _get_body_id(body: Node) -> String:
@@ -150,20 +137,3 @@ func _arrays_equal(a: Array, b: Array) -> bool:
 	sorted_a.sort()
 	sorted_b.sort()
 	return sorted_a == sorted_b
-
-
-func _cleanup_cooldowns() -> void:
-	var now: float = Time.get_ticks_msec() / 1000.0
-	var to_remove: Array = []
-	for key in _cooldowns:
-		if now - _cooldowns[key] > COOLDOWN_TIME:
-			to_remove.append(key)
-	for key in to_remove:
-		_cooldowns.erase(key)
-	if not to_remove.is_empty():
-		Log.debug("CollisionResolver: Cleaned %d expired cooldowns" % to_remove.size())
-
-
-func clear_cooldowns() -> void:
-	Log.debug("CollisionResolver: All cooldowns cleared")
-	_cooldowns.clear()

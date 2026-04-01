@@ -214,7 +214,6 @@ func _test_full_interaction_chain() -> void:
 	)
 
 	# Torch collides with plank
-	_collision_resolver.clear_cooldowns()
 	_collision_resolver.resolve_collision(torch, plank)
 
 	# Plank should now be on fire
@@ -228,14 +227,12 @@ func _test_full_interaction_chain() -> void:
 	# It should be able to ignite another flammable object
 	var plank2 = _make_mock_body("plank2", ["RIGID", "FLAMMABLE"], 50.0)
 	root.add_child(plank2)
-	_collision_resolver.clear_cooldowns()
 	_collision_resolver.resolve_collision(plank, plank2)
 	_assert("Chain: fire spreads to plank2", "HEAT_SOURCE" in plank2.get("tags"))
 
 	# Extinguish with water
 	var water = _make_mock_body("water", ["LIQUID"], 999.0)
 	root.add_child(water)
-	_collision_resolver.clear_cooldowns()
 	_collision_resolver.resolve_collision(water, plank)
 	_assert("Chain: water extinguishes plank", "HEAT_SOURCE" not in plank.get("tags"))
 	_assert("Chain: water removes HOT from plank", "HOT" not in plank.get("tags"))
@@ -245,7 +242,6 @@ func _test_full_interaction_chain() -> void:
 	var bystander = _make_mock_body("bystander", ["RIGID"], 100.0)
 	root.add_child(bomb)
 	root.add_child(bystander)
-	_collision_resolver.clear_cooldowns()
 	_collision_resolver.resolve_collision(bomb, bystander)
 	_assert("Explosive damages both", bomb.get("damage_log").size() > 0)
 	_assert("Explosive damages bystander too", bystander.get("damage_log").size() > 0)
@@ -277,12 +273,10 @@ func _test_cascade_chain() -> void:
 	root.add_child(plank)
 
 	# Resolve at max depth - should be a no-op
-	_collision_resolver.clear_cooldowns()
 	_collision_resolver.resolve_collision(torch, plank, 4)  # MAX_CASCADE_DEPTH is 3
 	_assert("Cascade: blocked at max depth", "HEAT_SOURCE" not in plank.get("tags"))
 
 	# Resolve at depth 0 - should work
-	_collision_resolver.clear_cooldowns()
 	_collision_resolver.resolve_collision(torch, plank, 0)
 	_assert("Cascade: works at depth 0", "HEAT_SOURCE" in plank.get("tags"))
 

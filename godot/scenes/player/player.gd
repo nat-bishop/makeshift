@@ -65,6 +65,7 @@ func _physics_process(delta: float) -> void:
 		EventBus.player_damaged.emit(float(MAX_HEALTH), current_health, MAX_HEALTH)
 		EventBus.player_died.emit()
 		set_physics_process(false)
+		_prev_contacts.clear()
 		return
 	_push_rigid_bodies()
 	_process_kick(delta)
@@ -91,22 +92,30 @@ func _process_normal_movement(gravity: float, speed: float, delta: float) -> voi
 
 
 func _push_rigid_bodies() -> void:
+	var current_contacts: Dictionary = {}
 	for i in get_slide_collision_count():
 		var collision := get_slide_collision(i)
 		var collider := collision.get_collider()
 		if collider is RigidBody2D:
+			var cid: int = collider.get_instance_id()
+			if cid in current_contacts:
+				continue
+			current_contacts[cid] = true
+			# Push — continuous, every frame
 			if collider.has_method("is_passively_pushable") and collider.is_passively_pushable():
 				var push_dir := -collision.get_normal()
 				collider.apply_central_impulse(push_dir * PUSH_FORCE)
-			# Bounce off BOUNCY objects using pre-slide velocity and collision normal
-			if collider.has_method("get_tags") and "BOUNCY" in collider.get_tags():
-				var normal := collision.get_normal()
-				var impact_speed: float = maxf(-_pre_slide_velocity.dot(normal), 0.0)
-				if impact_speed > BOUNCE_MIN_SPEED:
-					velocity = normal * impact_speed * BOUNCE_ENERGY
-			CollisionResolver.resolve_collision(self, collider)
-			if collider.has_method("fire_behavior_trigger"):
-				collider.fire_behavior_trigger("ON_CONTACT", self)
+			# Entry-only effects (first frame of new contact)
+			if cid not in _prev_contacts:
+				if collider.has_method("get_tags") and "BOUNCY" in collider.get_tags():
+					var normal := collision.get_normal()
+					var impact_speed: float = maxf(-_pre_slide_velocity.dot(normal), 0.0)
+					if impact_speed > BOUNCE_MIN_SPEED:
+						velocity = normal * impact_speed * BOUNCE_ENERGY
+				CollisionResolver.resolve_collision(self, collider)
+				if collider.has_method("fire_behavior_trigger"):
+					collider.fire_behavior_trigger("ON_CONTACT", self)
+	_prev_contacts = current_contacts
 
 
 func _process_kick(delta: float) -> void:
@@ -137,6 +146,7 @@ func _perform_kick() -> void:
 			if not collider.has_method("is_heavy") or not collider.is_heavy():
 				collider.apply_central_impulse(kick_dir * KICK_FORCE)
 			WorldMutations.apply_damage(collider, KICK_DAMAGE)
+			CollisionResolver.resolve_collision(self, collider)
 			if collider.has_method("fire_behavior_trigger"):
 				collider.fire_behavior_trigger("ON_CONTACT", self)
 			Log.debug("Player: Kicked '%s'" % collider.name)
@@ -193,6 +203,7 @@ func take_damage(amount: float, _element_color: Color = Color.WHITE) -> void:
 		Log.info("Player: Died from damage")
 		EventBus.player_died.emit()
 		set_physics_process(false)
+		_prev_contacts.clear()
 
 
 func heal(amount: float) -> void:

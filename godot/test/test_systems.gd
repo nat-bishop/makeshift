@@ -704,7 +704,6 @@ func _test_collision_resolver() -> void:
 	var root = get_root()
 
 	_assert("has resolve_collision()", _collision_resolver.has_method("resolve_collision"))
-	_assert("has clear_cooldowns()", _collision_resolver.has_method("clear_cooldowns"))
 
 	# Manually init _effect_executor since _ready() didn't fire
 	var ee_script = load("res://scripts/systems/effect_executor.gd")
@@ -729,7 +728,6 @@ func _test_collision_resolver() -> void:
 	}])
 
 	# Functional collision
-	_collision_resolver.clear_cooldowns()
 	var body_a = _make_mock_body("fire_src", ["HEAT_SOURCE"])
 	var body_b = _make_mock_body("wood", ["FLAMMABLE"])
 	root.add_child(body_a)
@@ -738,23 +736,17 @@ func _test_collision_resolver() -> void:
 	_assert("collision: adds HEAT_SOURCE", "HEAT_SOURCE" in body_b.get("tags"))
 	_assert("collision: adds HOT", "HOT" in body_b.get("tags"))
 
-	# Cooldown blocks re-execution
+	# Separate calls fire independently (no cross-call blocking)
 	body_b.remove_tag("HEAT_SOURCE")
 	body_b.remove_tag("HOT")
-	_collision_resolver.resolve_collision(body_a, body_b)
-	_assert("cooldown blocks repeat", "HEAT_SOURCE" not in body_b.get("tags"))
-
-	# clear_cooldowns allows re-execution
-	_collision_resolver.clear_cooldowns()
 	body_b.set("tags", ["FLAMMABLE"])
 	_collision_resolver.resolve_collision(body_a, body_b)
-	_assert("after clear: rule fires again", "HEAT_SOURCE" in body_b.get("tags"))
+	_assert("separate call fires again", "HEAT_SOURCE" in body_b.get("tags"))
 
 	body_a.free()
 	body_b.free()
 
 	# No-match collision
-	_collision_resolver.clear_cooldowns()
 	var body_c = _make_mock_body("rock", ["RIGID"])
 	var body_d = _make_mock_body("dirt", ["RIGID"])
 	root.add_child(body_c)
@@ -765,19 +757,20 @@ func _test_collision_resolver() -> void:
 	body_c.free()
 	body_d.free()
 
-	# Cooldown key is deterministic (both orderings blocked)
-	_collision_resolver.clear_cooldowns()
+	# Per-chain dedup: same pair blocked within one cascade chain
 	var body_e = _make_mock_body("aaa", ["HEAT_SOURCE"])
 	var body_f = _make_mock_body("zzz", ["FLAMMABLE"])
 	root.add_child(body_e)
 	root.add_child(body_f)
-	_collision_resolver.resolve_collision(body_e, body_f)
+	var shared_resolved: Dictionary = {}
+	# First call at depth 1 (simulates being inside a cascade) to use shared dict
+	_collision_resolver.resolve_collision(body_e, body_f, 1, "", shared_resolved)
 	body_f.remove_tag("HEAT_SOURCE")
 	body_f.remove_tag("HOT")
 	body_f.set("tags", ["FLAMMABLE"])
-	# Reversed order should still be on cooldown (same pair key)
-	_collision_resolver.resolve_collision(body_f, body_e)
-	_assert("cooldown key symmetric", "HEAT_SOURCE" not in body_f.get("tags"))
+	# Same resolved dict blocks re-fire within the chain
+	_collision_resolver.resolve_collision(body_f, body_e, 1, "", shared_resolved)
+	_assert("chain dedup blocks re-fire", "HEAT_SOURCE" not in body_f.get("tags"))
 
 	body_e.free()
 	body_f.free()
