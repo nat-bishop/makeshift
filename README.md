@@ -84,7 +84,7 @@ cd backend && uv run python -m evals.run_comparison --a baseline
 cd backend && uv run pytest evals/test_eval.py -v
 ```
 
-**4 metrics** per case: Validity (deterministic rule checks), Relevance, Creativity, Coherence (LLM-as-judge via Gemini). Results saved as structured JSON to `backend/evals/results/` with pre-parsed tags/behaviors/size, retry counts, and aggregate stats. Comparison uses Wilcoxon signed-rank test for statistical significance. Distribution analysis shows tag/behavior/size frequencies across all objects.
+**7 metrics** per case: Validity, Tag Recall, Interaction Surface, Has Signature (deterministic) + Faithfulness, Gameplay Quality, Sprite Prompt (LLM-as-judge via Gemini). Results saved as structured JSON to `backend/evals/results/` with pre-parsed tags/behaviors/size, retry counts, and aggregate stats. Comparison uses Wilcoxon signed-rank test for statistical significance. Distribution analysis shows tag/behavior/size frequencies across all objects.
 
 Add prompt variants in `backend/evals/prompts.py`. Test cases in `backend/evals/dataset.py` (50 cases across 9 categories).
 

@@ -46,6 +46,8 @@ async def generate_image(prompt: str) -> bytes:
                 "n": 1,
                 "size": "512x512",
                 "response_format": "b64_json",
+                "num_inference_steps": settings.local_image_steps,
+                "guidance_scale": settings.local_image_guidance_scale,
             },
         ),
         timeout=settings.image_timeout_seconds,

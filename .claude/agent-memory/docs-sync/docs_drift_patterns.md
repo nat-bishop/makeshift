@@ -62,7 +62,7 @@ type: project
 
 ## Tag/behavior system overhaul (2026-03-30)
 
-- ARCHITECTURE.md rule count in the `RuleResolver` intro line must match the actual rule count in `rules_data.py`. After this overhaul: 50 rules (was 53). The "24 of N" FIELD annotation count is approximate — only update the total.
+- ARCHITECTURE.md rule count in the `RuleResolver` intro line must match the actual rule count in `rules_data.py`. After this overhaul: 59 rules (was 50). The "~28 of N" FIELD annotation count is approximate — only update the total when it changes significantly.
 - ARCHITECTURE.md physics table drifts when tags are removed. SLIPPERY was removed but its row persisted. After any tag pruning, cross-check `tag_physics_map.gd` against the physics table.
 - `FieldConfig.FIELD_TAGS` is the authoritative source for which tags are continuous vs periodic and at what range. ARCHITECTURE.md Field System table and GAME_DESIGN.md Field Modes section must match it. GLOWING was removed from FIELD_TAGS but persisted in both docs.
 - `BehaviorTarget` enum: `NEAREST_OBJECT` was never a valid value. Docs and level blueprints that use it are stale. Valid targets: SELF, NEAREST_LIVING, NEAREST_PLAYER, CONTACT_BODY.
@@ -70,7 +70,16 @@ type: project
 - GAME_DESIGN.md "Pruned tags / Renamed" line had the old-name pairs backwards ("ACIDIC → ACIDIC, METALLIC → METALLIC"). Always write it as old→new.
 - Behavior limit in ARCHITECTURE.md pipeline step 4 and behavior system section must match the LLM constraint: was "0-3 behaviors" (old list model), now "0-1 signature behavior" (string field).
 
-**How to apply:** After any tag/rule system change, check: (1) rule count in resolver intro, (2) physics table rows vs `tag_physics_map.gd`, (3) FieldConfig table vs `field_config.gd`, (4) BehaviorTarget enum members vs `behaviors.py`, (5) all blueprint examples in LEVEL_DESIGN.md for old tag names.
+**How to apply:** After any tag/rule system change, check: (1) rule count in resolver intro, (2) physics table rows vs `tag_physics_map.gd`, (3) FieldConfig table vs `field_config.gd`, (4) BehaviorTarget enum members vs `behaviors.py`, (5) all blueprint examples in LEVEL_DESIGN.md for old tag names, (6) tag limit (min/max) in ARCHITECTURE.md pipeline step 4, GAME_DESIGN.md Core Concept and Object Economy, CLAUDE.md Behavior system bullet, (7) contradiction pair count and list in GAME_DESIGN.md.
+
+## CollisionResolver dedup overhaul (2026-04-01)
+
+- Cooldown-based deduplication (`COOLDOWN_TIME = 0.5s`, module-level `_cooldowns` dict) was replaced with per-chain `_resolved` dict passed as a parameter. ARCHITECTURE.md cascade flow diagram and the "`trigger_mode_filter`" section both referenced cooldowns and needed updating.
+- The CLAUDE.md gotcha about "collision cooldown key includes trigger_mode_filter suffix" was stale — replaced with a description of per-chain dedup.
+- CLAUDE.md autoload table for `CollisionResolver` said "cooldowns" — changed to "per-chain dedup".
+- ARCHITECTURE.md TagField "Periodic mode" paragraph referenced cooldown independence — updated to per-chain dedup language.
+
+**How to apply:** When collision/cascade resolution changes, check: (1) CLAUDE.md autoload table row, (2) CLAUDE.md Gotchas collision entry, (3) ARCHITECTURE.md Collision & Cascade flow block and constants, (4) ARCHITECTURE.md TagField periodic mode paragraph.
 
 ## EnvironmentBody pattern (2026-03-29)
 

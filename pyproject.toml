@@ -35,6 +35,12 @@ dev = [
     "pydantic-evals>=0.1.0",
     "scipy>=1.0.0",
 ]
+experiment = [
+    "diffusers>=0.36.0",
+    "accelerate>=0.30.0",
+    "imageio[ffmpeg]>=2.30.0",
+    "sentencepiece>=0.2.0",
+]
 
 [build-system]
 requires = ["hatchling"]

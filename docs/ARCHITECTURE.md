@@ -54,7 +54,7 @@ Full flow from player input to world-placed object with sprite:
 1. **Player types description** → `ObjectCreationPanel` sends text to `Backend.create_object()`
 2. **HTTP POST** → `POST /api/sessions/{id}/objects` with `{"description": "..."}`
 3. **Budget reserve** → `SessionManager.reserve_budget()` atomically charges $0.041 upfront (rejects with 402 if budget exceeded)
-4. **LLM agent** → `creator.agent.create_object()` runs PydanticAI agent (Gemini 3.1 Flash Lite Preview, 3 retries). Validators enforce: 1-3 word name, 1-4 tags, no contradictions, 0-1 signature behavior. Falls back to generic "Mysterious {description}" on failure
+4. **LLM agent** → `creator.agent.create_object()` runs PydanticAI agent (Gemini 3.1 Flash Lite Preview, 3 retries). Validators enforce: 1-3 word name, 2-5 tags, no contradictions, 0-1 signature behavior. Falls back to generic "Mysterious {description}" on failure
 5. **Blueprint construction** → `GameObjectBlueprint` adds UUID, computed field: `starting_durability`
 6. **Persist** → `save_object()` saves blueprint (including behaviors) to the `objects` table
 7. **Immediate response** → Client receives blueprint JSON (with behaviors) + `budget_remaining`. `EventBus.creation_requested` was emitted on submit — `Game` starts a `MaterializeEffect` at the spawn point (paper scraps coalesce over 1.2s, then idle-bob)
@@ -99,7 +99,7 @@ Full flow from player input to world-placed object with sprite:
 
 ### Backend: `engine/resolver.py`
 
-`RuleResolver` builds a two-tier index at init from 50 `InteractionRule` definitions:
+`RuleResolver` builds a two-tier index at init from 59 `InteractionRule` definitions:
 
 **Pair index** (O(1) lookup): Nested dict `tag_a → tag_b → [rules]`. For bidirectional rules, both `(a,b)` and `(b,a)` entries are created.
 
@@ -110,7 +110,7 @@ Full flow from player input to world-placed object with sprite:
 2. Scan wildcard rules for subset matches
 3. Deduplicate by `rule_id`, sort by `execution_order` descending
 
-**`TriggerMode`** (`models/rules.py`): StrEnum — `CONTACT` (default) | `FIELD`. ~24 of 50 rules are annotated `trigger_mode=TriggerMode.FIELD`. FIELD rules also fire on contact — `trigger_mode` is purely a filter used client-side by `TagField` and `CollisionResolver.resolve_collision(trigger_mode_filter=...)`.
+**`TriggerMode`** (`models/rules.py`): StrEnum — `CONTACT` (default) | `FIELD`. ~28 of 59 rules are annotated `trigger_mode=TriggerMode.FIELD`. FIELD rules also fire on contact — `trigger_mode` is purely a filter used client-side by `TagField` and `CollisionResolver.resolve_collision(trigger_mode_filter=...)`.
 
 ### Godot: `autoloads/rule_engine.gd`
 
@@ -167,7 +167,7 @@ add_tag(tag)  [dynamic, e.g. fire spread adds HEAT_SOURCE]
 
 **Continuous mode** (`_physics_process`): For each body overlapping the Area2D, applies `APPLY_FORCE` effects from pre-cached continuous rules directly via `apply_central_force()`. Per-tag center-to-center distance check (1.5× range margin to account for shape overlap).
 
-**Periodic mode** (`_on_periodic_tick`): Every 2s, calls `CollisionResolver.resolve_collision(owner, body, 0, "FIELD")` for each overlapping body in range. The `"FIELD"` filter makes `CollisionResolver` skip CONTACT-only rules. Cooldown key includes the trigger mode suffix (`"id_a:id_b:FIELD"`) — FIELD and CONTACT cooldowns are independent, preventing a periodic tick from blocking a physical collision between the same pair.
+**Periodic mode** (`_on_periodic_tick`): Every 2s, calls `CollisionResolver.resolve_collision(owner, body, 0, "FIELD")` for each overlapping body in range. The `"FIELD"` filter makes `CollisionResolver` skip CONTACT-only rules. Per-chain dedup key includes the trigger mode suffix (`"id_a:id_b:FIELD"`) — FIELD and CONTACT interactions dedup independently, so a periodic field tick won't suppress a concurrent physical collision between the same pair.
 
 **Detection geometry**: Shape-vs-shape Area2D overlap — accounts for object sizes automatically. One Area2D per field object at max range across all field tags (not one per tag).
 
@@ -201,7 +201,7 @@ Each `Behavior` is a flat Pydantic record:
 
 ### Limits
 
-- Max 1 signature behavior per object (LLM-authored), max 4 tags (enforced by Pydantic `max_length`)
+- Max 1 signature behavior per object (LLM-authored), 2-5 tags (enforced by Pydantic `min_length=2, max_length=5`)
 - Tag-implied behaviors (HOSTILE+LIVING→chase+flee, LIVING→wander, EXPLOSIVE→detonate) are added automatically — not in LLM output
 
 ### Godot Runtime (`godot/scripts/systems/behavior_executor.gd`)
@@ -281,24 +281,26 @@ Object A (HEAT_SOURCE) collides with Object B (EXPLOSIVE)
 ```
 body_entered signal (from GameObject)
   └─ call_deferred("_resolve_deferred", body)   # deferred to avoid physics flush crash
-       └─ resolve_collision(body_a, body_b, cascade_depth=0, trigger_mode_filter="")
-            ├─ Cooldown check: pair key "id_a:id_b:trigger_mode_filter" (sorted), skip if < 0.5s
+       └─ resolve_collision(body_a, body_b, cascade_depth=0, trigger_mode_filter="", _resolved={})
+            ├─ Per-chain dedup: pair key "id_a:id_b:trigger_mode_filter" in _resolved → skip
+            ├─ Top-level calls reset _resolved={}; cascades inherit parent's dict
             ├─ Extract tags: TagColors.get_body_tags() (duck-typed: effective_tags/get_tags)
             ├─ RuleEngine.find_matching_rules(tags_a, tags_b)
             ├─ Filter by trigger_mode_filter if non-empty (e.g., "FIELD" from TagField)
             ├─ Record tags_before snapshot
             ├─ For each matched rule: EffectExecutor.execute(rule, body_a, body_b)
-            ├─ Set cooldown timestamp
             └─ Cascade check (if any rule was cascade_eligible):
             ├─ Compare tags_before vs tags_after
-            └─ If changed: _cascade_to_neighbors(body, depth + 1)
+            └─ If changed: _cascade_to_neighbors(body, depth + 1, _resolved)
                  ├─ Prefer get_cascade_neighbors() (CascadeArea overlaps)
                  └─ Fallback: physics space query (CircleShape2D, 96px radius)
 ```
 
-**Constants**: `COOLDOWN_TIME = 0.5s`, `MAX_CASCADE_DEPTH = 3`, `CASCADE_RADIUS = 96px`. Cooldowns cleaned up every 5s.
+**Constants**: `MAX_CASCADE_DEPTH = 3`, `CASCADE_RADIUS = 96px`.
 
-**`trigger_mode_filter`**: When `"FIELD"`, only rules with `trigger_mode == "FIELD"` are executed. Contact-originated calls pass `""` (no filter), so ALL rules (including FIELD) fire on contact. Cooldown key includes the filter string — FIELD and CONTACT interactions cool down independently.
+**Per-chain deduplication**: `_resolved` dict is passed through the entire cascade chain. The same pair (including trigger mode suffix) can't fire twice in one chain, preventing loops. Independent collisions (new `body_entered` events) each start with a fresh `_resolved` dict. FIELD and CONTACT interactions dedup independently — different key suffixes.
+
+**`trigger_mode_filter`**: When `"FIELD"`, only rules with `trigger_mode == "FIELD"` are executed. Contact-originated calls pass `""` (no filter), so ALL rules (including FIELD) fire on contact.
 
 **Behavior cascade**: `BehaviorExecutor._apply_tags()` snapshots tags before mutation, then calls `CollisionResolver.resolve_collision(target, neighbor, 1)` for each neighbor if tags changed. Starting at depth 1 (not 0) avoids double-counting the behavior mutation itself as a cascade origin.
 
@@ -430,9 +432,10 @@ Endpoint: `ws://{host}/ws/{session_id}`. Session must exist or connection is rej
 | Direction | Type | Payload |
 |-----------|------|---------|
 | Client → Server | `ping` | — |
+| Client → Server | `request_sprite` | `object_id` — re-request cached sprite (used on reconnect) |
 | Server → Client | `pong` | — |
 | Server → Client | `sprite_ready` | `object_id`, `sprite_url` |
 | Server → Client | `sprite_failed` | `object_id`, `reason` |
 | Server → Client | `error` | `message` |
 
-**Godot reconnect**: Exponential backoff from 1s to 30s max. On reconnect, re-requests pending sprites.
+**Godot reconnect**: Exponential backoff from 1s to 30s max. On reconnect, re-requests pending sprites via `request_sprite`. Server checks cache on disk and re-sends `sprite_ready` if found — recovers sprites lost during API reload or disconnect.

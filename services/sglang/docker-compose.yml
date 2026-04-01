@@ -15,6 +15,8 @@ services:
       - NCCL_P2P_DISABLE=1
       - NCCL_SHM_DISABLE=1
       - NCCL_IB_DISABLE=1
+      - SGLANG_SET_CPU_AFFINITY=1
+      - SAFETENSORS_FAST_GPU=1
     entrypoint: ["sglang", "serve"]
     command:
       - --model-path
@@ -25,12 +27,14 @@ services:
       - /app/cache-dit-config.yaml
       - --config
       - /app/server-config.yaml
+      - --attention-backend
+      - sage
       - --enable-torch-compile
       - --warmup
       - --warmup-resolutions
       - 512x512
       - --warmup-steps
-      - "1"
+      - "4"
       - --host
       - "0.0.0.0"
       - --port
@@ -63,6 +67,8 @@ services:
     environment:
       - HF_TOKEN=${HF_TOKEN:-}
       - SGLANG_ENABLE_JIT_DEEPGEMM=0
+      - SGLANG_SET_CPU_AFFINITY=1
+      - SAFETENSORS_FAST_GPU=1
     entrypoint: ["python", "-m", "sglang.launch_server"]
     command:
       - --model-path
@@ -78,7 +84,7 @@ services:
       - --mamba-ssm-dtype
       - bfloat16
       - --context-length
-      - "262144"
+      - "65536"
       - --tool-call-parser
       - qwen3_coder
       - --reasoning-parser

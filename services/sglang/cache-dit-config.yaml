@@ -3,7 +3,7 @@ quantize_config:
   exclude_layers: ["embedder", "embed"]
 
 cache_config:
-  max_warmup_steps: 4
+  max_warmup_steps: 1
   max_cached_steps: -1
   Fn_compute_blocks: 2
   Bn_compute_blocks: 0

@@ -24,8 +24,8 @@ gpu: ## Start GPU/LLM Docker containers (detached)
 api: ## Start FastAPI dev server (foreground, auto-reload)
 	uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir backend --reload-include '*.py'
 
-gpu-restart: ## Restart GPU/LLM Docker containers
-	$(COMPOSE) restart
+gpu-restart: ## Rebuild and restart GPU/LLM Docker containers
+	$(COMPOSE) up -d --build --force-recreate
 
 gpu-logs: ## Tail GPU/LLM container logs
 	$(COMPOSE) logs -f
@@ -80,6 +80,9 @@ cli-sprite: ## Full sprite pipeline (PROMPT="fire sword" OUT=sprite.png)
 
 cli-status: ## Check health of configured services
 	cd backend && uv run python -m app.cli status
+
+cli-animate: ## Test I2V animation (SPRITE=path.png PROMPT="walk cycle")
+	cd backend && uv run python -m experiments.i2v_animation_test $(if $(SPRITE),--sprite "$(SPRITE)") $(if $(PROMPT),--prompt "$(PROMPT)")
 
 PROMPT_A ?= baseline
 

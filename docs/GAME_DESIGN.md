@@ -4,7 +4,7 @@
 
 "Scribblenauts meets Terraria" — a 2D physics sandbox where players type text descriptions to create game objects. An LLM (Gemini) interprets descriptions into tagged blueprints with visual descriptors and autonomous behaviors. Gemini image generation produces sprites. Objects interact through a tag-based rule system and behavior system, enabling emergent puzzle-solving: fire melts ice, a dragon patrols and breathes fire, a time bomb explodes after a delay.
 
-Tags define what an object *is*; behaviors define what it *does*. Each object gets 1-4 tags and an optional signature behavior — enough to express a rich concept while keeping LLM output focused. Common behaviors (chase, flee, wander, detonate) are tag-implied and don't need explicit authoring.
+Tags define what an object *is*; behaviors define what it *does*. Each object gets 2-5 tags and an optional signature behavior — enough to express a rich concept while keeping LLM output focused. Common behaviors (chase, flee, wander, detonate) are tag-implied and don't need explicit authoring.
 
 ## Tag System
 
@@ -35,15 +35,16 @@ REFLECTIVE (Surface) bounces heat, electricity, and resists acid — the `reflec
 
 EXPLOSIVE is the highest-impact single tag: area damage on heat or electricity contact. Tag-implied behavior: detonates when damaged (ON_DAMAGED → EXPLODE). The LLM can override the trigger via the signature behavior.
 
-### Contradiction Pairs (15)
+### Contradiction Pairs (16)
 
 Tags that can't coexist on the same object:
 
 ```
-FROZEN↔MOLTEN    FROZEN↔HOT        COLD↔HOT         COLD↔MOLTEN
-HEAVY↔LIGHT      LIQUID↔RIGID      GAS↔RIGID        GAS↔HEAVY
+FROZEN↔MOLTEN    FROZEN↔HOT        FROZEN↔HEAT_SOURCE
+COLD↔HOT         COLD↔MOLTEN       COLD↔HEAT_SOURCE
+HEAVY↔LIGHT      LIQUID↔RIGID      GAS↔RIGID         GAS↔HEAVY
 LIQUID↔GAS       METALLIC↔INSULATING
-HEAT_SOURCE↔FLAMMABLE              WET↔MOLTEN       WET↔HEAT_SOURCE
+WET↔MOLTEN       WET↔HEAT_SOURCE
 BRITTLE↔LIQUID   BRITTLE↔GAS
 ```
 
@@ -171,7 +172,7 @@ The tag and behavior systems interact through `ON_TAG_ADDED` triggers. This brid
 
 ### Push
 
-Walking into a `RigidBody2D` applies a continuous impulse of **80 units** in the collision direction. Only applies to `is_passively_pushable()` objects: LIGHT-tagged or tiny-sized, excluding HEAVY. Most objects require a deliberate kick to move.
+Walking into a `RigidBody2D` applies a continuous impulse of **80 units** in the collision direction. Only applies to `is_passively_pushable()` objects: tiny-sized, excluding HEAVY. Most objects require a deliberate kick to move.
 
 ### Kick
 
@@ -208,7 +209,7 @@ During placement, the HUD hint changes to "Click: Place | Esc: Cancel".
 | Cost per object | $0.041 (LLM ~$0.001 + image ~$0.04) |
 | Session budget | $1.00 (default, configurable) |
 | Max objects per session | ~24 |
-| Tags per object | 1-4 (enforced by LLM validator) |
+| Tags per object | 2-5 (enforced by LLM validator) |
 | Signature behavior | 0-1 (optional, enforced by LLM validator) |
 | Name length | 1-3 words (enforced by LLM validator) |
 
