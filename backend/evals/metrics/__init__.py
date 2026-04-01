@@ -87,31 +87,12 @@ RUBRICS: dict[str, str] = {
         "- 0.75: Strong tag choices with ONE missed opportunity — a natural tag omission "
         "(e.g., wooden object missing FLAMMABLE) or a signature that partially overlaps "
         "with tag behavior.\n"
-        "- 0.50: Tags include a direct contradiction (e.g., METALLIC on an insulator, "
-        "WET on a fire object) OR the design has very few interaction rules despite "
-        "having room for more tags.\n"
+        "- 0.50: Tags include a contradiction that undermines the design intent (check "
+        "the rules — does a tag enable damage the object should resist?), OR tags "
+        "create no meaningful interaction surfaces despite having room for more.\n"
         "- 0.25: Multiple tags contradict each other or the design intent. Signature "
-        "duplicates what tags already do.\n"
+        "duplicates what tags already do. Object is inert when it should be interactive.\n"
         "- 0.0: No useful gameplay properties. Tags create zero interaction surfaces.\n\n"
-        "SCORED EXAMPLES (use these to calibrate your scoring):\n\n"
-        'Example 1 — Score 1.0:\n'
-        'Input: "acid spider"\n'
-        'Output: tags [LIVING, HOSTILE, ACIDIC], '
-        'signature "ON_PROXIMITY -> SPAWN_PROJECTILE"\n'
-        "Why 1.0: Three tags create a rich interaction surface — LIVING enables movement, "
-        "HOSTILE auto-chases, ACIDIC dissolves on contact. Signature adds ranged acid "
-        "spit that tags can't provide.\n\n"
-        'Example 2 — Score 0.75:\n'
-        'Input: "wooden chair"\n'
-        'Output: tags [RIGID, FLAMMABLE, LIGHT]\n'
-        "Why 0.75: Good tag choices (burns, gets pushed by wind), but missing BREAKABLE "
-        "— a wooden chair should be smashable. One missed interaction opportunity.\n\n"
-        'Example 3 — Score 0.50:\n'
-        'Input: "rubber armor to block electricity"\n'
-        'Output: tags [INSULATING, METALLIC, BREAKABLE]\n'
-        "Why 0.50: INSULATING is correct intent, but METALLIC contradicts it (conducts "
-        "electricity — the thing it should block). BREAKABLE adds fragility to armor. "
-        "Tags work against the design goal.\n\n"
         "KEY PRINCIPLE: Tags are the primary gameplay driver. A fire sword "
         "with HEAT_SOURCE will ignite FLAMMABLE objects without needing a signature. "
         "Tags like SHARP, HOSTILE, HEAT_SOURCE, TOXIC, and ACIDIC all deal "
