@@ -50,12 +50,68 @@ static func apply_impulse(target: Node, direction: Vector2, magnitude: float) ->
 	var impulse: Vector2 = direction * magnitude
 	if target is RigidBody2D:
 		target.apply_central_impulse(impulse)
+		# Clamp pre-integration velocity as a soft cap — the impulse itself is queued
+		# for the next physics step, but this prevents accumulation across multiple
+		# impulses in the same frame from compounding to extreme velocities.
+		_clamp_velocity(target)
 	elif target.has_method("apply_external_impulse"):
 		target.apply_external_impulse(impulse)
 	else:
 		Log.debug("WorldMutations: %s cannot receive impulse, skipping" % target.name)
 		return
 	Log.debug("WorldMutations: apply_impulse to %s dir=%s mag=%.0f" % [target.name, direction, magnitude])
+
+
+const _GRAVITY: float = 980.0
+const MAX_VELOCITY: float = 800.0
+
+
+static func apply_movement_force(body: RigidBody2D, direction: Vector2, max_speed: float, force_magnitude: float) -> void:
+	## Apply friction-compensated force for AI movement with velocity clamping.
+	## Used by BehaviorExecutor for MOVE_TOWARD, MOVE_AWAY, PATROL.
+	var current_speed: float = body.linear_velocity.dot(direction)
+	if current_speed >= max_speed:
+		return  # Already at/above target speed in movement direction
+
+	# Scale force down as we approach max speed for smooth deceleration
+	var speed_ratio: float = clampf(current_speed / max_speed, 0.0, 1.0)
+	var scaled_force: float = force_magnitude * (1.0 - speed_ratio)
+	var compensated: float = friction_compensated(body, scaled_force)
+	body.apply_central_force(direction * compensated)
+
+
+static func apply_continuous_force(target: Node, direction: Vector2, magnitude: float) -> void:
+	## Apply friction-compensated continuous force. Works for both RigidBody2D and
+	## CharacterBody2D (via apply_external_impulse scaled by delta).
+	if target is RigidBody2D:
+		var compensated: float = friction_compensated(target, magnitude)
+		target.apply_central_force(direction * compensated)
+	elif target.has_method("apply_external_impulse"):
+		var dt: float = 1.0 / float(Engine.physics_ticks_per_second)
+		target.apply_external_impulse(direction * magnitude * dt)
+
+
+static func friction_compensated(body: RigidBody2D, desired_magnitude: float) -> float:
+	## Scale force to overcome ground friction so forces actually move objects.
+	## Treats desired_magnitude as a target acceleration (px/s²), then adds enough
+	## force on top to cancel out friction.
+	var grav_scale: float = absf(body.gravity_scale)
+	if grav_scale < 0.1:
+		# Airborne / FLOATING: no ground friction to overcome, just scale by mass
+		return desired_magnitude * body.mass
+	var friction: float = 1.0  # Assume ground default (MAX combine mode)
+	if body.physics_material_override:
+		friction = maxf(body.physics_material_override.friction, friction)
+	var weight: float = body.mass * _GRAVITY * grav_scale
+	var friction_force: float = friction * weight
+	var sign_f: float = signf(desired_magnitude)
+	return sign_f * (friction_force + absf(desired_magnitude) * body.mass)
+
+
+static func _clamp_velocity(body: RigidBody2D) -> void:
+	var vel: Vector2 = body.linear_velocity
+	if vel.length_squared() > MAX_VELOCITY * MAX_VELOCITY:
+		body.linear_velocity = vel.normalized() * MAX_VELOCITY
 
 
 static func apply_dot(target: Node, damage_per_tick: float, tick_interval: float, duration: float, element_color: Color = Color.WHITE) -> void:

@@ -327,24 +327,24 @@ func _apply_movement(target: Node, speed_tier: String, toward: bool) -> bool:
 		direction = -direction
 
 	var max_speed: float = BehaviorMaps.SPEED_MAX.get(speed_tier, 120.0)
-	var accel: float = max_speed * 5.0
-	var dt: float = get_physics_process_delta_time()
+	var force_mag: float = BehaviorMaps.SPEED_FORCE.get(speed_tier, 400.0)
 
-	# Set velocity directly — apply_central_force can't overcome ground friction.
-	var target_vx: float = direction.x * max_speed
-	_owner_body.linear_velocity.x = move_toward(
-		_owner_body.linear_velocity.x, target_vx, accel * dt)
+	# Force-based movement: composes with kicks, wind, explosions instead of trampling them.
+	# Friction compensation handled by WorldMutations.apply_movement_force().
+	var move_dir: Vector2 = Vector2(direction.x, 0.0).normalized() if direction.x != 0.0 else Vector2.ZERO
+	if move_dir != Vector2.ZERO:
+		WorldMutations.apply_movement_force(_owner_body, move_dir, max_speed, force_mag)
 
-	# FLOATING objects: also move vertically
-	if _owner_body.gravity_scale <= 0.0:
-		var target_vy: float = direction.y * max_speed
-		_owner_body.linear_velocity.y = move_toward(
-			_owner_body.linear_velocity.y, target_vy, accel * dt)
+	# FLOATING objects: also apply vertical force
+	if _owner_body.gravity_scale <= 0.0 and direction.y != 0.0:
+		var vert_dir := Vector2(0.0, signf(direction.y))
+		WorldMutations.apply_movement_force(_owner_body, vert_dir, max_speed, force_mag)
 	return true
 
 
 func _apply_patrol(speed_tier: String) -> void:
 	var max_speed: float = BehaviorMaps.SPEED_MAX.get(speed_tier, 120.0)
+	var force_mag: float = BehaviorMaps.SPEED_FORCE.get(speed_tier, 400.0)
 	var dt: float = get_physics_process_delta_time()
 
 	_patrol_distance += abs(_owner_body.linear_velocity.x) * dt
@@ -352,10 +352,8 @@ func _apply_patrol(speed_tier: String) -> void:
 		_patrol_direction *= -1.0
 		_patrol_distance = 0.0
 
-	var accel: float = max_speed * 5.0
-	var target_vx: float = _patrol_direction * max_speed
-	_owner_body.linear_velocity.x = move_toward(
-		_owner_body.linear_velocity.x, target_vx, accel * dt)
+	var move_dir := Vector2(_patrol_direction, 0.0)
+	WorldMutations.apply_movement_force(_owner_body, move_dir, max_speed, force_mag)
 
 
 func _apply_force(target: Node, intensity: String, attract: bool) -> bool:

@@ -6,7 +6,6 @@ extends Node
 ## Range and mode come from FieldConfig (tag-level), not from individual rules.
 
 const CL = preload("res://scripts/data/collision_layers.gd")
-const _GRAVITY: float = 980.0
 
 var _owner_body: RigidBody2D
 var _field_area: Area2D
@@ -21,6 +20,7 @@ var _max_periodic_range: float = 0.0  # for per-tag distance filtering in period
 
 # Generalized slow tracking: bodies we've slowed so we can restore on exit
 var _slow_damped: Dictionary = {}  # body instance_id -> original linear_damp
+var _slow_players: Dictionary = {}  # player instance_id -> true (entry/exit tracking)
 var _slow_factor: float = 0.25  # default; overridden by APPLY_SLOW effect
 var _slow_range_px: float = 0.0  # cached in _rebuild()
 var _has_slow: bool = false
@@ -219,29 +219,7 @@ func _apply_force_effects(rule: Dictionary, body: Node2D) -> void:
 			continue
 		var magnitude: float = effect.get("force_magnitude", 0.0)
 		var direction: Vector2 = (body.global_position - _owner_body.global_position).normalized()
-		if body is RigidBody2D:
-			var actual_force: float = _friction_compensated(body, magnitude)
-			body.apply_central_force(direction * actual_force)
-		elif body is CharacterBody2D and body.has_method("apply_external_impulse"):
-			var dt: float = get_physics_process_delta_time()
-			body.apply_external_impulse(direction * magnitude * dt)
-
-
-static func _friction_compensated(body: RigidBody2D, desired_magnitude: float) -> float:
-	# Scale force to overcome ground friction so field forces actually move objects.
-	# Treats desired_magnitude as a target acceleration (px/s²), then adds enough
-	# force on top to cancel out friction.
-	var grav_scale: float = absf(body.gravity_scale)
-	if grav_scale < 0.1:
-		# Airborne / FLOATING: no ground friction to overcome, just scale by mass
-		return desired_magnitude * body.mass
-	var friction: float = 1.0  # Assume ground default (MAX combine mode)
-	if body.physics_material_override:
-		friction = maxf(body.physics_material_override.friction, friction)
-	var weight: float = body.mass * _GRAVITY * grav_scale
-	var friction_force: float = friction * weight
-	var sign_f: float = signf(desired_magnitude)
-	return sign_f * (friction_force + absf(desired_magnitude) * body.mass)
+		WorldMutations.apply_continuous_force(body, direction, magnitude)
 
 
 func _on_periodic_tick() -> void:
@@ -279,7 +257,6 @@ func _has_any(tags: Array, check: Array) -> bool:
 
 func _apply_slow_field(owner_pos: Vector2, overlapping: Array) -> void:
 	var currently_in_range: Dictionary = {}  # instance_id -> body
-	var player_in_range: bool = false
 
 	for body in overlapping:
 		if body == _owner_body or not is_instance_valid(body):
@@ -295,11 +272,14 @@ func _apply_slow_field(owner_pos: Vector2, overlapping: Array) -> void:
 			body.linear_damp = 1.0 / _slow_factor
 			body.tree_exiting.connect(_on_slow_body_exiting.bind(bid), CONNECT_ONE_SHOT)
 
+		# Track player entry — only call apply_speed_modifier once on entry, not per frame
 		if body is CharacterBody2D and body.has_method("apply_speed_modifier"):
-			player_in_range = true
-			body.apply_speed_modifier(_slow_factor)
+			if bid not in _slow_players:
+				_slow_players[bid] = true
+				body.apply_speed_modifier(_slow_factor)
+				body.tree_exiting.connect(_on_slow_player_exiting.bind(bid), CONNECT_ONE_SHOT)
 
-	# Restore bodies that left the slow field
+	# Restore rigid bodies that left the slow field
 	var to_restore: Array = []
 	for bid in _slow_damped:
 		if bid not in currently_in_range:
@@ -307,9 +287,13 @@ func _apply_slow_field(owner_pos: Vector2, overlapping: Array) -> void:
 	for bid in to_restore:
 		_restore_slow_body(bid)
 
-	# Restore player if they left
-	if not player_in_range:
-		_clear_slow_player(overlapping)
+	# Restore players that left the slow field
+	var players_to_restore: Array = []
+	for pid in _slow_players:
+		if pid not in currently_in_range:
+			players_to_restore.append(pid)
+	for pid in players_to_restore:
+		_restore_slow_player(pid)
 
 
 func _restore_slow_body(bid: int) -> void:
@@ -326,17 +310,23 @@ func _on_slow_body_exiting(bid: int) -> void:
 	_restore_slow_body(bid)
 
 
-func _clear_slow_player(overlapping: Array = []) -> void:
-	var bodies: Array = overlapping if not overlapping.is_empty() else (
-		_field_area.get_overlapping_bodies() if _field_area != null else [])
-	for body in bodies:
-		if body is CharacterBody2D and body.has_method("clear_speed_modifier"):
-			body.clear_speed_modifier()
-			break
+func _restore_slow_player(pid: int) -> void:
+	if pid not in _slow_players:
+		return
+	_slow_players.erase(pid)
+	var body: Object = instance_from_id(pid)
+	if body != null and is_instance_valid(body) and body.has_method("clear_speed_modifier"):
+		body.clear_speed_modifier()
+
+
+func _on_slow_player_exiting(pid: int) -> void:
+	_restore_slow_player(pid)
 
 
 func _restore_all_slow() -> void:
 	for bid in _slow_damped.keys():
 		_restore_slow_body(bid)
 	_slow_damped.clear()
-	_clear_slow_player()
+	for pid in _slow_players.keys():
+		_restore_slow_player(pid)
+	_slow_players.clear()

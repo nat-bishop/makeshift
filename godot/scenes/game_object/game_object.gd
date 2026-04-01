@@ -1,10 +1,9 @@
 extends RigidBody2D
 
 var object_id: String = ""
-var tags: Array[String] = []
 var blueprint: Dictionary = {}
 var current_durability: int = 150
-var _tag_decay: TagDecay = null
+var _tag_manager: TagManager = null
 var _behavior_executor: Node = null
 var _tag_field: Node = null
 
@@ -25,13 +24,13 @@ func init_from_blueprint(bp: Dictionary) -> void:
 	blueprint = bp
 	object_id = bp.get("id", "")
 
-	_tag_decay = TagDecay.new()
-	_tag_decay.name = "TagDecay"
-	add_child(_tag_decay)
-	var raw_tags: Array = bp.get("tags", [])
-	tags.clear()
-	for tag in raw_tags:
-		tags.append(str(tag))
+	# Initialize tag manager
+	_tag_manager = TagManager.new()
+	_tag_manager.name = "TagManager"
+	add_child(_tag_manager)
+	_tag_manager.init_tags(bp.get("tags", []), bp.get("name", "?"))
+	_tag_manager.tag_added.connect(_on_tag_added)
+	_tag_manager.tags_changed.connect(_on_tags_changed)
 
 	current_durability = bp.get("starting_durability", 150)
 
@@ -70,6 +69,10 @@ func init_from_blueprint(bp: Dictionary) -> void:
 
 func get_blueprint() -> Dictionary:
 	return blueprint
+
+
+var tags: Array[String]:
+	get: return _tag_manager.tags if _tag_manager != null else []
 
 
 func get_tags() -> Array[String]:
@@ -121,34 +124,26 @@ func heal(amount: float) -> void:
 
 
 func add_tag(tag: String, duration: float = 0.0) -> void:
-	var is_new: bool = tag not in tags
-	if is_new:
-		tags.append(tag)
-		Log.debug("GameObject: '%s' +tag %s%s" % [blueprint.get("name", object_id), tag, " (%.1fs)" % duration if duration > 0.0 else ""])
-		_reapply_physics()
-		object_visual.refresh_tag_visuals(tags)
-		if tag in TagColors.COLORS:
-			object_visual.spawn_particles(TagColors.get_color(tag))
-		if _behavior_executor != null:
-			_behavior_executor.on_tag_added(tag)
-		# Update or create tag field for dynamic field tags (e.g., fire spread)
-		if _tag_field != null:
-			_tag_field.on_tags_changed(tags)
-		elif FieldConfig.has_any_field_tag(tags):
-			_create_tag_field(tags)
-	if duration > 0.0:
-		_tag_decay.set_decay(tag, duration)
-	if is_new:
-		Log.debug("GameObject: '%s' tags now: %s" % [blueprint.get("name", object_id), tags])
+	_tag_manager.add_tag(tag, duration)
 
 
 func remove_tag(tag: String) -> void:
-	_tag_decay.cancel(tag)
-	if tag not in tags:
-		return
-	Log.debug("GameObject: '%s' -tag %s" % [blueprint.get("name", object_id), tag])
-	tags.erase(tag)
-	Log.debug("GameObject: '%s' tags now: %s" % [blueprint.get("name", object_id), tags])
+	_tag_manager.remove_tag(tag)
+
+
+func _on_tag_added(tag: String) -> void:
+	# Add-only effects (common effects handled by _on_tags_changed)
+	if tag in TagColors.COLORS:
+		object_visual.spawn_particles(TagColors.get_color(tag))
+	if _behavior_executor != null:
+		_behavior_executor.on_tag_added(tag)
+	# Create tag field if this is the first field tag (update handled by _on_tags_changed)
+	if _tag_field == null and FieldConfig.is_field_tag(tag):
+		_create_tag_field(tags)
+
+
+func _on_tags_changed(_updated_tags: Array[String]) -> void:
+	# Common effects for both add and remove
 	_reapply_physics()
 	object_visual.refresh_tag_visuals(tags)
 	if _tag_field != null:
@@ -192,6 +187,4 @@ func _on_body_entered(body: Node) -> void:
 func _resolve_deferred(body: Node) -> void:
 	if not is_instance_valid(body):
 		return
-	CollisionResolver.resolve_collision(self, body)
-	if _behavior_executor != null:
-		_behavior_executor.fire_trigger("ON_CONTACT", body)
+	CollisionResolver.resolve_and_notify(self, body)
