@@ -6,6 +6,7 @@ Provides deterministic validity checks and LLM-as-judge scoring.
 from __future__ import annotations
 
 from app.engine.rules_data import ALL_RULES
+from pydantic_ai.settings import ModelSettings
 from pydantic_evals.evaluators import LLMJudge
 
 from evals.metrics.interaction_surface import InteractionSurfaceEvaluator
@@ -24,16 +25,35 @@ RUBRICS: dict[str, str] = {
         "game object with a name, tags, behaviors, and visual description.\n\n"
         "Evaluate whether the design faithfully represents what the player asked for.\n\n"
         "Score on this scale:\n"
-        "- 1.0: The design captures the core concept perfectly. Tags, behaviors, and "
-        "visuals all reinforce the player's intent. No irrelevant or contradictory elements.\n"
-        "- 0.75: The design captures the main idea with minor issues — one slightly off "
-        "tag, a missing but non-critical behavior, or a small visual mismatch.\n"
-        "- 0.5: The design partially captures the concept but has notable gaps — missing "
-        "a key tag that defines the object, or includes behaviors/tags that don't fit "
-        "the description.\n"
-        "- 0.25: The design misses the core concept — wrong physical properties, "
-        "contradictory theme, or behaviors that work against the player's intent.\n"
-        "- 0.0: The design bears no meaningful relationship to the player's description.\n\n"
+        "- 1.0: Every tag directly supports the player's description. Name matches the "
+        "concept. No irrelevant or contradictory tags.\n"
+        "- 0.75: Core concept is captured. ONE of: slightly off tag choice, target "
+        "auto-inference imprecision (NEAREST_LIVING vs NEAREST_PLAYER), or a missing "
+        "secondary attribute.\n"
+        "- 0.50: Missing a tag that defines the core concept (e.g., no FLOATING for "
+        "something that flies), OR includes a tag that contradicts the description.\n"
+        "- 0.25: Multiple core tags are wrong or missing. The design could describe a "
+        "different object entirely.\n"
+        "- 0.0: No meaningful connection to the player's description.\n\n"
+        "SCORED EXAMPLES (use these to calibrate your scoring):\n\n"
+        'Example 1 — Score 1.0:\n'
+        'Input: "fire sword"\n'
+        'Output: name "Fire Sword", tags [RIGID, SHARP, HEAT_SOURCE, FLAMMABLE]\n'
+        "Why 1.0: Name matches. SHARP captures 'sword', HEAT_SOURCE captures 'fire'. "
+        "All tags reinforce the concept.\n\n"
+        'Example 2 — Score 0.75:\n'
+        'Input: "healing mushroom that heals you when you kick it"\n'
+        'Output: name "Healing Cap", tags [LIVING, BREAKABLE], '
+        'signature "ON_DAMAGED -> HEAL -> NEAREST_LIVING"\n'
+        "Why 0.75: Core concept captured (mushroom that heals on kick). Minor issue: "
+        "NEAREST_LIVING instead of NEAREST_PLAYER means it heals any creature, not "
+        "specifically the player.\n\n"
+        'Example 3 — Score 0.25:\n'
+        'Input: "a parachute that slows you down when falling"\n'
+        'Output: name "War Chute", tags [HEAVY, RIGID, SHARP], '
+        'signature "ON_PROXIMITY -> DAMAGE"\n'
+        "Why 0.25: A parachute should be LIGHT and FLOATING, not HEAVY and SHARP. "
+        "The combat signature contradicts the slow-fall concept entirely.\n\n"
         "Focus on: Does the name match the concept? Do the tags reflect the object's "
         "core physical nature? Do the behaviors match what the player described or "
         "implied? Does the visual description match the tags and name?\n\n"
@@ -45,7 +65,7 @@ RUBRICS: dict[str, str] = {
         "You are evaluating a game object design for a 2D physics sandbox where objects "
         "interact through a TAG SYSTEM. Tags create automatic interactions — this is "
         "the core of the game's emergent gameplay.\n\n"
-        f"VALID TAGS (1-4 per object):\n{_TAG_LIST}\n\n"
+        f"VALID TAGS (2-4 per object):\n{_TAG_LIST}\n\n"
         f"COMPLETE TAG INTERACTION RULES ({len(ALL_RULES)} rules — "
         "these fire automatically, no behaviors needed):\n"
         f"{_RULES_SUMMARY}\n\n"
@@ -62,29 +82,36 @@ RUBRICS: dict[str, str] = {
         "Evaluate the GAMEPLAY QUALITY of this design — does it create interesting "
         "interactions?\n\n"
         "Score on this scale:\n"
-        "- 1.0: Excellent design that exploits the tag system for emergent gameplay. "
-        "Tags chosen create interesting interaction surfaces with other objects. "
-        "Signature behavior (if present) complements tags rather than duplicating "
-        "what tags already do. Examples of 1.0 designs:\n"
-        "  * A napalm monster with HEAT_SOURCE + STICKY — fire spreads AND things "
-        "stick to it, plus ADD_TAGS(FLAMMABLE) signature to make nearby objects "
-        "catchable by fire\n"
-        "  * A simple rock with HEAVY + RIGID — no signature needed, tags "
-        "fully define it\n"
-        "  * A wind spirit with LIVING + WIND_SOURCE + FLOATING — tags create "
-        "continuous push forces, LIVING implies wander movement\n"
-        "- 0.75: Good design with minor missed opportunities. Core tags are right but "
-        "one interaction opportunity missed (e.g., a wooden object without FLAMMABLE, "
-        "or a creature with only HOSTILE instead of using richer tag interactions).\n"
-        "- 0.5: Mediocre design. Falls into the 'generic damage' trap — uses only "
-        "HOSTILE when tags like HEAT_SOURCE, SHARP, ACIDIC, or "
-        "TOXIC would create richer interactions automatically. Or has tags that don't "
-        "create any meaningful interaction surfaces.\n"
-        "- 0.25: Poor design. Tags and signature work against each other, or the "
-        "object is inert when it should be interactive. Wasted budget on tags that "
-        "don't interact with anything.\n"
-        "- 0.0: No useful gameplay properties. Wrong tags, no interaction surfaces, "
-        "completely generic.\n\n"
+        "- 1.0: Tags create multiple interaction surfaces with other objects. Signature "
+        "(if present) adds a capability tags can't provide. No wasted or contradictory tags.\n"
+        "- 0.75: Strong tag choices with ONE missed opportunity — a natural tag omission "
+        "(e.g., wooden object missing FLAMMABLE) or a signature that partially overlaps "
+        "with tag behavior.\n"
+        "- 0.50: Tags include a direct contradiction (e.g., METALLIC on an insulator, "
+        "WET on a fire object) OR the design has very few interaction rules despite "
+        "having room for more tags.\n"
+        "- 0.25: Multiple tags contradict each other or the design intent. Signature "
+        "duplicates what tags already do.\n"
+        "- 0.0: No useful gameplay properties. Tags create zero interaction surfaces.\n\n"
+        "SCORED EXAMPLES (use these to calibrate your scoring):\n\n"
+        'Example 1 — Score 1.0:\n'
+        'Input: "acid spider"\n'
+        'Output: tags [LIVING, HOSTILE, ACIDIC], '
+        'signature "ON_PROXIMITY -> SPAWN_PROJECTILE"\n'
+        "Why 1.0: Three tags create a rich interaction surface — LIVING enables movement, "
+        "HOSTILE auto-chases, ACIDIC dissolves on contact. Signature adds ranged acid "
+        "spit that tags can't provide.\n\n"
+        'Example 2 — Score 0.75:\n'
+        'Input: "wooden chair"\n'
+        'Output: tags [RIGID, FLAMMABLE, LIGHT]\n'
+        "Why 0.75: Good tag choices (burns, gets pushed by wind), but missing BREAKABLE "
+        "— a wooden chair should be smashable. One missed interaction opportunity.\n\n"
+        'Example 3 — Score 0.50:\n'
+        'Input: "rubber armor to block electricity"\n'
+        'Output: tags [INSULATING, METALLIC, BREAKABLE]\n'
+        "Why 0.50: INSULATING is correct intent, but METALLIC contradicts it (conducts "
+        "electricity — the thing it should block). BREAKABLE adds fragility to armor. "
+        "Tags work against the design goal.\n\n"
         "KEY PRINCIPLE: Tags are the primary gameplay driver. A fire sword "
         "with HEAT_SOURCE will ignite FLAMMABLE objects without needing a signature. "
         "Tags like SHARP, HOSTILE, HEAT_SOURCE, TOXIC, and ACIDIC all deal "
@@ -122,11 +149,15 @@ METRIC_NAMES: list[str] = [
 ]
 
 
+JUDGE_SETTINGS = ModelSettings(temperature=0.0)
+
+
 def make_judge(name: str) -> LLMJudge:
     """Create an LLM-as-judge evaluator for the given metric."""
     return LLMJudge(
         rubric=RUBRICS[name],
         include_input=True,
+        model_settings=JUDGE_SETTINGS,
         score={"evaluation_name": name, "include_reason": True},
         assertion=False,
     )

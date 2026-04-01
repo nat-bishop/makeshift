@@ -37,6 +37,17 @@ backend/static/sprites/
 # Claude Code
 .claude/settings.local.json
 .claude/worktrees/
+backend/.claude/
+
+# Coverage
+.coverage
+backend/.coverage
+
+# Eval results (generated, large)
+backend/evals/results/
+
+# Godot UID files (auto-generated, Godot 4.6+)
+*.gd.uid
 
 # Experiment outputs (binary)
 backend/experiments/output/

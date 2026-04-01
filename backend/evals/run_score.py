@@ -27,6 +27,15 @@ from evals.metrics import default_evaluators
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Score a saved results directory (no agent calls)")
     parser.add_argument("results_dir", help="Path to results directory to score")
+    parser.add_argument(
+        "--repeat",
+        type=int,
+        default=1,
+        help="Score each case N times to measure judge variance (default: 1)",
+    )
+    parser.add_argument(
+        "--name", default=None, help="Override the run name for the saved result"
+    )
     return parser.parse_args()
 
 
@@ -63,16 +72,22 @@ async def main() -> None:
         print("Error: no scorable cases (all outputs missing)")
         sys.exit(1)
 
-    print(f"Scoring {len(cases)} cases from {path.name} (variant: {variant})\n")
+    repeat = args.repeat
+    run_name = args.name or variant
+    repeat_msg = f", repeat={repeat}" if repeat > 1 else ""
+    print(f"Scoring {len(cases)} cases from {path.name} (variant: {variant}{repeat_msg})\n")
+
     async def cached_task(description: str) -> str:
         return outputs[description]
 
     dataset = Dataset(cases=cases, evaluators=default_evaluators())
-    report = await dataset.evaluate(cached_task, name=variant, max_concurrency=8)
+    report = await dataset.evaluate(
+        cached_task, name=run_name, max_concurrency=8, repeat=repeat,
+    )
 
     report.print(include_input=True, include_reasons=True)
 
-    result = report_to_result(report, variant, model)
+    result = report_to_result(report, variant, model, name=run_name)
     run_dir = save_result(result)
     print(f"\nScored results saved to {run_dir}")
     print_distribution_report(result)
