@@ -116,6 +116,19 @@ class SessionManager:
         )
         return session
 
+    async def get_object_blueprint(
+        self, session_id: str, object_id: str
+    ) -> GameObjectBlueprint | None:
+        """Look up a single object's blueprint by session and object ID."""
+        cursor = await self._db.execute(
+            "SELECT blueprint_json FROM objects WHERE session_id = ? AND object_id = ?",
+            (session_id, object_id),
+        )
+        row = await cursor.fetchone()
+        if row is None:
+            return None
+        return GameObjectBlueprint.model_validate_json(row[0])
+
     async def save_object(
         self,
         session_id: str,

@@ -13,7 +13,7 @@ endef
 
 dev: gpu ## Start all servers + launch game
 	$(wait-services)
-	uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir backend &
+	uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir backend --reload-include '*.py' &
 	@sleep 2
 	$(GODOT) --path godot/
 	$(MAKE) stop
@@ -22,7 +22,7 @@ gpu: ## Start GPU/LLM Docker containers (detached)
 	$(COMPOSE) up -d --build
 
 api: ## Start FastAPI dev server (foreground, auto-reload)
-	uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir backend
+	uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir backend --reload-include '*.py'
 
 gpu-restart: ## Restart GPU/LLM Docker containers
 	$(COMPOSE) restart

@@ -3,6 +3,7 @@ from __future__ import annotations
 import structlog
 from fastapi import WebSocket, WebSocketDisconnect
 
+from app.images.pipeline import build_prompt, get_cached_sprite_path
 from app.sessions.manager import SessionManager
 
 logger = structlog.get_logger()
@@ -43,6 +44,10 @@ async def websocket_handler(websocket: WebSocket, session_id: str) -> None:
 
             if msg_type == "ping":
                 await websocket.send_json({"type": "pong"})
+            elif msg_type == "request_sprite":
+                object_id = data.get("object_id", "")
+                if object_id:
+                    await _handle_request_sprite(websocket, session_id, object_id)
             else:
                 logger.warning("ws_unknown_message_type", msg_type=msg_type)
                 await websocket.send_json(
@@ -65,6 +70,32 @@ async def websocket_handler(websocket: WebSocket, session_id: str) -> None:
             session_id=session_id,
             remaining_connections=remaining,
         )
+
+
+async def _handle_request_sprite(
+    websocket: WebSocket, session_id: str, object_id: str
+) -> None:
+    """Check if a sprite exists on disk and re-send sprite_ready if so."""
+    db = websocket.app.state.db
+    manager = SessionManager(db)
+    blueprint = await manager.get_object_blueprint(session_id, object_id)
+    if blueprint is None:
+        logger.debug("request_sprite_not_found", session_id=session_id, object_id=object_id)
+        return
+
+    prompt = build_prompt(blueprint.name, blueprint.visual_descriptor)
+    cache_path = get_cached_sprite_path(prompt)
+    if not cache_path.exists():
+        logger.debug("request_sprite_not_ready", session_id=session_id, object_id=object_id)
+        return
+
+    sprite_url = f"/static/sprites/{cache_path.name}"
+    logger.info("request_sprite_fulfilled", session_id=session_id, object_id=object_id)
+    await websocket.send_json({
+        "type": "sprite_ready",
+        "object_id": object_id,
+        "sprite_url": sprite_url,
+    })
 
 
 async def _broadcast(session_id: str, message: dict[str, object]) -> None:
