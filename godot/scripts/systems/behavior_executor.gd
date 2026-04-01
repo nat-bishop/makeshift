@@ -337,7 +337,7 @@ func _apply_movement(target: Node, speed_tier: String, toward: bool) -> bool:
 		WorldMutations.apply_movement_force(_owner_body, move_dir, max_speed, force_mag)
 
 	# FLYING objects: also apply vertical force
-	if _owner_body.gravity_scale <= 0.0 and direction.y != 0.0:
+	if _owner_body.gravity_scale < 0.1 and direction.y != 0.0:
 		var vert_dir := Vector2(0.0, signf(direction.y))
 		WorldMutations.apply_movement_force(_owner_body, vert_dir, max_speed, force_mag)
 	return true
@@ -355,7 +355,7 @@ func _apply_patrol(speed_tier: String) -> void:
 
 	var move_dir := Vector2(_patrol_direction, 0.0)
 	# Airborne objects: add vertical bobbing for natural flight look
-	if _owner_body.gravity_scale <= 0.1:
+	if _owner_body.gravity_scale < 0.1:
 		_patrol_bob_time += dt
 		move_dir.y = sin(_patrol_bob_time * 1.5) * 0.3
 	WorldMutations.apply_movement_force(_owner_body, move_dir, max_speed, force_mag)

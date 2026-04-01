@@ -19,7 +19,7 @@ Tags define what an object *is*; behaviors define what it *does*. Each object ge
 | Energy | FLAMMABLE, HEAT_SOURCE, ELECTRIC, MAGNETIC, EXPLOSIVE |
 | Surface | SHARP, STICKY, REFLECTIVE |
 | Mechanical | BOUNCY, BREAKABLE |
-| Environmental | FLOATING, WIND_SOURCE, ACIDIC, TOXIC, WET |
+| Environmental | FLYING, WIND_SOURCE, ACIDIC, TOXIC, WET |
 | Special | LIVING, METALLIC, INSULATING, HOSTILE |
 | Internal-only | HOT (rule-applied burn), GLOWING (smolder + attract), BRITTLE (freeze-then-shatter), CORRODED (acid-weakened) |
 
@@ -81,7 +81,7 @@ Enforced by Pydantic validators on `CreatorOutput`. Violations trigger `ModelRet
 | Hostile | HOSTILE + BREAKABLE/LIVING → 20 dmg + knockback (field, periodic), HOSTILE + HOSTILE → 15 dmg + 120 force | No | Yes |
 | WET | LIQUID → adds WET (15s), WET + ELECTRIC → 45 dmg, WET + COLD → faster freeze, HEAT_SOURCE → removes WET | No | Yes (LIQUID, WET) |
 | Counter | INSULATING blocks ELECTRIC, REFLECTIVE reflects HEAT_SOURCE/ELECTRIC/acid (reflective_acidic_resist) | No | No |
-| Magnetic/Wind | MAGNETIC + METALLIC → attract, WIND_SOURCE + LIGHT/GAS/FLOATING → push | No | Yes |
+| Magnetic/Wind | MAGNETIC + METALLIC → attract, WIND_SOURCE + LIGHT/GAS/FLYING → push | No | Yes |
 | Environmental | ACIDIC + BREAKABLE → corrode, TOXIC + LIVING → damage | No | Yes (TOXIC) |
 | Brittle/Corroded | BRITTLE + HEAVY → 40 dmg shatter, CORRODED + SHARP → 40 dmg slice | No | No |
 | Glowing | GLOWING + FLAMMABLE → smolder (adds HOT), GLOWING + LIVING → attract | No | Yes |

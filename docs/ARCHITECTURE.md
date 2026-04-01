@@ -389,7 +389,7 @@ Non-solid uses no filter because being inside the substance is semantically equi
 |-----|------|---------|----------|--------|---------|
 | HEAVY | 15.0 | 1.2 | 0.7 | 0.0 | 0.1 |
 | LIGHT | 0.2 | 0.8 | 0.3 | 0.0 | 1.5 |
-| FLOATING | — | -0.5 | — | — | 1.5 |
+| FLYING | — | 0.0 | — | — | 2.0 |
 | GAS | — | — | 0.0 | 0.0 | 4.0 |
 | LIQUID | — | 1.0 | 0.0 | 0.0 | 2.0 |
 | STICKY | — | — | 2.0 | — | — |

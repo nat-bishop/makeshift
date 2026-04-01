@@ -536,8 +536,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a wooden raft for floating across water",
         metadata=CaseMeta(
             category="vehicle",
-            expected_tags=["FLYING", "FLAMMABLE"],
-            notes="Practical water-crossing. Tests FLYING + FLAMMABLE from 'wooden'.",
+            expected_tags=["LIGHT", "FLAMMABLE"],
+            notes="Practical water-crossing. Tests LIGHT + FLAMMABLE from 'wooden'. Not FLYING (water buoyancy, not flight).",
         ),
     ),
     # =========================================================================

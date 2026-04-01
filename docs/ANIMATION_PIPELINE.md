@@ -106,7 +106,7 @@ This runs in parallel with static sprite generation (~12s), so total wall time d
 Gate animation by tags/behaviors:
 - `LIVING` tag → animate
 - Has movement behaviors (`MOVE_TOWARD`, `MOVE_AWAY`, `PATROL`) → animate
-- `FLOATING` tag → animate (bob cycle)
+- `FLYING` tag → animate (bob cycle)
 - `LIQUID`, `GAS`, `MOLTEN` → animate (flow cycle)
 - Plain `SOLID`+`RIGID` objects (walls, blocks) → skip, keep static sprite
 

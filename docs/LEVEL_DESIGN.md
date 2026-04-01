@@ -161,7 +161,7 @@ const WOODEN_CRATE_BLUEPRINT := {
 
 - If the bridge is both BREAKABLE and RIGID, BREAKABLE takes priority for durability (50 HP). The acidic_breakable_corrode rule fires (requires BREAKABLE on target). Bridge dies fast.
 - METALLIC bridges (metal) take more corrosion damage (20 dmg/s vs 10 dmg/s for RIGID-only). Still survives at 200 HP, but takes more wear. Interesting nuance.
-- If player creates something FLOATING over the acid, it doesn't touch the acid — no corrosion. But FLOATING objects can't support the player (player is CharacterBody2D walking on StaticBody2D/RigidBody2D surfaces, FLOATING objects have negative gravity and drift upward).
+- If player creates something FLYING over the acid, it doesn't touch the acid — no corrosion. But FLYING objects can't support the player (player is CharacterBody2D walking on StaticBody2D/RigidBody2D surfaces, FLYING objects have zero gravity and hover in place).
 - Freezing the acid: if the COLD object is small, it might only freeze the area near it. The freeze rule removes LIQUID tag — if this is on the entire env body, ALL the acid freezes. If env objects support partial coverage, only some freezes. Implementation detail.
 
 ---

@@ -30,7 +30,7 @@ RUBRICS: dict[str, str] = {
         "- 0.75: Core concept is captured. ONE of: slightly off tag choice, target "
         "auto-inference imprecision (NEAREST_LIVING vs NEAREST_PLAYER), or a missing "
         "secondary attribute.\n"
-        "- 0.50: Missing a tag that defines the core concept (e.g., no FLYING for"
+        "- 0.50: Missing a tag that defines the core concept (e.g., no FLYING for "
         "something that flies), OR includes a tag that contradicts the description.\n"
         "- 0.25: Multiple core tags are wrong or missing. The design could describe a "
         "different object entirely.\n"
