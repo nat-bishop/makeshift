@@ -83,8 +83,6 @@ func get_object_id() -> String:
 func is_passively_pushable() -> bool:
 	if "HEAVY" in tags:
 		return false
-	if "LIGHT" in tags:
-		return true
 	var size: String = blueprint.get("visual_descriptor", {}).get("size_category", "medium")
 	return size == "tiny"
 

@@ -56,7 +56,7 @@ TAG_DESCRIPTIONS: dict[Tag, str] = {
     Tag.GAS: "airborne, dispersed substance. Smoke, steam, poison clouds",
     Tag.RIGID: "hard, unyielding material (200 HP). Stone, metal, bone, hardwood",
     Tag.HEAVY: "dense and massive. Anvils, boulders, safes. Immovable by wind or pushing",
-    Tag.LIGHT: "very low mass. Feathers, paper, balloons. Blown by WIND_SOURCE, pushed by players",
+    Tag.LIGHT: "very low mass. Feathers, paper, balloons. Blown by WIND_SOURCE",
     Tag.FROZEN: "encased in or made of ice. Ice blocks, frost crystals. Brittle and slippery",
     Tag.COLD: "actively radiates cold. Freezers, ice elementals, snow clouds",
     Tag.MOLTEN: "superheated liquid. Lava, molten metal, magma",
