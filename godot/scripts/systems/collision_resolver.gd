@@ -13,6 +13,14 @@ func _ready() -> void:
 	add_child(_effect_executor)
 
 
+func resolve_and_notify(body_a: Node, body_b: Node, cascade_depth: int = 0, trigger_mode_filter: String = "") -> void:
+	## Resolve tag-based rules AND fire ON_CONTACT behavior trigger on body_b.
+	## Consolidates the common pattern used by player, game_object, and kick.
+	resolve_collision(body_a, body_b, cascade_depth, trigger_mode_filter)
+	if body_b.has_method("fire_behavior_trigger"):
+		body_b.fire_behavior_trigger("ON_CONTACT", body_a)
+
+
 func resolve_collision(body_a: Node, body_b: Node, cascade_depth: int = 0, trigger_mode_filter: String = "", _resolved: Dictionary = {}) -> void:
 	# Top-level calls get a fresh dedup dict; cascades inherit the parent's.
 	# (GDScript default Dictionary is shared across calls — same as Python's mutable default.)

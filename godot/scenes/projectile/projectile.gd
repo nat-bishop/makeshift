@@ -34,6 +34,8 @@ func _ready() -> void:
 func init_projectile(direction: Vector2, damage: float, payload_tag: String, source: Node) -> void:
 	_damage = damage
 	_source = source
+	if source is PhysicsBody2D:
+		add_collision_exception_with(source)
 
 	# Set up tags
 	tags = BehaviorMaps.PROJECTILE_BASE_TAGS.duplicate()
@@ -71,8 +73,6 @@ func take_damage(_amount: float) -> void:
 
 func _on_body_entered(body: Node) -> void:
 	if _has_hit:
-		return
-	if body == _source:
 		return
 
 	_has_hit = true

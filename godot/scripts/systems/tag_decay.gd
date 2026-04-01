@@ -2,8 +2,8 @@ class_name TagDecay
 extends Node
 
 ## Manages temporary tag duration timers for any taggable object.
-## Parent must implement remove_tag(tag: String).
-## Used by GameObject and EnvironmentBody to avoid duplicated decay logic.
+## Parent must implement remove_tag(tag: String) — works with both
+## TagManager (when used as its child) and direct entity parents (legacy).
 
 var _timers: Dictionary = {}  # tag name -> Timer
 

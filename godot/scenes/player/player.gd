@@ -3,7 +3,7 @@ extends CharacterBody2D
 const SPEED: float = 300.0
 const JUMP_VELOCITY: float = -400.0
 const GRAVITY: float = 980.0
-const PUSH_FORCE: float = 80.0
+const PUSH_FORCE: float = 500.0  # continuous force (N), not per-frame impulse
 const KICK_FORCE: float = 400.0
 const KICK_DAMAGE: float = 10.0
 const KICK_RANGE: float = 48.0
@@ -22,7 +22,7 @@ const BOUNCE_MIN_SPEED: float = 50.0  # ignore micro-bounces
 
 enum State { IDLE, WALK, JUMP, FALL, KICK }
 
-var _state: int = State.IDLE
+var _state: State = State.IDLE
 var _input_direction: float = 0.0
 var _facing: int = 1  # 1 = right, -1 = left
 var _kick_cooldown_timer: float = 0.0
@@ -104,7 +104,7 @@ func _push_rigid_bodies() -> void:
 			# Push — continuous, every frame
 			if collider.has_method("is_passively_pushable") and collider.is_passively_pushable():
 				var push_dir := -collision.get_normal()
-				collider.apply_central_impulse(push_dir * PUSH_FORCE)
+				collider.apply_central_force(push_dir * PUSH_FORCE)
 			# Entry-only effects (first frame of new contact)
 			if cid not in _prev_contacts:
 				if collider.has_method("get_tags") and "BOUNCY" in collider.get_tags():
@@ -112,9 +112,7 @@ func _push_rigid_bodies() -> void:
 					var impact_speed: float = maxf(-_pre_slide_velocity.dot(normal), 0.0)
 					if impact_speed > BOUNCE_MIN_SPEED:
 						velocity = normal * impact_speed * BOUNCE_ENERGY
-				CollisionResolver.resolve_collision(self, collider)
-				if collider.has_method("fire_behavior_trigger"):
-					collider.fire_behavior_trigger("ON_CONTACT", self)
+				CollisionResolver.resolve_and_notify(self, collider)
 	_prev_contacts = current_contacts
 
 
@@ -146,15 +144,13 @@ func _perform_kick() -> void:
 			if not collider.has_method("is_heavy") or not collider.is_heavy():
 				collider.apply_central_impulse(kick_dir * KICK_FORCE)
 			WorldMutations.apply_damage(collider, KICK_DAMAGE)
-			CollisionResolver.resolve_collision(self, collider)
-			if collider.has_method("fire_behavior_trigger"):
-				collider.fire_behavior_trigger("ON_CONTACT", self)
+			CollisionResolver.resolve_and_notify(self, collider)
 			Log.debug("Player: Kicked '%s'" % collider.name)
 
 
 func _on_animation_finished() -> void:
 	if _state == State.KICK:
-		_state = -1  # force _update_animation to re-evaluate on next frame
+		_state = State.IDLE  # re-evaluate on next frame via _update_animation
 
 
 func _update_animation() -> void:
@@ -167,7 +163,7 @@ func _update_animation() -> void:
 	if _state == State.KICK:
 		return
 
-	var new_state: int = _state
+	var new_state: State = _state
 	if not is_on_floor():
 		if velocity.y < 0.0:
 			new_state = State.JUMP
@@ -237,11 +233,12 @@ func _decay_knockback(delta: float) -> void:
 
 func apply_speed_modifier(factor: float) -> void:
 	_slow_count += 1
-	_speed_modifier = factor
+	# Use the strongest slow (lowest factor) across all active sources
+	_speed_modifier = minf(_speed_modifier, factor)
 
 
 func clear_speed_modifier() -> void:
-	_slow_count = max(0, _slow_count - 1)
+	_slow_count = maxi(0, _slow_count - 1)
 	if _slow_count == 0:
 		_speed_modifier = 1.0
 

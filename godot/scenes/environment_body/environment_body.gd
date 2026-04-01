@@ -11,28 +11,25 @@ extends StaticBody2D
 const CL = preload("res://scripts/data/collision_layers.gd")
 
 var env_id: String = ""
-var tags: Array[String] = []
+var _tag_manager: TagManager = null
 var _solid: bool = true
 var _initially_solid: bool = true
 var _visual: ColorRect
 var _initial_color: Color
 var _field_area: Area2D
 var _periodic_timer: Timer
-var _tag_decay: TagDecay = null
 
 const FIELD_MARGIN: float = 32.0
-const PERIODIC_INTERVAL: float = 2.0
 
 
 func init_env(id: String, init_tags: Array, size: Vector2, color: Color, solid: bool = true) -> void:
 	env_id = id
-	tags.clear()
-	for tag in init_tags:
-		tags.append(str(tag))
 
-	_tag_decay = TagDecay.new()
-	_tag_decay.name = "TagDecay"
-	add_child(_tag_decay)
+	_tag_manager = TagManager.new()
+	_tag_manager.name = "TagManager"
+	add_child(_tag_manager)
+	_tag_manager.init_tags(init_tags, id)
+	_tag_manager.tags_changed.connect(_on_tags_changed)
 
 	_solid = solid
 	_initially_solid = solid
@@ -77,6 +74,10 @@ func init_env(id: String, init_tags: Array, size: Vector2, color: Color, solid: 
 	Log.info("EnvironmentBody: Initialized '%s' with tags %s, solid=%s" % [env_id, tags, solid])
 
 
+var tags: Array[String]:
+	get: return _tag_manager.tags if _tag_manager != null else []
+
+
 func get_tags() -> Array[String]:
 	return tags
 
@@ -86,25 +87,14 @@ func get_object_id() -> String:
 
 
 func add_tag(tag: String, duration: float = 0.0) -> void:
-	var is_new: bool = tag not in tags
-	if is_new:
-		tags.append(tag)
-		Log.debug("EnvironmentBody: '%s' +tag %s%s" % [env_id, tag, " (%.1fs)" % duration if duration > 0.0 else ""])
-		_on_tags_changed()
-	if duration > 0.0:
-		_tag_decay.set_decay(tag, duration)
+	_tag_manager.add_tag(tag, duration)
 
 
 func remove_tag(tag: String) -> void:
-	_tag_decay.cancel(tag)
-	if tag not in tags:
-		return
-	Log.debug("EnvironmentBody: '%s' -tag %s" % [env_id, tag])
-	tags.erase(tag)
-	_on_tags_changed()
+	_tag_manager.remove_tag(tag)
 
 
-func _on_tags_changed() -> void:
+func _on_tags_changed(_updated_tags: Array[String]) -> void:
 	_update_solidity()
 	_update_visuals()
 	# Start/stop periodic timer based on field tags
@@ -115,7 +105,6 @@ func _on_tags_changed() -> void:
 		_periodic_timer.stop()
 		_periodic_timer.queue_free()
 		_periodic_timer = null
-	Log.debug("EnvironmentBody: '%s' tags now: %s" % [env_id, tags])
 
 
 func _update_solidity() -> void:
@@ -142,7 +131,7 @@ func _update_visuals() -> void:
 
 func _start_periodic_timer() -> void:
 	_periodic_timer = Timer.new()
-	_periodic_timer.wait_time = PERIODIC_INTERVAL
+	_periodic_timer.wait_time = FieldConfig.PERIODIC_INTERVAL
 	_periodic_timer.one_shot = false
 	_periodic_timer.timeout.connect(_on_periodic_tick)
 	add_child(_periodic_timer)

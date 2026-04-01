@@ -3,6 +3,8 @@ extends Node
 var _body: RigidBody2D
 var _collision_shape: CollisionShape2D
 var _has_sprite_shape: bool = false
+var _prev_friction: float = -1.0
+var _prev_bounce: float = -1.0
 
 
 func _ready() -> void:
@@ -20,11 +22,16 @@ func apply(tags: Array, visual_descriptor: Dictionary) -> void:
 	_body.gravity_scale = physics["gravity"]
 	_body.linear_damp = physics["damping"]
 
-	# Apply physics material
-	var mat := PhysicsMaterial.new()
-	mat.friction = physics["friction"]
-	mat.bounce = physics["bounce"]
-	_body.physics_material_override = mat
+	# Apply physics material (skip if unchanged to avoid waking the physics body)
+	var new_friction: float = physics["friction"]
+	var new_bounce: float = physics["bounce"]
+	if new_friction != _prev_friction or new_bounce != _prev_bounce:
+		var mat := PhysicsMaterial.new()
+		mat.friction = new_friction
+		mat.bounce = new_bounce
+		_body.physics_material_override = mat
+		_prev_friction = new_friction
+		_prev_bounce = new_bounce
 
 	Log.debug("PhysicsApplicator: Applied physics for '%s' — size=%s, mass=%.1f, friction=%.2f, bounce=%.2f, gravity=%.1f, damp=%.1f" % [_body.blueprint.get("name", ""), size_category, _body.mass, physics["friction"], physics["bounce"], physics["gravity"], physics["damping"]])
 
