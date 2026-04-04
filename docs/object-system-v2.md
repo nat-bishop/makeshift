@@ -24,7 +24,7 @@ behaviors:                0-4 verb + freeform target
   - eat → "food, especially donuts"
 ```
 
-The backend derives internal traits (same Tag enum the rule engine already uses) from substance + element + explicit tags. It computes a numeric substance profile for physics, a combat profile for parameterized rule damage, and 384-dim embeddings via a local model for behavior targeting. The existing rule engine, collision resolver, and field system are untouched.
+The backend derives internal traits (same Tag enum the rule engine already uses) from substance + element + explicit tags. It computes a numeric substance profile for physics, a combat profile for parameterized rule damage, and 1024-dim embeddings via a local model for behavior targeting. The existing rule engine, collision resolver, and field system are untouched.
 
 ## Behavior System
 
@@ -78,35 +78,50 @@ No implied flee, no implied chase, no category-based defaults. The LLM controls 
 
 ### Embedding-Based Targeting (Event-Driven)
 
-Every object gets a 384-dim identity embedding. Every behavior target gets a 384-dim embedding. Matching is event-driven — no polling, no per-frame scanning. The LLM only runs at spawn. Everything after that is string concatenation, local embedding (~1ms), and dot products.
+Every object gets a 1024-dim identity embedding. Every behavior target gets a 1024-dim embedding. Matching is event-driven — no polling, no per-frame scanning. The LLM only runs at spawn. Everything after that is string concatenation, local embedding (~5ms), and dot products.
 
-**Model: `all-MiniLM-L6-v2`** via ONNX Runtime (int8 quantized).
-- 22.7M params, 384 dimensions, ~23MB on disk
-- <1ms per embedding on GPU, ~5-15ms on CPU
-- Highest STS (semantic textual similarity) score among small models: 78.95
-- Dependencies: `onnxruntime` + `tokenizers` (~50MB total, no PyTorch)
+**Model: `qwen3-embedding:0.6b`** via Ollama.
+- 0.6B params, 1024 dimensions, ~640MB on disk (Q8 quantized)
+- <5ms per embedding on GPU, ~10-50ms on CPU
+- STS score 86.57 — best-in-class, beats 7B+ models on semantic similarity
+- Supports MRL (Matryoshka) — can truncate to 256 or 128 dims if needed
+- Deployment: `ollama pull qwen3-embedding:0.6b`, then `POST /api/embed` — no Python deps needed
 - Apache 2.0 license
 
 #### Three components
 
 **1. Object identity embedding.** Built from name + visual description + tag phrases for ALL current tags. When any tag changes, rebuild the string and re-embed locally (~1ms). Broadcast a `changed` event.
 
-```
+Each tag maps to a short natural-language fragment (1-3 words) that reads well in a comma-separated list. No distinction between "static" and "dynamic" tags — all tags get phrases, any tag can change at any time.
+
+```python
 TAG_PHRASES = {
-    SHARP: "sharp",  RIGID: "rigid, hard",  LIVING: "alive, living creature",
-    HEAT_SOURCE: "burning, on fire",  FROZEN: "frozen, icy",  HOSTILE: "hostile, aggressive",
-    HEAVY: "heavy",  LIGHT: "lightweight",  BOUNCY: "bouncy, elastic",
-    BREAKABLE: "fragile, breakable",  STICKY: "sticky",  REFLECTIVE: "reflective, shiny",
-    EXPLOSIVE: "explosive, volatile",  FLYING: "flying, airborne",  WET: "wet, soaked",
-    FLAMMABLE: "flammable",  METALLIC: "metallic",  INSULATING: "insulating",
-    LIQUID: "liquid, flowing",  GAS: "gaseous, airy",  MOLTEN: "molten, glowing hot",
-    ELECTRIC: "electric, sparking",  MAGNETIC: "magnetic",  COLD: "cold, chilling",
-    ACIDIC: "acidic, corrosive",  TOXIC: "toxic, poisonous",  WIND_SOURCE: "windy, blowing",
-    HOT: "hot, radiating heat",  BRITTLE: "brittle",  CORRODED: "corroded, weakened",
-    GLOWING: "glowing",  ...
+    # LLM-visible tags
+    SHARP: "sharp-edged",         HEAVY: "very heavy",        LIGHT: "lightweight",
+    BOUNCY: "bouncy and elastic", BREAKABLE: "fragile",       STICKY: "sticky",
+    REFLECTIVE: "shiny",          EXPLOSIVE: "explosive",     FLYING: "flying",
+    LIVING: "alive",              WET: "wet and soaked",       HOSTILE: "hostile",
+    # Substance-derived
+    RIGID: "hard and rigid",      METALLIC: "metallic",       INSULATING: "insulating",
+    FLAMMABLE: "flammable",       LIQUID: "liquid",           GAS: "gaseous",
+    FROZEN: "frozen solid",       MOLTEN: "molten",
+    # Element-derived
+    HEAT_SOURCE: "on fire",       HOT: "hot",                 ELECTRIC: "electrified",
+    MAGNETIC: "magnetic",         COLD: "freezing cold",      ACIDIC: "corrosive",
+    TOXIC: "poisonous",           WIND_SOURCE: "generating wind",
+    # Internal (added by rules)
+    BRITTLE: "brittle",           CORRODED: "corroded",       GLOWING: "glowing",
 }
 
-embed_string = f"{name}, {visual_description}, {' '.join(TAG_PHRASES[t] for t in sorted(current_tags))}"
+SIZE_PHRASES = {"tiny": "tiny", "small": "small", "large": "large", "huge": "towering and huge"}
+# "medium" omitted (default, not worth mentioning)
+
+def build_embed_string(name, visual_description, size_category, current_tags):
+    parts = [name, visual_description]
+    if size_category in SIZE_PHRASES:
+        parts.append(SIZE_PHRASES[size_category])
+    parts.extend(TAG_PHRASES[t] for t in sorted(current_tags) if t in TAG_PHRASES)
+    return ", ".join(parts)
 ```
 
 No distinction between "static" and "dynamic" tags. All tags are treated the same. When Medusa petrifies a villager (removes LIVING, adds RIGID + BREAKABLE), the identity updates from `"Villager, a frightened peasant, alive, living creature"` to `"Villager, a frightened peasant, rigid, hard, fragile, breakable"`. Re-embed, broadcast. A wolf that was chasing the villager as prey loses the match — "alive, living creature" is gone.
@@ -186,9 +201,9 @@ Result: cop targets the donut.
 
 ---
 
-## Stage 1 — Backend
+## Implementation — Backend
 
-Replace the LLM schema and object creation pipeline. The Godot client works unchanged during this stage because V2 blueprints include backward-compatible `tags` and V1-format `behaviors`.
+Replace the LLM schema and object creation pipeline. Remove V1 behavior code (behaviors.py, DSL parser) as you go.
 
 ### 1. Substance + Element Data
 
@@ -276,8 +291,8 @@ Replace the LLM schema and object creation pipeline. The Godot client works unch
   - [ ] Remove: signature field and its validator
 - [ ] Update `GameObjectBlueprint` in `backend/app/models/blueprint.py`
   - [ ] Add: substance, element, substance_profile (dict), combat_profile (dict), identity_embedding (list[float]), behavior_embeddings (list[list[float]])
-  - [ ] `tags` field now computed by `derive_traits()` — backward-compatible with Godot client
-  - [ ] `behaviors` field: convert V2 verbs to V1 Behavior objects for Godot backward compat
+  - [ ] `tags` field computed by `derive_traits()` — used by rule engine
+  - [ ] `behaviors` field stores V2 BehaviorVerbSpecs directly (verb + target + embedding)
   - [ ] `starting_durability` now from substance profile instead of tag-based (50/150/200)
 - [ ] Replace `create_object()` in `backend/app/creator/agent.py`
   - [ ] New system prompt (~80 lines): substance menu (16), element menu (7), tag menu (~12), behavior verbs (6) with examples
@@ -287,31 +302,28 @@ Replace the LLM schema and object creation pipeline. The Godot client works unch
 - [ ] Remove `backend/app/models/behaviors.py` (V1 DSL parser — no longer needed)
 - [ ] Update `backend/app/models/tag_behaviors.py`
   - [ ] Only one implied behavior: `LIVING` with empty behaviors list → append `investigate → "interesting nearby objects"` (default wander). No other implied behaviors — the LLM controls all behavior.
-  - [ ] V2→V1 behavior conversion for Godot compat: destroy→MOVE_TOWARD+HOSTILE, eat→MOVE_TOWARD, flee→MOVE_AWAY, investigate→PATROL, follow→MOVE_TOWARD, protect→MOVE_TOWARD
 
 ### 4. Local Embedding Model
 
-- [ ] Add `onnxruntime` and `tokenizers` to dependencies (~50MB total, no PyTorch)
-- [ ] Download `all-MiniLM-L6-v2` ONNX model (int8 quantized, ~23MB) — store in `backend/models/` or download on first use
+- [ ] Ensure Ollama is available and pull `qwen3-embedding:0.6b` (~640MB)
 - [ ] Create `backend/app/embeddings.py`
-  - [ ] `EmbeddingModel` class — lazy-loads ONNX model + tokenizer on first call
-  - [ ] `embed_texts(texts: list[str]) -> list[list[float]]` — tokenize, run ONNX inference, mean pooling, L2 normalize. Returns 384-dim vectors.
-  - [ ] `TAG_PHRASES: dict[str, str]` — every tag mapped to a natural-language phrase. No static/dynamic distinction — all tags treated the same. Used by both backend (initial embed) and Godot (re-embed on tag change).
-  - [ ] `build_identity_text(name, visual_description, current_tags) -> str` — format: `"{name}, {visual_description}, {' '.join(TAG_PHRASES[t] for t in sorted(current_tags))}"`. Includes ALL current tags, not just initial ones.
-  - [ ] `compute_object_embeddings(output) -> tuple[list[float], list[list[float]]]` — embed identity text + all behavior target texts in one batch. Returns (identity_embedding, [target_embeddings]).
-  - [ ] `embed_identity(name, visual_description, current_tags) -> list[float]` — single identity re-embed, used by the `/api/embed` endpoint when Godot reports a tag change.
-  - [ ] If model loading fails: return zero vectors. Behaviors degrade to random/nearest targeting in Godot.
+  - [ ] `embed_texts(texts: list[str]) -> list[list[float]]` — call Ollama `POST /api/embed` with model `qwen3-embedding:0.6b`. Returns 1024-dim vectors. Batch all texts in one request.
+  - [ ] `TAG_PHRASES: dict[str, str]` — every tag mapped to a short natural-language phrase (see design section above). Used by both backend (initial embed) and Godot (re-embed on tag change via `/api/embed` endpoint).
+  - [ ] `SIZE_PHRASES: dict[str, str]` — size category → phrase ("tiny", "small", "large", "towering and huge"). Medium omitted.
+  - [ ] `build_embed_string(name, visual_description, size_category, current_tags) -> str` — format: `"{name}, {visual_description}, {size_phrase}, {tag phrases}"`. Includes ALL current tags.
+  - [ ] `compute_object_embeddings(output) -> tuple[list[float], list[list[float]]]` — build embed string + all behavior target texts, embed in one batch. Returns (identity_embedding, [target_embeddings]).
+  - [ ] If Ollama unavailable: return zero vectors. Behaviors degrade to random/nearest targeting in Godot.
 - [ ] Add `POST /api/embed` endpoint to `backend/app/routers/objects.py`
-  - [ ] Accepts: name, visual_description, current_tags
-  - [ ] Returns: 384-dim identity embedding
-  - [ ] Called by Godot client when any tag is added/removed at runtime (~1ms server-side)
+  - [ ] Accepts: name, visual_description, size_category, current_tags
+  - [ ] Returns: 1024-dim identity embedding
+  - [ ] Called by Godot client when any tag is added/removed at runtime (~5ms server-side)
 - [ ] Tests in `backend/tests/test_embeddings.py`
-  - [ ] Returns 384-dim normalized vectors
+  - [ ] Returns 1024-dim normalized vectors
   - [ ] Donut identity vs "food, especially donuts" → cosine similarity > 0.5
   - [ ] Donut identity vs "criminals and lawbreakers" → cosine similarity < 0.3
-  - [ ] "Wooden Spoon, a smooth cooking spoon, burning, on fire" vs "fires and burning things" → cosine similarity > 0.5
-  - [ ] "Wooden Spoon, a smooth cooking spoon, rigid, hard" vs "fires and burning things" → cosine similarity < 0.3
-  - [ ] Medusa test: "Villager, a peasant, alive, living creature" vs "prey animals" → high. After petrify: "Villager, a peasant, rigid, hard, fragile, breakable" vs "prey animals" → low.
+  - [ ] "Wooden Spoon, a smooth cooking spoon, on fire, hot" vs "fires and burning things" → high
+  - [ ] "Wooden Spoon, a smooth cooking spoon, hard and rigid" vs "fires and burning things" → low
+  - [ ] Medusa test: "Villager, a peasant, alive" vs "prey animals" → high. After petrify: "Villager, a peasant, hard and rigid, fragile" vs "prey animals" → low
 
 ### 5. Eval + Integration Tests
 
@@ -323,21 +335,20 @@ Replace the LLM schema and object creation pipeline. The Godot client works unch
   - [ ] "ice wall" → substance: ice, element: null, tags: []
   - [ ] "rubber duck" → substance: rubber, element: null, tags: [LIGHT]
 - [ ] Add substance/element accuracy metrics
-- [ ] End-to-end: POST `/api/sessions/{id}/objects` returns blueprint with substance_profile, combat_profile, identity_embedding, and backward-compatible tags
+- [ ] End-to-end: POST `/api/sessions/{id}/objects` returns blueprint with substance_profile, combat_profile, identity_embedding, behavior_embeddings
 - [ ] `make check` passes
 
-### Stage 1 done when
+### Backend done when
 
 - [ ] V2 agent produces valid blueprints for 20+ objects
-- [ ] V2-derived traits match V1 expected tags for >80% of eval cases
 - [ ] Embedding similarities pass spot checks
-- [ ] Existing Godot client works unchanged (backward-compatible tags + V1-format behaviors in blueprint)
+- [ ] `make check` passes
 
 ---
 
-## Stage 2 — Godot + Cleanup
+## Implementation — Godot
 
-Make the Godot client consume V2 data: substance-based physics, verb behavior system with embedding targeting, parameterized rules. Then remove V1 code.
+Consume V2 blueprint data: substance-based physics, verb behavior system with embedding targeting, parameterized rules. Remove V1 Godot code (behavior_executor.gd, behavior_maps.gd, tag_physics_map.gd) as you go.
 
 ### 6. Substance-Based Physics
 
@@ -358,7 +369,7 @@ Two layers: event-driven target matching (perception) + per-frame movement (acti
 
 - [ ] Extract `godot/scripts/systems/movement_utils.gd` from `behavior_executor.gd`
   - [ ] `apply_movement_force()`, `apply_patrol()`, friction compensation, velocity clamping
-- [ ] Expose re-embedding endpoint on backend: `POST /api/embed` accepts identity text, returns 384-dim vector (~1ms local inference)
+- [ ] Expose re-embedding endpoint on backend: `POST /api/embed` accepts name + visual_description + size_category + current_tags, returns 1024-dim vector (~5ms via Ollama)
 - [ ] Create `godot/scripts/systems/verb_behavior_system.gd`
   - [ ] **Perception layer (event-driven, no polling):**
     - Store behavior target embeddings from blueprint (immutable, cached at spawn)
@@ -369,11 +380,11 @@ Two layers: event-driven target matching (perception) + per-frame movement (acti
   - [ ] **Action layer (per-frame):**
     - For each behavior in list order (priority): if target list non-empty, pick nearest by distance, execute verb, break
     - Verb execution: destroy (move+melee), eat (move+consume+heal), investigate (move slowly, stop at 128px), follow (move, maintain 64px), protect (follow+attack threats), flee (move away)
-  - [ ] Error handling: 5 consecutive errors disables behavior (same as V1 BehaviorExecutor)
+  - [ ] Error handling: 5 consecutive errors disables behavior
 - [ ] Update `game_object.gd`
   - [ ] Store `identity_embedding` as var. Expose `get_identity_embedding()`.
-  - [ ] `TAG_PHRASES` dict mapping every tag to a natural language phrase
-  - [ ] `_rebuild_and_reembed()`: rebuild embed string from `"{name}, {visual_description}, {tag phrases for all current tags}"`, call backend `/api/embed`, update cached vector, emit `object_embedding_changed` signal
+  - [ ] `TAG_PHRASES` and `SIZE_PHRASES` dicts (mirror of backend constants)
+  - [ ] `_rebuild_and_reembed()`: rebuild embed string via `build_embed_string(name, visual_description, size_category, current_tags)`, call backend `POST /api/embed`, update cached vector, emit `object_embedding_changed` signal
   - [ ] Call `_rebuild_and_reembed()` on any `add_tag()` or `remove_tag()` call
   - [ ] Attach VerbBehaviorSystem when blueprint has behavior_embeddings
 - [ ] Remove `behavior_executor.gd` and `behavior_maps.gd`
@@ -408,7 +419,7 @@ Pattern for each: add Tag value → add trait_deriver mapping → build Godot co
 
 ### 10. Cleanup + Docs
 
-- [ ] Remove V1 code: old system prompt, `CreatorOutputSpec.signature`, V1 implied behaviors, V1→V2 behavior conversion shims, old `LLM_VISIBLE_TAGS`
+- [ ] Remove V1 code: old system prompt, `CreatorOutputSpec.signature`, old implied behaviors, old `LLM_VISIBLE_TAGS`
 - [ ] Remove obsolete `TAG_CONTRADICTIONS` pairs (substance/element structure prevents them)
 - [ ] Remove obsolete `TAG_AUTO_CORRECTIONS` entries
 - [ ] Update CLAUDE.md, ARCHITECTURE.md, GAME_DESIGN.md
@@ -423,7 +434,7 @@ Pattern for each: add Tag value → add trait_deriver mapping → build Godot co
 - [ ] Medusa petrification test: wolf loses petrified villager from target list (LIVING removed → re-embed → match drops)
 - [ ] Greatsword deals more damage than dagger (parameterized rules)
 - [ ] All existing levels playable
-- [ ] No V1 behavior code remains
+- [ ] Old behavior code removed (behaviors.py, behavior_executor.gd, behavior_maps.gd, tag_physics_map.gd)
 - [ ] Docs updated
 
 ---
@@ -446,17 +457,19 @@ HOSTILE is also auto-derived from having a `destroy` verb, but stays LLM-visible
 
 ### Embedding model
 
-`all-MiniLM-L6-v2` via ONNX Runtime (int8 quantized).
-- 22.7M params, 384 dimensions, ~23MB on disk
-- <1ms per embedding on GPU, ~5-15ms on CPU
-- Dependencies: `onnxruntime` + `tokenizers` (~50MB, no PyTorch)
+`qwen3-embedding:0.6b` via Ollama.
+- 0.6B params, 1024 dimensions, ~640MB on disk (Q8)
+- <5ms per embedding on GPU, ~10-50ms on CPU
+- STS score 86.57 — best-in-class semantic similarity, beats 7B+ models
+- Supports MRL — truncate to 256/128 dims if needed
+- Deployment: `ollama pull qwen3-embedding:0.6b` + `POST /api/embed`
 - Apache 2.0 license
 
 ### Embedding architecture
 
 **Event-driven, not polling.** No per-frame scanning. Matching runs only when objects enter the scene or their tags change.
 
-- Object identity = `"{name}, {visual_description}, {tag phrases for ALL current tags}"`. Re-embedded locally on any tag change (~1ms).
+- Object identity = `"{name}, {visual_description}, {size_phrase}, {tag phrases for ALL current tags}"`. Re-embedded locally on any tag change (~5ms via Ollama).
 - Behavior targets = embedded once at creature spawn, cached forever.
 - Tag phrases cover every tag equally — no static/dynamic distinction. Any tag can change at any time (Medusa petrifies a villager → LIVING removed, RIGID added → identity re-embedded → wolves lose it from target list).
 - Matching: dot product of changed object against all behavior vectors. Above threshold → added to target list. Below → removed.
@@ -467,20 +480,21 @@ HOSTILE is also auto-derived from having a `destroy` verb, but stays LLM-visible
 **Fire sword** — `substance: metal, element: burning, tags: [SHARP]`
 → internal traits: [HEAT_SOURCE, HOT, METALLIC, RIGID, SHARP]
 → mass: 3.0, durability: 250, melee_damage: 50, fire_dps_coeff: 10
-→ identity: "Fire Sword, a gleaming blade wreathed in flame, metallic, rigid, sharp, burning, on fire, hot, radiating heat"
+→ identity: `"Fire Sword, a gleaming blade wreathed in flame, sharp-edged, metallic, hard and rigid, on fire, hot"`
 
 **Cop** — `substance: flesh, element: null, tags: [LIVING], behaviors: [eat→"food, especially donuts", destroy→"criminals", flee→"ghosts"]`
 → internal traits: [HOSTILE, LIVING] (HOSTILE from destroy verb)
 → behaviors in priority order: eat first (donut-obsessed), then destroy, then flee
-→ identity: "Officer Johnson, a stern police officer in blue uniform, alive, living creature, hostile, aggressive"
+→ identity: `"Officer Johnson, a stern police officer in blue uniform, alive, hostile"`
 
 **Dagger vs greatsword** — both `substance: metal, tags: [SHARP]`, but dagger is size=small (mass 1.5) and greatsword is size=large + [SHARP, HEAVY] (mass 8.0)
-→ dagger melee_damage: 25, greatsword melee_damage: 60
+→ dagger: `"Rusty Dagger, a short pitted blade, small, sharp-edged, metallic, hard and rigid"` → melee_damage: 25
+→ greatsword: `"Enchanted Greatsword, a massive glowing blade, large, sharp-edged, very heavy, metallic, hard and rigid"` → melee_damage: 60
 
 **Firefighter + burning tree** — firefighter has `destroy → "fires and burning things"`.
-Tree identity starts as: "Oak Tree, a tall tree with green leaves, flammable" → low match.
-Fire rule adds HEAT_SOURCE + HOT → re-embed: "Oak Tree, a tall tree with green leaves, flammable, burning, on fire, hot, radiating heat" → high match → firefighter adds tree to target list.
-Firefighter extinguishes it → tags removed → re-embed: back to low match → tree removed from target list.
+Tree identity starts as: `"Oak Tree, a tall tree with green leaves, large, flammable"` → low match.
+Fire rule adds HEAT_SOURCE + HOT → re-embed: `"Oak Tree, a tall tree with green leaves, large, flammable, on fire, hot"` → high match → firefighter adds tree to target list.
+Firefighter extinguishes it → tags removed → re-embed → back to low match → tree removed from target list.
 
-**Medusa petrifies villager** — villager identity: "Villager, a frightened peasant, alive, living creature" → wolf has `eat → "prey animals"` → high match.
-Medusa removes LIVING, adds RIGID + BREAKABLE → re-embed: "Villager, a frightened peasant, rigid, hard, fragile, breakable" → wolf's match drops → villager removed from wolf's target list.
+**Medusa petrifies villager** — villager identity: `"Villager, a frightened peasant in brown clothes, alive"` → wolf has `eat → "prey animals"` → high match.
+Medusa removes LIVING, adds RIGID + BREAKABLE → re-embed: `"Villager, a frightened peasant in brown clothes, hard and rigid, fragile"` → wolf's match drops → villager removed from wolf's target list.
