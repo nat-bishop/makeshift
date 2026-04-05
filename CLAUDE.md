@@ -55,9 +55,9 @@ uv run pytest -k "test_name"              # single test by name
 
 - **Substance system** (`models/substances.py`, `engine/trait_deriver.py`): V2 foundation. LLM picks 1 `Substance` (16 options: metal, wood, stone, glass, rubber, bone, ceramic, cloth, water, oil, slime, ice, lava, fire, smoke, flesh) and 0-1 `Element` (7 options: burning, electric, magnetic, freezing, acidic, toxic, windy). `SUBSTANCE_PROFILES` dict: mass, durability, friction, conductivity, burn_rate, specific_heat, heat_output, state. `SUBSTANCE_AUTO_TRAITS` maps substance → tag list. `ELEMENT_TRAITS` maps element → tag list. `derive_traits(substance, element, tags, behavior_verbs)` merges all three + behavior-derived traits (destroy verb → HOSTILE). `resolve_profile()` applies element overrides + tag modifiers (HEAVY, LIGHT, BOUNCY, STICKY, FLYING) to produce final `SubstanceProfile`. `compute_combat_profile()` derives melee/crush damage from mass + heat output.
 
-- **Behavior system** (`models/blueprint.py`, `models/tag_behaviors.py`): V2 verb-based. LLM outputs 0-4 `BehaviorVerbSpec` items (verb + freeform target string). Verbs: destroy, eat, investigate, follow, protect, flee. `resolve_implied_behaviors()` adds one default only: LIVING with no behaviors → `investigate → "interesting nearby objects"`. `BehaviorVerbSpec.target` embedded at creation time for semantic matching client-side.
+- **Behavior system** (`models/blueprint.py`, `models/tag_behaviors.py`): V2 verb-based. LLM outputs 0-4 `BehaviorVerbSpec` items (verb + freeform target string + `target_tags: list[Tag]`, 0-3 tags the target must have). Verbs: destroy, eat, investigate, follow, protect, flee. `resolve_implied_behaviors()` adds one default only: LIVING with no behaviors → `investigate → "interesting nearby objects"`. Behaviors compiled at creation time into `compiled_behaviors: list[dict]` (each entry: verb, target, target_embedding, require_any_tags, exclude_tags) stored in `GameObjectBlueprint`.
 
-- **Embedding system** (`embeddings.py`): Ollama `qwen3-embedding:0.6b` at `http://127.0.0.1:11434`. `build_embed_string()` builds natural-language identity string from name + visual description + size + tag phrases. `compute_object_embeddings()` batches identity + all behavior targets in one request → 1024-dim vectors stored in blueprint. Graceful degradation: unavailable Ollama → zero vectors (behaviors degrade to nearest targeting).
+- **Embedding system** (`embeddings.py`): Ollama `qwen3-embedding:0.6b` at `http://127.0.0.1:11434`. `build_identity_string()` builds natural-language identity string from name + visual description + substance + size (no tags). `build_target_query()` wraps behavior target strings with instructed-retrieval prefix for asymmetric matching. `compute_object_embeddings(substance=)` batches identity + all behavior targets in one request → 1024-dim vectors stored in blueprint. Identity embeddings are stable (computed once at creation, never re-embedded). Graceful degradation: unavailable Ollama → zero vectors (tag-filter behaviors still work; embedding-only behaviors degrade to no targeting).
 
 - **Rule engine** (`engine/resolver.py`, `engine/rules_data.py`): `RuleResolver` — two-tier matching (O(1) pair index + O(n) wildcard scan). 59 rules, ~28 annotated `trigger_mode=TriggerMode.FIELD`. `InteractionRule.execution_order` (int, higher fires first). `TriggerMode` StrEnum (CONTACT | FIELD) on `InteractionRule` — default CONTACT. Mirrored client-side in Godot's `RuleEngine` autoload. 6 `EffectType` primitives: DAMAGE, HEAL, ADD_TAG, REMOVE_TAG, APPLY_FORCE, APPLY_SLOW.
 
@@ -73,7 +73,7 @@ uv run pytest -k "test_name"              # single test by name
 
 | Autoload | Purpose |
 |----------|---------|
-| `EventBus` | Central signal bus (17 signals: interaction_triggered, object_created, sprite_ready, sprite_failed, level_completed, creation_requested, creation_failed, placement_started, placement_ended, debug_toggled, player_died, player_damaged, player_healed, effect_applied, object_entered_scene, object_exited_scene, object_embedding_changed) |
+| `EventBus` | Central signal bus (17 signals: interaction_triggered, object_created, sprite_ready, sprite_failed, level_completed, creation_requested, creation_failed, placement_started, placement_ended, debug_toggled, player_died, player_damaged, player_healed, effect_applied, object_entered_scene, object_exited_scene, object_tags_changed) |
 | `Backend` | HTTP + WebSocket client, session persistence, sprite cache, 10s sync timer |
 | `GameManager` | Game state (MENU/PLAYING/PAUSED), level management, scene transitions, `debug_mode` flag (toggled by `toggle_debug` input, emits `debug_toggled`) |
 | `RuleEngine` | Client-side rule matching (mirrors backend resolver) |
@@ -87,7 +87,7 @@ uv run pytest -k "test_name"              # single test by name
 | `PhysicsApplicator` | `scenes/game_object/physics_applicator.gd` | V2: reads physics from blueprint's `substance_profile` via `PhysicsComposer.compose_physics_v2()`. Mass = `substance_mass × size_mass_multiplier` |
 | `PhysicsComposer` | `scripts/systems/physics_composer.gd` | Size multipliers (tiny 0.25×…huge 10×), `DEFAULT_DAMPING=0.5`. V2: `compose_physics_v2()` delegates to `SubstancePhysics.resolve_physics()` |
 | `SubstancePhysics` | `scripts/data/substance_physics.gd` | V2: reads `substance_profile` from blueprint dict → resolves gravity/damping/friction/bounce/mass. State-derived defaults: solid(1.0, 0.5), liquid(1.0, 2.0), gas(-0.2, 4.0), energy(0.0, 0.0) |
-| `VerbBehaviorSystem` | `scripts/systems/verb_behavior_system.gd` | V2: per-object behavior runtime. Event-driven perception (object_entered/exited/embedding_changed signals) + dot-product matching against behavior embeddings. Action layer executes highest-priority verb with targets per frame. Disables after 5 errors |
+| `VerbBehaviorSystem` | `scripts/systems/verb_behavior_system.gd` | V2: per-object behavior runtime. Event-driven perception (object_entered/exited/tags_changed signals). Two-mode target matching: tag-filter mode (require_any_tags set → pure tag match, embedding ignored) or embedding mode (no tag requirements → dot-product ≥ 0.5 against target_embedding). `init_behaviors()` takes `compiled_behaviors: Array`. Action layer executes highest-priority verb with targets per frame. Disables after 5 errors |
 | `TagField` | `scripts/systems/tag_field.gd` | Per-object Area2D field: continuous per-frame forces + periodic 2s rule eval |
 | `FieldConfig` | `scripts/data/field_config.gd` | Maps field-emitting tags → range category + mode |
 | `TagDecay` | `scripts/systems/tag_decay.gd` | Node component managing temporary-tag timers for `GameObject` and `EnvironmentBody`. Extracted from both to avoid duplication |
@@ -107,14 +107,13 @@ uv run pytest -k "test_name"              # single test by name
 | GET | `/api/sessions/{id}` | Restore session |
 | PUT | `/api/sessions/{id}/sync` | Batch state sync from client |
 | POST | `/api/sessions/{id}/objects` | Create object from description |
-| POST | `/api/embed` | Re-embed object identity after tag changes (~5ms via Ollama) |
 | GET | `/api/rules` | Download rules (ETag caching) |
 | GET | `/health` | Health check |
 | WS | `/ws/{session_id}` | Sprite delivery + keepalive |
 
 ## Data Model Flow
 
-`CreatorOutput` (LLM output: name, substance, element, 0-3 tags, 0-4 `BehaviorVerbSpec`, `visual_descriptor`) → `resolve_implied_behaviors()` → `derive_traits(substance, element, tags, verbs)` → `resolve_profile()` → `compute_combat_profile()` → `compute_object_embeddings()` → `GameObjectBlueprint` (adds id, `starting_durability`, full trait list, `substance_profile`, `combat_profile`, `identity_embedding`, `behavior_embeddings`) → persisted as `objects` table row (`blueprint_json` column). `VisualDescriptor`: `visual_description: str` (sprite prompt only) + `size_category` (world display size). Ollama must be running for non-zero embeddings.
+`CreatorOutput` (LLM output: name, substance, element, 0-3 tags, 0-4 `BehaviorVerbSpec` [verb + target + target_tags], `visual_descriptor`) → `resolve_implied_behaviors()` → `derive_traits(substance, element, tags, verbs)` → `resolve_profile()` → `compute_combat_profile()` → `compute_object_embeddings(substance=)` → compile `compiled_behaviors` list → `GameObjectBlueprint` (adds id, `starting_durability`, full trait list, `substance_profile`, `combat_profile`, `identity_embedding`, `compiled_behaviors`) → persisted as `objects` table row (`blueprint_json` column). `VisualDescriptor`: `visual_description: str` (sprite prompt only) + `size_category` (world display size). Ollama must be running for non-zero embeddings; tag-filter behaviors work regardless.
 
 ## Environment
 
@@ -160,7 +159,7 @@ Requires `.env` file (see `.env.example`):
 - `creator/agent.py` SYSTEM_PROMPT substance/element tables reflect `SUBSTANCE_AUTO_TRAITS` and `ELEMENT_TRAITS` — if those change, update the prompt tables to match
 - `VerbBehaviorSystem` disables itself after 5 consecutive action errors to prevent runaway behavior on bad data
 - Behavior-added tags (via rule `ADD_TAG` effect) have a 10s duration (`EffectExecutor.DYNAMIC_TAG_DURATION`); decay managed by the `TagDecay` child node
-- `VerbBehaviorSystem` uses dot-product similarity (threshold 0.5) against pre-computed behavior embeddings to identify targets. When Ollama is unavailable, embeddings are zero vectors → no semantic targeting, all `_target_lists` remain empty
+- `VerbBehaviorSystem` two-mode matching: if `require_any_tags` is set on a behavior, targeting is pure tag filter (embedding ignored, works without Ollama). If no tag requirements, targeting uses dot-product ≥ 0.5 against `target_embedding`. When Ollama is unavailable, embedding-mode behaviors produce no targets; tag-filter behaviors are unaffected.
 - `ObjectVisual.set_sprite()` is guarded by `_sprite_applied: bool` — prevents double application when cache hit races with late `sprite_ready`. Sets texture + scale directly (no tween)
 - `body_entered` collision handling is deferred via `call_deferred("_resolve_deferred", body)` — resolving collisions directly in the signal callback crashes Godot with "Can't change state while flushing queries" because resolution can chain into `add_tag` → `_reapply_physics` → new shapes
 - `CollisionResolver` uses per-chain deduplication (not cooldowns): `_resolved` dict passed through cascade, keyed `"idA:idB:trigger_mode_filter"`. Top-level calls start with a fresh dict; cascades inherit it. Same pair can't fire twice in one resolution chain but can fire again from an independent collision. FIELD and CONTACT interactions dedup independently (different key suffixes).
