@@ -40,10 +40,10 @@ class SubstanceProfile(BaseModel):
     specific_heat: float
     heat_output: float
     state: SubstanceState
-    # Physics fields resolved later (not part of base substance data)
-    gravity: float = -1.0  # -1 = use state default
+    # Physics fields (resolved by resolve_profile from state defaults + tag modifiers)
+    gravity: float = 0.0
     bounce: float = 0.0
-    damping: float = -1.0  # -1 = use state default
+    damping: float = 0.0
 
 
 SUBSTANCE_PROFILES: dict[Substance, SubstanceProfile] = {

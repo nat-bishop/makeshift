@@ -1,4 +1,4 @@
-"""Tests for V2 trait derivation: substance + element + tags → traits + profiles."""
+"""Tests for trait derivation: substance + element + tags → traits + profiles."""
 
 from app.engine.trait_deriver import compute_combat_profile, derive_traits, resolve_profile
 from app.models.substances import Element, Substance

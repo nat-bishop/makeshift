@@ -1,6 +1,6 @@
 class_name BehaviorDisplay
 
-## V2: format verb+target behavior for display.
+## Format verb+target behavior for display.
 
 const VERB_PHRASES: Dictionary = {
 	"destroy": "Attacks %s",

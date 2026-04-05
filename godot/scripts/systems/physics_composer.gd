@@ -27,10 +27,5 @@ static func get_size_mass_multiplier(size_category: String) -> float:
 	return SIZE_MASS_MULTIPLIER.get(size_category, 1.0)
 
 
-static func compose_physics_v2(blueprint: Dictionary) -> Dictionary:
-	## Read pre-computed physics from substance_profile in blueprint.
-	return SubstancePhysics.resolve_physics(blueprint)
-
-
 static func get_size_data(size_category: String) -> Dictionary:
 	return SIZE_TO_PHYSICS.get(size_category, SIZE_TO_PHYSICS["medium"])

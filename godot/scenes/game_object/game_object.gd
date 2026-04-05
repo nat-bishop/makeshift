@@ -7,7 +7,7 @@ var _tag_manager: TagManager = null
 var _behavior_system: Node = null
 var _tag_field: Node = null
 
-# V2: embedding for semantic targeting
+# Embedding for semantic targeting
 var _identity_embedding: Array = []
 var _embed_dirty: bool = false
 
@@ -38,7 +38,7 @@ func init_from_blueprint(bp: Dictionary) -> void:
 
 	current_durability = bp.get("starting_durability", 150)
 
-	# V2: substance-based physics
+	# Substance-based physics
 	physics_applicator.apply_from_blueprint(bp)
 	object_visual.set_object_id(object_id)
 	object_visual.init_programmatic_anims(tags)
@@ -48,10 +48,10 @@ func init_from_blueprint(bp: Dictionary) -> void:
 	if "LIVING" in tags:
 		add_to_group("living")
 
-	# V2: store identity embedding
+	# Store identity embedding
 	_identity_embedding = bp.get("identity_embedding", [])
 
-	# V2: verb behavior system (replaces behavior_executor)
+	# Verb behavior system
 	var behaviors: Array = bp.get("behaviors", [])
 	var behavior_embeddings: Array = bp.get("behavior_embeddings", [])
 	if not behaviors.is_empty() and not behavior_embeddings.is_empty():
@@ -156,7 +156,7 @@ func _on_tags_changed(_updated_tags: Array[String]) -> void:
 	object_visual.refresh_tag_visuals(tags)
 	if _tag_field != null:
 		_tag_field.on_tags_changed(tags)
-	# V2: debounced re-embed — coalesce multiple tag changes per frame
+	# Debounced re-embed — coalesce multiple tag changes per frame
 	if not _embed_dirty:
 		_embed_dirty = true
 		call_deferred("_rebuild_and_reembed")
@@ -179,10 +179,12 @@ func _create_tag_field(current_tags: Array) -> void:
 
 
 func _reapply_physics() -> void:
-	# V2: re-apply from blueprint (substance profile doesn't change, but tags might
-	# affect physics via tag modifiers — however these are baked into the profile at
-	# creation. For now, just re-apply the original profile.)
-	physics_applicator.apply_from_blueprint(blueprint)
+	# Re-resolve physics with current tags (tag modifiers like HEAVY/LIGHT/FLYING
+	# affect mass, gravity, friction, bounce, damping at runtime)
+	var base_physics: Dictionary = SubstancePhysics.resolve_physics(blueprint)
+	var modified: Dictionary = SubstancePhysics.apply_tag_modifiers(base_physics, tags)
+	var size_category: String = blueprint.get("visual_descriptor", {}).get("size_category", "medium")
+	physics_applicator.apply_physics(modified, size_category)
 
 
 func _rebuild_and_reembed() -> void:

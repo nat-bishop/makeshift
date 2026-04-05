@@ -42,8 +42,8 @@ class Tag(StrEnum):
     HOSTILE = "HOSTILE"
 
 
-# V2: LLM picks 0-3 tags from this set. Substance/element absorb the rest.
-LLM_VISIBLE_TAGS_V2: frozenset[Tag] = frozenset({
+# LLM picks 0-3 tags from this set. Substance/element absorb the rest.
+LLM_VISIBLE_TAGS: frozenset[Tag] = frozenset({
     Tag.SHARP,
     Tag.HEAVY,
     Tag.LIGHT,

@@ -1,4 +1,4 @@
-"""Tests for V2 blueprint models: CreatorOutput validation, GameObjectBlueprint."""
+"""Tests for blueprint models: CreatorOutput validation, GameObjectBlueprint."""
 
 import pytest
 from app.models.blueprint import (
@@ -74,13 +74,13 @@ class TestCreatorOutput:
                 visual_descriptor=_make_visual(),
             )
 
-    def test_invalid_v2_tag_raises(self) -> None:
+    def test_invalid_llm_tag_raises(self) -> None:
         """Tags absorbed by substance (RIGID, METALLIC, etc.) should be rejected."""
         with pytest.raises(ModelRetry):
             CreatorOutput(
                 name="Sword",
                 substance=Substance.METAL,
-                tags=[Tag.RIGID],  # RIGID not in V2 visible set
+                tags=[Tag.RIGID],  # RIGID not in LLM visible set
                 visual_descriptor=_make_visual(),
             )
 
@@ -171,7 +171,7 @@ class TestGameObjectBlueprint:
         bp = self._make_blueprint(starting_durability=250)
         assert bp.starting_durability == 250
 
-    def test_serialization_includes_v2_fields(self) -> None:
+    def test_serialization_includes_all_fields(self) -> None:
         bp = self._make_blueprint()
         data = bp.model_dump(mode="json")
         assert "substance" in data

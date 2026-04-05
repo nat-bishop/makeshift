@@ -13,13 +13,13 @@ func _ready() -> void:
 
 
 func apply_from_blueprint(bp: Dictionary) -> void:
-	## V2: read physics from pre-computed substance_profile in blueprint.
-	var physics: Dictionary = PhysicsComposer.compose_physics_v2(bp)
+	## Read physics from pre-computed substance_profile in blueprint.
+	var physics: Dictionary = SubstancePhysics.resolve_physics(bp)
 	var size_category: String = bp.get("visual_descriptor", {}).get("size_category", "medium")
-	_apply_physics(physics, size_category)
+	apply_physics(physics, size_category)
 
 
-func _apply_physics(physics: Dictionary, size_category: String) -> void:
+func apply_physics(physics: Dictionary, size_category: String) -> void:
 	var size_mass_mult: float = PhysicsComposer.get_size_mass_multiplier(size_category)
 	_body.mass = physics["mass"] * size_mass_mult
 	_body.gravity_scale = physics["gravity"]

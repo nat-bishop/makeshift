@@ -77,7 +77,7 @@ async def test_fallback_no_behaviors() -> None:
     assert bp.behaviors == []
 
 
-async def test_success_returns_v2_blueprint() -> None:
+async def test_success_returns_blueprint() -> None:
     output = _sample_creator_output()
     with patch("app.creator.agent._get_agent", return_value=_mock_agent_success(output)):
         bp = await create_object("fire sword")

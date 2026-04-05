@@ -393,7 +393,7 @@ func _request(method: int, path: String, body: Dictionary = {}, extra_headers: P
 	return result
 
 
-# --- V2 Embedding ---
+# --- Embedding ---
 
 func post_embed(body: Dictionary, callback: Callable) -> void:
 	## Call POST /api/embed to re-embed an object's identity after tag changes.

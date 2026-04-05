@@ -7,15 +7,15 @@ import structlog
 from pydantic import BaseModel, Field, field_validator
 
 from app.models.substances import Element, Substance
-from app.models.tags import LLM_VISIBLE_TAGS_V2, TAG_DESCRIPTIONS, Tag
+from app.models.tags import LLM_VISIBLE_TAGS, TAG_DESCRIPTIONS, Tag
 
 logger = structlog.get_logger()
 
 # Pre-computed constants for tag validation
-_V2_TAG_VALUES: frozenset[str] = frozenset(t.value for t in LLM_VISIBLE_TAGS_V2)
-_V2_TAG_HELP: str = "\n".join(
+_LLM_TAG_VALUES: frozenset[str] = frozenset(t.value for t in LLM_VISIBLE_TAGS)
+_LLM_TAG_HELP: str = "\n".join(
     f"  {tag.value} — {TAG_DESCRIPTIONS[tag]}"
-    for tag in sorted(LLM_VISIBLE_TAGS_V2, key=lambda t: t.value)
+    for tag in sorted(LLM_VISIBLE_TAGS, key=lambda t: t.value)
 )
 
 
@@ -43,7 +43,7 @@ class VisualDescriptor(BaseModel):
 
 
 class CreatorOutput(BaseModel):
-    """V2 LLM output: substance + element + tags + behaviors."""
+    """LLM output: substance + element + tags + behaviors."""
 
     name: str
     substance: Substance
@@ -69,8 +69,8 @@ class CreatorOutput(BaseModel):
 
     @field_validator("tags", mode="before")
     @classmethod
-    def validate_v2_tags(cls, tags: list) -> list:
-        """Only allow V2 LLM-visible tags."""
+    def validate_llm_tags(cls, tags: list) -> list:
+        """Only allow LLM-visible tags."""
         from pydantic_ai import ModelRetry
 
         result = []
@@ -80,9 +80,9 @@ class CreatorOutput(BaseModel):
             if val in seen:
                 continue
             seen.add(val)
-            if val not in _V2_TAG_VALUES:
+            if val not in _LLM_TAG_VALUES:
                 raise ModelRetry(
-                    f"Tag '{t}' is not available. V2 tags (pick 0-3):\n{_V2_TAG_HELP}"
+                    f"Tag '{t}' is not available. Available tags (pick 0-3):\n{_LLM_TAG_HELP}"
                 )
             result.append(val)
         return result
@@ -94,7 +94,7 @@ class GameObjectBlueprint(BaseModel):
     id: str
     name: str
     description: str
-    # V2 fields
+    # Substance/element fields
     substance: Substance
     element: Element | None = None
     tags: list[Tag]

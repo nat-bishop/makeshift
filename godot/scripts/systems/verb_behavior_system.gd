@@ -1,6 +1,6 @@
 extends Node
 
-## V2 Verb Behavior System — event-driven targeting + per-frame verb execution.
+## Verb Behavior System — event-driven targeting + per-frame verb execution.
 ##
 ## Perception layer: listens for object enter/exit/embedding_changed events.
 ##   Maintains per-behavior target lists via dot-product matching.

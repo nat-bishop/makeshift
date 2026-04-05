@@ -2,7 +2,7 @@ extends Node
 
 # Applies rule effects to game objects.
 # Called by CollisionResolver for each matched rule.
-# V2: reads combat_profile/substance_profile from blueprints for parameterized damage.
+# Reads combat_profile/substance_profile from blueprints for parameterized damage.
 
 const DYNAMIC_TAG_DURATION: float = 10.0
 
@@ -93,7 +93,7 @@ func _apply_effect(effect_type: String, effect: Dictionary, target: Node, body_a
 
 
 func _resolve_damage(effect: Dictionary, body_a: Node, body_b: Node, target: Node, rule_id: String = "") -> float:
-	## V2: parameterized damage from combat_profile/substance_profile.
+	## Parameterized damage from combat_profile/substance_profile.
 	var base_amount: float = effect.get("damage_amount", 0.0)
 
 	# Get source and target blueprints
@@ -127,7 +127,7 @@ func _resolve_damage(effect: Dictionary, body_a: Node, body_b: Node, target: Nod
 
 
 func _resolve_force(effect: Dictionary, body_a: Node, body_b: Node, target: Node, rule_id: String = "") -> float:
-	## V2: parameterized force from substance_profile.
+	## Parameterized force from substance_profile.
 	var base_magnitude: float = effect.get("force_magnitude", 100.0)
 
 	var target_bp: Dictionary = target.blueprint if target.has_method("get_blueprint") else {}

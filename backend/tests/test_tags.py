@@ -1,7 +1,7 @@
-"""Tests for the V2 tag system: enum completeness, contradictions, V2 visible set."""
+"""Tests for the tag system: enum completeness, contradictions, LLM visible set."""
 
 from app.models.tags import (
-    LLM_VISIBLE_TAGS_V2,
+    LLM_VISIBLE_TAGS,
     TAG_CONTRADICTIONS,
     Tag,
 )
@@ -12,26 +12,26 @@ def test_tag_count():
     assert len(Tag) == 31
 
 
-def test_v2_visible_tag_count():
-    """V2 LLM picks from 12 tags."""
-    assert len(LLM_VISIBLE_TAGS_V2) == 12
+def test_llm_visible_tag_count():
+    """LLM picks from 12 tags."""
+    assert len(LLM_VISIBLE_TAGS) == 12
 
 
-def test_v2_tags_are_subset_of_all_tags():
-    for tag in LLM_VISIBLE_TAGS_V2:
+def test_llm_tags_are_subset_of_all_tags():
+    for tag in LLM_VISIBLE_TAGS:
         assert tag in Tag
 
 
-def test_internal_tags_not_in_v2():
-    assert Tag.HOT not in LLM_VISIBLE_TAGS_V2
-    assert Tag.GLOWING not in LLM_VISIBLE_TAGS_V2
-    assert Tag.BRITTLE not in LLM_VISIBLE_TAGS_V2
-    assert Tag.CORRODED not in LLM_VISIBLE_TAGS_V2
-    # Substance-absorbed tags not in V2
-    assert Tag.RIGID not in LLM_VISIBLE_TAGS_V2
-    assert Tag.METALLIC not in LLM_VISIBLE_TAGS_V2
-    assert Tag.LIQUID not in LLM_VISIBLE_TAGS_V2
-    assert Tag.FLAMMABLE not in LLM_VISIBLE_TAGS_V2
+def test_internal_tags_not_in_llm_visible():
+    assert Tag.HOT not in LLM_VISIBLE_TAGS
+    assert Tag.GLOWING not in LLM_VISIBLE_TAGS
+    assert Tag.BRITTLE not in LLM_VISIBLE_TAGS
+    assert Tag.CORRODED not in LLM_VISIBLE_TAGS
+    # Substance-absorbed tags not in LLM visible set
+    assert Tag.RIGID not in LLM_VISIBLE_TAGS
+    assert Tag.METALLIC not in LLM_VISIBLE_TAGS
+    assert Tag.LIQUID not in LLM_VISIBLE_TAGS
+    assert Tag.FLAMMABLE not in LLM_VISIBLE_TAGS
 
 
 def test_contradiction_pairs_are_frozensets_of_two():

@@ -1,4 +1,4 @@
-"""Tests for V2 embedding system."""
+"""Tests for embedding system."""
 
 import math
 

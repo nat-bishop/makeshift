@@ -1,4 +1,4 @@
-"""Tests for V2 creator agent: system prompt, fallback logic."""
+"""Tests for creator agent: system prompt, fallback logic."""
 
 import uuid
 
@@ -10,7 +10,7 @@ from app.models.blueprint import (
     VisualDescriptor,
 )
 from app.models.substances import Element, Substance
-from app.models.tags import LLM_VISIBLE_TAGS_V2, Tag
+from app.models.tags import LLM_VISIBLE_TAGS, Tag
 
 
 def make_visual(**kwargs: object) -> VisualDescriptor:
@@ -22,9 +22,9 @@ def make_visual(**kwargs: object) -> VisualDescriptor:
     return VisualDescriptor(**defaults)  # type: ignore[arg-type]
 
 
-def test_system_prompt_contains_all_v2_visible_tags():
-    """System prompt should mention every V2 LLM-visible tag."""
-    for tag in LLM_VISIBLE_TAGS_V2:
+def test_system_prompt_contains_all_llm_visible_tags():
+    """System prompt should mention every LLM-visible tag."""
+    for tag in LLM_VISIBLE_TAGS:
         assert tag.value in SYSTEM_PROMPT, f"Tag {tag.value} not in system prompt"
 
 
@@ -44,7 +44,7 @@ def test_system_prompt_mentions_all_verbs():
 
 
 def test_fallback_object_structure():
-    """Verify the fallback object matches expected V2 shape."""
+    """Verify the fallback object matches expected shape."""
     vd = make_visual()
     fallback = CreatorOutput(
         name="Mysterious Rock",

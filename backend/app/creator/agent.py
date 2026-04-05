@@ -193,7 +193,7 @@ def _get_agent() -> Agent[None, CreatorOutput]:
 async def create_object(description: str) -> GameObjectBlueprint:
     """Create a game object from a player's text description.
 
-    V2 pipeline: LLM → derive_traits → resolve_profile → compute_combat →
+    Pipeline: LLM → derive_traits → resolve_profile → compute_combat →
     compute_embeddings → assemble blueprint.
     """
     t0 = time.monotonic()

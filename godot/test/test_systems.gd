@@ -291,7 +291,7 @@ func _test_event_bus_signals() -> void:
 
 
 # ---------------------------------------------------------------------------
-# Section 6: SubstancePhysics (V2 — replaces TagPhysicsMap/PhysicsComposer)
+# Section 6: SubstancePhysics
 # ---------------------------------------------------------------------------
 
 func _test_substance_physics() -> void:

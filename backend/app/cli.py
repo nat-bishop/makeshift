@@ -101,7 +101,7 @@ class Timer:
 
 
 async def _run_llm(description: str, timer: Timer) -> Any:
-    """Run the V2 LLM creator agent via create_object()."""
+    """Run the LLM creator agent via create_object()."""
     from app.creator.agent import create_object
 
     t0 = time.monotonic()

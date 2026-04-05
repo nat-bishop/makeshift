@@ -1,4 +1,4 @@
-"""V2 implied behaviors — minimal. The LLM controls behavior directly.
+"""Implied behaviors — minimal. The LLM controls behavior directly.
 
 Only one default: LIVING with empty behaviors → append investigate → "interesting nearby objects".
 """
