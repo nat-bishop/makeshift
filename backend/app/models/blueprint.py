@@ -31,6 +31,29 @@ class BehaviorVerb(StrEnum):
 class BehaviorVerbSpec(BaseModel):
     verb: BehaviorVerb
     target: str = Field(min_length=1, max_length=100)
+    target_tags: list[Tag] = Field(default_factory=list, max_length=3)
+
+    @field_validator("target_tags", mode="before")
+    @classmethod
+    def validate_target_tags(cls, tags: list) -> list:
+        """Validate target_tags against all Tag values (not just LLM-visible)."""
+        from pydantic_ai import ModelRetry
+
+        all_tag_values: set[str] = {t.value for t in Tag}
+        result = []
+        seen: set[str] = set()
+        for t in tags:
+            val = t.value if isinstance(t, Tag) else str(t).strip().upper()
+            if val in seen:
+                continue
+            seen.add(val)
+            if val not in all_tag_values:
+                tag_list = ", ".join(sorted(all_tag_values))
+                raise ModelRetry(
+                    f"target_tag '{t}' is not a valid tag. Valid tags: {tag_list}"
+                )
+            result.append(val)
+        return result
 
 
 class VisualDescriptor(BaseModel):
@@ -104,5 +127,5 @@ class GameObjectBlueprint(BaseModel):
     substance_profile: dict[str, float | str] = Field(default_factory=dict)
     combat_profile: dict[str, float] = Field(default_factory=dict)
     identity_embedding: list[float] = Field(default_factory=list)
-    behavior_embeddings: list[list[float]] = Field(default_factory=list)
+    compiled_behaviors: list[dict] = Field(default_factory=list)
     starting_durability: int = 150

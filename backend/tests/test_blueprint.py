@@ -178,5 +178,5 @@ class TestGameObjectBlueprint:
         assert "substance_profile" in data
         assert "combat_profile" in data
         assert "identity_embedding" in data
-        assert "behavior_embeddings" in data
+        assert "compiled_behaviors" in data
         assert "starting_durability" in data

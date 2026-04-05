@@ -83,8 +83,12 @@ HOSTILE — aggressive. Deals damage to nearby creatures. Use for non-living thr
 
 ## Behaviors (0-4, for LIVING creatures)
 
-Each behavior is a verb + freeform target describing what/who this creature cares about. \
+Each behavior has a verb, a freeform target describing what this creature cares about, and optional target_tags. \
 List behaviors in order of importance — first behavior takes precedence when multiple are active.
+
+- **target**: freeform text describing the kind of thing (identity/noun)
+- **target_tags**: 0-2 tags the target object MUST currently have (state filter). \
+Use when the target's current state matters. Leave empty for pure identity targeting.
 
 | Verb | What it does |
 |------|-------------|
@@ -95,11 +99,18 @@ List behaviors in order of importance — first behavior takes precedence when m
 | protect | Follow target + attack threats near it |
 | flee | Move away from target at high speed |
 
+Common target_tags patterns:
+- Things currently on fire: target_tags: [HEAT_SOURCE]
+- Living creatures only: target_tags: [LIVING]
+- Hostile enemies: target_tags: [HOSTILE]
+- Metallic objects: target_tags: [METALLIC]
+- By identity only (food, donuts, treasure): target_tags: [] (empty)
+
 Examples:
-- A donut-obsessed cop: eat → "food, especially donuts", destroy → "criminals", flee → "ghosts"
-- A brave warrior: destroy → "enemies and monsters", protect → "innocent people"
-- A cowardly villager: flee → "anything dangerous", investigate → "interesting things"
-- A hungry wolf: destroy → "small prey animals", flee → "fire and loud noises"
+- A firefighter: destroy → "fires and burning things" target_tags: [HEAT_SOURCE], protect → "people" target_tags: [LIVING]
+- A brave warrior: destroy → "enemies and monsters" target_tags: [HOSTILE], protect → "innocent people" target_tags: [LIVING]
+- A hungry wolf: destroy → "small prey animals" target_tags: [LIVING], flee → "fire" target_tags: [HEAT_SOURCE]
+- A donut-obsessed cop: eat → "food, especially donuts" target_tags: [], destroy → "criminals" target_tags: [HOSTILE]
 
 Non-living objects usually have no behaviors. A sword doesn't need behaviors — its tags handle everything.
 
@@ -121,7 +132,7 @@ visual: "a gleaming steel blade wreathed in dancing orange flames"
 visual: "a rough gray boulder with moss patches"
 
 "acid spider" → substance: flesh, element: acidic, tags: [LIVING], \
-behaviors: [destroy → "small insects and prey", flee → "fire and larger creatures"], \
+behaviors: [destroy → "small insects and prey" target_tags: [LIVING], flee → "fire and larger creatures" target_tags: [HEAT_SOURCE]], \
 visual: "a glossy black spider dripping green acid from its fangs"
 
 "campfire" → substance: fire, element: null, tags: [], behaviors: [], \
@@ -134,7 +145,7 @@ visual: "a towering wall of translucent blue ice with frost crystals"
 visual: "a cheerful yellow rubber duck with an orange beak"
 
 "brave knight" → substance: flesh, element: null, tags: [LIVING], \
-behaviors: [destroy → "monsters and evil creatures", protect → "villagers and innocents"], \
+behaviors: [destroy → "monsters and evil creatures" target_tags: [HOSTILE], protect → "villagers and innocents" target_tags: [LIVING]], \
 visual: "a stalwart knight in dented silver armor with a red plume"
 
 "toxic mushroom" → substance: wood, element: toxic, tags: [BREAKABLE], behaviors: [], \
@@ -213,14 +224,25 @@ async def create_object(description: str) -> GameObjectBlueprint:
         profile = resolve_profile(spec.substance, spec.element, traits)
         combat = compute_combat_profile(profile)
 
-        # Compute embeddings
+        # Compute embeddings (identity = raw document, targets = instruction-prefixed queries)
         identity_emb, behavior_embs = await compute_object_embeddings(
             name=spec.name,
             visual_description=spec.visual_descriptor.visual_description,
             size_category=spec.visual_descriptor.size_category,
-            tags=traits,
+            substance=spec.substance.value,
             behavior_targets=[b.target for b in behaviors],
         )
+
+        # Compile behaviors: self-contained dicts with verb, target, embedding, and tag filters
+        compiled_behaviors = []
+        for i, b in enumerate(behaviors):
+            compiled_behaviors.append({
+                "verb": b.verb.value,
+                "target": b.target,
+                "target_embedding": behavior_embs[i] if i < len(behavior_embs) else [],
+                "require_any_tags": [t.value for t in b.target_tags],
+                "exclude_tags": [],
+            })
 
         elapsed = time.monotonic() - t0
         logger.info(
@@ -253,7 +275,7 @@ async def create_object(description: str) -> GameObjectBlueprint:
         combat = compute_combat_profile(profile)
         behaviors = []
         identity_emb = []
-        behavior_embs = []
+        compiled_behaviors = []
 
     # Durability from profile
     starting_durability = int(profile.durability)
@@ -270,7 +292,7 @@ async def create_object(description: str) -> GameObjectBlueprint:
         substance_profile=profile.model_dump(mode="json"),
         combat_profile=combat,
         identity_embedding=identity_emb,
-        behavior_embeddings=behavior_embs,
+        compiled_behaviors=compiled_behaviors,
         starting_durability=starting_durability,
     )
     logger.debug(

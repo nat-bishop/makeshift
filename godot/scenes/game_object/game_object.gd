@@ -9,7 +9,6 @@ var _tag_field: Node = null
 
 # Embedding for semantic targeting
 var _identity_embedding: Array = []
-var _embed_dirty: bool = false
 
 @onready var physics_applicator: Node = $PhysicsApplicator
 @onready var object_visual: Node = $ObjectVisual
@@ -52,14 +51,13 @@ func init_from_blueprint(bp: Dictionary) -> void:
 	_identity_embedding = bp.get("identity_embedding", [])
 
 	# Verb behavior system
-	var behaviors: Array = bp.get("behaviors", [])
-	var behavior_embeddings: Array = bp.get("behavior_embeddings", [])
-	if not behaviors.is_empty() and not behavior_embeddings.is_empty():
+	var compiled_behaviors: Array = bp.get("compiled_behaviors", [])
+	if not compiled_behaviors.is_empty():
 		var vbs_script = preload("res://scripts/systems/verb_behavior_system.gd")
 		_behavior_system = vbs_script.new()
 		_behavior_system.name = "VerbBehaviorSystem"
 		add_child(_behavior_system)
-		_behavior_system.init_behaviors(behaviors, behavior_embeddings, self)
+		_behavior_system.init_behaviors(compiled_behaviors, self)
 
 	# Initialize field system if object has field-emitting tags
 	if FieldConfig.has_any_field_tag(tags):
@@ -156,10 +154,8 @@ func _on_tags_changed(_updated_tags: Array[String]) -> void:
 	object_visual.refresh_tag_visuals(tags)
 	if _tag_field != null:
 		_tag_field.on_tags_changed(tags)
-	# Debounced re-embed — coalesce multiple tag changes per frame
-	if not _embed_dirty:
-		_embed_dirty = true
-		call_deferred("_rebuild_and_reembed")
+	# Notify behavior systems to re-evaluate tag filters (no re-embedding needed)
+	EventBus.object_tags_changed.emit(self)
 
 
 func get_cascade_neighbors() -> Array:
@@ -185,24 +181,6 @@ func _reapply_physics() -> void:
 	var modified: Dictionary = SubstancePhysics.apply_tag_modifiers(base_physics, tags)
 	var size_category: String = blueprint.get("visual_descriptor", {}).get("size_category", "medium")
 	physics_applicator.apply_physics(modified, size_category)
-
-
-func _rebuild_and_reembed() -> void:
-	_embed_dirty = false
-	var vd: Dictionary = blueprint.get("visual_descriptor", {})
-	var body: Dictionary = {
-		"name": blueprint.get("name", ""),
-		"visual_description": vd.get("visual_description", ""),
-		"size_category": vd.get("size_category", "medium"),
-		"current_tags": Array(tags),
-	}
-	Backend.post_embed(body, func(embedding: Array) -> void:
-		if not is_instance_valid(self):
-			return
-		_identity_embedding = embedding
-		EventBus.object_embedding_changed.emit(self)
-	)
-
 
 
 func _on_body_entered(body: Node) -> void:

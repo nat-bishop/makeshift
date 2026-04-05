@@ -24,8 +24,7 @@ from pathlib import Path
 
 import httpx
 
-from app.embeddings import build_embed_string, embed_texts
-from app.models.tags import Tag
+from app.embeddings import build_identity_string, build_target_query, embed_texts
 
 RESULTS_DIR = Path(__file__).parent / "results"
 
@@ -41,10 +40,11 @@ class EmbeddingPair:
 
 
 def _identity(
-    name: str, visual: str, size: str = "medium", tags: list[Tag] | None = None
+    name: str, visual: str, size: str = "medium", substance: str = "stone",
+    **_kwargs: object,
 ) -> str:
     """Build an identity embedding string for a test object."""
-    return build_embed_string(name, visual, size, tags or [])
+    return build_identity_string(name, visual, size, substance)
 
 
 # ---------------------------------------------------------------------------
@@ -52,96 +52,87 @@ def _identity(
 # ---------------------------------------------------------------------------
 
 EMBEDDING_PAIRS: list[EmbeddingPair] = [
-    # ===== Behavior-target matching (core use case) =====
+    # ===== Identity matching with instruction-prefixed targets =====
     EmbeddingPair(
         name="donut_vs_food_target",
         text_a=_identity("Donut", "a glazed sugary donut with rainbow sprinkles", "small",
-                         [Tag.BREAKABLE]),
-        text_b="food, especially donuts",
+                         "rubber"),
+        text_b=build_target_query("food, especially donuts"),
         expect_high=True,
         category="behavior_match",
-        notes="Cop's eat target should match a donut.",
+        notes="Cop's eat target should match a donut (instructed query).",
     ),
     EmbeddingPair(
         name="donut_vs_criminals_target",
         text_a=_identity("Donut", "a glazed sugary donut with rainbow sprinkles", "small",
-                         [Tag.BREAKABLE]),
-        text_b="criminals and lawbreakers",
+                         "rubber"),
+        text_b=build_target_query("criminals and lawbreakers"),
         expect_high=False,
         category="behavior_match",
         notes="Donut should NOT match a destroy-criminals target.",
     ),
     EmbeddingPair(
-        name="burning_spoon_vs_fire_target",
-        text_a=_identity("Wooden Spoon", "a smooth wooden cooking spoon", "small",
-                         [Tag.RIGID, Tag.FLAMMABLE, Tag.HEAT_SOURCE, Tag.HOT]),
-        text_b="fires and burning things",
-        expect_high=True,
-        category="behavior_match",
-        notes="Firefighter should target a burning spoon.",
-    ),
-    EmbeddingPair(
-        name="cold_spoon_vs_fire_target",
-        text_a=_identity("Wooden Spoon", "a smooth wooden cooking spoon", "small",
-                         [Tag.RIGID, Tag.FLAMMABLE]),
-        text_b="fires and burning things",
-        expect_high=False,
-        category="behavior_match",
-        notes="Non-burning spoon should NOT match fire target.",
-    ),
-    EmbeddingPair(
-        name="villager_alive_vs_prey",
-        text_a=_identity("Villager", "a frightened peasant in brown clothes", "medium",
-                         [Tag.LIVING]),
-        text_b="prey animals and living creatures",
-        expect_high=True,
-        category="behavior_match",
-        notes="Wolf's eat target should match a living villager.",
-    ),
-    EmbeddingPair(
-        name="villager_petrified_vs_prey",
-        text_a=_identity("Villager", "a frightened peasant in brown clothes", "medium",
-                         [Tag.RIGID, Tag.BREAKABLE]),
-        text_b="prey animals and living creatures",
-        expect_high=False,
-        category="behavior_match",
-        notes="Petrified villager (no LIVING) should NOT match prey target.",
-    ),
-    EmbeddingPair(
         name="robber_vs_criminals_target",
-        text_a=_identity("Robber", "a masked criminal in dark clothes", "medium",
-                         [Tag.LIVING, Tag.HOSTILE]),
-        text_b="criminals and lawbreakers",
+        text_a=_identity("Robber", "a masked criminal in dark clothes", "medium", "flesh"),
+        text_b=build_target_query("criminals and lawbreakers"),
         expect_high=True,
         category="behavior_match",
         notes="Cop's destroy target should match a robber.",
     ),
     EmbeddingPair(
-        name="burning_tree_vs_fire_target",
-        text_a=_identity("Oak Tree", "a tall tree with green leaves", "large",
-                         [Tag.FLAMMABLE, Tag.HEAT_SOURCE, Tag.HOT]),
-        text_b="fires and burning things",
+        name="guitar_vs_instruments",
+        text_a=_identity("Guitar", "a wooden acoustic guitar with steel strings", "medium",
+                         "wood"),
+        text_b=build_target_query("musical instruments"),
         expect_high=True,
         category="behavior_match",
-        notes="Firefighter should target a burning tree.",
+        notes="Musician should find a guitar.",
     ),
-    # ===== Cross-object discrimination =====
+    EmbeddingPair(
+        name="wooden_chair_vs_instruments",
+        text_a=_identity("Wooden Chair", "a simple wooden chair", "medium", "wood"),
+        text_b=build_target_query("musical instruments"),
+        expect_high=False,
+        category="behavior_match",
+        notes="Wooden chair should NOT match musical instruments.",
+    ),
+    EmbeddingPair(
+        name="salmon_vs_fish",
+        text_a=_identity("Salmon", "a fresh pink salmon fillet", "small", "flesh"),
+        text_b=build_target_query("fish and seafood"),
+        expect_high=True,
+        category="behavior_match",
+        notes="Cat should find salmon as fish.",
+    ),
+    EmbeddingPair(
+        name="dog_vs_fish",
+        text_a=_identity("Dog", "a friendly brown labrador", "medium", "flesh"),
+        text_b=build_target_query("fish and seafood"),
+        expect_high=False,
+        category="behavior_match",
+        notes="Dog should NOT match fish target.",
+    ),
+    EmbeddingPair(
+        name="gold_coin_vs_treasure",
+        text_a=_identity("Gold Coin", "a shiny gold coin", "tiny", "metal"),
+        text_b=build_target_query("treasure, gold, and jewels"),
+        expect_high=True,
+        category="behavior_match",
+        notes="Dragon should find gold coin as treasure.",
+    ),
+    # ===== Cross-object discrimination (stable identity) =====
     EmbeddingPair(
         name="fire_sword_vs_ice_wall",
-        text_a=_identity("Fire Sword", "a gleaming blade wreathed in flame", "small",
-                         [Tag.SHARP, Tag.METALLIC, Tag.RIGID, Tag.HEAT_SOURCE, Tag.HOT]),
-        text_b=_identity("Ice Wall", "a towering wall of translucent blue ice", "huge",
-                         [Tag.FROZEN, Tag.RIGID, Tag.COLD, Tag.BRITTLE]),
+        text_a=_identity("Fire Sword", "a gleaming blade wreathed in flame", "small", "metal"),
+        text_b=_identity("Ice Wall", "a towering wall of translucent blue ice", "huge", "ice"),
         expect_high=False,
         category="discrimination",
         notes="Opposite objects should have low similarity.",
     ),
     EmbeddingPair(
         name="sword_vs_dagger",
-        text_a=_identity("Steel Sword", "a long gleaming steel blade", "medium",
-                         [Tag.SHARP, Tag.METALLIC, Tag.RIGID]),
-        text_b=_identity("Iron Dagger", "a short rusty iron blade", "small",
-                         [Tag.SHARP, Tag.METALLIC, Tag.RIGID]),
+        text_a=_identity("Steel Sword", "a long gleaming steel blade", "medium", "metal"),
+        text_b=_identity("Iron Dagger", "a short rusty iron blade", "small", "metal"),
         expect_high=True,
         category="discrimination",
         notes="Similar weapons should have high similarity.",
@@ -149,9 +140,9 @@ EMBEDDING_PAIRS: list[EmbeddingPair] = [
     EmbeddingPair(
         name="cop_vs_donut",
         text_a=_identity("Officer Johnson", "a stern police officer in blue uniform", "medium",
-                         [Tag.LIVING, Tag.HOSTILE]),
+                         "flesh"),
         text_b=_identity("Donut", "a glazed sugary donut with rainbow sprinkles", "small",
-                         [Tag.BREAKABLE]),
+                         "rubber"),
         expect_high=False,
         category="discrimination",
         notes="A cop and a donut should be semantically distinct.",
@@ -159,44 +150,12 @@ EMBEDDING_PAIRS: list[EmbeddingPair] = [
     EmbeddingPair(
         name="wolf_vs_dog",
         text_a=_identity("Wolf", "a gray wolf with sharp teeth and yellow eyes", "medium",
-                         [Tag.LIVING, Tag.HOSTILE]),
+                         "flesh"),
         text_b=_identity("Dog", "a friendly brown dog with a wagging tail", "medium",
-                         [Tag.LIVING]),
+                         "flesh"),
         expect_high=True,
         category="discrimination",
-        notes="Similar animals should be somewhat similar even with different hostility.",
-    ),
-    # ===== Tag-shift tests (same object, different states) =====
-    EmbeddingPair(
-        name="tree_normal_vs_burning",
-        text_a=_identity("Oak Tree", "a tall tree with green leaves", "large",
-                         [Tag.FLAMMABLE]),
-        text_b=_identity("Oak Tree", "a tall tree with green leaves", "large",
-                         [Tag.FLAMMABLE, Tag.HEAT_SOURCE, Tag.HOT]),
-        expect_high=True,
-        category="tag_shift",
-        notes="Same tree in different states — should still be similar (it's the same tree).",
-    ),
-    EmbeddingPair(
-        name="villager_alive_vs_petrified",
-        text_a=_identity("Villager", "a frightened peasant", "medium", [Tag.LIVING]),
-        text_b=_identity("Villager", "a frightened peasant", "medium",
-                         [Tag.RIGID, Tag.BREAKABLE]),
-        expect_high=True,
-        category="tag_shift",
-        notes="Same name+description dominates. Tag phrases shift similarity but not enough "
-              "to drop below threshold. Real sim ~0.89. Known limitation: targeting relies on "
-              "tag phrase contribution which is small vs name+visual.",
-    ),
-    EmbeddingPair(
-        name="sword_dry_vs_wet",
-        text_a=_identity("Steel Sword", "a sharp steel blade", "medium",
-                         [Tag.SHARP, Tag.METALLIC, Tag.RIGID]),
-        text_b=_identity("Steel Sword", "a sharp steel blade", "medium",
-                         [Tag.SHARP, Tag.METALLIC, Tag.RIGID, Tag.WET]),
-        expect_high=True,
-        category="tag_shift",
-        notes="Wet sword is still a sword — minor state change.",
+        notes="Similar animals should be somewhat similar.",
     ),
     # ===== Behavior target semantics =====
     EmbeddingPair(
@@ -235,7 +194,7 @@ EMBEDDING_PAIRS: list[EmbeddingPair] = [
     EmbeddingPair(
         name="empty_vs_object",
         text_a="",
-        text_b=_identity("Rock", "a rough gray boulder", "medium", [Tag.RIGID, Tag.HEAVY]),
+        text_b=_identity("Rock", "a rough gray boulder", "medium", "stone"),
         expect_high=False,
         category="edge_case",
         notes="Empty string should have low similarity to any object.",
@@ -243,7 +202,7 @@ EMBEDDING_PAIRS: list[EmbeddingPair] = [
     EmbeddingPair(
         name="nonsense_vs_object",
         text_a="asdfghjkl qwerty zxcvbn",
-        text_b=_identity("Rock", "a rough gray boulder", "medium", [Tag.RIGID, Tag.HEAVY]),
+        text_b=_identity("Rock", "a rough gray boulder", "medium", "stone"),
         expect_high=False,
         category="edge_case",
         notes="Nonsense should have low similarity.",

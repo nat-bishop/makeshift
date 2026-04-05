@@ -1,9 +1,10 @@
 extends Node
 
-## Verb Behavior System — event-driven targeting + per-frame verb execution.
+## Verb Behavior System — two-mode targeting + per-frame verb execution.
 ##
-## Perception layer: listens for object enter/exit/embedding_changed events.
-##   Maintains per-behavior target lists via dot-product matching.
+## Targeting modes (per behavior):
+##   Tag mode: require_any_tags present → pure boolean tag check, embedding ignored.
+##   Identity mode: no tag requirements → embedding dot-product at MATCH_THRESHOLD.
 ## Action layer: per-frame, picks best target by priority + distance, executes verb.
 
 const MATCH_THRESHOLD: float = 0.5
@@ -23,34 +24,33 @@ const MELEE_COOLDOWN: float = 1.0
 const MAX_ERRORS: int = 5
 
 var _owner_body: RigidBody2D
-var _behaviors: Array = []  # Array of {verb, target_text, target_embedding}
+var _behaviors: Array = []  # Array of {verb, target_text, target_embedding, require_any_tags, exclude_tags}
 var _target_lists: Array = []  # Array of Arrays — per-behavior list of matching objects
 var _error_count: int = 0
 var _disabled: bool = false
 var _melee_timer: float = 0.0
 
 
-func init_behaviors(behaviors: Array, behavior_embeddings: Array, owner: RigidBody2D) -> void:
+func init_behaviors(compiled_behaviors: Array, owner: RigidBody2D) -> void:
 	_owner_body = owner
 	_behaviors = []
 	_target_lists = []
 
-	for i in range(behaviors.size()):
-		var b: Dictionary = behaviors[i] if behaviors[i] is Dictionary else {}
-		var embedding: Array = []
-		if i < behavior_embeddings.size():
-			embedding = behavior_embeddings[i]
+	for cb in compiled_behaviors:
+		var entry: Dictionary = cb if cb is Dictionary else {}
 		_behaviors.append({
-			"verb": b.get("verb", "investigate"),
-			"target_text": b.get("target", ""),
-			"target_embedding": embedding,
+			"verb": entry.get("verb", "investigate"),
+			"target_text": entry.get("target", ""),
+			"target_embedding": entry.get("target_embedding", []),
+			"require_any_tags": entry.get("require_any_tags", []),
+			"exclude_tags": entry.get("exclude_tags", []),
 		})
 		_target_lists.append([])
 
 	# Listen for scene events
 	EventBus.object_entered_scene.connect(_on_object_entered)
 	EventBus.object_exited_scene.connect(_on_object_exited)
-	EventBus.object_embedding_changed.connect(_on_embedding_changed)
+	EventBus.object_tags_changed.connect(_on_tags_changed)
 
 	# Scan existing objects already in the scene (e.g., level load)
 	call_deferred("_scan_existing_objects")
@@ -66,8 +66,8 @@ func _exit_tree() -> void:
 		EventBus.object_entered_scene.disconnect(_on_object_entered)
 	if EventBus.object_exited_scene.is_connected(_on_object_exited):
 		EventBus.object_exited_scene.disconnect(_on_object_exited)
-	if EventBus.object_embedding_changed.is_connected(_on_embedding_changed):
-		EventBus.object_embedding_changed.disconnect(_on_embedding_changed)
+	if EventBus.object_tags_changed.is_connected(_on_tags_changed):
+		EventBus.object_tags_changed.disconnect(_on_tags_changed)
 
 
 # ---------------------------------------------------------------------------
@@ -88,7 +88,7 @@ func _on_object_exited(game_object: Node) -> void:
 		_target_lists[i].erase(game_object)
 
 
-func _on_embedding_changed(game_object: Node) -> void:
+func _on_tags_changed(game_object: Node) -> void:
 	if game_object == _owner_body or not is_instance_valid(game_object):
 		return
 	if not game_object.has_method("get_identity_embedding"):
@@ -98,16 +98,40 @@ func _on_embedding_changed(game_object: Node) -> void:
 
 
 func _check_object_against_all_behaviors(game_object: Node, obj_embedding: Array) -> void:
+	var obj_tags: Array = game_object.get_tags() if game_object.has_method("get_tags") else []
 	for i in range(_behaviors.size()):
-		var behavior_emb: Array = _behaviors[i]["target_embedding"]
-		if behavior_emb.is_empty() or obj_embedding.is_empty():
-			continue
-		var sim: float = _dot_product(behavior_emb, obj_embedding)
-		if sim >= MATCH_THRESHOLD:
+		var b: Dictionary = _behaviors[i]
+		var require_any: Array = b.get("require_any_tags", [])
+		var exclude: Array = b.get("exclude_tags", [])
+		var has_tag_reqs: bool = not require_any.is_empty() or not exclude.is_empty()
+		var is_match: bool = false
+
+		if has_tag_reqs:
+			# Tag mode: pure boolean check, embedding ignored
+			is_match = _passes_tag_filter(obj_tags, require_any, exclude)
+		else:
+			# Identity mode: pure embedding match
+			var emb: Array = b["target_embedding"]
+			if not emb.is_empty() and not obj_embedding.is_empty():
+				is_match = _dot_product(emb, obj_embedding) >= MATCH_THRESHOLD
+
+		if is_match:
 			if game_object not in _target_lists[i]:
 				_target_lists[i].append(game_object)
 		else:
 			_target_lists[i].erase(game_object)
+
+
+static func _passes_tag_filter(obj_tags: Array, require_any: Array, exclude: Array) -> bool:
+	for tag in exclude:
+		if tag in obj_tags:
+			return false
+	if require_any.is_empty():
+		return true
+	for tag in require_any:
+		if tag in obj_tags:
+			return true
+	return false
 
 
 static func _dot_product(a: Array, b: Array) -> float:

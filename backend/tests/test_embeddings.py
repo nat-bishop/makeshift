@@ -3,35 +3,49 @@
 import math
 
 import pytest
-from app.embeddings import build_embed_string, embed_texts
-from app.models.tags import Tag
+from app.embeddings import RETRIEVAL_PREFIX, build_identity_string, build_target_query, embed_texts
 
 
-class TestBuildEmbedString:
+class TestBuildIdentityString:
     def test_basic(self) -> None:
-        s = build_embed_string("Fire Sword", "a gleaming blade", "medium", [Tag.SHARP, Tag.METALLIC])
+        s = build_identity_string("Fire Sword", "a gleaming blade", "medium", "metal")
         assert "Fire Sword" in s
         assert "a gleaming blade" in s
-        assert "sharp-edged" in s
-        assert "metallic" in s
+        assert "made of metal" in s
         # medium size omitted
         assert "medium" not in s.split(", ")[2:]
 
     def test_large_size(self) -> None:
-        s = build_embed_string("Boulder", "a huge rock", "large", [Tag.RIGID])
+        s = build_identity_string("Boulder", "a huge rock", "large", "stone")
         assert "large" in s
+        assert "made of stone" in s
 
     def test_huge_size(self) -> None:
-        s = build_embed_string("Dragon", "a fire dragon", "huge", [Tag.LIVING])
+        s = build_identity_string("Dragon", "a fire dragon", "huge", "flesh")
         assert "towering and huge" in s
 
-    def test_no_tags(self) -> None:
-        s = build_embed_string("Rock", "a gray stone", "medium", [])
-        assert s == "Rock, a gray stone"
+    def test_no_size_phrase_for_medium(self) -> None:
+        s = build_identity_string("Rock", "a gray stone", "medium", "stone")
+        assert s == "Rock, a gray stone, made of stone"
+
+    def test_substance_included(self) -> None:
+        s = build_identity_string("Table", "a wooden table", "medium", "wood")
+        assert "made of wood" in s
+
+
+class TestBuildTargetQuery:
+    def test_prefix_applied(self) -> None:
+        q = build_target_query("food, especially donuts")
+        assert q.startswith(RETRIEVAL_PREFIX)
+        assert "food, especially donuts" in q
+
+    def test_empty_target(self) -> None:
+        q = build_target_query("")
+        assert q == f"{RETRIEVAL_PREFIX}"
 
 
 def _cosine_sim(a: list[float], b: list[float]) -> float:
-    dot = sum(x * y for x, y in zip(a, b))
+    dot = sum(x * y for x, y in zip(a, b, strict=True))
     norm_a = math.sqrt(sum(x * x for x in a))
     norm_b = math.sqrt(sum(x * x for x in b))
     if norm_a == 0 or norm_b == 0:
@@ -50,7 +64,7 @@ class TestEmbedTextsIntegration:
 
     async def test_donut_similarity(self) -> None:
         vecs = await embed_texts([
-            "Donut, a glazed sugary donut with rainbow sprinkles, fragile",
+            "Donut, a glazed sugary donut with rainbow sprinkles, made of rubber",
             "food, especially donuts",
             "criminals and lawbreakers",
         ])
@@ -58,23 +72,3 @@ class TestEmbedTextsIntegration:
         donut_criminal = _cosine_sim(vecs[0], vecs[2])
         assert donut_food > 0.5
         assert donut_criminal < 0.3
-
-    async def test_burning_spoon(self) -> None:
-        vecs = await embed_texts([
-            "Wooden Spoon, a smooth cooking spoon, on fire, hot",
-            "fires and burning things",
-            "Wooden Spoon, a smooth cooking spoon, hard and rigid",
-        ])
-        burning_fire = _cosine_sim(vecs[0], vecs[1])
-        plain_fire = _cosine_sim(vecs[2], vecs[1])
-        assert burning_fire > plain_fire
-
-    async def test_medusa_petrify(self) -> None:
-        vecs = await embed_texts([
-            "Villager, a frightened peasant, alive",
-            "prey animals",
-            "Villager, a frightened peasant, hard and rigid, fragile",
-        ])
-        alive_prey = _cosine_sim(vecs[0], vecs[1])
-        stone_prey = _cosine_sim(vecs[2], vecs[1])
-        assert alive_prey > stone_prey

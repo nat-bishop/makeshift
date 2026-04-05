@@ -393,19 +393,6 @@ func _request(method: int, path: String, body: Dictionary = {}, extra_headers: P
 	return result
 
 
-# --- Embedding ---
-
-func post_embed(body: Dictionary, callback: Callable) -> void:
-	## Call POST /api/embed to re-embed an object's identity after tag changes.
-	## Fires callback(embedding: Array) on completion.
-	var result: Dictionary = await _http_post("/api/embed", body)
-	if result.has("error"):
-		Log.warn("Backend: Embed request failed: %s" % result.get("message", "unknown"))
-		callback.call([])
-		return
-	var embedding: Array = result.get("embedding", [])
-	callback.call(embedding)
-
 
 # --- Session Persistence ---
 
