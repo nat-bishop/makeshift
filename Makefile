@@ -1,4 +1,4 @@
-.PHONY: dev gpu api stop gpu-restart gpu-logs godot play install test lint fix format typecheck check clear-sprites cli-create cli-image cli-sprite cli-status eval-run eval-compare eval-single help
+.PHONY: dev gpu api stop gpu-restart gpu-logs godot play install test lint fix format typecheck check clear-sprites cli-create cli-image cli-sprite cli-status eval-run eval-compare eval-single ollama help
 
 GODOT ?= godot
 VERBOSE ?= 0
@@ -11,7 +11,7 @@ define wait-services
 	@until curl -sf http://127.0.0.1:5200/health > /dev/null 2>&1; do sleep 2; done; echo "LLM ready"
 endef
 
-dev: gpu ## Start all servers + launch game
+dev: gpu ollama ## Start all servers + launch game
 	$(wait-services)
 	uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir backend --reload-include '*.py' &
 	@sleep 2
@@ -77,6 +77,10 @@ cli-image: ## Generate a raw image (PROMPT="a pixel art sword" OUT=output.png)
 
 cli-sprite: ## Full sprite pipeline (PROMPT="fire sword" OUT=sprite.png)
 	cd backend && uv run python -m app.cli sprite "$(PROMPT)" $(if $(OUT),--out "$(OUT)")
+
+ollama: ## Pull embedding model and verify Ollama is running
+	ollama pull qwen3-embedding:0.6b
+	@curl -sf http://127.0.0.1:11434/api/tags > /dev/null 2>&1 && echo "Ollama ready" || echo "Ollama not running — start it with 'ollama serve'"
 
 cli-status: ## Check health of configured services
 	cd backend && uv run python -m app.cli status
