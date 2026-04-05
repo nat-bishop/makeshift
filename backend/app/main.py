@@ -122,6 +122,7 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 # Include routers
 app.include_router(sessions.router)
 app.include_router(objects.router)
+app.include_router(objects.embed_router)
 app.include_router(rules.router)
 
 

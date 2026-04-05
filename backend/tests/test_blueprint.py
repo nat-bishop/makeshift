@@ -1,14 +1,14 @@
-"""Tests for blueprint models: CreatorOutput validation, GameObjectBlueprint computed fields."""
+"""Tests for V2 blueprint models: CreatorOutput validation, GameObjectBlueprint."""
 
 import pytest
 from app.models.blueprint import (
-    DURABILITY_BREAKABLE,
-    DURABILITY_DEFAULT,
-    DURABILITY_RIGID,
+    BehaviorVerb,
+    BehaviorVerbSpec,
     CreatorOutput,
     GameObjectBlueprint,
     VisualDescriptor,
 )
+from app.models.substances import Element, Substance
 from app.models.tags import Tag
 from pydantic import ValidationError
 from pydantic_ai import ModelRetry
@@ -37,84 +37,50 @@ class TestVisualDescriptor:
 class TestCreatorOutput:
     def test_valid_creation(self) -> None:
         out = CreatorOutput(
-            name="Test Object",
-            tags=[Tag.RIGID, Tag.HEAVY],
+            name="Fire Sword",
+            substance=Substance.METAL,
+            element=Element.BURNING,
+            tags=[Tag.SHARP],
             visual_descriptor=_make_visual(),
         )
-        assert out.name == "Test Object"
-        assert len(out.tags) == 2
+        assert out.name == "Fire Sword"
+        assert out.substance == Substance.METAL
+        assert out.element == Element.BURNING
+        assert out.tags == [Tag.SHARP]
 
-    def test_contradiction_raises(self) -> None:
-        """Contradictory tags should raise a validation error (ModelRetry in agent context)."""
-        with pytest.raises(ModelRetry):
-            CreatorOutput(
-                name="Bad Object",
-                tags=[Tag.FROZEN, Tag.MOLTEN],
-                visual_descriptor=_make_visual(),
-            )
-
-    def test_high_cost_tags_valid_without_budget(self) -> None:
-        """Without budget, expensive tag combos should pass if count is valid."""
-        out = CreatorOutput(
-            name="Expensive",
-            tags=[Tag.EXPLOSIVE, Tag.ELECTRIC, Tag.SHARP],
-            visual_descriptor=_make_visual(),
-        )
-        assert len(out.tags) == 3
-
-    def test_multiple_contradictions(self) -> None:
-        """RIGID + LIQUID is a contradiction."""
-        with pytest.raises(ModelRetry):
-            CreatorOutput(
-                name="Impossible",
-                tags=[Tag.RIGID, Tag.LIQUID],
-                visual_descriptor=_make_visual(),
-            )
-
-    def test_metallic_insulating_contradiction(self) -> None:
-        with pytest.raises(ModelRetry):
-            CreatorOutput(
-                name="Impossible",
-                tags=[Tag.METALLIC, Tag.INSULATING],
-                visual_descriptor=_make_visual(),
-            )
-
-    def test_single_tag_rejected(self) -> None:
-        with pytest.raises(ValidationError):
-            CreatorOutput(
-                name="Rock",
-                tags=[Tag.RIGID],
-                visual_descriptor=_make_visual(),
-            )
-
-    def test_two_tags_valid(self) -> None:
+    def test_no_tags_valid(self) -> None:
         out = CreatorOutput(
             name="Rock",
-            tags=[Tag.RIGID, Tag.HEAVY],
+            substance=Substance.STONE,
             visual_descriptor=_make_visual(),
         )
-        assert len(out.tags) == 2
+        assert out.tags == []
 
-    def test_empty_tags_raises(self) -> None:
-        with pytest.raises(ValidationError):
-            CreatorOutput(
-                name="Empty",
-                tags=[],
-                visual_descriptor=_make_visual(),
-            )
+    def test_no_element_valid(self) -> None:
+        out = CreatorOutput(
+            name="Rock",
+            substance=Substance.STONE,
+            tags=[],
+            visual_descriptor=_make_visual(),
+        )
+        assert out.element is None
 
     def test_too_many_tags_raises(self) -> None:
         with pytest.raises(ValidationError):
             CreatorOutput(
-                name="Overloaded",
-                tags=[
-                    Tag.RIGID,
-                    Tag.LIGHT,
-                    Tag.COLD,
-                    Tag.BREAKABLE,
-                    Tag.FLAMMABLE,
-                    Tag.WET,
-                ],  # 6 tags, over max of 5
+                name="Over",
+                substance=Substance.METAL,
+                tags=[Tag.SHARP, Tag.HEAVY, Tag.LIGHT, Tag.BOUNCY],  # 4 > max 3
+                visual_descriptor=_make_visual(),
+            )
+
+    def test_invalid_v2_tag_raises(self) -> None:
+        """Tags absorbed by substance (RIGID, METALLIC, etc.) should be rejected."""
+        with pytest.raises(ModelRetry):
+            CreatorOutput(
+                name="Sword",
+                substance=Substance.METAL,
+                tags=[Tag.RIGID],  # RIGID not in V2 visible set
                 visual_descriptor=_make_visual(),
             )
 
@@ -122,7 +88,8 @@ class TestCreatorOutput:
         with pytest.raises(ModelRetry):
             CreatorOutput(
                 name="The Great Big Sword",
-                tags=[Tag.RIGID, Tag.HEAVY],
+                substance=Substance.METAL,
+                tags=[Tag.SHARP],
                 visual_descriptor=_make_visual(),
             )
 
@@ -130,56 +97,86 @@ class TestCreatorOutput:
         with pytest.raises(ModelRetry):
             CreatorOutput(
                 name="",
-                tags=[Tag.RIGID, Tag.HEAVY],
+                substance=Substance.METAL,
                 visual_descriptor=_make_visual(),
             )
 
     def test_name_stripped(self) -> None:
         out = CreatorOutput(
             name="  Fire Sword  ",
-            tags=[Tag.RIGID, Tag.HEAVY],
+            substance=Substance.METAL,
+            tags=[Tag.SHARP],
             visual_descriptor=_make_visual(),
         )
         assert out.name == "Fire Sword"
 
+    def test_behaviors_valid(self) -> None:
+        out = CreatorOutput(
+            name="Cop",
+            substance=Substance.FLESH,
+            tags=[Tag.LIVING],
+            behaviors=[
+                BehaviorVerbSpec(verb=BehaviorVerb.EAT, target="donuts"),
+                BehaviorVerbSpec(verb=BehaviorVerb.DESTROY, target="criminals"),
+            ],
+            visual_descriptor=_make_visual(),
+        )
+        assert len(out.behaviors) == 2
+
+    def test_too_many_behaviors_raises(self) -> None:
+        with pytest.raises(ValidationError):
+            CreatorOutput(
+                name="Cop",
+                substance=Substance.FLESH,
+                tags=[Tag.LIVING],
+                behaviors=[
+                    BehaviorVerbSpec(verb=BehaviorVerb.EAT, target="a"),
+                    BehaviorVerbSpec(verb=BehaviorVerb.DESTROY, target="b"),
+                    BehaviorVerbSpec(verb=BehaviorVerb.FLEE, target="c"),
+                    BehaviorVerbSpec(verb=BehaviorVerb.FOLLOW, target="d"),
+                    BehaviorVerbSpec(verb=BehaviorVerb.PROTECT, target="e"),
+                ],
+                visual_descriptor=_make_visual(),
+            )
+
+    def test_dedup_tags(self) -> None:
+        out = CreatorOutput(
+            name="Rock",
+            substance=Substance.STONE,
+            tags=[Tag.SHARP, Tag.SHARP],
+            visual_descriptor=_make_visual(),
+        )
+        assert out.tags == [Tag.SHARP]
+
 
 class TestGameObjectBlueprint:
-    def _make_blueprint(
-        self,
-        id: str = "test-id",
-        name: str = "Test",
-        description: str = "A test object",
-        tags: list[Tag] | None = None,
-        visual_descriptor: VisualDescriptor | None = None,
-    ) -> GameObjectBlueprint:
-        return GameObjectBlueprint(
-            id=id,
-            name=name,
-            description=description,
-            tags=tags if tags is not None else [Tag.RIGID, Tag.HEAVY],
-            visual_descriptor=(
-                visual_descriptor if visual_descriptor is not None else _make_visual()
-            ),
-        )
+    def _make_blueprint(self, **kwargs: object) -> GameObjectBlueprint:
+        defaults: dict[str, object] = {
+            "id": "test-id",
+            "name": "Test",
+            "description": "A test object",
+            "substance": Substance.STONE,
+            "tags": [Tag.RIGID, Tag.HEAVY],
+            "visual_descriptor": _make_visual(),
+            "starting_durability": 300,
+        }
+        defaults.update(kwargs)
+        return GameObjectBlueprint(**defaults)  # type: ignore[arg-type]
 
-    def test_durability_breakable(self) -> None:
-        bp = self._make_blueprint(tags=[Tag.RIGID, Tag.BREAKABLE])
-        assert bp.starting_durability == DURABILITY_BREAKABLE
+    def test_substance_stored(self) -> None:
+        bp = self._make_blueprint()
+        assert bp.substance == Substance.STONE
 
-    def test_durability_rigid(self) -> None:
-        bp = self._make_blueprint(tags=[Tag.RIGID, Tag.HEAVY])
-        assert bp.starting_durability == DURABILITY_RIGID
+    def test_starting_durability(self) -> None:
+        bp = self._make_blueprint(starting_durability=250)
+        assert bp.starting_durability == 250
 
-    def test_durability_default(self) -> None:
-        bp = self._make_blueprint(tags=[Tag.LIQUID, Tag.HEAVY])
-        assert bp.starting_durability == DURABILITY_DEFAULT
-
-    def test_durability_breakable_takes_precedence(self) -> None:
-        """BREAKABLE check comes first, even if RIGID is also present."""
-        bp = self._make_blueprint(tags=[Tag.RIGID, Tag.BREAKABLE])
-        assert bp.starting_durability == DURABILITY_BREAKABLE
-
-    def test_serialization_includes_computed_fields(self) -> None:
-        bp = self._make_blueprint(tags=[Tag.RIGID, Tag.HEAVY])
+    def test_serialization_includes_v2_fields(self) -> None:
+        bp = self._make_blueprint()
         data = bp.model_dump(mode="json")
+        assert "substance" in data
+        assert "substance_profile" in data
+        assert "combat_profile" in data
+        assert "identity_embedding" in data
+        assert "behavior_embeddings" in data
         assert "starting_durability" in data

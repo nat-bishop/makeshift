@@ -5,7 +5,6 @@ Bridges pydantic-evals EvaluationReport to our persistent EvalRunResult format.
 
 from __future__ import annotations
 
-import contextlib
 import json
 import re
 from collections import Counter
@@ -52,55 +51,31 @@ def _extract_failure_retry_info(
     return retries, retry_errors
 
 
-def _resolve_behaviors(tags: list[str], signature: str | None) -> list[str]:
-    """Resolve tag-implied + signature behaviors into display strings."""
-    from app.models.behaviors import BehaviorParseError, expand_behavior_spec, parse_behavior_string
-    from app.models.tag_behaviors import resolve_implied_behaviors
-    from app.models.tags import Tag
-
-    parsed_tags: list[Tag] = []
-    for t in tags:
-        try:
-            parsed_tags.append(Tag(t))
-        except (ValueError, KeyError):
-            continue
-
-    explicit = None
-    if signature:
-        with contextlib.suppress(BehaviorParseError, ValueError):
-            explicit = expand_behavior_spec(parse_behavior_string(signature))
-
-    resolved = resolve_implied_behaviors(parsed_tags, explicit)
-
-    # Format back to readable strings
+def _format_behaviors(behaviors: list[dict]) -> list[str]:
+    """Format V2 behavior dicts into display strings."""
     lines: list[str] = []
-    for b in resolved:
-        parts = [b.trigger.value, b.action.value, b.target.value]
-        line = " -> ".join(parts)
-        if b.tags_to_apply:
-            # Already encoded in action via parametric syntax
-            pass
-        if b.trigger_tag:
-            parts[0] = f"{b.trigger.value}({b.trigger_tag.value})"
-            line = " -> ".join(parts)
-        lines.append(line)
+    for b in behaviors:
+        verb = b.get("verb", "unknown")
+        target = b.get("target", "")
+        lines.append(f"{verb} → {target}")
     return lines
 
 
 def _parse_output(raw: str) -> ParsedOutput | None:
-    """Parse a CreatorOutputSpec JSON string into structured fields."""
+    """Parse a V2 CreatorOutput JSON string into structured fields."""
     try:
         data = json.loads(raw)
     except (json.JSONDecodeError, TypeError):
         return None
     vd = data.get("visual_descriptor", {})
     tags = data.get("tags", [])
-    signature = data.get("signature")
+    behaviors = data.get("behaviors", [])
     return ParsedOutput(
         name=data.get("name", ""),
         tags=tags,
-        signature=signature,
-        resolved_behaviors=_resolve_behaviors(tags, signature),
+        substance=data.get("substance"),
+        element=data.get("element"),
+        resolved_behaviors=_format_behaviors(behaviors),
         size_category=vd.get("size_category", "unknown") if isinstance(vd, dict) else "unknown",
         visual_description=(
             vd.get("visual_description", "") if isinstance(vd, dict) else ""
@@ -126,6 +101,8 @@ def report_to_result(
             inputs=rc.inputs,
             category=meta.category if meta else "unknown",
             expected_tags=list(meta.expected_tags) if meta else [],
+            expected_substance=meta.expected_substance if meta else None,
+            expected_element=meta.expected_element if meta else None,
             output_raw=rc.output,
             output=_parse_output(rc.output) if rc.output else None,
             error=None,
@@ -148,6 +125,8 @@ def report_to_result(
             inputs=fc.inputs,
             category=meta.category if meta else "unknown",
             expected_tags=list(meta.expected_tags) if meta else [],
+            expected_substance=meta.expected_substance if meta else None,
+            expected_element=meta.expected_element if meta else None,
             output_raw=None,
             output=None,
             error=fc.error_message,

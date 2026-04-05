@@ -2,11 +2,9 @@ extends SceneTree
 ## Comprehensive test harness: exercises all Godot subsystems headlessly.
 ## Run: cd godot && timeout 60 godot --headless --quit --script res://test/test_systems.gd
 
-const TPM = preload("res://scripts/data/tag_physics_map.gd")
 const TC = preload("res://scripts/data/tag_colors.gd")
 const CL = preload("res://scripts/data/collision_layers.gd")
-# PhysicsComposer can't be preloaded (class_name TagPhysicsMap dependency
-# isn't registered in --script mode). Algorithm tested inline instead.
+const SP = preload("res://scripts/data/substance_physics.gd")
 
 var _pass_count: int = 0
 var _fail_count: int = 0
@@ -41,9 +39,8 @@ func _initialize() -> void:
 	_test_game_manager()
 	_test_rule_engine()
 	_test_event_bus_signals()
-	_test_physics_composer()
+	_test_substance_physics()
 	_test_tag_colors()
-	_test_tag_physics_map()
 	_test_effect_executor()
 	_test_scene_compilation()
 	_test_level_construction()
@@ -294,117 +291,48 @@ func _test_event_bus_signals() -> void:
 
 
 # ---------------------------------------------------------------------------
-# Section 6: PhysicsComposer
+# Section 6: SubstancePhysics (V2 — replaces TagPhysicsMap/PhysicsComposer)
 # ---------------------------------------------------------------------------
 
-func _test_physics_composer() -> void:
-	_section("PhysicsComposer")
-	# PhysicsComposer can't be loaded in --script mode (class_name dep chain).
-	# Test the algorithm inline using TPM.TAG_PHYSICS data directly.
-	# This mirrors PhysicsComposer.compose_physics() logic exactly.
+func _test_substance_physics() -> void:
+	_section("SubstancePhysics")
 
-	# Empty tags -> defaults
-	var empty_result: Dictionary = _compose_physics([])
+	# No substance_profile → fallback defaults
+	var empty_bp: Dictionary = {}
+	var empty_result: Dictionary = SP.resolve_physics(empty_bp)
 	_assert("empty: mass == 1.0", is_equal_approx(empty_result["mass"], 1.0))
 	_assert("empty: gravity == 1.0", is_equal_approx(empty_result["gravity"], 1.0))
 	_assert("empty: friction == 0.5", is_equal_approx(empty_result["friction"], 0.5))
 	_assert("empty: bounce == 0.0", is_equal_approx(empty_result["bounce"], 0.0))
 
-	# Single tag HEAVY
-	var heavy: Dictionary = _compose_physics(["HEAVY"])
-	_assert("HEAVY: mass == 5.0", is_equal_approx(heavy["mass"], 5.0))
-	_assert("HEAVY: gravity == 1.2", is_equal_approx(heavy["gravity"], 1.2))
-	_assert("HEAVY: friction == 0.7", is_equal_approx(heavy["friction"], 0.7))
-	_assert("HEAVY: bounce == 0.0", is_equal_approx(heavy["bounce"], 0.0))
+	# Metal substance profile (pre-computed by backend)
+	var metal_bp: Dictionary = {"substance_profile": {
+		"mass": 3.0, "friction": 0.6, "bounce": 0.0, "state": "solid",
+		"gravity": -1.0, "damping": -1.0,  # sentinels → use solid defaults
+	}}
+	var metal: Dictionary = SP.resolve_physics(metal_bp)
+	_assert("metal: mass == 3.0", is_equal_approx(metal["mass"], 3.0))
+	_assert("metal: gravity == 1.0 (solid default)", is_equal_approx(metal["gravity"], 1.0))
+	_assert("metal: damping == 0.5 (solid default)", is_equal_approx(metal["damping"], 0.5))
+	_assert("metal: friction == 0.6", is_equal_approx(metal["friction"], 0.6))
 
-	# Single tag BOUNCY
-	var bouncy: Dictionary = _compose_physics(["BOUNCY"])
-	_assert("BOUNCY: bounce == 0.9", is_equal_approx(bouncy["bounce"], 0.9))
-	_assert("BOUNCY: friction == 0.2", is_equal_approx(bouncy["friction"], 0.2))
-	_assert("BOUNCY: mass == 1.0 (default)", is_equal_approx(bouncy["mass"], 1.0))
-	_assert("BOUNCY: gravity == 1.0 (default)", is_equal_approx(bouncy["gravity"], 1.0))
+	# Gas state → negative gravity, high damping
+	var gas_bp: Dictionary = {"substance_profile": {
+		"mass": 0.01, "friction": 0.0, "bounce": 0.0, "state": "gas",
+		"gravity": -1.0, "damping": -1.0,
+	}}
+	var gas: Dictionary = SP.resolve_physics(gas_bp)
+	_assert("gas: gravity == -0.2", is_equal_approx(gas["gravity"], -0.2))
+	_assert("gas: damping == 4.0", is_equal_approx(gas["damping"], 4.0))
 
-	# HEAVY(priority 8) wins over LIGHT(priority 7) for mass
-	var heavy_light: Dictionary = _compose_physics(["HEAVY", "LIGHT"])
-	_assert("HEAVY wins over LIGHT for mass", is_equal_approx(heavy_light["mass"], 5.0))
-
-	# Same-priority average: BOUNCY(6) + FROZEN(6) for friction
-	var bouncy_frozen: Dictionary = _compose_physics(["BOUNCY", "FROZEN"])
-	_assert("same priority friction avg", is_equal_approx(bouncy_frozen["friction"], (0.2 + 0.05) / 2.0))
-
-	# Higher priority wins: FLYING(9) over HEAVY(8) for gravity
-	var fly_heavy: Dictionary = _compose_physics(["FLYING", "HEAVY"])
-	_assert("FLYING overrides HEAVY gravity", is_equal_approx(fly_heavy["gravity"], 0.0))
-
-	# Size data (inline constants matching PhysicsComposer.SIZE_TO_PHYSICS)
-	var size_data: Dictionary = {
-		"tiny": {"sprite": 24, "collision": 16},
-		"small": {"sprite": 44, "collision": 32},
-		"medium": {"sprite": 72, "collision": 56},
-		"large": {"sprite": 120, "collision": 96},
-		"huge": {"sprite": 192, "collision": 160},
-	}
-	_assert("tiny: sprite == 24", size_data["tiny"]["sprite"] == 24)
-	_assert("tiny: collision == 16", size_data["tiny"]["collision"] == 16)
-	_assert("medium: sprite == 72", size_data["medium"]["sprite"] == 72)
-	_assert("unknown size -> medium default", size_data.get("gigantic", size_data["medium"])["sprite"] == 72)
-
-	# Shape detection (inline constants matching PhysicsComposer)
-	var elongated: Array[String] = ["sword", "plank", "rope", "ladder", "wand", "torch", "fan"]
-	var round_forms: Array[String] = ["sphere", "ball", "boulder", "wheel"]
-	_assert("sword -> capsule", "sword" in elongated)
-	_assert("ball -> circle", "ball" in round_forms)
-	_assert("box -> rectangle (default)", "box" not in elongated and "box" not in round_forms)
-	_assert("unknown -> rectangle", "xyz" not in elongated and "xyz" not in round_forms)
-
-
-# Inline mirror of PhysicsComposer.compose_physics() — tests the algorithm
-# using TPM.TAG_PHYSICS data directly (avoids class_name dep chain).
-func _compose_physics(tags: Array) -> Dictionary:
-	var mass_entries: Array = []
-	var gravity_entries: Array = []
-	var friction_entries: Array = []
-	var bounce_entries: Array = []
-
-	for tag in tags:
-		var tag_str: String = str(tag)
-		if tag_str not in TPM.TAG_PHYSICS:
-			continue
-		var props: Dictionary = TPM.TAG_PHYSICS[tag_str]
-		var priority: int = props["priority"]
-
-		if props["mass"] >= 0.0:
-			mass_entries.append({"priority": priority, "value": props["mass"]})
-		if props["gravity"] > -2.0 and props["gravity"] != -1.0:
-			gravity_entries.append({"priority": priority, "value": props["gravity"]})
-		if props["friction"] >= 0.0:
-			friction_entries.append({"priority": priority, "value": props["friction"]})
-		if props["bounce"] >= 0.0:
-			bounce_entries.append({"priority": priority, "value": props["bounce"]})
-
-	return {
-		"mass": _resolve_property(mass_entries, 1.0),
-		"gravity": _resolve_property(gravity_entries, 1.0),
-		"friction": _resolve_property(friction_entries, 0.5),
-		"bounce": _resolve_property(bounce_entries, 0.0),
-	}
-
-
-func _resolve_property(entries: Array, default_value: float) -> float:
-	if entries.is_empty():
-		return default_value
-	var max_priority: int = -1
-	for entry in entries:
-		if entry["priority"] > max_priority:
-			max_priority = entry["priority"]
-	var values: Array = []
-	for entry in entries:
-		if entry["priority"] == max_priority:
-			values.append(entry["value"])
-	var total: float = 0.0
-	for v in values:
-		total += v
-	return total / values.size()
+	# Profile with explicit gravity/damping (overrides state defaults)
+	var flying_bp: Dictionary = {"substance_profile": {
+		"mass": 1.5, "friction": 0.5, "bounce": 0.0, "state": "solid",
+		"gravity": 0.0, "damping": 2.0,  # FLYING tag modifier baked in
+	}}
+	var flying: Dictionary = SP.resolve_physics(flying_bp)
+	_assert("flying: gravity == 0.0", is_equal_approx(flying["gravity"], 0.0))
+	_assert("flying: damping == 2.0", is_equal_approx(flying["damping"], 2.0))
 
 
 # ---------------------------------------------------------------------------
@@ -422,24 +350,6 @@ func _test_tag_colors() -> void:
 	_assert("COLORS has 14 entries", TC.COLORS.size() == 14)
 
 
-# ---------------------------------------------------------------------------
-# Section 10: TagPhysicsMap
-# ---------------------------------------------------------------------------
-
-func _test_tag_physics_map() -> void:
-	_section("TagPhysicsMap")
-	_assert("HEAVY defined", "HEAVY" in TPM.TAG_PHYSICS)
-	_assert("LIGHT defined", "LIGHT" in TPM.TAG_PHYSICS)
-	_assert("BOUNCY defined", "BOUNCY" in TPM.TAG_PHYSICS)
-	_assert("FLYING defined", "FLYING" in TPM.TAG_PHYSICS)
-	_assert("FROZEN defined", "FROZEN" in TPM.TAG_PHYSICS)
-	_assert("MOLTEN defined", "MOLTEN" in TPM.TAG_PHYSICS)
-
-	var heavy: Dictionary = TPM.TAG_PHYSICS["HEAVY"]
-	_assert("HEAVY has priority", heavy.has("priority"))
-	_assert("HEAVY mass > 1.0", heavy["mass"] > 1.0)
-	_assert("HEAVY priority is 8", heavy["priority"] == 8)
-	_assert("TAG_PHYSICS has 12 entries", TPM.TAG_PHYSICS.size() == 12)
 
 
 # ---------------------------------------------------------------------------

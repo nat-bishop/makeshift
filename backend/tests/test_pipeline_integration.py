@@ -16,6 +16,7 @@ from app.images.pipeline import (
     get_cached_sprite_path,
 )
 from app.models.blueprint import GameObjectBlueprint, VisualDescriptor
+from app.models.substances import Substance
 from app.models.tags import Tag
 from PIL import Image
 
@@ -43,10 +44,12 @@ def _make_blueprint(id: str = "test-id", name: str = "Test Object") -> GameObjec
         id=id,
         name=name,
         description="test",
+        substance=Substance.STONE,
         tags=[Tag.RIGID, Tag.HEAVY],
         visual_descriptor=VisualDescriptor(
             visual_description="a gray cube", size_category="medium"
         ),
+        starting_durability=300,
     )
 
 

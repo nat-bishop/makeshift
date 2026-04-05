@@ -4,8 +4,12 @@ var object_id: String = ""
 var blueprint: Dictionary = {}
 var current_durability: int = 150
 var _tag_manager: TagManager = null
-var _behavior_executor: Node = null
+var _behavior_system: Node = null
 var _tag_field: Node = null
+
+# V2: embedding for semantic targeting
+var _identity_embedding: Array = []
+var _embed_dirty: bool = false
 
 @onready var physics_applicator: Node = $PhysicsApplicator
 @onready var object_visual: Node = $ObjectVisual
@@ -34,30 +38,34 @@ func init_from_blueprint(bp: Dictionary) -> void:
 
 	current_durability = bp.get("starting_durability", 150)
 
-	var visual_descriptor: Dictionary = bp.get("visual_descriptor", {})
-	physics_applicator.apply(tags, visual_descriptor)
+	# V2: substance-based physics
+	physics_applicator.apply_from_blueprint(bp)
 	object_visual.set_object_id(object_id)
 	object_visual.init_programmatic_anims(tags)
 
-	# Add to groups for behavior target resolution
+	# Add to groups
 	add_to_group("game_objects")
 	if "LIVING" in tags:
 		add_to_group("living")
 
-	# Initialize behavior system if behaviors present
+	# V2: store identity embedding
+	_identity_embedding = bp.get("identity_embedding", [])
+
+	# V2: verb behavior system (replaces behavior_executor)
 	var behaviors: Array = bp.get("behaviors", [])
-	if not behaviors.is_empty():
-		var executor_script = preload("res://scripts/systems/behavior_executor.gd")
-		_behavior_executor = executor_script.new()
-		_behavior_executor.name = "BehaviorExecutor"
-		add_child(_behavior_executor)
-		_behavior_executor.init_behaviors(behaviors, self)
+	var behavior_embeddings: Array = bp.get("behavior_embeddings", [])
+	if not behaviors.is_empty() and not behavior_embeddings.is_empty():
+		var vbs_script = preload("res://scripts/systems/verb_behavior_system.gd")
+		_behavior_system = vbs_script.new()
+		_behavior_system.name = "VerbBehaviorSystem"
+		add_child(_behavior_system)
+		_behavior_system.init_behaviors(behaviors, behavior_embeddings, self)
 
 	# Initialize field system if object has field-emitting tags
 	if FieldConfig.has_any_field_tag(tags):
 		_create_tag_field(tags)
 
-	# Debug label for overlay
+	# Debug label
 	var debug_label_script: GDScript = preload("res://scripts/ui/debug_label.gd")
 	var debug_label := PanelContainer.new()
 	debug_label.set_script(debug_label_script)
@@ -65,6 +73,17 @@ func init_from_blueprint(bp: Dictionary) -> void:
 	debug_label.init(self)
 
 	Log.info("GameObject: Initialized '%s' (id=%s) with %d tags, %d behaviors, durability=%d" % [bp.get("name", "?"), object_id, tags.size(), behaviors.size(), current_durability])
+
+	# Notify scene after node enters tree (deferred to ensure _ready() completes first)
+	call_deferred("_emit_entered_scene")
+
+
+func _emit_entered_scene() -> void:
+	EventBus.object_entered_scene.emit(self)
+
+
+func _exit_tree() -> void:
+	EventBus.object_exited_scene.emit(self)
 
 
 func get_blueprint() -> Dictionary:
@@ -81,6 +100,10 @@ func get_tags() -> Array[String]:
 
 func get_object_id() -> String:
 	return object_id
+
+
+func get_identity_embedding() -> Array:
+	return _identity_embedding
 
 
 func is_passively_pushable() -> bool:
@@ -100,18 +123,9 @@ func take_damage(amount: float, element_color: Color = Color.WHITE) -> void:
 	object_visual.flash_hit(element_color)
 
 	if current_durability <= 0:
-		if _behavior_executor != null:
-			_behavior_executor.fire_trigger("ON_DESTROY")
 		Log.info("GameObject: '%s' (id=%s) destroyed, final durability=%d" % [blueprint.get("name", "?"), object_id, current_durability])
 		queue_free()
 		return
-
-	# Fire damage-related behavior triggers
-	if _behavior_executor != null:
-		_behavior_executor.fire_trigger("ON_DAMAGED")
-		var starting: int = blueprint.get("starting_durability", 150)
-		if current_durability < starting / 2:
-			_behavior_executor.fire_trigger("ON_HEALTH_LOW")
 
 
 func heal(amount: float) -> void:
@@ -130,22 +144,22 @@ func remove_tag(tag: String) -> void:
 
 
 func _on_tag_added(tag: String) -> void:
-	# Add-only effects (common effects handled by _on_tags_changed)
 	if tag in TagColors.COLORS:
 		object_visual.spawn_particles(TagColors.get_color(tag))
-	if _behavior_executor != null:
-		_behavior_executor.on_tag_added(tag)
-	# Create tag field if this is the first field tag (update handled by _on_tags_changed)
+	# Create tag field if this is the first field tag
 	if _tag_field == null and FieldConfig.is_field_tag(tag):
 		_create_tag_field(tags)
 
 
 func _on_tags_changed(_updated_tags: Array[String]) -> void:
-	# Common effects for both add and remove
 	_reapply_physics()
 	object_visual.refresh_tag_visuals(tags)
 	if _tag_field != null:
 		_tag_field.on_tags_changed(tags)
+	# V2: debounced re-embed — coalesce multiple tag changes per frame
+	if not _embed_dirty:
+		_embed_dirty = true
+		call_deferred("_rebuild_and_reembed")
 
 
 func get_cascade_neighbors() -> Array:
@@ -165,20 +179,33 @@ func _create_tag_field(current_tags: Array) -> void:
 
 
 func _reapply_physics() -> void:
-	var visual_descriptor: Dictionary = blueprint.get("visual_descriptor", {})
-	physics_applicator.apply(tags, visual_descriptor)
+	# V2: re-apply from blueprint (substance profile doesn't change, but tags might
+	# affect physics via tag modifiers — however these are baked into the profile at
+	# creation. For now, just re-apply the original profile.)
+	physics_applicator.apply_from_blueprint(blueprint)
 
 
-func fire_behavior_trigger(trigger_name: String, source: Node = null) -> void:
-	if _behavior_executor != null:
-		_behavior_executor.fire_trigger(trigger_name, source)
+func _rebuild_and_reembed() -> void:
+	_embed_dirty = false
+	var vd: Dictionary = blueprint.get("visual_descriptor", {})
+	var body: Dictionary = {
+		"name": blueprint.get("name", ""),
+		"visual_description": vd.get("visual_description", ""),
+		"size_category": vd.get("size_category", "medium"),
+		"current_tags": Array(tags),
+	}
+	Backend.post_embed(body, func(embedding: Array) -> void:
+		if not is_instance_valid(self):
+			return
+		_identity_embedding = embedding
+		EventBus.object_embedding_changed.emit(self)
+	)
+
 
 
 func _on_body_entered(body: Node) -> void:
 	if not TagColors.is_taggable(body):
 		return
-	# Defer to avoid "Can't change state while flushing queries" —
-	# collision resolution can chain to add_tag → _reapply_physics → new shapes.
 	call_deferred("_resolve_deferred", body)
 
 

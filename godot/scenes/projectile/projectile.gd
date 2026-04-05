@@ -6,6 +6,10 @@ extends RigidBody2D
 
 const CL = preload("res://scripts/data/collision_layers.gd")
 
+const PROJECTILE_BASE_TAGS := ["LIGHT", "BREAKABLE"]
+const PROJECTILE_LIFETIME := 2.5
+const PROJECTILE_SPEED := 250.0
+
 static var _texture_cache: Dictionary = {}  # color_hex -> ImageTexture
 
 var tags: Array = []
@@ -24,7 +28,7 @@ func _ready() -> void:
 
 	# Lifetime timer
 	var lifetime_timer := Timer.new()
-	lifetime_timer.wait_time = BehaviorMaps.PROJECTILE_LIFETIME
+	lifetime_timer.wait_time = PROJECTILE_LIFETIME
 	lifetime_timer.one_shot = true
 	lifetime_timer.timeout.connect(_on_lifetime_expired)
 	add_child(lifetime_timer)
@@ -38,12 +42,12 @@ func init_projectile(direction: Vector2, damage: float, payload_tag: String, sou
 		add_collision_exception_with(source)
 
 	# Set up tags
-	tags = BehaviorMaps.PROJECTILE_BASE_TAGS.duplicate()
+	tags = PROJECTILE_BASE_TAGS.duplicate()
 	if not payload_tag.is_empty():
 		tags.append(payload_tag)
 
 	# Set velocity
-	linear_velocity = direction * BehaviorMaps.PROJECTILE_SPEED
+	linear_velocity = direction * PROJECTILE_SPEED
 
 	# Create placeholder visual
 	_create_visual(payload_tag)

@@ -27,12 +27,12 @@ import logfire
 from app.config import settings
 from pydantic_evals import Dataset
 
-from evals.conftest import make_agent, make_task
+from evals.conftest import make_agent, make_split_task, make_task
 from evals.dataset import EVAL_CASES, build_dataset
 from evals.distribution import print_distribution_report
 from evals.io import report_to_result, save_result
 from evals.metrics import default_evaluators
-from evals.prompts import PROMPT_VARIANTS
+from evals.prompts import PROMPT_VARIANTS, SPLIT_VARIANTS
 
 
 def parse_args() -> argparse.Namespace:
@@ -64,8 +64,10 @@ async def main():
     args = parse_args()
 
     variant = args.variant
-    if variant not in PROMPT_VARIANTS:
-        print(f"Error: variant '{variant}' not found. Available: {list(PROMPT_VARIANTS.keys())}")
+    all_variants = {**PROMPT_VARIANTS, **{k: k for k in SPLIT_VARIANTS}}
+    if variant not in all_variants and variant not in SPLIT_VARIANTS:
+        available = list(PROMPT_VARIANTS.keys()) + list(SPLIT_VARIANTS.keys())
+        print(f"Error: variant '{variant}' not found. Available: {available}")
         sys.exit(1)
 
     run_name = args.name or variant
@@ -88,9 +90,19 @@ async def main():
         f"variant '{variant}', name '{run_name}'{repeat_msg}..."
     )
 
-    agent = make_agent(PROMPT_VARIANTS[variant])
+    if variant in SPLIT_VARIANTS:
+        from evals.split_models import ClassifyOutput, CreativeOutput
+
+        classify_prompt, creative_prompt = SPLIT_VARIANTS[variant]
+        classify_agent = make_agent(classify_prompt, output_type=ClassifyOutput)
+        creative_agent = make_agent(creative_prompt, output_type=CreativeOutput)
+        task_fn = make_split_task(classify_agent, creative_agent)
+    else:
+        agent = make_agent(PROMPT_VARIANTS[variant])
+        task_fn = make_task(agent)
+
     report = await dataset.evaluate(
-        make_task(agent), name=run_name, max_concurrency=8, repeat=repeat,
+        task_fn, name=run_name, max_concurrency=8, repeat=repeat,
     )
 
     # Print pydantic-evals report

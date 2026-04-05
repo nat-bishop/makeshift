@@ -2,101 +2,79 @@ from enum import StrEnum
 
 
 class Tag(StrEnum):
-    # Physical State (5) — SOLID removed (implicit default), FLEXIBLE removed
+    # Physical State
     LIQUID = "LIQUID"
     GAS = "GAS"
     RIGID = "RIGID"
     HEAVY = "HEAVY"
     LIGHT = "LIGHT"
-    # Temperature (3+1 internal) — HOT kept as internal-only (not in LLM vocab)
+    # Temperature
     FROZEN = "FROZEN"
     COLD = "COLD"
-    HOT = "HOT"
+    HOT = "HOT"  # internal-only: derived from substance/element
     MOLTEN = "MOLTEN"
-    BRITTLE = "BRITTLE"  # internal-only: added by freeze rules, shatterable by force
-    # Energy (5)
+    BRITTLE = "BRITTLE"  # internal-only: added by freeze rules
+    # Energy
     FLAMMABLE = "FLAMMABLE"
     HEAT_SOURCE = "HEAT_SOURCE"
     ELECTRIC = "ELECTRIC"
     MAGNETIC = "MAGNETIC"
     EXPLOSIVE = "EXPLOSIVE"
-    # Surface (3) — SLIPPERY removed
+    # Surface
     SHARP = "SHARP"
     STICKY = "STICKY"
     REFLECTIVE = "REFLECTIVE"
-    # Mechanical (2)
+    # Mechanical
     BOUNCY = "BOUNCY"
     BREAKABLE = "BREAKABLE"
-    # Environmental (5+1 internal) — CORROSIVE renamed to ACIDIC, FLOATING renamed to FLYING
+    # Environmental
     FLYING = "FLYING"
     WIND_SOURCE = "WIND_SOURCE"
     ACIDIC = "ACIDIC"
     TOXIC = "TOXIC"
     WET = "WET"
-    CORRODED = "CORRODED"  # internal-only: added by acid rules, vulnerable to force
-    # Special (5) — GLOWING kept as internal-only, CONDUCTING renamed to METALLIC
+    CORRODED = "CORRODED"  # internal-only: added by acid rules
+    # Special
     LIVING = "LIVING"
-    GLOWING = "GLOWING"
+    GLOWING = "GLOWING"  # internal-only: smolder ignition + creature attraction
     METALLIC = "METALLIC"
     INSULATING = "INSULATING"
     HOSTILE = "HOSTILE"
 
 
-# Tags the LLM can pick. Internal-only tags are rule-applied at runtime.
-LLM_VISIBLE_TAGS: frozenset[Tag] = frozenset(Tag) - {
-    Tag.HOT,
-    Tag.GLOWING,
-    Tag.BRITTLE,
-    Tag.CORRODED,
-}
+# V2: LLM picks 0-3 tags from this set. Substance/element absorb the rest.
+LLM_VISIBLE_TAGS_V2: frozenset[Tag] = frozenset({
+    Tag.SHARP,
+    Tag.HEAVY,
+    Tag.LIGHT,
+    Tag.BOUNCY,
+    Tag.BREAKABLE,
+    Tag.STICKY,
+    Tag.REFLECTIVE,
+    Tag.EXPLOSIVE,
+    Tag.FLYING,
+    Tag.LIVING,
+    Tag.WET,
+    Tag.HOSTILE,
+})
 
-# One-line gameplay descriptions for hallucinated-tag retry messages.
+# One-line gameplay descriptions for tag validation help text.
 TAG_DESCRIPTIONS: dict[Tag, str] = {
-    Tag.LIQUID: "fluid that flows and pools. Water, oil, slime",
-    Tag.GAS: "airborne, dispersed substance. Smoke, steam, poison clouds",
-    Tag.RIGID: "hard, unyielding material (200 HP). Stone, metal, bone, hardwood",
+    Tag.SHARP: "has a cutting edge or point. Swords, thorns, broken glass, claws",
     Tag.HEAVY: "dense and massive. Anvils, boulders, safes. Immovable by wind or pushing",
     Tag.LIGHT: "very low mass. Feathers, paper, balloons. Blown by WIND_SOURCE",
-    Tag.FROZEN: "encased in or made of ice. Ice blocks, frost crystals. Brittle and slippery",
-    Tag.COLD: "actively radiates cold. Freezers, ice elementals, snow clouds",
-    Tag.MOLTEN: "superheated liquid. Lava, molten metal, magma",
-    Tag.FLAMMABLE: "combustible. Wood, cloth, paper, oil. Ignited by HEAT_SOURCE or ELECTRIC",
-    Tag.HEAT_SOURCE: "actively produces heat or fire. Torches, campfires, fire elementals",
-    Tag.ELECTRIC: "electrical charge. Lightning, live wires. Propagates through METALLIC/LIQUID",
-    Tag.MAGNETIC: "magnetic field. Magnets, lodestones. Pulls METALLIC objects at range",
-    Tag.EXPLOSIVE: "volatile, detonates under stress. Dynamite, grenades, gas canisters",
-    Tag.SHARP: "has a cutting edge or point. Swords, thorns, broken glass, claws",
+    Tag.BOUNCY: "elastic, high restitution. Rubber balls, springs, trampolines",
+    Tag.BREAKABLE: "fragile, easily destroyed. Glass, pottery, eggshells",
     Tag.STICKY: "adhesive surface. Honey, tar, spider webs, glue. Slows nearby to 25% speed",
     Tag.REFLECTIVE: "smooth, mirror-like surface. Shields, mirrors, polished metal",
-    Tag.BOUNCY: "elastic, high restitution. Rubber balls, springs, trampolines",
-    Tag.BREAKABLE: "fragile, easily destroyed (50 HP). Glass, pottery, eggshells",
-    Tag.FLYING: "defies gravity, hovers or flies. Helicopters, birds, drones, balloons, clouds",
-    Tag.WIND_SOURCE: "strong air currents. Fans, tornados. Pushes LIGHT, disperses GAS",
-    Tag.ACIDIC: "corrosive chemical. Acid pools, chemical waste, digestive fluid",
-    Tag.TOXIC: "poisonous substance. Venom, toxic mushrooms, noxious fumes. Cascades through GAS",
+    Tag.EXPLOSIVE: "volatile, detonates under stress. Dynamite, grenades, gas canisters",
+    Tag.FLYING: "defies gravity, hovers or flies. Birds, drones, balloons, ghosts, clouds",
+    Tag.LIVING: "biological creature or organism. Animals, monsters, insects. NOT machines",
     Tag.WET: "damp or soaked. Amplifies ELECTRIC shock, freezes from COLD, resists fire",
-    Tag.LIVING: "biological creature or organism. Animals, monsters, insects",
-    Tag.METALLIC: "made of metal. Swords, armor, coins, chains. Conducts heat and electricity",
-    Tag.INSULATING: "blocks energy transfer. Rubber coating, ceramic, thick glass",
-    Tag.HOSTILE: "aggressive, damage + knockback nearby. Two HOSTILE objects fight each other",
+    Tag.HOSTILE: "aggressive. Deals damage to nearby creatures. Auto-derived from destroy verb",
 }
 
-# Auto-correction: if LLM outputs HOT, silently replace with HEAT_SOURCE.
-TAG_AUTO_CORRECTIONS: dict[str, Tag] = {
-    "HOT": Tag.HEAT_SOURCE,
-    "SOLID": Tag.RIGID,  # closest equivalent for objects that "should be solid"
-    "CORROSIVE": Tag.ACIDIC,
-    "CONDUCTING": Tag.METALLIC,
-    "SLIPPERY": Tag.FROZEN,
-    "FLEXIBLE": Tag.BOUNCY,
-    "GLOWING": Tag.HEAT_SOURCE,  # closest gameplay equivalent
-    "BRITTLE": Tag.FROZEN,  # closest LLM-visible equivalent
-    "CORRODED": Tag.ACIDIC,  # closest LLM-visible equivalent
-    "FLOATING": Tag.FLYING,  # renamed tag
-    "AIRBORNE": Tag.FLYING,  # common hallucination
-}
-
-
+# Runtime tag contradictions — enforced by WorldMutations.apply_add_tag()
 TAG_CONTRADICTIONS: list[frozenset[Tag]] = [
     frozenset({Tag.FROZEN, Tag.MOLTEN}),
     frozenset({Tag.FROZEN, Tag.HEAT_SOURCE}),

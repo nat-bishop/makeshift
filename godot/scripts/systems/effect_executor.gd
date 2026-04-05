@@ -2,23 +2,26 @@ extends Node
 
 # Applies rule effects to game objects.
 # Called by CollisionResolver for each matched rule.
-# All effects are expressed as 5 primitives: DAMAGE, HEAL, ADD_TAG, REMOVE_TAG, APPLY_FORCE.
+# V2: reads combat_profile/substance_profile from blueprints for parameterized damage.
+
+const DYNAMIC_TAG_DURATION: float = 10.0
 
 
 func execute(rule: Dictionary, body_a: Node, body_b: Node, cascade_depth: int = 0) -> void:
 	var effects: Array = rule.get("effects", [])
 	var last_message: String = ""
-	var tag_duration: float = BehaviorMaps.DYNAMIC_TAG_DURATION if cascade_depth > 0 else 0.0
+	var tag_duration: float = DYNAMIC_TAG_DURATION if cascade_depth > 0 else 0.0
 	Log.debug("EffectExecutor: Executing rule '%s' (%d effects, cascade_depth=%d)" % [rule.get("rule_id", "?"), effects.size(), cascade_depth])
+	var rule_id: String = rule.get("rule_id", "")
 	for effect in effects:
 		if effect is not Dictionary:
-			Log.debug("EffectExecutor: Skipping non-Dictionary effect in rule '%s'" % rule.get("rule_id", "?"))
+			Log.debug("EffectExecutor: Skipping non-Dictionary effect in rule '%s'" % rule_id)
 			continue
 		var targets: Array[Node] = _get_targets(effect, body_a, body_b)
 		var effect_type: String = effect.get("effect_type", "")
 
 		for target in targets:
-			_apply_effect(effect_type, effect, target, body_a, body_b, tag_duration)
+			_apply_effect(effect_type, effect, target, body_a, body_b, tag_duration, rule_id)
 
 		var msg: String = effect.get("message", "")
 		if msg != "":
@@ -33,10 +36,10 @@ func execute(rule: Dictionary, body_a: Node, body_b: Node, cascade_depth: int = 
 		)
 
 
-func _apply_effect(effect_type: String, effect: Dictionary, target: Node, body_a: Node, body_b: Node, tag_duration: float = 0.0) -> void:
+func _apply_effect(effect_type: String, effect: Dictionary, target: Node, body_a: Node, body_b: Node, tag_duration: float = 0.0, rule_id: String = "") -> void:
 	match effect_type:
 		"DAMAGE":
-			var amount: float = effect.get("damage_amount", 0.0)
+			var amount: float = _resolve_damage(effect, body_a, body_b, target, rule_id)
 			var tick_interval: float = effect.get("tick_interval", 0.0)
 			var tick_dur: float = effect.get("tick_duration", 0.0)
 			var source: Node = body_a if target == body_b else body_b
@@ -74,7 +77,7 @@ func _apply_effect(effect_type: String, effect: Dictionary, target: Node, body_a
 				WorldMutations.apply_remove_tag(target, tag)
 
 		"APPLY_FORCE":
-			var magnitude: float = effect.get("force_magnitude", 100.0)
+			var magnitude: float = _resolve_force(effect, body_a, body_b, target, rule_id)
 			var source: Node = body_b if target == body_a else body_a
 			var direction: Vector2 = Vector2.ZERO
 			if source is Node2D and target is Node2D:
@@ -83,10 +86,60 @@ func _apply_effect(effect_type: String, effect: Dictionary, target: Node, body_a
 			WorldMutations.apply_impulse(target, direction, magnitude)
 
 		"APPLY_SLOW":
-			pass  # Continuous per-frame effect handled by TagField, not impulse-based
+			pass  # Continuous per-frame effect handled by TagField
 
 		_:
 			Log.warn("EffectExecutor: Unknown effect type '%s'" % effect_type)
+
+
+func _resolve_damage(effect: Dictionary, body_a: Node, body_b: Node, target: Node, rule_id: String = "") -> float:
+	## V2: parameterized damage from combat_profile/substance_profile.
+	var base_amount: float = effect.get("damage_amount", 0.0)
+
+	# Get source and target blueprints
+	var source: Node = body_a if target == body_b else body_b
+	var source_bp: Dictionary = source.blueprint if source.has_method("get_blueprint") else {}
+	var target_bp: Dictionary = target.blueprint if target.has_method("get_blueprint") else {}
+	var source_combat: Dictionary = source_bp.get("combat_profile", {})
+	var target_profile: Dictionary = target_bp.get("substance_profile", {})
+
+	# Parameterized rules — use combat/substance profiles when available
+	match rule_id:
+		"sharp_living_cut", "sharp_breakable_damage":
+			if source_combat.has("melee_damage"):
+				return source_combat["melee_damage"]
+		"heavy_breakable_crush":
+			if source_combat.has("crush_damage"):
+				return source_combat["crush_damage"]
+		"heat_flammable_ignite":
+			var fire_coeff: float = source_combat.get("fire_dps_coefficient", 0.0)
+			var burn_rate: float = target_profile.get("burn_rate", 0.5)
+			if fire_coeff > 0.0:
+				return fire_coeff * burn_rate
+		"electric_metallic_electrify":
+			var conductivity: float = target_profile.get("conductivity", 0.5)
+			return 30.0 * conductivity
+		"reflective_heat_reflect":
+			var heat_output: float = source_bp.get("substance_profile", {}).get("heat_output", 0.0)
+			return 10.0 * heat_output
+
+	return base_amount
+
+
+func _resolve_force(effect: Dictionary, body_a: Node, body_b: Node, target: Node, rule_id: String = "") -> float:
+	## V2: parameterized force from substance_profile.
+	var base_magnitude: float = effect.get("force_magnitude", 100.0)
+
+	var target_bp: Dictionary = target.blueprint if target.has_method("get_blueprint") else {}
+	var target_profile: Dictionary = target_bp.get("substance_profile", {})
+
+	match rule_id:
+		"wind_light_push":
+			var mass: float = target_profile.get("mass", 1.0)
+			if mass > 0.0:
+				return 45.0 * (0.3 / mass)
+
+	return base_magnitude
 
 
 func _get_targets(effect: Dictionary, body_a: Node, body_b: Node) -> Array[Node]:

@@ -1,33 +1,36 @@
+from __future__ import annotations
+
+from enum import StrEnum
 from typing import Literal
 
 import structlog
-from pydantic import BaseModel, Field, ValidationError, computed_field, field_validator
+from pydantic import BaseModel, Field, field_validator
 
-from app.models.behaviors import (
-    Behavior,
-    BehaviorParseError,
-    parse_behavior_string,
-)
-from app.models.tags import (
-    LLM_VISIBLE_TAGS,
-    TAG_AUTO_CORRECTIONS,
-    TAG_CONTRADICTIONS,
-    TAG_DESCRIPTIONS,
-    Tag,
-)
-
-DURABILITY_BREAKABLE = 50
-DURABILITY_RIGID = 200
-DURABILITY_DEFAULT = 150
+from app.models.substances import Element, Substance
+from app.models.tags import LLM_VISIBLE_TAGS_V2, TAG_DESCRIPTIONS, Tag
 
 logger = structlog.get_logger()
 
-# Pre-computed constants for tag validation (avoid rebuilding per call)
-_VALID_TAG_VALUES: frozenset[str] = frozenset(t.value for t in Tag)
-_TAG_HELP_STRING: str = "\n".join(
+# Pre-computed constants for tag validation
+_V2_TAG_VALUES: frozenset[str] = frozenset(t.value for t in LLM_VISIBLE_TAGS_V2)
+_V2_TAG_HELP: str = "\n".join(
     f"  {tag.value} — {TAG_DESCRIPTIONS[tag]}"
-    for tag in sorted(LLM_VISIBLE_TAGS, key=lambda t: t.value)
+    for tag in sorted(LLM_VISIBLE_TAGS_V2, key=lambda t: t.value)
 )
+
+
+class BehaviorVerb(StrEnum):
+    DESTROY = "destroy"
+    EAT = "eat"
+    INVESTIGATE = "investigate"
+    FOLLOW = "follow"
+    PROTECT = "protect"
+    FLEE = "flee"
+
+
+class BehaviorVerbSpec(BaseModel):
+    verb: BehaviorVerb
+    target: str = Field(min_length=1, max_length=100)
 
 
 class VisualDescriptor(BaseModel):
@@ -40,8 +43,13 @@ class VisualDescriptor(BaseModel):
 
 
 class CreatorOutput(BaseModel):
+    """V2 LLM output: substance + element + tags + behaviors."""
+
     name: str
-    tags: list[Tag] = Field(min_length=2, max_length=5)
+    substance: Substance
+    element: Element | None = None
+    tags: list[Tag] = Field(default_factory=list, max_length=3)
+    behaviors: list[BehaviorVerbSpec] = Field(default_factory=list, max_length=4)
     visual_descriptor: VisualDescriptor
 
     @field_validator("name")
@@ -61,95 +69,40 @@ class CreatorOutput(BaseModel):
 
     @field_validator("tags", mode="before")
     @classmethod
-    def auto_correct_tags(cls, tags: list) -> list:
-        """Auto-correct removed/renamed tags and reject hallucinated ones."""
+    def validate_v2_tags(cls, tags: list) -> list:
+        """Only allow V2 LLM-visible tags."""
         from pydantic_ai import ModelRetry
 
-        corrected = []
-        for t in tags:
-            if isinstance(t, str):
-                upper = t.strip().upper()
-                if upper in TAG_AUTO_CORRECTIONS:
-                    replacement = TAG_AUTO_CORRECTIONS[upper]
-                    logger.debug(
-                        "tag_auto_corrected", original=upper, replacement=replacement.value
-                    )
-                    corrected.append(replacement.value)
-                    continue
-                if upper not in _VALID_TAG_VALUES:
-                    raise ModelRetry(
-                        f"Unknown tag '{t}'. Choose from these tags:\n{_TAG_HELP_STRING}"
-                    )
-            corrected.append(t)
-        # Deduplicate while preserving order
+        result = []
         seen: set[str] = set()
-        deduped = []
-        for t in corrected:
-            val = t.value if isinstance(t, Tag) else str(t)
-            if val not in seen:
-                seen.add(val)
-                deduped.append(t)
-        return deduped
-
-    @field_validator("tags")
-    @classmethod
-    def check_contradictions(cls, tags: list[Tag]) -> list[Tag]:
-        from pydantic_ai import ModelRetry
-
-        tag_set = set(tags)
-        for pair in TAG_CONTRADICTIONS:
-            if pair <= tag_set:
-                a, b = sorted(pair, key=lambda t: t.value)
-                logger.debug("llm_retry_contradiction", tag_a=a.value, tag_b=b.value)
-                raise ModelRetry(f"{a.value} and {b.value} cannot coexist. Remove one.")
-        return tags
+        for t in tags:
+            val = t.value if isinstance(t, Tag) else str(t).strip().upper()
+            if val in seen:
+                continue
+            seen.add(val)
+            if val not in _V2_TAG_VALUES:
+                raise ModelRetry(
+                    f"Tag '{t}' is not available. V2 tags (pick 0-3):\n{_V2_TAG_HELP}"
+                )
+            result.append(val)
+        return result
 
 
-class CreatorOutputSpec(CreatorOutput):
-    """A game object with a name, tags, optional signature behavior, and visual description."""
-
-    signature: str | None = Field(
-        default=None,
-        description=(
-            "One unique behavior that defines this object. Optional — most objects "
-            "don't need one. Format: TRIGGER -> ACTION or TRIGGER -> ACTION -> TARGET, "
-            "power=POWER. Parametric: ON_TAG_ADDED(TAG), ADD_TAGS(TAG1, TAG2). "
-            "Don't write behaviors that tags already handle (chase, flee, patrol, detonate)."
-        ),
-    )
-
-    @field_validator("signature")
-    @classmethod
-    def check_signature(cls, signature: str | None) -> str | None:
-        from pydantic_ai import ModelRetry
-
-        if signature is None:
-            return None
-        try:
-            parse_behavior_string(signature)
-        except (BehaviorParseError, ValidationError) as e:
-            logger.debug("llm_retry_signature_parse", signature=signature, error=str(e))
-            raise ModelRetry(
-                f"Invalid signature '{signature}': {e}\n"
-                f"Expected: TRIGGER -> ACTION or TRIGGER -> ACTION -> TARGET\n"
-                f"Example: ON_TAG_ADDED(HEAT_SOURCE) -> EXPLODE"
-            ) from e
-        return signature
 
 
 class GameObjectBlueprint(BaseModel):
     id: str
     name: str
     description: str
+    # V2 fields
+    substance: Substance
+    element: Element | None = None
     tags: list[Tag]
-    behaviors: list[Behavior] = Field(default_factory=list)
+    behaviors: list[BehaviorVerbSpec] = Field(default_factory=list)
     visual_descriptor: VisualDescriptor
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def starting_durability(self) -> int:
-        if Tag.BREAKABLE in self.tags:
-            return DURABILITY_BREAKABLE
-        if Tag.RIGID in self.tags:
-            return DURABILITY_RIGID
-        return DURABILITY_DEFAULT
+    # Derived data (computed at creation time)
+    substance_profile: dict[str, float | str] = Field(default_factory=dict)
+    combat_profile: dict[str, float] = Field(default_factory=dict)
+    identity_embedding: list[float] = Field(default_factory=list)
+    behavior_embeddings: list[list[float]] = Field(default_factory=list)
+    starting_durability: int = 150

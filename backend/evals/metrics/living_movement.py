@@ -1,8 +1,7 @@
-"""Has Signature evaluator — deterministic, no LLM call.
+"""Has Behaviors evaluator — deterministic, no LLM call.
 
-Flags LIVING objects that have no signature behavior (only generic
-tag-implied behaviors like wander/chase). These objects work but
-lack unique personality.
+V2: Flags LIVING objects that have no explicit behaviors (only the
+default "investigate nearby objects" implied behavior).
 """
 
 from __future__ import annotations
@@ -16,13 +15,10 @@ from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorCont
 
 @dataclass
 class HasSignatureEvaluator(Evaluator[str, str, object]):
-    """Check if LIVING objects have a signature behavior for personality.
+    """Check if LIVING objects have explicit behaviors for personality.
 
-    LIVING objects get implied behaviors (wander, chase) from tags automatically.
-    A signature behavior adds unique personality beyond the defaults.
-
-    Returns 1.0 if the object has a signature or is not LIVING.
-    Returns 0.0 if LIVING with no signature behavior.
+    Returns 1.0 if the object has behaviors or is not LIVING.
+    Returns 0.0 if LIVING with no explicit behaviors.
     """
 
     def evaluate(self, ctx: EvaluatorContext[str, str, object]) -> dict[str, EvaluationReason]:
@@ -38,16 +34,17 @@ class HasSignatureEvaluator(Evaluator[str, str, object]):
                 "Has Signature": EvaluationReason(value=1.0, reason="Not a LIVING object")
             }
 
-        signature = data.get("signature")
-        if signature:
+        behaviors = data.get("behaviors", [])
+        if behaviors:
+            verbs = [b.get("verb", "") for b in behaviors if isinstance(b, dict)]
             return {
                 "Has Signature": EvaluationReason(
-                    value=1.0, reason=f"Has signature: {signature}"
+                    value=1.0, reason=f"Has {len(behaviors)} behaviors: {', '.join(verbs)}"
                 )
             }
 
         return {
             "Has Signature": EvaluationReason(
-                value=0.0, reason="LIVING object with no signature behavior"
+                value=0.0, reason="LIVING object with no explicit behaviors"
             )
         }

@@ -8,7 +8,9 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from app.creator.agent import create_object
+from app.embeddings import build_embed_string, embed_texts
 from app.models.blueprint import GameObjectBlueprint
+from app.models.tags import Tag
 from app.sessions.manager import SessionManager
 from app.ws.handler import send_sprite_failed, send_sprite_ready
 
@@ -106,3 +108,35 @@ async def _generate_and_deliver_sprite(
             await send_sprite_failed(session_id, object_id, "generation_exception")
         except Exception:
             logger.error("sprite_failed_notify_error", object_id=object_id, exc_info=True)
+
+
+# ---------------------------------------------------------------------------
+# Embedding endpoint — called by Godot client on tag change for re-embedding
+# ---------------------------------------------------------------------------
+
+embed_router = APIRouter(prefix="/api", tags=["embed"])
+
+
+class EmbedRequest(BaseModel):
+    name: str
+    visual_description: str
+    size_category: str
+    current_tags: list[str]
+
+
+class EmbedResponse(BaseModel):
+    embedding: list[float]
+
+
+@embed_router.post("/embed", response_model=EmbedResponse)
+async def embed_object(body: EmbedRequest) -> EmbedResponse:
+    """Re-embed an object's identity after tag changes. ~5ms via Ollama."""
+    tags: list[Tag] = []
+    for t in body.current_tags:
+        try:
+            tags.append(Tag(t))
+        except ValueError:
+            continue  # skip unknown tags
+    text = build_embed_string(body.name, body.visual_description, body.size_category, tags)
+    embeddings = await embed_texts([text])
+    return EmbedResponse(embedding=embeddings[0])

@@ -12,17 +12,19 @@ func _ready() -> void:
 	_collision_shape = _body.get_node("CollisionShape2D")
 
 
-func apply(tags: Array, visual_descriptor: Dictionary) -> void:
-	var physics: Dictionary = PhysicsComposer.compose_physics(tags)
-	var size_category: String = visual_descriptor.get("size_category", "medium")
+func apply_from_blueprint(bp: Dictionary) -> void:
+	## V2: read physics from pre-computed substance_profile in blueprint.
+	var physics: Dictionary = PhysicsComposer.compose_physics_v2(bp)
+	var size_category: String = bp.get("visual_descriptor", {}).get("size_category", "medium")
+	_apply_physics(physics, size_category)
 
-	# Apply mass (scaled by size) and gravity
+
+func _apply_physics(physics: Dictionary, size_category: String) -> void:
 	var size_mass_mult: float = PhysicsComposer.get_size_mass_multiplier(size_category)
 	_body.mass = physics["mass"] * size_mass_mult
 	_body.gravity_scale = physics["gravity"]
 	_body.linear_damp = physics["damping"]
 
-	# Apply physics material (skip if unchanged to avoid waking the physics body)
 	var new_friction: float = physics["friction"]
 	var new_bounce: float = physics["bounce"]
 	if new_friction != _prev_friction or new_bounce != _prev_bounce:
@@ -35,8 +37,6 @@ func apply(tags: Array, visual_descriptor: Dictionary) -> void:
 
 	Log.debug("PhysicsApplicator: Applied physics for '%s' — size=%s, mass=%.1f, friction=%.2f, bounce=%.2f, gravity=%.1f, damp=%.1f" % [_body.blueprint.get("name", ""), size_category, _body.mass, physics["friction"], physics["bounce"], physics["gravity"], physics["damping"]])
 
-	# Configure fallback collision shape from size_category
-	# Will be overridden by sprite-derived shape once sprite loads
 	if not _has_sprite_shape:
 		_configure_shape(size_category)
 
@@ -48,11 +48,9 @@ func update_shape_from_sprite(texture: Texture2D, world_size: float) -> void:
 	if used_rect.size.x == 0 or used_rect.size.y == 0:
 		return
 
-	# Scale from texture pixels to world units
 	var tex_size: float = float(image.get_width())
 	var world_scale: float = world_size / tex_size
 
-	# Offset: shift collision center to match opaque region center
 	var sprite_center := Vector2(tex_size / 2.0, float(image.get_height()) / 2.0)
 	var rect_center := Vector2(
 		used_rect.position.x + used_rect.size.x / 2.0,

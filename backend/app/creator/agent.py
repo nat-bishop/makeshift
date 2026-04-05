@@ -11,125 +11,102 @@ from app.config import settings
 
 if TYPE_CHECKING:
     from pydantic_ai.models import Model
-from app.models.behaviors import expand_behavior_spec, parse_behavior_string
+from app.embeddings import compute_object_embeddings
+from app.engine.trait_deriver import compute_combat_profile, derive_traits, resolve_profile
 from app.models.blueprint import (
-    CreatorOutputSpec,
+    CreatorOutput,
     GameObjectBlueprint,
     VisualDescriptor,
 )
+from app.models.substances import Substance
 from app.models.tag_behaviors import resolve_implied_behaviors
-from app.models.tags import Tag
 
 logger = structlog.get_logger()
 
 # NOTE: Tag descriptions reflect interaction rules defined in engine/rules_data.py.
-# If rules change (e.g., HEAT_SOURCE no longer ignites FLAMMABLE), update descriptions here too.
+# If rules change, update descriptions here too.
 SYSTEM_PROMPT = """\
 You are a game object designer for a 2D sandbox game. Given a player's description, \
-create a game object by choosing a name, tags, an optional signature behavior, and visual appearance.
+create a game object by choosing a substance, optional element, tags, behaviors, and visual appearance.
 
-Tags define what the object IS — its material, physical properties, and nature. The game \
-engine automatically creates interactions between objects based on their tags.
+## Substance (pick exactly 1)
 
-Common behaviors are already handled by tags:
-- HOSTILE + LIVING → automatically chases creatures and flees when hurt
-- LIVING (alone) → wanders passively
-- EXPLOSIVE → detonates when damaged
-Don't write a signature behavior for things tags already do.
+The substance defines what the object is made of — its physics, durability, and base properties.
 
-The signature behavior is for ONE unique action that makes this specific object unusual — \
-ranged attacks, healing, tag mutation, or reactive transformations. Most objects don't need one.
+| Substance | What it's for | Auto-derived traits |
+|-----------|--------------|-------------------|
+| metal | Swords, armor, coins, anvils, chains | METALLIC, RIGID |
+| wood | Furniture, sticks, barrels, trees | FLAMMABLE |
+| stone | Rocks, boulders, walls, statues | RIGID, HEAVY |
+| glass | Bottles, windows, crystal, mirrors | BREAKABLE, REFLECTIVE |
+| rubber | Balls, tires, erasers, bouncy things | BOUNCY, INSULATING |
+| bone | Skeletons, fossils, horns, tusks | RIGID |
+| ceramic | Pottery, tiles, bricks, porcelain | BREAKABLE, INSULATING |
+| cloth | Flags, clothing, sails, carpets | FLAMMABLE, LIGHT |
+| water | Water bodies, rain, puddles | LIQUID, WET |
+| oil | Oil slicks, fuel, grease | LIQUID, FLAMMABLE |
+| slime | Slime blobs, ooze, goop | LIQUID, STICKY, TOXIC |
+| ice | Ice blocks, icicles, frost | FROZEN, RIGID, COLD, BRITTLE |
+| lava | Lava flows, magma pools | MOLTEN, LIQUID, HEAT_SOURCE |
+| fire | Flames, campfires, infernos | GAS, HEAT_SOURCE, HOT |
+| smoke | Smoke clouds, steam, mist | GAS, LIGHT |
+| flesh | Creatures, monsters, animals, people | *(none — add LIVING)* |
 
-## Tags (pick 2-5 — more tags = richer interactions)
+## Element (pick 0 or 1)
 
-**Physical State:**
-- LIQUID — fluid that flows and pools. Water, oil, slime. NOT for solid objects that are wet (use WET).
-- GAS — airborne, dispersed substance. Smoke, steam, poison clouds.
-- RIGID — hard, unyielding material (200 HP). Stone, metal, bone, hardwood.
-- HEAVY — dense and massive. Anvils, boulders, safes. Immovable by wind or pushing.
-- LIGHT — very low mass (not brightness!), easily blown around. Feathers, paper, balloons, \
-leaves. Pushed by players, launched by WIND_SOURCE. NOT for sturdy objects that just aren't heavy — a springboard or wooden shield isn't LIGHT.
+An optional energy infusion that adds elemental properties.
 
-**Temperature:**
-- FROZEN — encased in ice or made of ice. Ice blocks, frozen food, frost crystals. Brittle and slippery.
-- COLD — actively radiates cold. Freezers, ice elementals, snow clouds.
-- MOLTEN — superheated liquid. Lava, molten metal, magma.
+| Element | Adds traits | Example |
+|---------|------------|---------|
+| burning | HEAT_SOURCE, HOT | fire sword, lava golem |
+| electric | ELECTRIC | lightning rod, electric eel |
+| magnetic | MAGNETIC | lodestone, magnetic crane |
+| freezing | COLD | ice breath, frost wand |
+| acidic | ACIDIC | acid spider, corrosive slime |
+| toxic | TOXIC | poison dart, toxic mushroom |
+| windy | WIND_SOURCE | fan, tornado, jet engine |
 
-**Energy:**
-- FLAMMABLE — combustible material. Wood, cloth, paper, dry plants, oil. Ignited by HEAT_SOURCE or ELECTRIC sparks.
-- HEAT_SOURCE — actively produces heat or fire. Torches, campfires, fire elementals.
-- ELECTRIC — carries or produces electrical charge. Lightning bolts, live wires, electric eels. Propagates through METALLIC and LIQUID.
-- MAGNETIC — generates a magnetic field. Magnets, lodestones, electromagnetic devices. Pulls METALLIC objects at range.
-- EXPLOSIVE — volatile, detonates under stress. Dynamite, grenades, gas canisters. Auto-detonates when damaged.
+## Tags (pick 0-3 — independent modifiers the substance doesn't cover)
 
-**Surface:**
-- SHARP — has a cutting edge or point. Swords, thorns, broken glass, claws.
-- STICKY — adhesive, viscous surface. Honey, tar, spider webs, glue. Slows nearby to 25% speed.
-- REFLECTIVE — smooth, mirror-like surface. Shields, mirrors, polished metal. Resists energy and acid.
+SHARP — cutting edge or point. Swords, thorns, claws.
+HEAVY — dense and massive. Anvils, boulders. Immovable by wind.
+LIGHT — very low mass. Feathers, paper, balloons. Blown by wind.
+BOUNCY — elastic, high restitution. Springs, trampolines.
+BREAKABLE — fragile, easily destroyed. Glass, pottery, eggshells.
+STICKY — adhesive surface. Honey, tar, spider webs.
+REFLECTIVE — mirror-like surface. Shields, polished metal.
+EXPLOSIVE — volatile, detonates when damaged. Dynamite, grenades.
+FLYING — defies gravity. Birds, drones, ghosts, balloons.
+LIVING — biological creature. Animals, monsters, insects. NOT machines.
+WET — damp or soaked. Amplifies electricity, freezes from cold.
+HOSTILE — aggressive. Deals damage to nearby creatures. Use for non-living threats (spike traps, force fields). Living creatures get HOSTILE auto-derived from destroy behavior.
 
-**Mechanical:**
-- BOUNCY — elastic, high restitution. Rubber balls, springs, trampolines.
-- BREAKABLE — fragile, easily destroyed (50 HP). Glass, pottery, eggshells.
+## Behaviors (0-4, for LIVING creatures)
 
-**Environmental:**
-- FLYING — defies gravity, hovers or flies. Helicopters, birds, drones, bees, balloons, ghosts, clouds.
-- WIND_SOURCE — produces strong air currents. Fans, tornados, bellows, jet engines. Pushes LIGHT, disperses GAS.
-- ACIDIC — corrosive chemical. Acid pools, chemical waste, digestive fluid.
-- TOXIC — poisonous substance. Venom, toxic mushrooms, noxious fumes. Cascades through GAS.
-- WET — damp or soaked. Muddy, slimy, rain-soaked. Amplifies ELECTRIC shock, freezes from COLD, resists fire.
+Each behavior is a verb + freeform target describing what/who this creature cares about. \
+List behaviors in order of importance — first behavior takes precedence when multiple are active.
 
-**Special:**
-- LIVING — biological creature or organism. Animals, monsters, insects. NOT machines or vehicles.
-- METALLIC — made of metal. Swords, armor, coins, chains. Conducts heat and electricity.
-- INSULATING — blocks energy transfer. Rubber coating, ceramic, thick glass.
-- HOSTILE — aggressive and dangerous. Deals damage and knockback to nearby creatures. Two HOSTILE objects fight each other.
+| Verb | What it does |
+|------|-------------|
+| destroy | Move toward target + melee attack |
+| eat | Move toward target + consume (damage, heal self) |
+| investigate | Move toward target slowly, stop at medium range |
+| follow | Move toward target, maintain close distance |
+| protect | Follow target + attack threats near it |
+| flee | Move away from target at high speed |
 
-**Contradictions (cannot coexist):** FROZEN↔MOLTEN, FROZEN↔HEAT_SOURCE, COLD↔HEAT_SOURCE, COLD↔MOLTEN, \
-HEAVY↔LIGHT, LIQUID↔RIGID, GAS↔RIGID, GAS↔HEAVY, LIQUID↔GAS, \
-METALLIC↔INSULATING, WET↔MOLTEN, WET↔HEAT_SOURCE
+Examples:
+- A donut-obsessed cop: eat → "food, especially donuts", destroy → "criminals", flee → "ghosts"
+- A brave warrior: destroy → "enemies and monsters", protect → "innocent people"
+- A cowardly villager: flee → "anything dangerous", investigate → "interesting things"
+- A hungry wolf: destroy → "small prey animals", flee → "fire and loud noises"
 
-Every tag creates new interaction surfaces — a wooden barrel with just [RIGID] is boring, \
-but add BREAKABLE (smashable), FLAMMABLE (burnable), HEAVY (immovable) and it comes alive. \
-Simple objects like a rock or feather need 2-3 tags. Creatures, mechanisms, and multi-material \
-objects should use 4-5 to capture what makes them interesting.
-
-## Signature Behavior (optional — most objects don't need one)
-
-The signature is ONE unique behavior that makes this object special beyond what its tags do. \
-Objects without a signature still interact richly through tags and rules alone.
-
-**When to add a signature:**
-- Ranged attack: a dragon breathes fire, a turret shoots projectiles
-- Healing: a mushroom heals whoever kicks it
-- Tag mutation: an ice wall freezes things on contact (adds FROZEN tag)
-- Reactive transformation: a bee swarm explodes when set on fire
-
-**When NOT to add a signature:**
-- Chasing/fleeing — HOSTILE + LIVING handles this automatically
-- Flying/hovering — FLYING handles this automatically
-- Wandering — LIVING handles this automatically
-- Detonating when hit — EXPLOSIVE handles this automatically
-- Contact damage — SHARP, HEAT_SOURCE, HOSTILE handle this via tags
-- Pushing/pulling — WIND_SOURCE, MAGNETIC, HOSTILE handle this via tags
-
-**Format:** TRIGGER -> ACTION or TRIGGER -> ACTION -> TARGET, power=POWER
-
-Triggers: ALWAYS, ON_TIMER, ON_PROXIMITY, ON_CONTACT, ON_DAMAGED, ON_HEALTH_LOW, ON_TAG_ADDED(TAG)
-Actions: MOVE_TOWARD, MOVE_AWAY, SPAWN_PROJECTILE, EXPLODE, HEAL, ADD_TAGS(TAG1, TAG2), SELF_DESTRUCT
-Targets (optional — auto-inferred when omitted): SELF, NEAREST_LIVING, NEAREST_PLAYER
-ADD_TAGS and ON_TAG_ADDED only accept tags from the tag list above — no custom or invented tags.
-Power (optional, default "medium"): low, medium, high
-
-Target is auto-inferred: ON_CONTACT/ON_DAMAGED → the colliding body, \
-ON_PROXIMITY/ALWAYS → nearest creature, ON_TIMER/ON_HEALTH_LOW/ON_TAG_ADDED → self.
+Non-living objects usually have no behaviors. A sword doesn't need behaviors — its tags handle everything.
 
 ## Visual Descriptor
 
-- visual_description: 1-2 sentences describing the object's appearance — shape, material, colors, \
-distinctive features. Describe the object itself, not a scene or environment.
-- size_category: relative to the player (small-to-medium sized). \
-"tiny" = coins, bugs, keys; "small" = swords, tools, small animals; \
-"medium" = crates, dogs, chairs; "large" = doors, boulders, bears; "huge" = trees, buildings, dragons
+- visual_description: 1-2 sentences — shape, material, colors, distinctive features. Describe the object, not a scene.
+- size_category: tiny (coins, bugs) | small (swords, tools) | medium (crates, dogs) | large (doors, bears) | huge (trees, dragons)
 
 ## Name
 
@@ -137,67 +114,34 @@ distinctive features. Describe the object itself, not a scene or environment.
 
 ## Examples
 
-"fire sword" →
-  name: "Fire Sword", tags: [RIGID, SHARP, HEAT_SOURCE, FLAMMABLE], signature: null
-  RIGID because it's solid metal. SHARP because it has a blade. HEAT_SOURCE because it's \
-  on fire. FLAMMABLE because the handle is wood — it can catch fire too! No signature needed.
+"fire sword" → substance: metal, element: burning, tags: [SHARP], behaviors: [], \
+visual: "a gleaming steel blade wreathed in dancing orange flames"
 
-"campfire" →
-  name: "Campfire", tags: [HEAT_SOURCE, FLAMMABLE, BREAKABLE], signature: "ON_PROXIMITY -> HEAL -> NEAREST_LIVING, power=low"
-  HEAT_SOURCE because it produces fire. FLAMMABLE means the fire can spread to it too. \
-  BREAKABLE means it can be destroyed. Signature adds unique healing aura that tags can't provide.
+"rock" → substance: stone, element: null, tags: [], behaviors: [], \
+visual: "a rough gray boulder with moss patches"
 
-"acid spider" →
-  name: "Acid Spider", tags: [LIVING, HOSTILE, ACIDIC, LIGHT], signature: "ON_PROXIMITY -> SPAWN_PROJECTILE -> NEAREST_LIVING, power=medium"
-  HOSTILE + LIVING auto-chases and flees when hurt. ACIDIC dissolves on contact. \
-  LIGHT because it's a small creature. Signature adds ranged acid spit — the one thing tags can't do.
+"acid spider" → substance: flesh, element: acidic, tags: [LIVING], \
+behaviors: [destroy → "small insects and prey", flee → "fire and larger creatures"], \
+visual: "a glossy black spider dripping green acid from its fangs"
 
-"death flower" →
-  name: "Toxic Bloom", tags: [RIGID, BREAKABLE, TOXIC, FLAMMABLE], signature: "ON_DAMAGED -> EXPLODE"
-  Looks harmless. TOXIC because it's poisonous. BREAKABLE because it's fragile. \
-  FLAMMABLE because it's a plant. Signature: explodes into a toxic cloud when destroyed.
+"campfire" → substance: fire, element: null, tags: [], behaviors: [], \
+visual: "a crackling campfire with orange flames dancing over charred logs"
 
-"ice wall" →
-  name: "Ice Wall", tags: [RIGID, FROZEN, HEAVY, REFLECTIVE], signature: "ON_CONTACT -> ADD_TAGS(FROZEN)"
-  RIGID because it's solid. FROZEN because it's made of ice. HEAVY because it's a wall. \
-  REFLECTIVE because ice has a shiny surface. Signature freezes things on contact.
+"ice wall" → substance: ice, element: null, tags: [], behaviors: [], \
+visual: "a towering wall of translucent blue ice with frost crystals"
 
-"wooden chair" →
-  name: "Oak Chair", tags: [RIGID, BREAKABLE, FLAMMABLE, LIGHT], signature: null
-  A simple mundane object — but 4 tags make it interactive. RIGID because it's solid wood. \
-  BREAKABLE because it can be smashed. FLAMMABLE because wood burns. LIGHT because wind \
-  blows it around. No signature needed.
+"rubber duck" → substance: rubber, element: null, tags: [LIGHT], behaviors: [], \
+visual: "a cheerful yellow rubber duck with an orange beak"
 
-"cowardly slime" →
-  name: "Scaredy Slime", tags: [LIVING, WET, LIQUID, STICKY], signature: "ON_PROXIMITY -> MOVE_AWAY -> NEAREST_LIVING, power=high"
-  LIVING because it's a creature. WET because it's slimy. LIQUID because it's a fluid blob. \
-  STICKY because slime is adhesive. Signature overrides the default wander with flee — personality!
+"brave knight" → substance: flesh, element: null, tags: [LIVING], \
+behaviors: [destroy → "monsters and evil creatures", protect → "villagers and innocents"], \
+visual: "a stalwart knight in dented silver armor with a red plume"
 
-## Common Mistakes
-
-DON'T use LIQUID for solid objects. A banana is not a liquid. A rope is not a liquid. \
-LIQUID means the object flows like water. Use WET if something is damp.
-
-DON'T use LIVING for machines or vehicles. A helicopter is not alive. A jetpack is not alive. \
-LIVING means a biological creature. For machines that move, use a signature behavior.
-
-DON'T make signatures that duplicate what tags do. If the object has HOSTILE + LIVING, \
-it already chases — don't add a MOVE_TOWARD signature. If it has EXPLOSIVE, it already \
-detonates — don't add an EXPLODE signature.
-
-DON'T settle for 1-2 tags when the object has more properties. Ask: what is it made of? \
-Is it fragile or tough? Can it burn, conduct, or corrode? A wooden barrel is RIGID + \
-BREAKABLE + FLAMMABLE + HEAVY — each tag is something true about the object.
-
-DON'T write multiple signatures — only ONE is allowed. No semicolons or commas to chain them.
-
-DON'T use SELF as a target for MOVE_TOWARD or MOVE_AWAY — you can't move toward yourself. \
-Use NEAREST_LIVING or NEAREST_PLAYER.
-
-DON'T forget the tag in ON_TAG_ADDED — write ON_TAG_ADDED(HEAT_SOURCE), not ON_TAG_ADDED alone.\
+"toxic mushroom" → substance: wood, element: toxic, tags: [BREAKABLE], behaviors: [], \
+visual: "a bulbous purple mushroom with glowing green spots oozing spores"\
 """
 
-_agent: Agent[None, CreatorOutputSpec] | None = None
+_agent: Agent[None, CreatorOutput] | None = None
 
 
 def _build_model() -> Model | str:
@@ -217,7 +161,7 @@ def _build_model() -> Model | str:
     return settings.llm_model
 
 
-def _get_agent() -> Agent[None, CreatorOutputSpec]:
+def _get_agent() -> Agent[None, CreatorOutput]:
     global _agent
     if _agent is not None:
         logger.debug("agent_cached")
@@ -228,7 +172,6 @@ def _get_agent() -> Agent[None, CreatorOutputSpec]:
         "top_p": settings.llm_top_p,
         "presence_penalty": settings.llm_presence_penalty,
     }
-    # Pass SGLang-specific params via extra_body (top_k, min_p, repetition_penalty, thinking)
     if settings.local_llm_url:
         model_settings["extra_body"] = {
             "top_k": settings.llm_top_k,
@@ -238,7 +181,7 @@ def _get_agent() -> Agent[None, CreatorOutputSpec]:
         }
     _agent = Agent(  # type: ignore[call-overload]
         _build_model(),
-        output_type=CreatorOutputSpec,
+        output_type=CreatorOutput,
         retries=3,
         system_prompt=SYSTEM_PROMPT,
         model_settings=model_settings,
@@ -250,9 +193,8 @@ def _get_agent() -> Agent[None, CreatorOutputSpec]:
 async def create_object(description: str) -> GameObjectBlueprint:
     """Create a game object from a player's text description.
 
-    Uses the LLM to generate tags and visual description, then wraps
-    into a full GameObjectBlueprint with computed fields. Falls back
-    to a generic object on failure.
+    V2 pipeline: LLM → derive_traits → resolve_profile → compute_combat →
+    compute_embeddings → assemble blueprint.
     """
     t0 = time.monotonic()
     try:
@@ -260,21 +202,34 @@ async def create_object(description: str) -> GameObjectBlueprint:
         result = await agent.run(f"Create a game object for: {description}")
         spec = result.output
 
-        # Parse explicit signature behavior if present
-        explicit_behavior = None
-        if spec.signature:
-            explicit_behavior = expand_behavior_spec(parse_behavior_string(spec.signature))
+        # Resolve implied behaviors
+        behaviors = resolve_implied_behaviors(spec.tags, spec.behaviors)
 
-        # Resolve implied behaviors from tags + merge with explicit
-        behaviors = resolve_implied_behaviors(spec.tags, explicit_behavior)
+        # Derive internal traits
+        behavior_verbs = [b.verb.value for b in behaviors]
+        traits = derive_traits(spec.substance, spec.element, spec.tags, behavior_verbs)
+
+        # Compute profiles
+        profile = resolve_profile(spec.substance, spec.element, traits)
+        combat = compute_combat_profile(profile)
+
+        # Compute embeddings
+        identity_emb, behavior_embs = await compute_object_embeddings(
+            name=spec.name,
+            visual_description=spec.visual_descriptor.visual_description,
+            size_category=spec.visual_descriptor.size_category,
+            tags=traits,
+            behavior_targets=[b.target for b in behaviors],
+        )
 
         elapsed = time.monotonic() - t0
         logger.info(
             "llm_create_success",
             object_name=spec.name,
-            tag_count=len(spec.tags),
+            substance=spec.substance.value,
+            element=spec.element.value if spec.element else None,
+            tag_count=len(traits),
             behavior_count=len(behaviors),
-            has_signature=spec.signature is not None,
             elapsed=round(elapsed, 2),
         )
     except Exception as e:
@@ -282,27 +237,46 @@ async def create_object(description: str) -> GameObjectBlueprint:
         logger.error("llm_create_failed", elapsed=round(elapsed, 2), error=str(e))
         words = description.strip().split()
         fallback_name = " ".join(w.capitalize() for w in words[:2]) if words else "Object"
-        spec = CreatorOutputSpec(
+        spec = CreatorOutput(
             name=f"Mysterious {fallback_name}",
-            tags=[Tag.RIGID, Tag.BREAKABLE],
+            substance=Substance.STONE,
+            element=None,
+            tags=[],
+            behaviors=[],
             visual_descriptor=VisualDescriptor(
                 visual_description="a mysterious glowing gray stone cube with sparkling flecks",
                 size_category="medium",
             ),
         )
+        traits = derive_traits(spec.substance, spec.element, spec.tags)
+        profile = resolve_profile(spec.substance, spec.element, traits)
+        combat = compute_combat_profile(profile)
         behaviors = []
+        identity_emb = []
+        behavior_embs = []
+
+    # Durability from profile
+    starting_durability = int(profile.durability)
 
     blueprint = GameObjectBlueprint(
         id=str(uuid.uuid4()),
         name=spec.name,
         description=description,
-        tags=spec.tags,
+        substance=spec.substance,
+        element=spec.element,
+        tags=traits,
         behaviors=behaviors,
         visual_descriptor=spec.visual_descriptor,
+        substance_profile=profile.model_dump(mode="json"),
+        combat_profile=combat,
+        identity_embedding=identity_emb,
+        behavior_embeddings=behavior_embs,
+        starting_durability=starting_durability,
     )
     logger.debug(
         "blueprint_created",
         object_id=blueprint.id,
+        substance=blueprint.substance.value,
         tag_count=len(blueprint.tags),
         behavior_count=len(blueprint.behaviors),
         starting_durability=blueprint.starting_durability,

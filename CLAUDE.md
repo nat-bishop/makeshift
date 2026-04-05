@@ -49,11 +49,15 @@ uv run pytest -k "test_name"              # single test by name
 
 **Backend** (`backend/app/`): FastAPI application with these key subsystems:
 
-- **Object creation pipeline** (`creator/agent.py` → `routers/objects.py` → `images/pipeline.py` → `ws/handler.py`): Player text → PydanticAI agent (Gemini) → `CreatorOutputSpec` (tags + optional signature behavior) → tag-implied behaviors resolved → immediate JSON response (blueprint + `budget_remaining`) → background sprite generation → WebSocket `sprite_ready` delivery. See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for full pipeline flow.
+- **Object creation pipeline** (`creator/agent.py` → `routers/objects.py` → `images/pipeline.py` → `ws/handler.py`): Player text → PydanticAI agent → `CreatorOutput` (substance + element + 0-3 tags + behaviors) → `derive_traits()` → `resolve_profile()` + `compute_combat_profile()` → `compute_object_embeddings()` → immediate JSON response (blueprint + `budget_remaining`) → background sprite generation → WebSocket `sprite_ready` delivery. See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for full pipeline flow.
 
-- **Tag system** (`models/tags.py`): 31 `Tag` StrEnum values total (27 LLM-visible + 4 internal-only: HOT, GLOWING, BRITTLE, CORRODED). 7 categories, 16 contradiction pairs enforced via `ModelRetry`. `LLM_VISIBLE_TAGS` frozenset controls what the LLM can pick. `TAG_AUTO_CORRECTIONS` dict silently maps removed/renamed tags (HOT→HEAT_SOURCE, SOLID→RIGID, CORROSIVE→ACIDIC, CONDUCTING→METALLIC, BRITTLE→FROZEN, CORRODED→ACIDIC, etc.). `TAG_DESCRIPTIONS` dict provides one-line gameplay descriptions for hallucinated-tag retry messages. Tags define what objects *are* — physics, interactions, durability, and implied behaviors. Internal-only tags enable emergent behavior: BRITTLE (added by freeze rules, shatterable by HEAVY/SHARP), CORRODED (added by acid rules, vulnerable to physical force), GLOWING (smolder ignition + creature attraction), HOT (heat burn damage). Pruned: SOLID (0 rules, 82% filler), FLEXIBLE (1 rule), SLIPPERY (0% generated). Renamed: CORROSIVE→ACIDIC, CONDUCTING→METALLIC. See [GAME_DESIGN.md](docs/GAME_DESIGN.md) for design rationale.
+- **Tag system** (`models/tags.py`): 31 `Tag` StrEnum values total. `LLM_VISIBLE_TAGS_V2` frozenset — 12 tags the LLM can pick directly (SHARP, HEAVY, LIGHT, BOUNCY, BREAKABLE, STICKY, REFLECTIVE, EXPLOSIVE, FLYING, LIVING, WET, HOSTILE). Most tags are now derived from substance/element, not chosen by the LLM. Internal-only: BRITTLE (freeze rules), CORRODED (acid rules), GLOWING (smolder + attraction), HOT (heat damage). 16 contradiction pairs enforced at runtime. `TAG_DESCRIPTIONS` for validation error messages. See [GAME_DESIGN.md](docs/GAME_DESIGN.md) for design rationale.
 
-- **Behavior system** (`models/behaviors.py`, `models/blueprint.py`, `models/tag_behaviors.py`): Two layers — tag-implied behaviors (automatic from tags: HOSTILE+LIVING→chase+flee, LIVING→wander, EXPLOSIVE→detonate) + optional LLM-authored signature behavior (1 max). `CreatorOutputSpec.signature: str | None` replaces the old `behaviors: list[str]`. LLM vocab: 7 triggers × 7 actions × 3 targets. Engine-internal actions (PATROL, APPLY_FORCE, ATTRACT, REMOVE_TAGS) and triggers (ON_CREATE, ON_DESTROY) exist for tag-implied behaviors but are not in the LLM vocabulary. Target auto-inference: ON_CONTACT/ON_DAMAGED→CONTACT_BODY, ON_PROXIMITY/ALWAYS→NEAREST_LIVING, ON_TIMER/ON_HEALTH_LOW/ON_TAG_ADDED→SELF. `resolve_implied_behaviors(tags, explicit)` merges with per-trigger override. Tag count: 2-5 per object (`min_length=2, max_length=5` on `CreatorOutput.tags`).
+- **Substance system** (`models/substances.py`, `engine/trait_deriver.py`): V2 foundation. LLM picks 1 `Substance` (16 options: metal, wood, stone, glass, rubber, bone, ceramic, cloth, water, oil, slime, ice, lava, fire, smoke, flesh) and 0-1 `Element` (7 options: burning, electric, magnetic, freezing, acidic, toxic, windy). `SUBSTANCE_PROFILES` dict: mass, durability, friction, conductivity, burn_rate, specific_heat, heat_output, state. `SUBSTANCE_AUTO_TRAITS` maps substance → tag list. `ELEMENT_TRAITS` maps element → tag list. `derive_traits(substance, element, tags, behavior_verbs)` merges all three + behavior-derived traits (destroy verb → HOSTILE). `resolve_profile()` applies element overrides + tag modifiers (HEAVY, LIGHT, BOUNCY, STICKY, FLYING) to produce final `SubstanceProfile`. `compute_combat_profile()` derives melee/crush damage from mass + heat output.
+
+- **Behavior system** (`models/blueprint.py`, `models/tag_behaviors.py`): V2 verb-based. LLM outputs 0-4 `BehaviorVerbSpec` items (verb + freeform target string). Verbs: destroy, eat, investigate, follow, protect, flee. `resolve_implied_behaviors()` adds one default only: LIVING with no behaviors → `investigate → "interesting nearby objects"`. `BehaviorVerbSpec.target` embedded at creation time for semantic matching client-side.
+
+- **Embedding system** (`embeddings.py`): Ollama `qwen3-embedding:0.6b` at `http://127.0.0.1:11434`. `build_embed_string()` builds natural-language identity string from name + visual description + size + tag phrases. `compute_object_embeddings()` batches identity + all behavior targets in one request → 1024-dim vectors stored in blueprint. Graceful degradation: unavailable Ollama → zero vectors (behaviors degrade to nearest targeting).
 
 - **Rule engine** (`engine/resolver.py`, `engine/rules_data.py`): `RuleResolver` — two-tier matching (O(1) pair index + O(n) wildcard scan). 59 rules, ~28 annotated `trigger_mode=TriggerMode.FIELD`. `InteractionRule.execution_order` (int, higher fires first). `TriggerMode` StrEnum (CONTACT | FIELD) on `InteractionRule` — default CONTACT. Mirrored client-side in Godot's `RuleEngine` autoload. 6 `EffectType` primitives: DAMAGE, HEAL, ADD_TAG, REMOVE_TAG, APPLY_FORCE, APPLY_SLOW.
 
@@ -63,13 +67,13 @@ uv run pytest -k "test_name"              # single test by name
 
 - **WebSocket** (`ws/handler.py`): Per-session multi-client broadcast. Messages: sprite_ready, sprite_failed, error, ping/pong.
 
-- **Eval suite** (`backend/evals/`): pydantic-evals framework. 50 curated test cases × 7 metrics — 4 deterministic (Validity, Tag Recall, Interaction Surface, Has Signature) + 3 LLM-as-judge via Gemini (Faithfulness, Gameplay Quality, Sprite Prompt). `run_eval.py` runs evals and saves `EvalRunResult` JSON to `evals/results/`. `run_comparison.py` loads saved results for offline Wilcoxon comparison. `run_generate_cases.py` generates synthetic test cases. `run_temp_experiment.py` runs temperature sweeps. Retry count tracked per case via `set_eval_attribute`. Distribution analysis shows tag/behavior/size frequencies. Prompt variants defined in `evals/prompts.py`.
+- **Eval suite** (`backend/evals/`): pydantic-evals framework. 50 curated test cases × 9 metrics — 6 deterministic (Validity, Substance Accuracy, Element Accuracy, Tag Recall, Interaction Surface, Has Signature [checks LIVING objects have explicit verb behaviors]) + 3 LLM-as-judge via Gemini (Faithfulness, Gameplay Quality, Sprite Prompt). `run_eval.py` runs evals and saves `EvalRunResult` JSON to `evals/results/`. `run_comparison.py` loads saved results for offline Wilcoxon comparison. `run_generate_cases.py` generates synthetic test cases. `run_temp_experiment.py` runs temperature sweeps. Retry count tracked per case via `set_eval_attribute`. Distribution analysis shows substance/element/tag/behavior frequencies. Prompt variants defined in `evals/prompts.py`.
 
 **Godot Client** (`godot/`): Godot 4.3, GDScript.
 
 | Autoload | Purpose |
 |----------|---------|
-| `EventBus` | Central signal bus (14 signals: interaction_triggered, object_created, sprite_ready, sprite_failed, level_completed, creation_requested, creation_failed, placement_started, placement_ended, debug_toggled, player_died, player_damaged, player_healed, effect_applied) |
+| `EventBus` | Central signal bus (17 signals: interaction_triggered, object_created, sprite_ready, sprite_failed, level_completed, creation_requested, creation_failed, placement_started, placement_ended, debug_toggled, player_died, player_damaged, player_healed, effect_applied, object_entered_scene, object_exited_scene, object_embedding_changed) |
 | `Backend` | HTTP + WebSocket client, session persistence, sprite cache, 10s sync timer |
 | `GameManager` | Game state (MENU/PLAYING/PAUSED), level management, scene transitions, `debug_mode` flag (toggled by `toggle_debug` input, emits `debug_toggled`) |
 | `RuleEngine` | Client-side rule matching (mirrors backend resolver) |
@@ -79,11 +83,11 @@ uv run pytest -k "test_name"              # single test by name
 | System | File | Purpose |
 |--------|------|---------|
 | `WorldMutations` | `scripts/systems/world_mutations.gd` | Static class — all game-state mutations route through here |
-| `EffectExecutor` | `scripts/systems/effect_executor.gd` | 5 effects: DAMAGE, HEAL, ADD_TAG, REMOVE_TAG, APPLY_FORCE. DAMAGE + tick params = DOT |
-| `PhysicsApplicator` | `scenes/game_object/physics_applicator.gd` | Tag→physics mapping. Mass = `tag_mass × size_mass_multiplier` |
-| `PhysicsComposer` | `scripts/systems/physics_composer.gd` | Size multipliers (tiny 0.25×…huge 10×), `DEFAULT_DAMPING=0.5`, resolves mass/friction/bounce/damping by tag priority |
-| `BehaviorExecutor` | `scripts/systems/behavior_executor.gd` | Per-object autonomous behavior runtime. Disables after 5 consecutive errors |
-| `BehaviorMaps` | `scripts/data/behavior_maps.gd` | Categorical→numeric value mappings for behavior params. `DYNAMIC_TAG_DURATION=10s` (unified duration for cascade/behavior-added tags) |
+| `EffectExecutor` | `scripts/systems/effect_executor.gd` | 5 effects: DAMAGE, HEAL, ADD_TAG, REMOVE_TAG, APPLY_FORCE. DAMAGE + tick params = DOT. V2: reads `combat_profile`/`substance_profile` from blueprint for parameterized damage |
+| `PhysicsApplicator` | `scenes/game_object/physics_applicator.gd` | V2: reads physics from blueprint's `substance_profile` via `PhysicsComposer.compose_physics_v2()`. Mass = `substance_mass × size_mass_multiplier` |
+| `PhysicsComposer` | `scripts/systems/physics_composer.gd` | Size multipliers (tiny 0.25×…huge 10×), `DEFAULT_DAMPING=0.5`. V2: `compose_physics_v2()` delegates to `SubstancePhysics.resolve_physics()` |
+| `SubstancePhysics` | `scripts/data/substance_physics.gd` | V2: reads `substance_profile` from blueprint dict → resolves gravity/damping/friction/bounce/mass. State-derived defaults: solid(1.0, 0.5), liquid(1.0, 2.0), gas(-0.2, 4.0), energy(0.0, 0.0) |
+| `VerbBehaviorSystem` | `scripts/systems/verb_behavior_system.gd` | V2: per-object behavior runtime. Event-driven perception (object_entered/exited/embedding_changed signals) + dot-product matching against behavior embeddings. Action layer executes highest-priority verb with targets per frame. Disables after 5 errors |
 | `TagField` | `scripts/systems/tag_field.gd` | Per-object Area2D field: continuous per-frame forces + periodic 2s rule eval |
 | `FieldConfig` | `scripts/data/field_config.gd` | Maps field-emitting tags → range category + mode |
 | `TagDecay` | `scripts/systems/tag_decay.gd` | Node component managing temporary-tag timers for `GameObject` and `EnvironmentBody`. Extracted from both to avoid duplication |
@@ -103,13 +107,14 @@ uv run pytest -k "test_name"              # single test by name
 | GET | `/api/sessions/{id}` | Restore session |
 | PUT | `/api/sessions/{id}/sync` | Batch state sync from client |
 | POST | `/api/sessions/{id}/objects` | Create object from description |
+| POST | `/api/embed` | Re-embed object identity after tag changes (~5ms via Ollama) |
 | GET | `/api/rules` | Download rules (ETag caching) |
 | GET | `/health` | Health check |
 | WS | `/ws/{session_id}` | Sprite delivery + keepalive |
 
 ## Data Model Flow
 
-`CreatorOutputSpec` (LLM output: name, tags, optional signature behavior, `visual_descriptor`) → tag-implied behaviors resolved via `resolve_implied_behaviors()` → `GameObjectBlueprint` (adds id, computed `starting_durability`, merged behaviors list) → `WorldObject` (adds position, session context) → persisted as `objects` table row. `VisualDescriptor` has 2 fields: `visual_description: str` (free text, used only for sprite prompt) and `size_category: Literal["tiny","small","medium","large","huge"]` (used client-side for world display size). Behaviors stored in existing `blueprint_json` column — no schema changes.
+`CreatorOutput` (LLM output: name, substance, element, 0-3 tags, 0-4 `BehaviorVerbSpec`, `visual_descriptor`) → `resolve_implied_behaviors()` → `derive_traits(substance, element, tags, verbs)` → `resolve_profile()` → `compute_combat_profile()` → `compute_object_embeddings()` → `GameObjectBlueprint` (adds id, `starting_durability`, full trait list, `substance_profile`, `combat_profile`, `identity_embedding`, `behavior_embeddings`) → persisted as `objects` table row (`blueprint_json` column). `VisualDescriptor`: `visual_description: str` (sprite prompt only) + `size_category` (world display size). Ollama must be running for non-zero embeddings.
 
 ## Environment
 
@@ -131,6 +136,7 @@ Requires `.env` file (see `.env.example`):
 - `LOGFIRE_ENABLED` — Pydantic Logfire. Default: false (run `logfire auth` first)
 - Sampling params loaded from `backend/app/model_profiles.toml` keyed by `LLM_MODEL`
 - Other settings have sensible defaults (budget $1.00, timeouts 30s, max 3 concurrent images)
+- **Ollama** (not in `.env`): must be running at `http://127.0.0.1:11434` with `qwen3-embedding:0.6b` pulled for semantic targeting. Embeddings gracefully degrade to zero vectors if unavailable.
 
 ## Code Conventions
 
@@ -149,19 +155,18 @@ Requires `.env` file (see `.env.example`):
 - `@computed_field` properties require `# type: ignore[prop-decorator]` — mypy still doesn't support decorators above `@property`
 - WebSocket connection rejected with close code 4004 if session doesn't exist
 - Sprite cache keyed by SHA-256 hash of the image prompt (first 16 hex chars), not object ID — identical prompts share sprites. Controlled by `SPRITE_CACHE_ENABLED` setting.
-- LLM outputs one optional signature behavior as string notation (`TRIGGER -> ACTION` or `TRIGGER -> ACTION -> TARGET, power=POWER`), parsed by `parse_behavior_string()` in `models/behaviors.py`. Target auto-inferred when omitted (ON_CONTACT→CONTACT_BODY, ON_PROXIMITY→NEAREST_LIVING, ON_TIMER→SELF, etc.). `CreatorOutputSpec.signature: str | None` replaces the old `behaviors: list[str]`. Tag-implied behaviors merged via `resolve_implied_behaviors()` in `models/tag_behaviors.py` — per-trigger override (explicit wins matching trigger, other implied survive).
-- `TAG_AUTO_CORRECTIONS` in `models/tags.py` silently maps removed/renamed tags (HOT→HEAT_SOURCE, SOLID→RIGID, CORROSIVE→ACIDIC, CONDUCTING→METALLIC, BRITTLE→FROZEN, CORRODED→ACIDIC, etc.) so the LLM doesn't waste a retry. Hallucinated tags get a `ModelRetry` with the full `TAG_DESCRIPTIONS` list.
-- `CONTACT_BODY` behavior target is internal-only (not in LLM vocab) — auto-inferred for ON_CONTACT, ON_DAMAGED, ON_PROXIMITY triggers
-- `creator/agent.py` SYSTEM_PROMPT tag descriptions reflect interaction rules from `engine/rules_data.py` — if rules change, update tag descriptions in the prompt to match
-- `BehaviorExecutor` disables itself after 5 consecutive action errors to prevent runaway behavior on bad LLM output
-- Behavior-added tags (via `ADD_TAGS` action) have a 10s duration (`BehaviorMaps.DYNAMIC_TAG_DURATION`); decay managed by the `TagDecay` child node (shared by `GameObject` and `EnvironmentBody`)
-- Movement conflicts resolved by `BehaviorMaps.MOVEMENT_RANK` (lower = higher priority): `ON_HEALTH_LOW` > `ON_TAG_ADDED` > `ON_DAMAGED` > `ON_CONTACT` > `ON_PROXIMITY` > `ON_TIMER` > `ALWAYS`
+- V2 LLM output is `CreatorOutput` with `substance`, `element`, `tags` (0-3 from `LLM_VISIBLE_TAGS_V2`), and `behaviors` (0-4 `BehaviorVerbSpec`). Old trigger/action/target behavior string format and `models/behaviors.py` are removed.
+- Hallucinated tags get a `ModelRetry` with the `TAG_DESCRIPTIONS` list. No `TAG_AUTO_CORRECTIONS` — V2 uses `LLM_VISIBLE_TAGS_V2` validator that rejects unknown tags outright.
+- `creator/agent.py` SYSTEM_PROMPT substance/element tables reflect `SUBSTANCE_AUTO_TRAITS` and `ELEMENT_TRAITS` — if those change, update the prompt tables to match
+- `VerbBehaviorSystem` disables itself after 5 consecutive action errors to prevent runaway behavior on bad data
+- Behavior-added tags (via rule `ADD_TAG` effect) have a 10s duration (`EffectExecutor.DYNAMIC_TAG_DURATION`); decay managed by the `TagDecay` child node
+- `VerbBehaviorSystem` uses dot-product similarity (threshold 0.5) against pre-computed behavior embeddings to identify targets. When Ollama is unavailable, embeddings are zero vectors → no semantic targeting, all `_target_lists` remain empty
 - `ObjectVisual.set_sprite()` is guarded by `_sprite_applied: bool` — prevents double application when cache hit races with late `sprite_ready`. Sets texture + scale directly (no tween)
 - `body_entered` collision handling is deferred via `call_deferred("_resolve_deferred", body)` — resolving collisions directly in the signal callback crashes Godot with "Can't change state while flushing queries" because resolution can chain into `add_tag` → `_reapply_physics` → new shapes
 - `CollisionResolver` uses per-chain deduplication (not cooldowns): `_resolved` dict passed through cascade, keyed `"idA:idB:trigger_mode_filter"`. Top-level calls start with a fresh dict; cascades inherit it. Same pair can't fire twice in one resolution chain but can fire again from an independent collision. FIELD and CONTACT interactions dedup independently (different key suffixes).
 - `WorldMutations.apply_add_tag()` auto-removes contradictory tags before adding (e.g., adding HEAT_SOURCE removes WET). Uses `TagContradictions.get_contradictions()` — runtime mirror of the backend contradiction list
 - Backend autoload uses `127.0.0.1` not `localhost` — avoids DNS resolution delays and IPv6 fallback issues on some systems
-- In Godot 4.3+, assigning an untyped `Array` (e.g. from JSON parsing) to a typed `Array[Dictionary]` or `Array[String]` silently fails — the typed array rejects the source and remains empty. Use untyped `Array` or iterate-and-append. Pattern: `game_object.gd` tags use manual iterate/append; `behavior_executor.gd` `_behaviors` uses untyped `Array`.
+- In Godot 4.3+, assigning an untyped `Array` (e.g. from JSON parsing) to a typed `Array[Dictionary]` or `Array[String]` silently fails — the typed array rejects the source and remains empty. Use untyped `Array` or iterate-and-append. Pattern: `game_object.gd` tags use manual iterate/append; `verb_behavior_system.gd` `_behaviors` and `_target_lists` use untyped `Array`.
 - `TagField` is lazily created by `game_object.gd`: created at `init_from_blueprint()` if field tags are present, or on first `add_tag()` that introduces a field tag. This means fire-spread (rule adds HEAT_SOURCE) or WET propagation (LIQUID adds WET) automatically promotes a non-field object into a field emitter.
 - Continuous field rules (`WIND_SOURCE`, `MAGNETIC`, `STICKY`) use `apply_central_force()` or `APPLY_SLOW` per physics frame — `force_magnitude` tuned for per-frame, not impulse. `STICKY` slow is driven by the `sticky_slow` rule's `APPLY_SLOW` effect (generalized in `TagField._apply_slow_field()`). Periodic rules fire on 2s timer; first tick immediate via `call_deferred`.
 - DOT timer replacement (`WorldMutations.apply_dot`): must `stop()` + `remove_child()` before `queue_free()` — `queue_free()` alone leaves the node until end-of-frame, causing Godot to auto-rename the replacement (appending `@2`).

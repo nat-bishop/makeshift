@@ -12,11 +12,12 @@ from pydantic import BaseModel
 
 
 class ParsedOutput(BaseModel):
-    """Pre-parsed fields from CreatorOutputSpec for analysis."""
+    """Pre-parsed fields from V2 CreatorOutput for analysis."""
 
     name: str
     tags: list[str]
-    signature: str | None = None
+    substance: str | None = None
+    element: str | None = None
     resolved_behaviors: list[str] = []
     size_category: str
     visual_description: str
@@ -29,6 +30,8 @@ class CaseResult(BaseModel):
     inputs: str
     category: str
     expected_tags: list[str]
+    expected_substance: str | None = None
+    expected_element: str | None = None
 
     output_raw: str | None
     output: ParsedOutput | None

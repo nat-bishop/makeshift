@@ -6,7 +6,8 @@ import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.creator.agent import create_object
-from app.models.blueprint import CreatorOutputSpec, VisualDescriptor
+from app.models.blueprint import CreatorOutput, VisualDescriptor
+from app.models.substances import Element, Substance
 from app.models.tags import Tag
 
 
@@ -16,7 +17,7 @@ def _mock_agent_error(error: Exception | None = None) -> MagicMock:
     return agent
 
 
-def _mock_agent_success(output: CreatorOutputSpec) -> MagicMock:
+def _mock_agent_success(output: CreatorOutput) -> MagicMock:
     result = MagicMock()
     result.output = output
     agent = MagicMock()
@@ -24,10 +25,12 @@ def _mock_agent_success(output: CreatorOutputSpec) -> MagicMock:
     return agent
 
 
-def _sample_creator_output() -> CreatorOutputSpec:
-    return CreatorOutputSpec(
+def _sample_creator_output() -> CreatorOutput:
+    return CreatorOutput(
         name="Fire Sword",
-        tags=[Tag.RIGID, Tag.SHARP, Tag.HEAT_SOURCE],
+        substance=Substance.METAL,
+        element=Element.BURNING,
+        tags=[Tag.SHARP],
         visual_descriptor=VisualDescriptor(
             visual_description="a curved steel sword with a fiery red blade wreathed in flames",
             size_category="medium",
@@ -39,7 +42,7 @@ async def test_fallback_on_llm_error() -> None:
     with patch("app.creator.agent._get_agent", return_value=_mock_agent_error()):
         bp = await create_object("fire sword")
     assert bp.name == "Mysterious Fire Sword"
-    assert bp.tags == [Tag.RIGID, Tag.BREAKABLE]
+    assert bp.substance == Substance.STONE
 
 
 async def test_fallback_name_two_words() -> None:
@@ -74,18 +77,21 @@ async def test_fallback_no_behaviors() -> None:
     assert bp.behaviors == []
 
 
-async def test_success_returns_llm_output() -> None:
+async def test_success_returns_v2_blueprint() -> None:
     output = _sample_creator_output()
     with patch("app.creator.agent._get_agent", return_value=_mock_agent_success(output)):
         bp = await create_object("fire sword")
     assert bp.name == "Fire Sword"
-    assert bp.tags == [Tag.RIGID, Tag.SHARP, Tag.HEAT_SOURCE]
+    assert bp.substance == Substance.METAL
+    assert Tag.SHARP in bp.tags
+    assert Tag.METALLIC in bp.tags  # derived from metal substance
+    assert Tag.HEAT_SOURCE in bp.tags  # derived from burning element
 
 
 async def test_blueprint_has_uuid() -> None:
     with patch("app.creator.agent._get_agent", return_value=_mock_agent_error()):
         bp = await create_object("test")
-    uuid.UUID(bp.id)  # raises ValueError if not valid UUID
+    uuid.UUID(bp.id)
 
 
 async def test_blueprint_description_matches_input() -> None:
@@ -99,3 +105,12 @@ async def test_agent_called_with_description() -> None:
     with patch("app.creator.agent._get_agent", return_value=agent):
         await create_object("magic wand")
     agent.run.assert_called_once_with("Create a game object for: magic wand")
+
+
+async def test_substance_profile_in_blueprint() -> None:
+    output = _sample_creator_output()
+    with patch("app.creator.agent._get_agent", return_value=_mock_agent_success(output)):
+        bp = await create_object("fire sword")
+    assert "mass" in bp.substance_profile
+    assert "melee_damage" in bp.combat_profile
+    assert bp.starting_durability == 250  # metal durability

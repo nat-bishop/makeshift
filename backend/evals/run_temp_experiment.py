@@ -13,18 +13,17 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-from collections import defaultdict
 from statistics import mean
 
 import logfire
 from app.config import settings
 from app.creator.agent import _build_model
-from app.models.blueprint import CreatorOutputSpec
+from app.models.blueprint import CreatorOutput
 from pydantic_ai import Agent
-from pydantic_ai.messages import ModelRequest, RetryPromptPart
-from pydantic_evals import Dataset, set_eval_attribute
+from pydantic_evals import Dataset
 
-from evals.dataset import EVAL_CASES, CaseMeta
+from evals.conftest import make_task
+from evals.dataset import EVAL_CASES
 from evals.io import report_to_result, save_result
 from evals.metrics import default_evaluators
 from evals.prompts import PROMPT_VARIANTS
@@ -34,7 +33,7 @@ def _make_agent_with_overrides(
     system_prompt: str,
     temperature: float,
     top_p: float | None = None,
-) -> Agent[None, CreatorOutputSpec]:
+) -> Agent[None, CreatorOutput]:
     """Build a PydanticAI agent with specific sampling overrides."""
     model_settings: dict = {
         "timeout": settings.llm_timeout_seconds,
@@ -52,29 +51,13 @@ def _make_agent_with_overrides(
 
     return Agent(
         _build_model(),
-        output_type=CreatorOutputSpec,
+        output_type=CreatorOutput,
         retries=3,
         system_prompt=system_prompt,
         model_settings=model_settings,
     )
 
 
-def _make_task(agent: Agent[None, CreatorOutputSpec]):
-    async def task(description: str) -> str:
-        result = await agent.run(f"Create a game object for: {description}")
-        set_eval_attribute("retries", result.usage().requests - 1)
-
-        retry_errors = []
-        for msg in result.all_messages():
-            if isinstance(msg, ModelRequest):
-                for part in msg.parts:
-                    if isinstance(part, RetryPromptPart):
-                        retry_errors.append(str(part.content))
-        set_eval_attribute("retry_errors", retry_errors)
-
-        return result.output.model_dump_json(indent=2)
-
-    return task
 
 
 def parse_args() -> argparse.Namespace:
@@ -156,7 +139,7 @@ async def main():
 
         agent = _make_agent_with_overrides(system_prompt, temp, tp)
         dataset = Dataset(cases=list(cases), evaluators=default_evaluators())
-        report = await dataset.evaluate(_make_task(agent), name=name, max_concurrency=8)
+        report = await dataset.evaluate(make_task(agent), name=name, max_concurrency=8)
 
         result = report_to_result(report, variant, settings.llm_model, name=name)
         run_dir = save_result(result)
@@ -209,7 +192,7 @@ async def main():
     print()
 
     # Per-category breakdown
-    print(f"\n--- Gameplay Quality by Category ---\n")
+    print("\n--- Gameplay Quality by Category ---\n")
     cats = sorted({c.category for c in all_results[labels[0]].cases})
     print(f"{'Category':<22}", end="")
     for label in labels:

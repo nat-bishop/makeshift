@@ -9,6 +9,7 @@ import pytest
 from app.middleware import session_context_middleware
 from app.models.blueprint import GameObjectBlueprint, VisualDescriptor
 from app.models.session import WorldObject
+from app.models.substances import Substance
 from app.models.tags import Tag
 from app.routers import sessions
 from fastapi import FastAPI
@@ -46,11 +47,13 @@ def _make_blueprint(obj_id: str = "test-obj-1", name: str = "Test Rock") -> Game
         id=obj_id,
         name=name,
         description="A simple test rock",
+        substance=Substance.STONE,
         tags=[Tag.RIGID, Tag.HEAVY],
         visual_descriptor=VisualDescriptor(
             visual_description="a small gray stone rock",
             size_category="small",
         ),
+        starting_durability=300,
     )
 
 

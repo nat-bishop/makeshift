@@ -7,6 +7,7 @@ import aiosqlite
 import pytest
 from app.models.blueprint import GameObjectBlueprint, VisualDescriptor
 from app.models.session import Session, WorldObject
+from app.models.substances import Substance
 from app.models.tags import Tag
 from app.sessions.manager import SessionManager
 
@@ -49,11 +50,13 @@ def _make_blueprint(
         id=str(uuid.uuid4()),
         name=name,
         description="test",
+        substance=Substance.STONE,
         tags=tags or [Tag.RIGID, Tag.HEAVY],
         visual_descriptor=VisualDescriptor(
             visual_description="a gray stone cube",
             size_category="medium",
         ),
+        starting_durability=300,
     )
 
 

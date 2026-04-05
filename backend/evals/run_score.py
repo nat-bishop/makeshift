@@ -65,6 +65,8 @@ async def main() -> None:
             metadata=CaseMeta(
                 category=c.category,
                 expected_tags=c.expected_tags,
+                expected_substance=c.expected_substance,
+                expected_element=c.expected_element,
             ),
         ))
 

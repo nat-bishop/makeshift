@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, patch
 import aiosqlite
 from app.middleware import session_context_middleware
 from app.models.blueprint import GameObjectBlueprint, VisualDescriptor
+from app.models.substances import Element, Substance
 from app.models.tags import Tag
 from app.routers import objects, sessions
 from fastapi import FastAPI
@@ -27,11 +28,14 @@ def _make_blueprint() -> GameObjectBlueprint:
         id=str(uuid.uuid4()),
         name="Fire Sword",
         description="a fire sword",
-        tags=[Tag.RIGID, Tag.SHARP, Tag.HEAT_SOURCE],
+        substance=Substance.METAL,
+        element=Element.BURNING,
+        tags=[Tag.RIGID, Tag.SHARP, Tag.HEAT_SOURCE, Tag.METALLIC, Tag.HOT],
         visual_descriptor=VisualDescriptor(
             visual_description="a curved steel sword with a fiery red blade wreathed in flames",
             size_category="medium",
         ),
+        starting_durability=250,
     )
 
 
