@@ -2,7 +2,7 @@
 
 from app.engine.trait_deriver import compute_combat_profile, derive_traits, resolve_profile
 from app.models.substances import Element, Substance
-from app.models.tags import Tag
+from app.models.tags import Category, Tag
 
 
 class TestDeriveTraits:
@@ -14,9 +14,21 @@ class TestDeriveTraits:
         traits = derive_traits(Substance.ICE, None, [Tag.HEAVY])
         assert set(traits) == {Tag.BRITTLE, Tag.COLD, Tag.FROZEN, Tag.HEAVY, Tag.RIGID}
 
-    def test_flesh_living_destroy_verb(self) -> None:
-        traits = derive_traits(Substance.FLESH, None, [Tag.LIVING], behavior_verbs=["destroy"])
+    def test_flesh_creature_destroy_verb(self) -> None:
+        """CREATURE → LIVING, destroy → HOSTILE."""
+        traits = derive_traits(
+            Substance.FLESH, None, [], behavior_verbs=["destroy"],
+            categories=[Category.CREATURE],
+        )
         assert set(traits) == {Tag.HOSTILE, Tag.LIVING}
+
+    def test_creature_category_derives_living(self) -> None:
+        traits = derive_traits(Substance.FLESH, None, [], categories=[Category.CREATURE])
+        assert Tag.LIVING in traits
+
+    def test_food_category_no_living(self) -> None:
+        traits = derive_traits(Substance.CLOTH, None, [], categories=[Category.FOOD])
+        assert Tag.LIVING not in traits
 
     def test_rubber_light(self) -> None:
         traits = derive_traits(Substance.RUBBER, None, [Tag.LIGHT])

@@ -1,6 +1,32 @@
 from enum import StrEnum
 
 
+class Category(StrEnum):
+    CREATURE = "CREATURE"
+    FOOD = "FOOD"
+    WEAPON = "WEAPON"
+    PLANT = "PLANT"
+    VALUABLE = "VALUABLE"
+    VEHICLE = "VEHICLE"
+    TOOL = "TOOL"
+
+
+CATEGORY_DESCRIPTIONS: dict[Category, str] = {
+    Category.CREATURE: "A living or animated being — animals, monsters, people, insects.",
+    Category.FOOD: "Something edible or consumable — fruit, meat, potions, snacks.",
+    Category.WEAPON: "Made to deal damage — swords, bombs, bows, traps.",
+    Category.PLANT: "A plant or fungus — trees, flowers, vines, mushrooms.",
+    Category.VALUABLE: "Precious or worth collecting — treasure, coins, gems, rare items.",
+    Category.VEHICLE: "Something rideable or that carries things — carts, boats, horses.",
+    Category.TOOL: "A utility object — buckets, ropes, levers, keys, shields.",
+}
+
+# Valid values for BehaviorVerbSpec.target_tag — categories + select state tags.
+BEHAVIOR_TARGETS: frozenset[str] = frozenset(
+    {c.value for c in Category} | {"HOSTILE", "HEAT_SOURCE"}
+)
+
+
 class Tag(StrEnum):
     # Physical State
     LIQUID = "LIQUID"
@@ -43,6 +69,7 @@ class Tag(StrEnum):
 
 
 # LLM picks 0-3 tags from this set. Substance/element absorb the rest.
+# LIVING auto-derived from CREATURE category. HOSTILE auto-derived from destroy verb.
 LLM_VISIBLE_TAGS: frozenset[Tag] = frozenset({
     Tag.SHARP,
     Tag.HEAVY,
@@ -53,9 +80,7 @@ LLM_VISIBLE_TAGS: frozenset[Tag] = frozenset({
     Tag.REFLECTIVE,
     Tag.EXPLOSIVE,
     Tag.FLYING,
-    Tag.LIVING,
     Tag.WET,
-    Tag.HOSTILE,
 })
 
 # One-line gameplay descriptions for tag validation help text.
@@ -69,9 +94,9 @@ TAG_DESCRIPTIONS: dict[Tag, str] = {
     Tag.REFLECTIVE: "smooth, mirror-like surface. Shields, mirrors, polished metal",
     Tag.EXPLOSIVE: "volatile, detonates under stress. Dynamite, grenades, gas canisters",
     Tag.FLYING: "defies gravity, hovers or flies. Birds, drones, balloons, ghosts, clouds",
-    Tag.LIVING: "biological creature or organism. Animals, monsters, insects. NOT machines",
+    Tag.LIVING: "biological creature. Auto-derived from CREATURE category",
     Tag.WET: "damp or soaked. Amplifies ELECTRIC shock, freezes from COLD, resists fire",
-    Tag.HOSTILE: "aggressive. Deals damage to nearby creatures. Auto-derived from destroy verb",
+    Tag.HOSTILE: "aggressive. Auto-derived from destroy behavior verb",
 }
 
 # Runtime tag contradictions — enforced by WorldMutations.apply_add_tag()

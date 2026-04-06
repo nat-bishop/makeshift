@@ -9,18 +9,18 @@ Godot 4 Client                          FastAPI Backend
 │   └─ Backend.create_object() ──POST──►  /api/sessions/{id}/objects │
 │                                      │    └─ PydanticAI agent ─────► Gemini LLM
 │ Backend (autoload)                   │      (substance+element  │
-│   ├─ HTTP client ◄─── JSON ─────────┤       +tags+behaviors)   │
-│   └─ WebSocket  ◄── sprite_ready ───┤  Background task ────────────► Gemini image gen
-│                                      │    └─ rembg / birefnet  │
-│ RuleEngine (autoload)                │                          │
-│   └─ mirrors backend rules           │  Ollama (local)          │
-│                                      │    └─ qwen3-embedding    │
-│ CollisionResolver (autoload)         │  aiosqlite               │
-│   └─ EffectExecutor                  │    └─ sessions, objects  │
+│   ├─ HTTP client ◄─── JSON ─────────┤       +tags+categories   │
+│   └─ WebSocket  ◄── sprite_ready ───┤       +behaviors)        │
+│                                      │  Background task ────────────► Gemini image gen
+│ RuleEngine (autoload)                │    └─ rembg / birefnet  │
+│   └─ mirrors backend rules           │  aiosqlite               │
+│                                      │    └─ sessions, objects  │
+│ CollisionResolver (autoload)         │                          │
+│   └─ EffectExecutor                  │                          │
 │                                      │                          │
 │ GameObject                           │                          │
 │   ├─ VerbBehaviorSystem (child node) │                          │
-│   │    └─ embedding dot-product      │                          │
+│   │    └─ tag/category matching      │                          │
 │   └─ TagField (child node, optional) │                          │
 │        └─ FieldConfig                │                          │
 └──────────────────┘                   └──────────────────────────┘
@@ -48,7 +48,7 @@ Godot 4 Client                          FastAPI Backend
 | `effect_applied` | effect_type: String, amount: float, element_color: Color, world_pos: Vector2 | Visual effect feedback (floating numbers, etc.) |
 | `object_entered_scene` | game_object: Node | Object added to world — VerbBehaviorSystem listens to score candidates |
 | `object_exited_scene` | game_object: Node | Object removed from world — VerbBehaviorSystem cleans target lists |
-| `object_embedding_changed` | game_object: Node | Object's identity embedding updated (tag change) — triggers re-score |
+| `object_tags_changed` | game_object: Node | Object's tags changed — `VerbBehaviorSystem` instances re-evaluate targeting |
 
 ## Object Creation Pipeline
 
@@ -57,16 +57,15 @@ Full flow from player input to world-placed object with sprite:
 1. **Player types description** → `ObjectCreationPanel` sends text to `Backend.create_object()`
 2. **HTTP POST** → `POST /api/sessions/{id}/objects` with `{"description": "..."}`
 3. **Budget reserve** → `SessionManager.reserve_budget()` atomically charges $0.041 upfront (rejects with 402 if budget exceeded)
-4. **LLM agent** → `creator.agent.create_object()` runs PydanticAI agent (3 retries). Produces `CreatorOutput`: name (1-3 words), substance (1 of 16), element (0-1 of 7), tags (0-3 from `LLM_VISIBLE_TAGS_V2`), behaviors (0-4 `BehaviorVerbSpec`). Falls back to stone + no element + no tags on failure
-5. **Trait derivation** → `derive_traits(substance, element, tags, verbs)` merges `SUBSTANCE_AUTO_TRAITS` + `ELEMENT_TRAITS` + explicit tags + behavior-derived (destroy → HOSTILE)
+4. **LLM agent** → `creator.agent.create_object()` runs PydanticAI agent (3 retries). Produces `CreatorOutput`: name (1-3 words), substance (1 of 16), element (0-1 of 7), tags (0-3 from `LLM_VISIBLE_TAGS_V2`), categories (0-7 from `Category`), behaviors (0-4 `BehaviorVerbSpec`). Falls back to stone + no element + no tags on failure
+5. **Trait derivation** → `derive_traits(substance, element, tags, verbs, categories)` merges `SUBSTANCE_AUTO_TRAITS` + `ELEMENT_TRAITS` + explicit tags + behavior-derived (destroy → HOSTILE) + category-derived (CREATURE → LIVING)
 6. **Profile resolution** → `resolve_profile()` applies element overrides + tag modifiers to `SUBSTANCE_PROFILES[substance]` → final `SubstanceProfile` (mass, friction, bounce, gravity, damping, etc.). `compute_combat_profile()` derives melee/crush damage coefficients
-7. **Embedding** → `compute_object_embeddings()` batches identity string + all behavior target strings via Ollama `qwen3-embedding:0.6b` → 1024-dim vectors. Zero vectors if Ollama unavailable
-8. **Blueprint construction** → `GameObjectBlueprint` assembled with UUID, full trait list, serialized `substance_profile`, `combat_profile`, `identity_embedding`, `behavior_embeddings`, `starting_durability` (from profile)
-9. **Persist** → `save_object()` saves blueprint to `objects` table (`blueprint_json` column)
-10. **Immediate response** → Client receives blueprint JSON + `budget_remaining`. `EventBus.creation_requested` was emitted on submit — `Game` starts a `MaterializeEffect` at spawn point
-11. **Background sprite generation** → `asyncio.Task` held in module-level `_background_tasks` set (prevents GC). Runs image pipeline (see below)
-12. **WebSocket delivery** → `send_sprite_ready()` broadcasts `{sprite_url}` to all session clients → Godot fetches PNG → decodes to `ImageTexture` → `EventBus.sprite_ready` emitted
-13. **Placement mode** → On `sprite_ready` (or `sprite_failed`), ghost preview follows mouse; left-click spawns. Object NOT added to world until placement confirmed
+7. **Blueprint construction** → `GameObjectBlueprint` assembled with UUID, full trait list, serialized `substance_profile`, `combat_profile`, `categories`, `compiled_behaviors`, `starting_durability` (from profile)
+8. **Persist** → `save_object()` saves blueprint to `objects` table (`blueprint_json` column)
+9. **Immediate response** → Client receives blueprint JSON + `budget_remaining`. `EventBus.creation_requested` was emitted on submit — `Game` starts a `MaterializeEffect` at spawn point
+10. **Background sprite generation** → `asyncio.Task` held in module-level `_background_tasks` set (prevents GC). Runs image pipeline (see below)
+11. **WebSocket delivery** → `send_sprite_ready()` broadcasts `{sprite_url}` to all session clients → Godot fetches PNG → decodes to `ImageTexture` → `EventBus.sprite_ready` emitted
+12. **Placement mode** → On `sprite_ready` (or `sprite_failed`), ghost preview follows mouse; left-click spawns. Object NOT added to world until placement confirmed
 
 `EventBus.creation_failed` cancels the effect and discards the pending blueprint at any point in the flow.
 
@@ -187,11 +186,13 @@ STICKY uses `TagField._apply_sticky_slow()` instead of joint-based pinning. Per 
 
 ## Behavior System
 
-Objects carry 0-4 behaviors expressed as verb + freeform target string. Behaviors are LLM-authored; only one implicit default exists (LIVING + no behaviors → investigate). Tags = what objects *are*; behaviors = what objects *do*.
+Objects carry 0-4 behaviors expressed as verb + `target_tag` (category or tag string). Behaviors are LLM-authored; only one implicit default exists (LIVING + no behaviors → investigate). Tags = what objects *are*; behaviors = what objects *do*.
 
 ### Data Model (`backend/app/models/blueprint.py`)
 
-`BehaviorVerbSpec`: `verb: BehaviorVerb` + `target: str` (1-100 chars, freeform description of what to act on).
+`BehaviorVerbSpec`: `verb: BehaviorVerb` + `target_description: str` (human-readable, for display) + `target_tag: str` (single value from `BEHAVIOR_TARGETS` or empty).
+
+`BEHAVIOR_TARGETS`: all 7 `Category` values (CREATURE, FOOD, WEAPON, PLANT, VALUABLE, VEHICLE, TOOL) + HOSTILE + HEAT_SOURCE.
 
 | Verb | Action |
 |------|--------|
@@ -202,17 +203,16 @@ Objects carry 0-4 behaviors expressed as verb + freeform target string. Behavior
 | `protect` | Follow target + attack threats near it |
 | `flee` | Move away at high speed |
 
-`resolve_implied_behaviors()`: if LIVING and no explicit behaviors, adds `investigate → "interesting nearby objects"`. No other defaults.
+`resolve_implied_behaviors()`: if LIVING and no explicit behaviors, adds `investigate` with empty target. No other defaults.
 
 ### Godot Runtime (`godot/scripts/systems/verb_behavior_system.gd`)
 
 `VerbBehaviorSystem` is a Node child of `GameObject` when `behaviors` is non-empty. Two layers:
 
 **Perception (event-driven)**:
-- Listens to `EventBus.object_entered_scene` / `object_exited_scene` / `object_embedding_changed`
-- On enter/embedding_changed: computes dot-product between behavior's target embedding and the object's identity embedding
-- Objects with similarity ≥ `MATCH_THRESHOLD` (0.5) are added to that behavior's `_target_lists[i]`
-- On exit: removed from all target lists
+- Listens to `EventBus.object_entered_scene` / `object_exited_scene` / `object_tags_changed`
+- On enter/tags_changed: `_matches_target(target_tag, obj_tags, obj_categories)` — empty `target_tag` matches everything; non-empty checks whether the value appears in the object's tags OR categories
+- Matching objects added to that behavior's `_target_lists[i]`; on exit removed from all target lists
 
 **Action (per physics frame)**:
 - Walks behaviors in priority order (index 0 = highest)
@@ -222,8 +222,6 @@ Objects carry 0-4 behaviors expressed as verb + freeform target string. Behavior
 **Error fallback**: disables entire system after 5 consecutive errors.
 
 **Speed constants**: destroy=200, eat=180, investigate=80, follow=160, protect=180, flee=250 px/s. Melee range=48px, investigate stop range=128px, follow range=64px. Melee cooldown=1.0s.
-
-**Embed re-scoring**: when an object's tags change, `game_object.gd` re-requests the identity embedding via `POST /api/embed` and emits `object_embedding_changed` — all `VerbBehaviorSystem` instances re-score that object against their behavior embeddings.
 
 ## Collision & Cascade System
 
@@ -364,7 +362,7 @@ V2: physics is pre-computed on the backend from the substance profile and stored
 | `sessions` | `id TEXT PK` | created_at, budget_used, budget_limit (default $1.00) |
 | `objects` | `(session_id, object_id) PK` | blueprint_json, x, y, durability |
 
-`blueprint_json` stores the full `GameObjectBlueprint` including V2 fields (`substance_profile`, `combat_profile`, `identity_embedding`, `behavior_embeddings`).
+`blueprint_json` stores the full `GameObjectBlueprint` including V2 fields (`substance_profile`, `combat_profile`, `categories`, `compiled_behaviors`).
 
 ### Session Lifecycle
 

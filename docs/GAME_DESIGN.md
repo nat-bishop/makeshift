@@ -138,7 +138,7 @@ Rules with empty `tags_required_b` match any second object. Used for uncondition
 
 ## Behavior System
 
-LLM authors 0-4 verb behaviors per object. Each behavior = verb + freeform target string. The verb defines movement and action; the target string is semantically matched at runtime via embedding similarity.
+LLM authors 0-4 verb behaviors per object. Each behavior = verb + `target_tag` (a category or tag from `BEHAVIOR_TARGETS`). The verb defines movement and action; the target is matched at runtime by checking whether the value appears in an object's tags or categories.
 
 ### Verbs
 
@@ -153,17 +153,19 @@ LLM authors 0-4 verb behaviors per object. Each behavior = verb + freeform targe
 
 ### Target Matching
 
-Each behavior's target string is embedded at creation time (via Ollama `qwen3-embedding:0.6b`). When objects enter the scene, their identity embedding (name + description + size + tags as natural language) is dot-product scored against each behavior's target embedding. Objects above threshold 0.5 become targets. Targets are re-scored when an object's tags change.
+`BEHAVIOR_TARGETS` = 9 values: CREATURE, FOOD, WEAPON, PLANT, VALUABLE, VEHICLE, TOOL, HOSTILE, HEAT_SOURCE. Empty `target_tag` matches every object in perception range. Non-empty checks whether the value appears in the object's tags or categories. Re-evaluated whenever an object's tags change.
+
+destroy/eat/flee require a non-empty `target_tag`; investigate/follow/protect allow empty.
 
 ### Default Behavior
 
-Only one implied behavior: LIVING + no explicit behaviors → `investigate → "interesting nearby objects"`.
+Only one implied behavior: LIVING + no explicit behaviors → `investigate` with empty target (matches everything).
 
 ### Design Examples
 
 **Hungry wolf** (substance: flesh, element: null):
 - Tags: LIVING
-- Behaviors: destroy → "small prey animals", flee → "fire and loud noises"
+- Behaviors: destroy → CREATURE, flee → HEAT_SOURCE
 
 **Fire sword** (substance: metal, element: burning):
 - Tags: SHARP
@@ -171,11 +173,11 @@ Only one implied behavior: LIVING + no explicit behaviors → `investigate → "
 
 **Acid spider** (substance: flesh, element: acidic):
 - Tags: LIVING
-- Behaviors: destroy → "small insects and prey", flee → "fire and larger creatures"
+- Behaviors: destroy → CREATURE, flee → HEAT_SOURCE
 
 **Brave knight** (substance: flesh, element: null):
 - Tags: LIVING, HOSTILE
-- Behaviors: destroy → "monsters and evil creatures", protect → "villagers and innocents"
+- Behaviors: destroy → HOSTILE, protect → CREATURE
 
 ## Player Controls
 

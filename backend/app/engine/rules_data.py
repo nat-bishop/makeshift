@@ -753,54 +753,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # 35b. HOSTILE + BREAKABLE → blunt damage + knockback
-    InteractionRule(
-        rule_id="hostile_breakable_damage",
-        name="Strike",
-        tags_required_a={Tag.HOSTILE},
-        tags_required_b={Tag.BREAKABLE},
-        execution_order=7,
-        bidirectional=False,
-        cascade_eligible=False,
-        trigger_mode=TriggerMode.FIELD,
-        effects=[
-            Effect(
-                effect_type=EffectType.DAMAGE,
-                target=EffectTarget.B,
-                damage_amount=20.0,
-                message="Struck! 20 damage.",
-            ),
-            Effect(
-                effect_type=EffectType.APPLY_FORCE,
-                target=EffectTarget.B,
-                force_magnitude=100.0,
-            ),
-        ],
-    ),
-    # 35c. HOSTILE + LIVING → blunt damage + knockback
-    InteractionRule(
-        rule_id="hostile_living_damage",
-        name="Attack",
-        tags_required_a={Tag.HOSTILE},
-        tags_required_b={Tag.LIVING},
-        execution_order=7,
-        bidirectional=False,
-        cascade_eligible=False,
-        trigger_mode=TriggerMode.FIELD,
-        effects=[
-            Effect(
-                effect_type=EffectType.DAMAGE,
-                target=EffectTarget.B,
-                damage_amount=20.0,
-                message="Attacked! 20 damage.",
-            ),
-            Effect(
-                effect_type=EffectType.APPLY_FORCE,
-                target=EffectTarget.B,
-                force_magnitude=150.0,
-            ),
-        ],
-    ),
+    # HOSTILE combat rules removed — behavior system handles creature combat directly.
     # 36. FLYING + HEAVY → cancel flight
     InteractionRule(
         rule_id="flying_heavy_cancel",
@@ -1008,33 +961,7 @@ ALL_RULES: list[InteractionRule] = [
             ),
         ],
     ),
-    # =========================================================================
-    # HOSTILE clash
-    # =========================================================================
-    # 46. HOSTILE + HOSTILE → mutual damage + knockback
-    InteractionRule(
-        rule_id="hostile_hostile_clash",
-        name="Clash",
-        tags_required_a={Tag.HOSTILE},
-        tags_required_b={Tag.HOSTILE},
-        execution_order=6,
-        bidirectional=False,
-        cascade_eligible=False,
-        trigger_mode=TriggerMode.FIELD,
-        effects=[
-            Effect(
-                effect_type=EffectType.DAMAGE,
-                target=EffectTarget.BOTH,
-                damage_amount=15.0,
-                message="Hostile creatures clash! 15 damage each.",
-            ),
-            Effect(
-                effect_type=EffectType.APPLY_FORCE,
-                target=EffectTarget.BOTH,
-                force_magnitude=120.0,
-            ),
-        ],
-    ),
+    # HOSTILE clash rule removed — behavior system handles creature combat directly.
     # =========================================================================
     # REFLECTIVE expansion
     # =========================================================================

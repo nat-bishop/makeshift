@@ -4,10 +4,10 @@ from enum import StrEnum
 from typing import Literal
 
 import structlog
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.models.substances import Element, Substance
-from app.models.tags import LLM_VISIBLE_TAGS, TAG_DESCRIPTIONS, Tag
+from app.models.tags import BEHAVIOR_TARGETS, LLM_VISIBLE_TAGS, TAG_DESCRIPTIONS, Category, Tag
 
 logger = structlog.get_logger()
 
@@ -30,30 +30,37 @@ class BehaviorVerb(StrEnum):
 
 class BehaviorVerbSpec(BaseModel):
     verb: BehaviorVerb
-    target: str = Field(min_length=1, max_length=100)
-    target_tags: list[Tag] = Field(default_factory=list, max_length=3)
+    target_description: str = Field(min_length=1, max_length=100)
+    target_tag: str = ""
 
-    @field_validator("target_tags", mode="before")
+    @field_validator("target_tag", mode="before")
     @classmethod
-    def validate_target_tags(cls, tags: list) -> list:
-        """Validate target_tags against all Tag values (not just LLM-visible)."""
+    def validate_target_tag(cls, val: str) -> str:
+        """Validate target_tag against BEHAVIOR_TARGETS (categories + select state tags)."""
         from pydantic_ai import ModelRetry
 
-        all_tag_values: set[str] = {t.value for t in Tag}
-        result = []
-        seen: set[str] = set()
-        for t in tags:
-            val = t.value if isinstance(t, Tag) else str(t).strip().upper()
-            if val in seen:
-                continue
-            seen.add(val)
-            if val not in all_tag_values:
-                tag_list = ", ".join(sorted(all_tag_values))
-                raise ModelRetry(
-                    f"target_tag '{t}' is not a valid tag. Valid tags: {tag_list}"
-                )
-            result.append(val)
-        return result
+        if not val:
+            return ""
+        val = str(val).strip().upper()
+        if val not in BEHAVIOR_TARGETS:
+            valid = ", ".join(sorted(BEHAVIOR_TARGETS))
+            raise ModelRetry(
+                f"target_tag '{val}' is not valid. Valid target_tags: {valid}"
+            )
+        return val
+
+    @model_validator(mode="after")
+    def check_aggressive_verbs_have_target(self) -> BehaviorVerbSpec:
+        from pydantic_ai import ModelRetry
+
+        aggressive = (BehaviorVerb.DESTROY, BehaviorVerb.EAT, BehaviorVerb.FLEE)
+        if self.verb in aggressive and not self.target_tag:
+            valid = ", ".join(sorted(BEHAVIOR_TARGETS))
+            raise ModelRetry(
+                f"'{self.verb.value}' behaviors MUST have a target_tag. "
+                f"Valid target_tags: {valid}"
+            )
+        return self
 
 
 class VisualDescriptor(BaseModel):
@@ -66,14 +73,36 @@ class VisualDescriptor(BaseModel):
 
 
 class CreatorOutput(BaseModel):
-    """LLM output: substance + element + tags + behaviors."""
+    """LLM output: substance + element + categories + tags + behaviors."""
 
     name: str
     substance: Substance
     element: Element | None = None
+    categories: list[Category] = Field(default_factory=list, max_length=3)
     tags: list[Tag] = Field(default_factory=list, max_length=3)
     behaviors: list[BehaviorVerbSpec] = Field(default_factory=list, max_length=4)
     visual_descriptor: VisualDescriptor
+
+    @field_validator("categories", mode="before")
+    @classmethod
+    def validate_categories(cls, cats: list) -> list:
+        """Validate and deduplicate categories."""
+        from pydantic_ai import ModelRetry
+
+        valid = {c.value for c in Category}
+        result = []
+        seen: set[str] = set()
+        for c in cats:
+            val = c.value if isinstance(c, Category) else str(c).strip().upper()
+            if val in seen:
+                continue
+            seen.add(val)
+            if val not in valid:
+                raise ModelRetry(
+                    f"Category '{c}' is not valid. Valid categories: {', '.join(sorted(valid))}"
+                )
+            result.append(val)
+        return result
 
     @field_validator("name")
     @classmethod
@@ -120,12 +149,12 @@ class GameObjectBlueprint(BaseModel):
     # Substance/element fields
     substance: Substance
     element: Element | None = None
+    categories: list[str] = Field(default_factory=list)
     tags: list[Tag]
     behaviors: list[BehaviorVerbSpec] = Field(default_factory=list)
     visual_descriptor: VisualDescriptor
     # Derived data (computed at creation time)
     substance_profile: dict[str, float | str] = Field(default_factory=dict)
     combat_profile: dict[str, float] = Field(default_factory=dict)
-    identity_embedding: list[float] = Field(default_factory=list)
     compiled_behaviors: list[dict] = Field(default_factory=list)
     starting_durability: int = 150

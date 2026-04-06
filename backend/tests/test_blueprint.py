@@ -9,7 +9,7 @@ from app.models.blueprint import (
     VisualDescriptor,
 )
 from app.models.substances import Element, Substance
-from app.models.tags import Tag
+from app.models.tags import Category, Tag
 from pydantic import ValidationError
 from pydantic_ai import ModelRetry
 
@@ -32,6 +32,44 @@ class TestVisualDescriptor:
     def test_invalid_size_category_raises(self) -> None:
         with pytest.raises(ValidationError):
             _make_visual(size_category="gigantic")
+
+
+class TestBehaviorVerbSpec:
+    def test_destroy_requires_target_tag(self) -> None:
+        with pytest.raises(ModelRetry):
+            BehaviorVerbSpec(verb=BehaviorVerb.DESTROY, target_description="enemies")
+
+    def test_eat_requires_target_tag(self) -> None:
+        with pytest.raises(ModelRetry):
+            BehaviorVerbSpec(verb=BehaviorVerb.EAT, target_description="food")
+
+    def test_flee_requires_target_tag(self) -> None:
+        with pytest.raises(ModelRetry):
+            BehaviorVerbSpec(verb=BehaviorVerb.FLEE, target_description="danger")
+
+    def test_investigate_allows_empty_target_tag(self) -> None:
+        b = BehaviorVerbSpec(verb=BehaviorVerb.INVESTIGATE, target_description="anything")
+        assert b.target_tag == ""
+
+    def test_follow_allows_empty_target_tag(self) -> None:
+        b = BehaviorVerbSpec(verb=BehaviorVerb.FOLLOW, target_description="leader")
+        assert b.target_tag == ""
+
+    def test_protect_allows_empty_target_tag(self) -> None:
+        b = BehaviorVerbSpec(verb=BehaviorVerb.PROTECT, target_description="villagers")
+        assert b.target_tag == ""
+
+    def test_valid_target_tag(self) -> None:
+        b = BehaviorVerbSpec(
+            verb=BehaviorVerb.DESTROY, target_description="prey", target_tag="CREATURE"
+        )
+        assert b.target_tag == "CREATURE"
+
+    def test_invalid_target_tag_raises(self) -> None:
+        with pytest.raises(ModelRetry):
+            BehaviorVerbSpec(
+                verb=BehaviorVerb.DESTROY, target_description="stuff", target_tag="METALLIC"
+            )
 
 
 class TestCreatorOutput:
@@ -84,6 +122,53 @@ class TestCreatorOutput:
                 visual_descriptor=_make_visual(),
             )
 
+    def test_living_tag_rejected(self) -> None:
+        """LIVING is auto-derived from CREATURE category, not LLM-pickable."""
+        with pytest.raises(ModelRetry):
+            CreatorOutput(
+                name="Dog",
+                substance=Substance.FLESH,
+                tags=[Tag.LIVING],
+                visual_descriptor=_make_visual(),
+            )
+
+    def test_hostile_tag_rejected(self) -> None:
+        """HOSTILE is auto-derived from destroy verb, not LLM-pickable."""
+        with pytest.raises(ModelRetry):
+            CreatorOutput(
+                name="Trap",
+                substance=Substance.METAL,
+                tags=[Tag.HOSTILE],
+                visual_descriptor=_make_visual(),
+            )
+
+    def test_categories_valid(self) -> None:
+        out = CreatorOutput(
+            name="Wolf",
+            substance=Substance.FLESH,
+            categories=[Category.CREATURE],
+            visual_descriptor=_make_visual(),
+        )
+        assert out.categories == [Category.CREATURE]
+
+    def test_categories_dedup(self) -> None:
+        out = CreatorOutput(
+            name="Dog",
+            substance=Substance.FLESH,
+            categories=[Category.CREATURE, Category.CREATURE],
+            visual_descriptor=_make_visual(),
+        )
+        assert out.categories == [Category.CREATURE]
+
+    def test_invalid_category_raises(self) -> None:
+        with pytest.raises(ModelRetry):
+            CreatorOutput(
+                name="Dog",
+                substance=Substance.FLESH,
+                categories=["MONSTER"],  # type: ignore[list-item]
+                visual_descriptor=_make_visual(),
+            )
+
     def test_name_too_long_raises(self) -> None:
         with pytest.raises(ModelRetry):
             CreatorOutput(
@@ -114,10 +199,14 @@ class TestCreatorOutput:
         out = CreatorOutput(
             name="Cop",
             substance=Substance.FLESH,
-            tags=[Tag.LIVING],
+            categories=[Category.CREATURE],
             behaviors=[
-                BehaviorVerbSpec(verb=BehaviorVerb.EAT, target="donuts"),
-                BehaviorVerbSpec(verb=BehaviorVerb.DESTROY, target="criminals"),
+                BehaviorVerbSpec(
+                    verb=BehaviorVerb.EAT, target_description="donuts", target_tag="FOOD"
+                ),
+                BehaviorVerbSpec(
+                    verb=BehaviorVerb.DESTROY, target_description="criminals", target_tag="HOSTILE"
+                ),
             ],
             visual_descriptor=_make_visual(),
         )
@@ -128,13 +217,19 @@ class TestCreatorOutput:
             CreatorOutput(
                 name="Cop",
                 substance=Substance.FLESH,
-                tags=[Tag.LIVING],
+                categories=[Category.CREATURE],
                 behaviors=[
-                    BehaviorVerbSpec(verb=BehaviorVerb.EAT, target="a"),
-                    BehaviorVerbSpec(verb=BehaviorVerb.DESTROY, target="b"),
-                    BehaviorVerbSpec(verb=BehaviorVerb.FLEE, target="c"),
-                    BehaviorVerbSpec(verb=BehaviorVerb.FOLLOW, target="d"),
-                    BehaviorVerbSpec(verb=BehaviorVerb.PROTECT, target="e"),
+                    BehaviorVerbSpec(
+                        verb=BehaviorVerb.EAT, target_description="a", target_tag="FOOD"
+                    ),
+                    BehaviorVerbSpec(
+                        verb=BehaviorVerb.DESTROY, target_description="b", target_tag="CREATURE"
+                    ),
+                    BehaviorVerbSpec(
+                        verb=BehaviorVerb.FLEE, target_description="c", target_tag="HOSTILE"
+                    ),
+                    BehaviorVerbSpec(verb=BehaviorVerb.FOLLOW, target_description="d"),
+                    BehaviorVerbSpec(verb=BehaviorVerb.PROTECT, target_description="e"),
                 ],
                 visual_descriptor=_make_visual(),
             )
@@ -175,8 +270,9 @@ class TestGameObjectBlueprint:
         bp = self._make_blueprint()
         data = bp.model_dump(mode="json")
         assert "substance" in data
+        assert "categories" in data
         assert "substance_profile" in data
         assert "combat_profile" in data
-        assert "identity_embedding" in data
         assert "compiled_behaviors" in data
         assert "starting_durability" in data
+        assert "identity_embedding" not in data

@@ -6,9 +6,7 @@ var current_durability: int = 150
 var _tag_manager: TagManager = null
 var _behavior_system: Node = null
 var _tag_field: Node = null
-
-# Embedding for semantic targeting
-var _identity_embedding: Array = []
+var _categories: Array = []
 
 @onready var physics_applicator: Node = $PhysicsApplicator
 @onready var object_visual: Node = $ObjectVisual
@@ -37,6 +35,11 @@ func init_from_blueprint(bp: Dictionary) -> void:
 
 	current_durability = bp.get("starting_durability", 150)
 
+	# Parse categories
+	_categories = []
+	for cat in bp.get("categories", []):
+		_categories.append(str(cat))
+
 	# Substance-based physics
 	physics_applicator.apply_from_blueprint(bp)
 	object_visual.set_object_id(object_id)
@@ -46,9 +49,6 @@ func init_from_blueprint(bp: Dictionary) -> void:
 	add_to_group("game_objects")
 	if "LIVING" in tags:
 		add_to_group("living")
-
-	# Store identity embedding
-	_identity_embedding = bp.get("identity_embedding", [])
 
 	# Verb behavior system
 	var compiled_behaviors: Array = bp.get("compiled_behaviors", [])
@@ -70,7 +70,7 @@ func init_from_blueprint(bp: Dictionary) -> void:
 	add_child(debug_label)
 	debug_label.init(self)
 
-	Log.info("GameObject: Initialized '%s' (id=%s) with %d tags, %d behaviors, durability=%d" % [bp.get("name", "?"), object_id, tags.size(), behaviors.size(), current_durability])
+	Log.info("GameObject: Initialized '%s' (id=%s) with %d tags, %d behaviors, durability=%d" % [bp.get("name", "?"), object_id, tags.size(), compiled_behaviors.size(), current_durability])
 
 	# Notify scene after node enters tree (deferred to ensure _ready() completes first)
 	call_deferred("_emit_entered_scene")
@@ -100,8 +100,8 @@ func get_object_id() -> String:
 	return object_id
 
 
-func get_identity_embedding() -> Array:
-	return _identity_embedding
+func get_categories() -> Array:
+	return _categories
 
 
 func is_passively_pushable() -> bool:

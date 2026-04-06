@@ -1,13 +1,11 @@
 extends Node
 
-## Verb Behavior System — two-mode targeting + per-frame verb execution.
+## Verb Behavior System — single-value target matching + per-frame verb execution.
 ##
-## Targeting modes (per behavior):
-##   Tag mode: require_any_tags present → pure boolean tag check, embedding ignored.
-##   Identity mode: no tag requirements → embedding dot-product at MATCH_THRESHOLD.
+## Targeting: each behavior has a target_tag (category or tag string).
+##   Empty target_tag matches everything. Non-empty checks obj tags + categories.
 ## Action layer: per-frame, picks best target by priority + distance, executes verb.
 
-const MATCH_THRESHOLD: float = 0.5
 const MELEE_RANGE: float = 48.0
 const INVESTIGATE_RANGE: float = 128.0
 const FOLLOW_RANGE: float = 64.0
@@ -24,7 +22,7 @@ const MELEE_COOLDOWN: float = 1.0
 const MAX_ERRORS: int = 5
 
 var _owner_body: RigidBody2D
-var _behaviors: Array = []  # Array of {verb, target_text, target_embedding, require_any_tags, exclude_tags}
+var _behaviors: Array = []  # Array of {verb, target_description, target_tag}
 var _target_lists: Array = []  # Array of Arrays — per-behavior list of matching objects
 var _error_count: int = 0
 var _disabled: bool = false
@@ -40,10 +38,8 @@ func init_behaviors(compiled_behaviors: Array, owner: RigidBody2D) -> void:
 		var entry: Dictionary = cb if cb is Dictionary else {}
 		_behaviors.append({
 			"verb": entry.get("verb", "investigate"),
-			"target_text": entry.get("target", ""),
-			"target_embedding": entry.get("target_embedding", []),
-			"require_any_tags": entry.get("require_any_tags", []),
-			"exclude_tags": entry.get("exclude_tags", []),
+			"target_description": entry.get("target_description", ""),
+			"target_tag": entry.get("target_tag", ""),
 		})
 		_target_lists.append([])
 
@@ -77,10 +73,7 @@ func _exit_tree() -> void:
 func _on_object_entered(game_object: Node) -> void:
 	if game_object == _owner_body or not is_instance_valid(game_object):
 		return
-	if not game_object.has_method("get_identity_embedding"):
-		return
-	var obj_embedding: Array = game_object.get_identity_embedding()
-	_check_object_against_all_behaviors(game_object, obj_embedding)
+	_check_object_against_all_behaviors(game_object)
 
 
 func _on_object_exited(game_object: Node) -> void:
@@ -91,30 +84,15 @@ func _on_object_exited(game_object: Node) -> void:
 func _on_tags_changed(game_object: Node) -> void:
 	if game_object == _owner_body or not is_instance_valid(game_object):
 		return
-	if not game_object.has_method("get_identity_embedding"):
-		return
-	var obj_embedding: Array = game_object.get_identity_embedding()
-	_check_object_against_all_behaviors(game_object, obj_embedding)
+	_check_object_against_all_behaviors(game_object)
 
 
-func _check_object_against_all_behaviors(game_object: Node, obj_embedding: Array) -> void:
+func _check_object_against_all_behaviors(game_object: Node) -> void:
 	var obj_tags: Array = game_object.get_tags() if game_object.has_method("get_tags") else []
+	var obj_cats: Array = game_object.get_categories() if game_object.has_method("get_categories") else []
 	for i in range(_behaviors.size()):
-		var b: Dictionary = _behaviors[i]
-		var require_any: Array = b.get("require_any_tags", [])
-		var exclude: Array = b.get("exclude_tags", [])
-		var has_tag_reqs: bool = not require_any.is_empty() or not exclude.is_empty()
-		var is_match: bool = false
-
-		if has_tag_reqs:
-			# Tag mode: pure boolean check, embedding ignored
-			is_match = _passes_tag_filter(obj_tags, require_any, exclude)
-		else:
-			# Identity mode: pure embedding match
-			var emb: Array = b["target_embedding"]
-			if not emb.is_empty() and not obj_embedding.is_empty():
-				is_match = _dot_product(emb, obj_embedding) >= MATCH_THRESHOLD
-
+		var target_tag: String = _behaviors[i].get("target_tag", "")
+		var is_match: bool = _matches_target(target_tag, obj_tags, obj_cats)
 		if is_match:
 			if game_object not in _target_lists[i]:
 				_target_lists[i].append(game_object)
@@ -122,24 +100,10 @@ func _check_object_against_all_behaviors(game_object: Node, obj_embedding: Array
 			_target_lists[i].erase(game_object)
 
 
-static func _passes_tag_filter(obj_tags: Array, require_any: Array, exclude: Array) -> bool:
-	for tag in exclude:
-		if tag in obj_tags:
-			return false
-	if require_any.is_empty():
-		return true
-	for tag in require_any:
-		if tag in obj_tags:
-			return true
-	return false
-
-
-static func _dot_product(a: Array, b: Array) -> float:
-	var result: float = 0.0
-	var size: int = min(a.size(), b.size())
-	for i in range(size):
-		result += a[i] * b[i]
-	return result
+static func _matches_target(target_tag: String, obj_tags: Array, obj_categories: Array) -> bool:
+	if target_tag.is_empty():
+		return true  # empty target_tag matches everything
+	return target_tag in obj_tags or target_tag in obj_categories
 
 
 # ---------------------------------------------------------------------------

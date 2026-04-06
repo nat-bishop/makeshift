@@ -128,7 +128,7 @@ class TestRuleResolver:
 
 class TestAllRules:
     def test_all_rules_loaded(self):
-        assert len(ALL_RULES) == 59
+        assert len(ALL_RULES) == 56
 
     def test_all_rules_have_unique_ids(self):
         ids = [r.rule_id for r in ALL_RULES]
@@ -266,18 +266,7 @@ class TestAllRules:
             "electric_flammable_spark"
         )
 
-    def test_hostile_hostile_clash(self):
-        resolver = RuleResolver(ALL_RULES)
-        matches = resolver.find_matching_rules({Tag.HOSTILE}, {Tag.HOSTILE})
-        rule_ids = [m.rule_id for m in matches]
-        assert "hostile_hostile_clash" in rule_ids
-
-    def test_hostile_has_knockback(self):
-        resolver = RuleResolver(ALL_RULES)
-        matches = resolver.find_matching_rules({Tag.HOSTILE}, {Tag.LIVING})
-        rule = next(m for m in matches if m.rule_id == "hostile_living_damage")
-        effect_types = [e.effect_type for e in rule.effects]
-        assert EffectType.APPLY_FORCE in effect_types
+    # HOSTILE combat rules removed — behavior system handles creature combat.
 
     def test_reflective_acidic_resist(self):
         resolver = RuleResolver(ALL_RULES)

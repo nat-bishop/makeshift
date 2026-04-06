@@ -11,7 +11,6 @@ from app.config import settings
 
 if TYPE_CHECKING:
     from pydantic_ai.models import Model
-from app.embeddings import compute_object_embeddings
 from app.engine.trait_deriver import compute_combat_profile, derive_traits, resolve_profile
 from app.models.blueprint import (
     CreatorOutput,
@@ -27,7 +26,7 @@ logger = structlog.get_logger()
 # If rules change, update descriptions here too.
 SYSTEM_PROMPT = """\
 You are a game object designer for a 2D sandbox game. Given a player's description, \
-create a game object by choosing a substance, optional element, tags, behaviors, and visual appearance.
+create a game object by choosing a substance, optional element, categories, tags, behaviors, and visual appearance.
 
 ## Substance (pick exactly 1)
 
@@ -50,7 +49,7 @@ The substance defines what the object is made of — its physics, durability, an
 | lava | Lava flows, magma pools | MOLTEN, LIQUID, HEAT_SOURCE |
 | fire | Flames, campfires, infernos | GAS, HEAT_SOURCE, HOT |
 | smoke | Smoke clouds, steam, mist | GAS, LIGHT |
-| flesh | Creatures, monsters, animals, people | *(none — add LIVING)* |
+| flesh | Creatures, monsters, animals, people | *(none)* |
 
 ## Element (pick 0 or 1)
 
@@ -66,7 +65,21 @@ An optional energy infusion that adds elemental properties.
 | toxic | TOXIC | poison dart, toxic mushroom |
 | windy | WIND_SOURCE | fan, tornado, jet engine |
 
-## Tags (pick 0-3 — independent modifiers the substance doesn't cover)
+## Categories (pick 0-3 — what gameplay interactions this object supports)
+
+CREATURE — a living being. Animals, monsters, people, insects. Auto-adds LIVING tag.
+FOOD — something edible. Fruit, meat, potions, snacks.
+WEAPON — made to deal damage. Swords, bombs, bows, traps.
+PLANT — a plant or fungus. Trees, flowers, vines, mushrooms.
+VALUABLE — precious or collectible. Treasure, coins, gems, rare items.
+VEHICLE — something rideable or that carries things. Carts, boats, horses.
+TOOL — a utility object. Buckets, ropes, levers, keys, shields.
+
+Most objects have 0-1 categories. A wolf is [CREATURE]. A donut is [FOOD]. \
+A fire sword is [WEAPON]. An oak tree is [PLANT]. A gold coin is [VALUABLE]. \
+A cart is [VEHICLE]. A rope is [TOOL]. A campfire has none.
+
+## Tags (pick 0-3 — physical modifiers the substance doesn't cover)
 
 SHARP — cutting edge or point. Swords, thorns, claws.
 HEAVY — dense and massive. Anvils, boulders. Immovable by wind.
@@ -77,18 +90,16 @@ STICKY — adhesive surface. Honey, tar, spider webs.
 REFLECTIVE — mirror-like surface. Shields, polished metal.
 EXPLOSIVE — volatile, detonates when damaged. Dynamite, grenades.
 FLYING — defies gravity. Birds, drones, ghosts, balloons.
-LIVING — biological creature. Animals, monsters, insects. NOT machines.
 WET — damp or soaked. Amplifies electricity, freezes from cold.
-HOSTILE — aggressive. Deals damage to nearby creatures. Use for non-living threats (spike traps, force fields). Living creatures get HOSTILE auto-derived from destroy behavior.
 
-## Behaviors (0-4, for LIVING creatures)
+## Behaviors (0-4, for CREATURE objects)
 
-Each behavior has a verb, a freeform target describing what this creature cares about, and optional target_tags. \
+Each behavior has a verb, a target_tag (what to target), and a target_description (freeform reasoning). \
 List behaviors in order of importance — first behavior takes precedence when multiple are active.
 
-- **target**: freeform text describing the kind of thing (identity/noun)
-- **target_tags**: 0-2 tags the target object MUST currently have (state filter). \
-Use when the target's current state matters. Leave empty for pure identity targeting.
+- **target_tag**: one of CREATURE, FOOD, WEAPON, PLANT, VALUABLE, VEHICLE, TOOL, HOSTILE, HEAT_SOURCE — or empty for "anything nearby"
+- **target_description**: freeform text describing intent (for display, not used for matching)
+- destroy/eat/flee MUST have a target_tag. investigate/follow/protect may leave it empty.
 
 | Verb | What it does |
 |------|-------------|
@@ -99,20 +110,15 @@ Use when the target's current state matters. Leave empty for pure identity targe
 | protect | Follow target + attack threats near it |
 | flee | Move away from target at high speed |
 
-Common target_tags patterns:
-- Things currently on fire: target_tags: [HEAT_SOURCE]
-- Living creatures only: target_tags: [LIVING]
-- Hostile enemies: target_tags: [HOSTILE]
-- Metallic objects: target_tags: [METALLIC]
-- By identity only (food, donuts, treasure): target_tags: [] (empty)
-
 Examples:
-- A firefighter: destroy → "fires and burning things" target_tags: [HEAT_SOURCE], protect → "people" target_tags: [LIVING]
-- A brave warrior: destroy → "enemies and monsters" target_tags: [HOSTILE], protect → "innocent people" target_tags: [LIVING]
-- A hungry wolf: destroy → "small prey animals" target_tags: [LIVING], flee → "fire" target_tags: [HEAT_SOURCE]
-- A donut-obsessed cop: eat → "food, especially donuts" target_tags: [], destroy → "criminals" target_tags: [HOSTILE]
+- A wolf: destroy target_tag=CREATURE "small prey animals", flee target_tag=HEAT_SOURCE "fire"
+- A cop: eat target_tag=FOOD "donuts and snacks", destroy target_tag=HOSTILE "criminals"
+- A dragon: destroy target_tag=CREATURE "anything alive", follow target_tag=VALUABLE "treasure and gold"
+- A firefighter: destroy target_tag=HEAT_SOURCE "fires", protect target_tag=CREATURE "people"
+- A villager: flee target_tag=HOSTILE "dangerous creatures"
+- A curious cat: investigate "interesting objects nearby" (empty target_tag — investigates everything)
 
-Non-living objects usually have no behaviors. A sword doesn't need behaviors — its tags handle everything.
+Non-CREATURE objects have no behaviors. A sword doesn't need behaviors — its tags handle everything.
 
 ## Visual Descriptor
 
@@ -125,31 +131,35 @@ Non-living objects usually have no behaviors. A sword doesn't need behaviors —
 
 ## Examples
 
-"fire sword" → substance: metal, element: burning, tags: [SHARP], behaviors: [], \
+"fire sword" → substance: metal, element: burning, categories: [WEAPON], tags: [SHARP], behaviors: [], \
 visual: "a gleaming steel blade wreathed in dancing orange flames"
 
-"rock" → substance: stone, element: null, tags: [], behaviors: [], \
+"rock" → substance: stone, element: null, categories: [], tags: [], behaviors: [], \
 visual: "a rough gray boulder with moss patches"
 
-"acid spider" → substance: flesh, element: acidic, tags: [LIVING], \
-behaviors: [destroy → "small insects and prey" target_tags: [LIVING], flee → "fire and larger creatures" target_tags: [HEAT_SOURCE]], \
+"acid spider" → substance: flesh, element: acidic, categories: [CREATURE], tags: [], \
+behaviors: [destroy target_tag=CREATURE "small insects and prey", flee target_tag=HEAT_SOURCE "fire"], \
 visual: "a glossy black spider dripping green acid from its fangs"
 
-"campfire" → substance: fire, element: null, tags: [], behaviors: [], \
+"campfire" → substance: fire, element: null, categories: [], tags: [], behaviors: [], \
 visual: "a crackling campfire with orange flames dancing over charred logs"
 
-"ice wall" → substance: ice, element: null, tags: [], behaviors: [], \
-visual: "a towering wall of translucent blue ice with frost crystals"
+"donut" → substance: cloth, element: null, categories: [FOOD], tags: [], behaviors: [], \
+visual: "a golden-brown glazed donut with colorful sprinkles"
 
-"rubber duck" → substance: rubber, element: null, tags: [LIGHT], behaviors: [], \
-visual: "a cheerful yellow rubber duck with an orange beak"
+"gold coin" → substance: metal, element: null, categories: [VALUABLE], tags: [LIGHT], behaviors: [], \
+visual: "a shiny gold coin with an embossed crown on one side"
 
-"brave knight" → substance: flesh, element: null, tags: [LIVING], \
-behaviors: [destroy → "monsters and evil creatures" target_tags: [HOSTILE], protect → "villagers and innocents" target_tags: [LIVING]], \
+"brave knight" → substance: flesh, element: null, categories: [CREATURE], tags: [], \
+behaviors: [destroy target_tag=HOSTILE "monsters and evil creatures", protect target_tag=CREATURE "villagers and innocents"], \
 visual: "a stalwart knight in dented silver armor with a red plume"
 
-"toxic mushroom" → substance: wood, element: toxic, tags: [BREAKABLE], behaviors: [], \
-visual: "a bulbous purple mushroom with glowing green spots oozing spores"\
+"toxic mushroom" → substance: wood, element: toxic, categories: [FOOD, PLANT], tags: [BREAKABLE], \
+behaviors: [], \
+visual: "a bulbous purple mushroom with glowing green spots oozing spores"
+
+"rope" → substance: cloth, element: null, categories: [TOOL], tags: [], behaviors: [], \
+visual: "a coil of rough hemp rope with frayed ends"\
 """
 
 _agent: Agent[None, CreatorOutput] | None = None
@@ -204,8 +214,8 @@ def _get_agent() -> Agent[None, CreatorOutput]:
 async def create_object(description: str) -> GameObjectBlueprint:
     """Create a game object from a player's text description.
 
-    Pipeline: LLM → derive_traits → resolve_profile → compute_combat →
-    compute_embeddings → assemble blueprint.
+    Pipeline: LLM → resolve_implied_behaviors → derive_traits → resolve_profile →
+    compute_combat → assemble blueprint.
     """
     t0 = time.monotonic()
     try:
@@ -213,35 +223,26 @@ async def create_object(description: str) -> GameObjectBlueprint:
         result = await agent.run(f"Create a game object for: {description}")
         spec = result.output
 
-        # Resolve implied behaviors
-        behaviors = resolve_implied_behaviors(spec.tags, spec.behaviors)
+        # Resolve implied behaviors (CREATURE with no behaviors → investigate)
+        behaviors = resolve_implied_behaviors(spec.categories, spec.behaviors)
 
-        # Derive internal traits
+        # Derive internal traits (substance + element + tags + behaviors + categories)
         behavior_verbs = [b.verb.value for b in behaviors]
-        traits = derive_traits(spec.substance, spec.element, spec.tags, behavior_verbs)
+        traits = derive_traits(
+            spec.substance, spec.element, spec.tags, behavior_verbs, categories=spec.categories
+        )
 
         # Compute profiles
         profile = resolve_profile(spec.substance, spec.element, traits)
         combat = compute_combat_profile(profile)
 
-        # Compute embeddings (identity = raw document, targets = instruction-prefixed queries)
-        identity_emb, behavior_embs = await compute_object_embeddings(
-            name=spec.name,
-            visual_description=spec.visual_descriptor.visual_description,
-            size_category=spec.visual_descriptor.size_category,
-            substance=spec.substance.value,
-            behavior_targets=[b.target for b in behaviors],
-        )
-
-        # Compile behaviors: self-contained dicts with verb, target, embedding, and tag filters
+        # Compile behaviors: self-contained dicts with verb + target_tag
         compiled_behaviors = []
-        for i, b in enumerate(behaviors):
+        for b in behaviors:
             compiled_behaviors.append({
                 "verb": b.verb.value,
-                "target": b.target,
-                "target_embedding": behavior_embs[i] if i < len(behavior_embs) else [],
-                "require_any_tags": [t.value for t in b.target_tags],
-                "exclude_tags": [],
+                "target_description": b.target_description,
+                "target_tag": b.target_tag,
             })
 
         elapsed = time.monotonic() - t0
@@ -263,6 +264,7 @@ async def create_object(description: str) -> GameObjectBlueprint:
             name=f"Mysterious {fallback_name}",
             substance=Substance.STONE,
             element=None,
+            categories=[],
             tags=[],
             behaviors=[],
             visual_descriptor=VisualDescriptor(
@@ -274,7 +276,6 @@ async def create_object(description: str) -> GameObjectBlueprint:
         profile = resolve_profile(spec.substance, spec.element, traits)
         combat = compute_combat_profile(profile)
         behaviors = []
-        identity_emb = []
         compiled_behaviors = []
 
     # Durability from profile
@@ -286,12 +287,12 @@ async def create_object(description: str) -> GameObjectBlueprint:
         description=description,
         substance=spec.substance,
         element=spec.element,
+        categories=[c.value for c in spec.categories],
         tags=traits,
         behaviors=behaviors,
         visual_descriptor=spec.visual_descriptor,
         substance_profile=profile.model_dump(mode="json"),
         combat_profile=combat,
-        identity_embedding=identity_emb,
         compiled_behaviors=compiled_behaviors,
         starting_durability=starting_durability,
     )

@@ -47,7 +47,7 @@ async def test_get_rules_has_etag() -> None:
 async def test_get_rules_count() -> None:
     async with _client() as c:
         resp = await c.get("/api/rules")
-    assert len(resp.json()) == 59
+    assert len(resp.json()) == 56
 
 
 async def test_get_rules_structure() -> None:

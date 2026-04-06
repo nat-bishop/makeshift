@@ -12,7 +12,7 @@ from app.models.substances import (
     SubstanceProfile,
     SubstanceState,
 )
-from app.models.tags import Tag
+from app.models.tags import Category, Tag
 
 
 def derive_traits(
@@ -20,8 +20,9 @@ def derive_traits(
     element: Element | None,
     tags: list[Tag],
     behavior_verbs: list[str] | None = None,
+    categories: list[Category] | None = None,
 ) -> list[Tag]:
-    """Compute the full internal trait set from substance + element + explicit tags + behaviors."""
+    """Compute full internal trait set from substance + element + tags + behaviors + categories."""
     trait_set: set[Tag] = set()
 
     # Substance auto-traits
@@ -37,6 +38,10 @@ def derive_traits(
     # Behavior-derived: destroy verb → HOSTILE
     if behavior_verbs and "destroy" in behavior_verbs:
         trait_set.add(Tag.HOSTILE)
+
+    # Category-derived: CREATURE → LIVING
+    if categories and Category.CREATURE in categories:
+        trait_set.add(Tag.LIVING)
 
     return sorted(trait_set, key=lambda t: t.value)
 

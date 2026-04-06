@@ -97,14 +97,26 @@ The entire tag+behavior model was replaced. Key drift vectors:
 - `models/substances.py` + `engine/trait_deriver.py` added — substance/element tables appear in THREE places: CLAUDE.md Architecture bullet, ARCHITECTURE.md pipeline step 4, GAME_DESIGN.md Tag System. CLAUDE.md has a one-liner; ARCHITECTURE.md has the pipeline context; GAME_DESIGN.md has the design tables. Don't duplicate the full table everywhere.
 - `LLM_VISIBLE_TAGS_V2` (12 tags) replaced the old `LLM_VISIBLE_TAGS` (27 tags). The tag count appears in CLAUDE.md, GAME_DESIGN.md, and ARCHITECTURE.md pipeline steps. Update all three.
 - `CreatorOutput` fields changed: `substance` (required), `element` (optional), `tags` (0-3 max), `behaviors: list[BehaviorVerbSpec]` (0-4). Old `signature: str | None` is gone. CLAUDE.md Data Model Flow and ARCHITECTURE.md pipeline step 4 must stay in sync.
-- `GameObjectBlueprint` gained: `substance_profile`, `combat_profile`, `identity_embedding`, `behavior_embeddings`. CLAUDE.md Data Model Flow sentence must list these.
+- `GameObjectBlueprint` gained: `substance_profile`, `combat_profile`. Note: `identity_embedding` and `behavior_embeddings` were added in V2 but then removed in the affordance category refactor (2026-04-05) — they no longer exist.
 - `behavior_executor.gd` and `behavior_maps.gd` deleted → replaced by `verb_behavior_system.gd`. The CLAUDE.md Key systems table, ARCHITECTURE.md system diagram, and any gotchas referencing these files need updating.
 - `tag_physics_map.gd` deleted → replaced by `substance_physics.gd`. CLAUDE.md Key systems table and ARCHITECTURE.md Physics Composition section must reflect this.
-- Ollama is now a runtime dependency (qwen3-embedding:0.6b at port 11434). Add to Environment section in CLAUDE.md.
-- New API endpoint: `POST /api/embed`. Add to CLAUDE.md API Endpoints table and ARCHITECTURE.md if describing the re-embedding flow.
-- EventBus gained 3 signals: `object_entered_scene`, `object_exited_scene`, `object_embedding_changed`. Signal count in CLAUDE.md autoload table went from 14 to 17.
+- Ollama was a runtime dependency in V2 initial implementation but was removed in the affordance category refactor (2026-04-05). No Ollama dependency exists.
+- EventBus gained 3 signals: `object_entered_scene`, `object_exited_scene`, `object_tags_changed` (not `object_embedding_changed` — that was never shipped). Signal count in CLAUDE.md autoload table is 17.
 
 **How to apply:** After any major model refactor, check in order: (1) CLAUDE.md Architecture bullets, (2) CLAUDE.md Godot systems table, (3) CLAUDE.md API endpoints table, (4) CLAUDE.md Data Model Flow, (5) CLAUDE.md Gotchas for stale references, (6) ARCHITECTURE.md system diagram, (7) ARCHITECTURE.md pipeline steps, (8) ARCHITECTURE.md behavior/physics sections, (9) GAME_DESIGN.md tag/behavior/economy sections.
+
+## Affordance category + embedding removal refactor (2026-04-05)
+
+- `embeddings.py` deleted entirely. `identity_embedding`, `compute_object_embeddings()`, Ollama dependency all gone. Remove from CLAUDE.md Environment section and Data Model Flow. Any docs mentioning "Ollama" or "qwen3-embedding" as a runtime requirement are now stale.
+- `Category` enum in `models/tags.py` expanded from 3 to 7 values: CREATURE, FOOD, WEAPON, PLANT, VALUABLE, VEHICLE, TOOL (2026-04-05). Categories appear in `CreatorOutput`, `GameObjectBlueprint`, and `derive_traits()` signature. CLAUDE.md Data Model Flow must list `categories` in both `CreatorOutput` fields and `GameObjectBlueprint` fields.
+- `LLM_VISIBLE_TAGS_V2` shrank from 12 to 10 — LIVING and HOSTILE dropped. Both are now derived-only. The count appears in CLAUDE.md tag system bullet; update it there and nowhere else (ARCHITECTURE.md/GAME_DESIGN.md hold the full rationale).
+- `BehaviorVerbSpec` shape changed: `target: str` + `target_tags: list[Tag]` → `target_description: str` + `target_tag: str`. `compiled_behaviors` dict shape changed accordingly (dropped `target_embedding`, `require_any_tags`, `exclude_tags`; added `target_description`, `target_tag`). Both CLAUDE.md Data Model Flow and Behavior system bullet must be updated together.
+- `BEHAVIOR_TARGETS` = 9 values: all 7 Category values (CREATURE, FOOD, WEAPON, PLANT, VALUABLE, VEHICLE, TOOL) + HOSTILE + HEAT_SOURCE — valid values for `target_tag`. destroy/eat/flee require non-empty; investigate/follow/protect allow empty. Worth a Gotcha entry.
+- `VerbBehaviorSystem` collapsed from two-mode to single-value matching. Gotcha about "two-mode matching" / "dot-product ≥ 0.5" is now stale — replace with single-value description.
+- 3 HOSTILE combat rules removed: rule count 59 → 56. ARCHITECTURE.md rule engine section must update the total if it's listed there.
+- Player gained `get_tags()` / `get_categories()` and joined `"game_objects"` group — now VBS-targetable. Note in VerbBehaviorSystem table entry.
+
+**How to apply:** After embedding/targeting model changes, check: (1) CLAUDE.md embedding system bullet (delete or update), (2) CLAUDE.md Environment Ollama entry, (3) CLAUDE.md Data Model Flow for blueprint fields, (4) CLAUDE.md Behavior system bullet for BehaviorVerbSpec shape and compiled_behaviors dict, (5) CLAUDE.md VerbBehaviorSystem table row, (6) CLAUDE.md Gotchas for stale two-mode/dot-product/Ollama gotchas, (7) rule count in CLAUDE.md rule engine bullet.
 
 ## Signal count drift (2026-03-29)
 
