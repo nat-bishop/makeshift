@@ -11,6 +11,7 @@ var _game_over_title: Label
 var _health_bar: ProgressBar
 var _health_label: Label
 var _damage_flash: ColorRect
+var _post_process_label: Label
 
 
 func _ready() -> void:
@@ -25,6 +26,7 @@ func _ready() -> void:
 	EventBus.player_died.connect(_on_player_died)
 	EventBus.player_damaged.connect(_on_player_damaged)
 	EventBus.player_healed.connect(_on_player_healed)
+	EventBus.post_process_changed.connect(_on_post_process_changed)
 
 	_pause_menu = _build_overlay("Paused", Color(0, 0, 0, 0.5), [
 		{"text": "Resume", "callback": _hide_pause_menu},
@@ -38,6 +40,7 @@ func _ready() -> void:
 
 	_build_health_bar()
 	_build_damage_flash()
+	_build_post_process_label()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -226,8 +229,23 @@ func _on_placement_ended() -> void:
 	_update_action_hint()
 
 
-func _on_debug_toggled(_enabled: bool) -> void:
-	pass
+func _on_debug_toggled(enabled: bool) -> void:
+	_post_process_label.visible = enabled
+
+
+func _build_post_process_label() -> void:
+	_post_process_label = Label.new()
+	_post_process_label.text = "Post: OFF"
+	_post_process_label.visible = GameManager.debug_mode
+	_post_process_label.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_post_process_label.position = Vector2(16, 40)
+	_post_process_label.add_theme_font_size_override("font_size", 14)
+	_post_process_label.add_theme_color_override("font_color", Color(0.7, 1.0, 0.7, 0.9))
+	add_child(_post_process_label)
+
+
+func _on_post_process_changed(shader_name: String) -> void:
+	_post_process_label.text = "Post: %s" % shader_name
 
 
 func _on_player_died() -> void:
@@ -245,4 +263,4 @@ func _update_action_hint() -> void:
 	if _placement_active:
 		_action_hint.text = "Click: Place  |  Esc: Cancel"
 	else:
-		_action_hint.text = "Tab: Create  |  E: Kick  |  Esc: Menu  |  F3: Debug"
+		_action_hint.text = "Tab: Create  |  E: Kick  |  F8: Shader  |  F9: Cycle  |  Esc: Menu  |  F3: Debug"
