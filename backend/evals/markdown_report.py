@@ -7,15 +7,15 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 
-from app.models.tags import LLM_VISIBLE_TAGS_V2
+from app.models.tags import LLM_VISIBLE_TAGS
 
 from evals.models import EvalRunResult
 
-ALL_V2_TAGS = sorted(t.value for t in LLM_VISIBLE_TAGS_V2)
+ALL_V2_TAGS = sorted(t.value for t in LLM_VISIBLE_TAGS)
 
 _SCORE_METRICS = {
-    "Validity", "Substance Accuracy", "Element Accuracy", "Tag Recall",
-    "Faithfulness", "Gameplay Quality", "Sprite Prompt",
+    "Validity", "Substance Accuracy", "Element Accuracy", "Category Accuracy",
+    "Tag Recall", "Faithfulness", "Delight", "Visual Clarity",
 }
 _COUNT_METRICS = {"Interaction Surface"}
 
@@ -34,8 +34,8 @@ def _bar(pct: float, width: int = 20) -> str:
 def _section_overview(result: EvalRunResult) -> str:
     ts = result.timestamp.strftime("%Y-%m-%d %H:%M UTC")
     score_order = [
-        "Validity", "Substance Accuracy", "Element Accuracy", "Tag Recall",
-        "Faithfulness", "Gameplay Quality", "Sprite Prompt",
+        "Validity", "Substance Accuracy", "Element Accuracy", "Category Accuracy",
+        "Tag Recall", "Faithfulness", "Delight", "Visual Clarity",
     ]
     lines = [
         f"# Eval: {result.name}",
@@ -85,6 +85,7 @@ def _section_reliability(result: EvalRunResult) -> str:
 
 def _section_distribution(result: EvalRunResult) -> str:
     tag_counts: Counter[str] = Counter()
+    category_counts: Counter[str] = Counter()
     substance_counts: Counter[str] = Counter()
     element_counts: Counter[str] = Counter()
     size_counts: Counter[str] = Counter()
@@ -98,6 +99,8 @@ def _section_distribution(result: EvalRunResult) -> str:
         out = case.output
         for tag in out.tags:
             tag_counts[tag] += 1
+        for cat in out.categories:
+            category_counts[cat] += 1
         size_counts[out.size_category] += 1
         if out.substance:
             substance_counts[out.substance] += 1
@@ -128,6 +131,15 @@ def _section_distribution(result: EvalRunResult) -> str:
     for elem, count in element_counts.most_common():
         pct = count / total * 100
         lines.append(f"| {elem} | {count}/{total} | {pct:.0f}% |")
+
+    # Category frequency
+    if category_counts:
+        lines.extend([
+            "", "### Categories", "", "| Category | Count | Pct |", "|----------|-------|-----|",
+        ])
+        for cat, count in category_counts.most_common():
+            pct = count / total * 100
+            lines.append(f"| {cat} | {count}/{total} | {pct:.0f}% |")
 
     # Tag frequency
     lines.extend(["", "### Tags", "", "| Tag | Count | Pct | |", "|-----|-------|-----|---|"])
@@ -167,8 +179,8 @@ def _section_category_scores(result: EvalRunResult) -> str:
         return ""
 
     metrics = [
-        "Validity", "Substance Accuracy", "Element Accuracy", "Tag Recall",
-        "Faithfulness", "Gameplay Quality", "Sprite Prompt",
+        "Validity", "Substance Accuracy", "Element Accuracy", "Category Accuracy",
+        "Tag Recall", "Faithfulness", "Delight", "Visual Clarity",
     ]
     header = "| Category | " + " | ".join(metrics) + " | n |"
     sep = "|----------|" + "|".join("-" * (len(m) + 2) for m in metrics) + "|---|"
@@ -228,7 +240,7 @@ def _section_cases(result: EvalRunResult) -> str:
         score_parts = []
         for m in (
             "Validity", "Substance Accuracy", "Element Accuracy", "Tag Recall",
-            "Faithfulness", "Gameplay Quality", "Sprite Prompt",
+            "Faithfulness", "Delight", "Visual Clarity",
         ):
             if m in case.scores:
                 score_parts.append(f"{m} {_fmt_score(m, case.scores[m])}")
@@ -240,7 +252,7 @@ def _section_cases(result: EvalRunResult) -> str:
         # Reasons for imperfect scores
         for m in (
             "Substance Accuracy", "Element Accuracy", "Tag Recall",
-            "Faithfulness", "Gameplay Quality", "Sprite Prompt",
+            "Faithfulness", "Delight", "Visual Clarity",
         ):
             score = case.scores.get(m, 1.0)
             reason = case.reasons.get(m, "")

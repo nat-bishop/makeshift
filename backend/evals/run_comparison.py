@@ -40,6 +40,14 @@ def load_or_find(name_or_path: str) -> EvalRunResult:
     return load_result(found)
 
 
+# TODO: Pairwise LLM judge mode. Skipped because:
+# - 3-point anchored scales reduce the score compression that motivates pairwise
+# - Wilcoxon on per-case scores already provides statistical comparison
+# - Pairwise doubles judge calls and requires both outputs available simultaneously
+# - Revisit if scores remain compressed after rubric overhaul. Design: paired prompt
+#   "Given input X, which output is better: A or B?" on comparison step only.
+
+
 def print_wilcoxon(result_a: EvalRunResult, result_b: EvalRunResult) -> None:
     """Print Wilcoxon signed-rank test results for each metric."""
     name_a = result_a.name

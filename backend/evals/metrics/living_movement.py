@@ -1,6 +1,6 @@
 """Has Behaviors evaluator — deterministic, no LLM call.
 
-V2: Flags LIVING objects that have no explicit behaviors (only the
+Flags CREATURE objects that have no explicit behaviors (only the
 default "investigate nearby objects" implied behavior).
 """
 
@@ -9,16 +9,15 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 
-from app.models.tags import Tag
 from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorContext
 
 
 @dataclass
 class HasSignatureEvaluator(Evaluator[str, str, object]):
-    """Check if LIVING objects have explicit behaviors for personality.
+    """Check if CREATURE objects have explicit behaviors for personality.
 
-    Returns 1.0 if the object has behaviors or is not LIVING.
-    Returns 0.0 if LIVING with no explicit behaviors.
+    Returns 1.0 if the object has behaviors or is not a CREATURE.
+    Returns 0.0 if CREATURE with no explicit behaviors.
     """
 
     def evaluate(self, ctx: EvaluatorContext[str, str, object]) -> dict[str, EvaluationReason]:
@@ -28,10 +27,10 @@ class HasSignatureEvaluator(Evaluator[str, str, object]):
         except (json.JSONDecodeError, TypeError):
             return {"Has Signature": EvaluationReason(value=1.0, reason="Not valid JSON")}
 
-        raw_tags = data.get("tags", [])
-        if Tag.LIVING.value not in raw_tags:
+        categories = data.get("categories", [])
+        if "CREATURE" not in categories:
             return {
-                "Has Signature": EvaluationReason(value=1.0, reason="Not a LIVING object")
+                "Has Signature": EvaluationReason(value=1.0, reason="Not a CREATURE")
             }
 
         behaviors = data.get("behaviors", [])
@@ -45,6 +44,6 @@ class HasSignatureEvaluator(Evaluator[str, str, object]):
 
         return {
             "Has Signature": EvaluationReason(
-                value=0.0, reason="LIVING object with no explicit behaviors"
+                value=0.0, reason="CREATURE with no explicit behaviors"
             )
         }

@@ -8,16 +8,17 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 
-from app.models.tags import LLM_VISIBLE_TAGS_V2
+from app.models.tags import LLM_VISIBLE_TAGS
 
 from evals.models import EvalRunResult
 
-ALL_V2_TAGS = sorted(t.value for t in LLM_VISIBLE_TAGS_V2)
+ALL_V2_TAGS = sorted(t.value for t in LLM_VISIBLE_TAGS)
 
 
 def print_distribution_report(result: EvalRunResult) -> None:
     """Print aggregate distribution stats from a saved eval result."""
     tag_counts: Counter[str] = Counter()
+    category_counts: Counter[str] = Counter()
     substance_counts: Counter[str] = Counter()
     element_counts: Counter[str] = Counter()
     verb_counts: Counter[str] = Counter()
@@ -33,6 +34,8 @@ def print_distribution_report(result: EvalRunResult) -> None:
 
         for tag in out.tags:
             tag_counts[tag] += 1
+        for cat in out.categories:
+            category_counts[cat] += 1
 
         size_counts[out.size_category] += 1
 
@@ -74,6 +77,14 @@ def print_distribution_report(result: EvalRunResult) -> None:
     for elem, count in element_counts.most_common():
         pct = count / total * 100
         print(f"    {elem:<12} {count:>3}/{total}  ({pct:4.0f}%)")
+
+    # Category frequency
+    if category_counts:
+        print("\n  Category Frequency:")
+        for cat, count in category_counts.most_common():
+            pct = count / total * 100
+            bar = "#" * int(pct / 2)
+            print(f"    {cat:<12} {count:>3}/{total}  ({pct:4.0f}%)  {bar}")
 
     # Tag frequency
     print("\n  Tag Frequency:")

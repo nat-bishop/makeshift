@@ -5,84 +5,114 @@ Provides deterministic validity checks and LLM-as-judge scoring.
 
 from __future__ import annotations
 
-from app.engine.rules_data import ALL_RULES
-from pydantic_ai.settings import ModelSettings
-from pydantic_evals.evaluators import LLMJudge
+from dataclasses import dataclass
 
+from pydantic_ai.settings import ModelSettings
+from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorContext, LLMJudge
+
+from evals.metrics.category_accuracy import CategoryAccuracyEvaluator
 from evals.metrics.element_accuracy import ElementAccuracyEvaluator
 from evals.metrics.interaction_surface import InteractionSurfaceEvaluator
 from evals.metrics.living_movement import HasSignatureEvaluator
-from evals.metrics.rubric_context import get_rules_summary_string, get_tag_list_string
+from evals.metrics.rubric_context import get_tag_list_string
 from evals.metrics.substance_accuracy import SubstanceAccuracyEvaluator
 from evals.metrics.tag_recall import TagRecallEvaluator
-from evals.metrics.validity import ValidityEvaluator
+from evals.metrics.validity import ValidityEvaluator, is_structurally_valid
 
 _TAG_LIST = get_tag_list_string()
-_RULES_SUMMARY = get_rules_summary_string()
+
+# --- Rubric design notes ---
+# All LLM judge metrics use a 3-point anchored scale (0.0 / 0.5 / 1.0) with concrete
+# game-specific examples at each level. This avoids the 0.75-compression problem where
+# 5-point scales with generic descriptions cause judges to default to "mostly fine."
+# Anchors use real game objects and tag interactions so the judge has clear boundaries.
 
 RUBRICS: dict[str, str] = {
+    # Faithfulness: does the design match the player's intent?
+    # Scored on literal fidelity, not creativity. A "fire sword" that's metal+burning+SHARP
+    # is 1.0 even if boring. Creative liberties are fine as long as they don't contradict.
     "Faithfulness": (
-        "You are evaluating a V2 game object design for a 2D physics sandbox game "
-        "(like Scribblenauts). A player typed a description, and an AI designed a "
-        "game object with a substance, optional element, tags, behaviors, and visual.\n\n"
-        "Evaluate whether the design faithfully represents what the player asked for.\n\n"
-        "Score on this scale:\n"
-        "- 1.0: Substance matches material, element matches energy type, tags are correct. "
-        "Name matches the concept.\n"
-        "- 0.75: Core concept captured. ONE minor issue (slightly off substance/element, "
-        "missing a secondary tag).\n"
-        "- 0.50: Wrong substance or element that contradicts the concept, OR missing "
-        "a key tag.\n"
-        "- 0.25: Multiple core choices wrong. Could describe a different object.\n"
-        "- 0.0: No meaningful connection to the player's description.\n\n"
+        "You are evaluating a game object design for a 2D physics sandbox (like Scribblenauts). "
+        "A player typed a description, and an AI designed a game object with a substance, "
+        "optional element, tags, behaviors, and visual description.\n\n"
+        "**Question: Does this design faithfully represent what the player typed?**\n\n"
+        "Score EXACTLY one of 0.0, 0.5, or 1.0:\n\n"
+        "- **0.0 — Fail:** No meaningful connection to the player's description. "
+        "Example: player typed 'fire sword' but got substance=water, no burning element, "
+        "no SHARP tag — nothing says 'fire' or 'sword.'\n\n"
+        "- **0.5 — Partial:** Core concept is present but one significant mismatch. "
+        "Example: 'wooden sword' gets substance=stone instead of wood. Or 'fire sword' has "
+        "metal+SHARP but is missing the burning element entirely.\n\n"
+        "- **1.0 — Pass:** Substance matches the material, element matches the energy type, "
+        "tags fit the concept. Creative liberties are fine — 'ice cream' mapped to "
+        "substance=slime is acceptable if the rest is coherent. Example: 'fire sword' → "
+        "metal + burning + SHARP.\n\n"
         f"VALID TAGS (0-3 per object):\n{_TAG_LIST}\n\n"
         "Substances: metal, wood, stone, glass, rubber, bone, ceramic, cloth, water, oil, "
         "slime, ice, lava, fire, smoke, flesh\n"
         "Elements: burning, electric, magnetic, freezing, acidic, toxic, windy\n"
     ),
-    "Gameplay Quality": (
-        "You are evaluating a V2 game object design for a 2D physics sandbox where "
-        "substance determines physics and the tag system drives interactions.\n\n"
-        f"VALID TAGS (0-3 per object):\n{_TAG_LIST}\n\n"
-        f"COMPLETE TAG INTERACTION RULES ({len(ALL_RULES)} rules — "
-        "these fire automatically):\n"
-        f"{_RULES_SUMMARY}\n\n"
-        "V2 DESIGN: Substance provides physics (mass, durability, friction). Element "
-        "adds energy traits. Tags add independent modifiers. Behaviors define creature "
-        "personality via verb+target (destroy, eat, investigate, follow, protect, flee).\n\n"
-        "Score on this scale:\n"
-        "- 1.0: Substance + element + tags create rich interaction surfaces. Behaviors "
-        "(if present) add meaningful personality.\n"
-        "- 0.75: Strong choices with ONE missed opportunity.\n"
-        "- 0.50: Substance or element doesn't match the concept, OR tags create no "
-        "meaningful interactions.\n"
-        "- 0.25: Multiple poor choices. Object is inert or contradictory.\n"
-        "- 0.0: No useful gameplay properties.\n"
+    # Delight: proxy for player reaction, not system correctness.
+    # A player doesn't know the 56 rules — they just want something that feels right and
+    # makes them want to experiment. No rules context is provided to the judge on purpose.
+    "Delight": (
+        "You are evaluating a game object design for a 2D physics sandbox (like Scribblenauts). "
+        "A player typed a description, and an AI designed a game object.\n\n"
+        "**Question: If you were a player who typed this, would you be delighted by the "
+        "result? Would you want to experiment with it and see what happens when you combine "
+        "it with other objects?**\n\n"
+        "Score EXACTLY one of 0.0, 0.5, or 1.0:\n\n"
+        "- **0.0 — Fail:** Boring or broken. The object contradicts the player's fantasy or "
+        "has no interesting properties. Example: player typed 'explosive barrel' but got "
+        "substance=stone with no EXPLOSIVE tag — it's just a rock shaped like a barrel.\n\n"
+        "- **0.5 — Partial:** Competent but obvious. The substance and element are correct "
+        "but the design doesn't invite experimentation. Example: 'rock' → stone with no "
+        "tags, no element — technically correct but it's just an inert lump. Or 'fire sword' "
+        "→ metal + burning + SHARP with zero behaviors — functional but predictable.\n\n"
+        "- **1.0 — Pass:** Surprising-but-fitting. The design includes choices that invite "
+        "experimentation beyond what the player explicitly asked for. Example: 'rock' → "
+        "stone + BREAKABLE (now it shatters when hit!). Or 'campfire' → fire substance + "
+        "STICKY (things get caught in the flames). Creative liberties that make you think "
+        "'oh cool, I wonder what happens if...' are exactly what earns a 1.0.\n\n"
+        "Substances: metal, wood, stone, glass, rubber, bone, ceramic, cloth, water, oil, "
+        "slime, ice, lava, fire, smoke, flesh\n"
+        "Elements: burning, electric, magnetic, freezing, acidic, toxic, windy\n"
     ),
-    "Sprite Prompt": (
-        "You are evaluating a visual description that will be used to generate a 2D "
-        "game sprite image.\n\n"
-        "Score on this scale:\n"
-        "- 1.0: Clear shape, materials, colors, distinctive features. Recognizable sprite.\n"
-        "- 0.75: Good with minor gaps.\n"
-        "- 0.5: Vague or contradictory.\n"
-        "- 0.25: Very vague, describes a scene, or contradicts the object.\n"
-        "- 0.0: Empty, nonsensical, or unrelated.\n\n"
+    # Visual Clarity: can an image model produce a recognizable sprite from this description?
+    # Penalizes scene descriptions and vagueness. Rewards specificity about shape, material,
+    # and color — the things that make a good 2D game sprite.
+    "Visual Clarity": (
+        "You are evaluating a visual description that will be sent to an image generation "
+        "model to produce a 2D game sprite.\n\n"
+        "**Question: Could an image model generate a recognizable, distinctive game sprite "
+        "from this visual description?**\n\n"
+        "Score EXACTLY one of 0.0, 0.5, or 1.0:\n\n"
+        "- **0.0 — Fail:** Empty, nonsensical, describes a scene instead of an object, or "
+        "contradicts the substance/tags. Example: the description says 'a vast mountain "
+        "landscape with rolling clouds' for what should be a single sword sprite.\n\n"
+        "- **0.5 — Partial:** Recognizable but generic — could describe many different "
+        "objects. Missing distinctive features, colors, or material cues. Example: 'a round "
+        "thing' for a health potion, or 'a creature' for an acid spider.\n\n"
+        "- **1.0 — Pass:** Clear shape, material texture, colors, and distinctive features "
+        "that match the substance and tags. Example: 'a translucent glass sphere filled with "
+        "swirling green liquid, faintly glowing, sealed with a small cork' for a health "
+        "potion. The description doesn't need to be long — just specific enough to produce "
+        "a recognizable sprite.\n\n"
         f"VALID TAGS:\n{_TAG_LIST}\n"
         "Verify the visual description is consistent with the substance and tags."
     ),
 }
 
 METRIC_NAMES: list[str] = [
-    "Validity", "Substance Accuracy", "Element Accuracy", "Tag Recall",
-    "Interaction Surface", "Has Signature", *RUBRICS.keys(),
+    "Validity", "Substance Accuracy", "Element Accuracy", "Category Accuracy",
+    "Tag Recall", "Interaction Surface", "Has Signature", *RUBRICS.keys(),
 ]
 
 
-JUDGE_SETTINGS = ModelSettings(temperature=0.0)
+JUDGE_SETTINGS = ModelSettings(temperature=0.0, max_tokens=300)
 
 
-def make_judge(name: str) -> LLMJudge:
+def _make_judge(name: str) -> LLMJudge:
     """Create an LLM-as-judge evaluator for the given metric."""
     return LLMJudge(
         rubric=RUBRICS[name],
@@ -93,14 +123,57 @@ def make_judge(name: str) -> LLMJudge:
     )
 
 
+@dataclass
+class SafeJudge(Evaluator[str, str, object]):
+    """LLM judge wrapper: skips on structurally invalid output, 0.0 on failure."""
+
+    judge_name: str
+
+    def __post_init__(self):
+        self._judge = _make_judge(self.judge_name)
+
+    async def evaluate(
+        self, ctx: EvaluatorContext[str, str, object]
+    ) -> dict[str, EvaluationReason]:
+        if not is_structurally_valid(ctx.output or ""):
+            return {
+                self.judge_name: EvaluationReason(
+                    value=0.0, reason="Structurally invalid output — judge skipped"
+                )
+            }
+        try:
+            result = await self._judge.evaluate(ctx)
+            return result  # type: ignore[return-value]
+        except Exception as e:
+            return {
+                self.judge_name: EvaluationReason(
+                    value=0.0, reason=f"Judge call failed: {e}"
+                )
+            }
+
+
 def default_evaluators() -> list:
     """Build the standard set of evaluators for creator agent evals."""
     return [
         ValidityEvaluator(),
         SubstanceAccuracyEvaluator(),
         ElementAccuracyEvaluator(),
+        CategoryAccuracyEvaluator(),
         TagRecallEvaluator(),
         InteractionSurfaceEvaluator(),
         HasSignatureEvaluator(),
-        *(make_judge(name) for name in RUBRICS),
+        *(SafeJudge(judge_name=name) for name in RUBRICS),
+    ]
+
+
+def gate_evaluators() -> list:
+    """Deterministic-only evaluators for fast gate checks. No LLM judge calls."""
+    return [
+        ValidityEvaluator(),
+        SubstanceAccuracyEvaluator(),
+        ElementAccuracyEvaluator(),
+        CategoryAccuracyEvaluator(),
+        TagRecallEvaluator(),
+        InteractionSurfaceEvaluator(),
+        HasSignatureEvaluator(),
     ]

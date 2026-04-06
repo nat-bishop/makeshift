@@ -16,6 +16,7 @@ class ParsedOutput(BaseModel):
 
     name: str
     tags: list[str]
+    categories: list[str] = []
     substance: str | None = None
     element: str | None = None
     resolved_behaviors: list[str] = []
@@ -30,6 +31,7 @@ class CaseResult(BaseModel):
     inputs: str
     category: str
     expected_tags: list[str]
+    expected_categories: list[str] = []
     expected_substance: str | None = None
     expected_element: str | None = None
 
@@ -59,7 +61,7 @@ class DatasetInfo(BaseModel):
 class EvalRunResult(BaseModel):
     """Top-level result file schema. One file = one eval run."""
 
-    version: int = 1
+    version: int = 2
     name: str
     variant: str
     timestamp: datetime

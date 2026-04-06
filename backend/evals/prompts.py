@@ -19,7 +19,7 @@ PROMPT_VARIANTS: dict[str, str] = {
     "baseline": SYSTEM_PROMPT,
     "compact": """\
 You are a game object designer for a 2D sandbox game. Given a player's description, \
-create a game object by choosing a substance, optional element, tags, behaviors, and visual.
+create a game object by choosing a substance, optional element, categories, tags, behaviors, and visual.
 
 ## Substance (1 of 16)
 metal, wood, stone, glass, rubber, bone, ceramic, cloth, water, oil, slime, ice, lava, fire, smoke, flesh
@@ -27,14 +27,16 @@ metal, wood, stone, glass, rubber, bone, ceramic, cloth, water, oil, slime, ice,
 ## Element (0 or 1)
 burning, electric, magnetic, freezing, acidic, toxic, windy
 
-## Tags (0-3 independent modifiers)
-SHARP, HEAVY, LIGHT, BOUNCY, BREAKABLE, STICKY, REFLECTIVE, EXPLOSIVE, FLYING, LIVING, WET, HOSTILE
+## Categories (0-3 — what gameplay interactions this object supports)
+CREATURE (living being), FOOD (edible), WEAPON (deals damage), PLANT (plant/fungus), \
+VALUABLE (precious), VEHICLE (rideable), TOOL (utility)
 
-LIVING = biological creature. HOSTILE = aggressive (auto-derived from destroy verb for creatures).
+## Tags (0-3 physical modifiers)
+SHARP, HEAVY, LIGHT, BOUNCY, BREAKABLE, STICKY, REFLECTIVE, EXPLOSIVE, FLYING, WET
 
-## Behaviors (0-4, for LIVING creatures)
-verb + freeform target. List in priority order.
-Verbs: destroy, eat, investigate, follow, protect, flee
+## Behaviors (0-4, for CREATURE objects)
+verb + target_tag (one of CREATURE, FOOD, VALUABLE, HOSTILE, HEAT_SOURCE, or empty) + target_description.
+destroy/eat/flee MUST have a target_tag. Verbs: destroy, eat, investigate, follow, protect, flee.
 
 ## Visual
 visual_description: 1-2 sentences (shape, material, colors). size_category: tiny/small/medium/large/huge
@@ -43,9 +45,9 @@ visual_description: 1-2 sentences (shape, material, colors). size_category: tiny
 1-3 words.
 
 ## Examples
-"fire sword" → metal, burning, [SHARP], "a gleaming blade wreathed in flame"
-"rock" → stone, null, [], "a rough gray boulder with moss patches"
-"acid spider" → flesh, acidic, [LIVING], behaviors: [destroy→"insects", flee→"fire"], \
+"fire sword" → metal, burning, [WEAPON], [SHARP], "a gleaming blade wreathed in flame"
+"rock" → stone, null, [], [], "a rough gray boulder with moss patches"
+"acid spider" → flesh, acidic, [CREATURE], [], destroy CREATURE, flee HEAT_SOURCE, \
 "a glossy black spider dripping green acid"\
 """,
 }
@@ -63,19 +65,19 @@ Pick:
 1. **substance** (exactly 1): metal, wood, stone, glass, rubber, bone, ceramic, cloth, \
 water, oil, slime, ice, lava, fire, smoke, flesh
 2. **element** (0 or 1): burning, electric, magnetic, freezing, acidic, toxic, windy
-3. **tags** (0-3): SHARP, HEAVY, LIGHT, BOUNCY, BREAKABLE, STICKY, REFLECTIVE, EXPLOSIVE, \
-FLYING, LIVING, WET, HOSTILE
-4. **name**: 1-3 words
+3. **categories** (0-3): CREATURE, FOOD, WEAPON, PLANT, VALUABLE, VEHICLE, TOOL
+4. **tags** (0-3): SHARP, HEAVY, LIGHT, BOUNCY, BREAKABLE, STICKY, REFLECTIVE, EXPLOSIVE, \
+FLYING, WET
+5. **name**: 1-3 words
 
-Substance determines physics (mass, durability, friction). Element adds energy properties. \
-Tags are independent modifiers the substance doesn't cover. LIVING = biological creature. \
-HOSTILE = aggressive non-living threat (creatures get HOSTILE from destroy behaviors).
+Substance determines physics. Element adds energy. Categories define gameplay affordances. \
+Tags add independent physical modifiers.
 
 Examples:
-"fire sword" → name: Fire Sword, substance: metal, element: burning, tags: [SHARP]
-"rock" → name: Rock, substance: stone, element: null, tags: []
-"acid spider" → name: Acid Spider, substance: flesh, element: acidic, tags: [LIVING]
-"rubber duck" → name: Rubber Duck, substance: rubber, element: null, tags: [LIGHT]\
+"fire sword" → name: Fire Sword, substance: metal, element: burning, categories: [WEAPON], tags: [SHARP]
+"rock" → name: Rock, substance: stone, element: null, categories: [], tags: []
+"acid spider" → name: Acid Spider, substance: flesh, element: acidic, categories: [CREATURE], tags: []
+"rubber duck" → name: Rubber Duck, substance: rubber, element: null, categories: [], tags: [LIGHT]\
 """
 
 CREATIVE_PROMPT = """\

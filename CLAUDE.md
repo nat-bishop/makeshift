@@ -33,12 +33,14 @@ make cli-sprite PROMPT="fire sword"        # full pipeline: LLM → image → bg
 make cli-status                            # check health of configured services
 
 # Evals — LLM output quality evaluation (costs money, not in `make test`):
-cd backend && uv run python -m evals.run_eval                    # run all 50 cases, save results
-cd backend && uv run python -m evals.run_eval --variant v2       # run with a different prompt variant
-cd backend && uv run python -m evals.run_eval --cases "rock,fire sword"  # filter cases
-cd backend && uv run python -m evals.run_comparison --a baseline --b v2  # compare two saved results
-cd backend && uv run python -m evals.run_comparison --a baseline         # single result analysis
-cd backend && uv run pytest evals/test_eval.py -v                # pytest runner (also saves results)
+make eval-gate                                   # fast gate check (deterministic only, no LLM judges)
+make eval NAME=my_experiment                     # full eval run (90 cases × 10 metrics)
+make eval NAME=my_experiment COMPARE=1           # full eval + auto-compare to baseline
+make eval-promote NAME=my_experiment             # promote run to current baseline
+make eval-compare NAME=my_experiment             # compare a run against baseline
+make eval-compare A=run1 B=run2                  # compare two specific runs
+make eval-list                                   # list all saved runs with scores
+cd backend && uv run pytest evals/test_eval.py -v  # pytest runner (also saves results)
 
 # For more granular control:
 uv run pytest backend/tests/test_tags.py  # single test file
@@ -65,7 +67,7 @@ uv run pytest -k "test_name"              # single test by name
 
 - **WebSocket** (`ws/handler.py`): Per-session multi-client broadcast. Messages: sprite_ready, sprite_failed, error, ping/pong.
 
-- **Eval suite** (`backend/evals/`): pydantic-evals framework. 50 curated test cases × 9 metrics — 6 deterministic (Validity, Substance Accuracy, Element Accuracy, Tag Recall, Interaction Surface, Has Signature [checks LIVING objects have explicit verb behaviors]) + 3 LLM-as-judge via Gemini (Faithfulness, Gameplay Quality, Sprite Prompt). `run_eval.py` runs evals and saves `EvalRunResult` JSON to `evals/results/`. `run_comparison.py` loads saved results for offline Wilcoxon comparison. `run_generate_cases.py` generates synthetic test cases. `run_temp_experiment.py` runs temperature sweeps. Retry count tracked per case via `set_eval_attribute`. Distribution analysis shows substance/element/tag/behavior frequencies. Prompt variants defined in `evals/prompts.py`.
+- **Eval suite** (`backend/evals/`): pydantic-evals framework. 90 curated test cases × 10 metrics — 7 deterministic (Validity, Substance Accuracy, Element Accuracy, Category Accuracy, Tag Recall, Interaction Surface, Has Signature) + 3 LLM-as-judge via Gemini on 3-point anchored scales (Faithfulness, Delight, Visual Clarity). 14-case gate dataset for fast deterministic-only checks (`--gate`). Baseline management: `--promote` saves current baseline, `--compare` auto-compares against it, `--list` shows run history. `run_eval.py` runs evals and saves `EvalRunResult` JSON to `evals/results/`. `run_comparison.py` loads saved results for offline Wilcoxon comparison. Prompt variants defined in `evals/prompts.py`.
 
 **Godot Client** (`godot/`): Godot 4.3, GDScript.
 

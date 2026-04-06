@@ -7,9 +7,9 @@ so rubrics stay in sync with the codebase.
 from __future__ import annotations
 
 from app.engine.rules_data import ALL_RULES
-from app.models.tags import LLM_VISIBLE_TAGS_V2, Tag
+from app.models.tags import LLM_VISIBLE_TAGS, Tag
 
-_V2_TAG_NAMES = sorted(t.value for t in LLM_VISIBLE_TAGS_V2)
+_V2_TAG_NAMES = sorted(t.value for t in LLM_VISIBLE_TAGS)
 
 # All tags that can appear at runtime (LLM-visible + substance/element-derived + internal)
 _ALL_RUNTIME_TAGS = frozenset(Tag)

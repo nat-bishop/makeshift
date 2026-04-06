@@ -11,13 +11,32 @@ from dataclasses import dataclass
 
 from app.models.blueprint import BehaviorVerb
 from app.models.substances import Element, Substance
-from app.models.tags import LLM_VISIBLE_TAGS_V2
+from app.models.tags import LLM_VISIBLE_TAGS, Category
 from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorContext
 
-_V2_TAG_VALUES = frozenset(t.value for t in LLM_VISIBLE_TAGS_V2)
+_V2_TAG_VALUES = frozenset(t.value for t in LLM_VISIBLE_TAGS)
 _SUBSTANCE_VALUES = frozenset(s.value for s in Substance)
 _ELEMENT_VALUES = frozenset(e.value for e in Element)
 _VERB_VALUES = frozenset(v.value for v in BehaviorVerb)
+_CATEGORY_VALUES = frozenset(c.value for c in Category)
+
+
+def is_structurally_valid(output_text: str) -> bool:
+    """Quick pass/fail: is the output parseable JSON with required fields?
+
+    Used by SafeJudge to skip LLM calls on garbage output.
+    """
+    try:
+        data = json.loads(output_text)
+    except (json.JSONDecodeError, TypeError):
+        return False
+    return (
+        isinstance(data, dict)
+        and data.get("substance", "") in _SUBSTANCE_VALUES
+        and isinstance(data.get("tags"), list)
+        and isinstance(data.get("name"), str)
+        and len(data.get("name", "").strip()) > 0
+    )
 
 
 @dataclass
@@ -27,6 +46,7 @@ class ValidityEvaluator(Evaluator[str, str, object]):
     CHECK_WEIGHTS: dict[str, int] = dataclasses.field(default_factory=lambda: {
         "valid_substance": 2,
         "valid_element": 1,
+        "valid_categories": 1,
         "valid_tags": 2,
         "tag_count": 1,
         "valid_behaviors": 1,
@@ -50,6 +70,10 @@ class ValidityEvaluator(Evaluator[str, str, object]):
         # Element (optional)
         element = data.get("element")
         checks["valid_element"] = element is None or element in _ELEMENT_VALUES
+
+        # Categories (0-7, valid Category values)
+        raw_cats = data.get("categories", [])
+        checks["valid_categories"] = all(c in _CATEGORY_VALUES for c in raw_cats)
 
         # Tags (0-3, V2 visible set)
         raw_tags = data.get("tags", [])

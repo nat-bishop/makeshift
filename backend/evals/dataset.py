@@ -19,6 +19,7 @@ class CaseMeta:
     expected_tags: list[str] = field(default_factory=list)
     expected_substance: str | None = None
     expected_element: str | None = None
+    expected_categories: list[str] = field(default_factory=list)
     notes: str = ""
 
 
@@ -63,6 +64,7 @@ EVAL_CASES: list[CreatorCase] = [
             category="mundane",
             expected_substance="wood",
             expected_tags=["LIGHT"],
+            expected_categories=["FOOD"],
             notes="Organic plant matter → wood. Lightweight throwable food item.",
         ),
     ),
@@ -115,6 +117,7 @@ EVAL_CASES: list[CreatorCase] = [
             expected_substance="metal",
             expected_element="burning",
             expected_tags=["SHARP"],
+            expected_categories=["WEAPON"],
             notes="Baseline in-prompt example. Metal+burning+SHARP.",
         ),
     ),
@@ -125,6 +128,7 @@ EVAL_CASES: list[CreatorCase] = [
             category="weapon",
             expected_substance="metal",
             expected_tags=["SHARP"],
+            expected_categories=["WEAPON"],
             notes="Bare minimum single word. Metal gives METALLIC+RIGID.",
         ),
     ),
@@ -135,6 +139,7 @@ EVAL_CASES: list[CreatorCase] = [
             category="weapon",
             expected_substance="metal",
             expected_tags=["EXPLOSIVE"],
+            expected_categories=["WEAPON"],
             notes="EXPLOSIVE tag handles detonation. Metal casing.",
         ),
     ),
@@ -144,6 +149,7 @@ EVAL_CASES: list[CreatorCase] = [
         metadata=CaseMeta(
             category="weapon",
             expected_tags=["EXPLOSIVE"],
+            expected_categories=["WEAPON"],
             notes="EXPLOSIVE core. Substance could be metal. Pop culture framing.",
         ),
     ),
@@ -153,8 +159,9 @@ EVAL_CASES: list[CreatorCase] = [
         metadata=CaseMeta(
             category="weapon",
             expected_substance="rubber",
-            expected_tags=["HOSTILE"],
-            notes="Rubber auto-derives BOUNCY. HOSTILE for contact damage. Comedic escalation.",
+            expected_tags=[],
+            expected_categories=["WEAPON"],
+            notes="Rubber auto-derives BOUNCY. HOSTILE auto-derived from destroy verb. Comedic escalation.",
         ),
     ),
     Case(
@@ -205,6 +212,7 @@ EVAL_CASES: list[CreatorCase] = [
             category="trap",
             expected_substance="wood",
             expected_element="toxic",
+            expected_categories=["PLANT"],
             notes="Wood for plant, toxic element. Player explaining the gimmick.",
         ),
     ),
@@ -218,8 +226,9 @@ EVAL_CASES: list[CreatorCase] = [
             category="creature",
             expected_substance="flesh",
             expected_element="acidic",
-            expected_tags=["LIVING"],
-            notes="Flesh+acidic+LIVING. Acidic element gives ACIDIC trait.",
+            expected_tags=[],
+            expected_categories=["CREATURE"],
+            notes="Flesh+acidic. LIVING auto-derived from CREATURE category. Acidic element gives ACIDIC trait.",
         ),
     ),
     Case(
@@ -228,8 +237,9 @@ EVAL_CASES: list[CreatorCase] = [
         metadata=CaseMeta(
             category="creature",
             expected_substance="flesh",
-            expected_tags=["LIVING"],
-            notes="Non-hostile creature. Flesh+LIVING, follow behaviors expected.",
+            expected_tags=[],
+            expected_categories=["CREATURE"],
+            notes="Non-hostile creature. Flesh, LIVING auto-derived from CREATURE. Follow behaviors expected.",
         ),
     ),
     Case(
@@ -238,8 +248,9 @@ EVAL_CASES: list[CreatorCase] = [
         metadata=CaseMeta(
             category="creature",
             expected_substance="lava",
-            expected_tags=["LIVING"],
-            notes="Lava auto-derives MOLTEN+LIQUID+HEAT_SOURCE. LIVING for creature.",
+            expected_tags=[],
+            expected_categories=["CREATURE"],
+            notes="Lava auto-derives MOLTEN+LIQUID+HEAT_SOURCE. LIVING auto-derived from CREATURE category.",
         ),
     ),
     Case(
@@ -248,8 +259,9 @@ EVAL_CASES: list[CreatorCase] = [
         metadata=CaseMeta(
             category="creature",
             expected_substance="flesh",
-            expected_tags=["LIVING"],
-            notes="Flesh creature. Destroy behavior expected. HOSTILE auto from destroy verb.",
+            expected_tags=[],
+            expected_categories=["CREATURE"],
+            notes="Flesh creature. Destroy behavior expected. HOSTILE auto-derived from destroy verb.",
         ),
     ),
     Case(
@@ -259,8 +271,9 @@ EVAL_CASES: list[CreatorCase] = [
             category="creature",
             expected_substance="flesh",
             expected_element="electric",
-            expected_tags=["LIVING"],
-            notes="Flesh+electric+LIVING. Electric element gives ELECTRIC trait.",
+            expected_tags=[],
+            expected_categories=["CREATURE"],
+            notes="Flesh+electric. LIVING auto-derived from CREATURE category. Electric element gives ELECTRIC trait.",
         ),
     ),
     Case(
@@ -269,8 +282,9 @@ EVAL_CASES: list[CreatorCase] = [
         metadata=CaseMeta(
             category="creature",
             expected_element="windy",
-            expected_tags=["LIVING", "FLYING"],
-            notes="Windy element gives WIND_SOURCE. LIVING+FLYING. Substance ambiguous (flesh or smoke).",
+            expected_tags=["FLYING"],
+            expected_categories=["CREATURE"],
+            notes="Windy element gives WIND_SOURCE. LIVING auto-derived from CREATURE. FLYING. Substance ambiguous (flesh or smoke).",
         ),
     ),
     Case(
@@ -280,8 +294,9 @@ EVAL_CASES: list[CreatorCase] = [
             category="creature",
             expected_substance="flesh",
             expected_element="toxic",
-            expected_tags=["LIVING"],
-            notes="Flesh+toxic+LIVING. Toxic element gives TOXIC trait.",
+            expected_tags=[],
+            expected_categories=["CREATURE"],
+            notes="Flesh+toxic. LIVING auto-derived from CREATURE category. Toxic element gives TOXIC trait.",
         ),
     ),
     Case(
@@ -290,8 +305,9 @@ EVAL_CASES: list[CreatorCase] = [
         metadata=CaseMeta(
             category="creature",
             expected_substance="glass",
-            expected_tags=["LIVING"],
-            notes="Glass auto-derives BREAKABLE+REFLECTIVE. LIVING for creature.",
+            expected_tags=[],
+            expected_categories=["CREATURE"],
+            notes="Glass auto-derives BREAKABLE+REFLECTIVE. LIVING auto-derived from CREATURE category.",
         ),
     ),
     Case(
@@ -299,8 +315,9 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a living vine that reaches out and wraps around things nearby, pulling them in closer like a lasso",
         metadata=CaseMeta(
             category="creature",
-            expected_tags=["LIVING", "STICKY"],
-            notes="LIVING+STICKY. Substance could be flesh or wood.",
+            expected_tags=["STICKY"],
+            expected_categories=["CREATURE"],
+            notes="LIVING auto-derived from CREATURE. STICKY. Substance could be flesh or wood.",
         ),
     ),
     Case(
@@ -308,8 +325,9 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a little slime creature thats really scared of everything, the moment anything comes near it just books it in the other direction as fast as it can",
         metadata=CaseMeta(
             category="creature",
-            expected_tags=["LIVING"],
-            notes="LIVING creature with flee behavior. Substance ambiguous (slime or flesh).",
+            expected_tags=[],
+            expected_categories=["CREATURE"],
+            notes="LIVING auto-derived from CREATURE. Flee behavior. Substance ambiguous (slime or flesh).",
         ),
     ),
     Case(
@@ -317,8 +335,9 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="an egg that looks totally normal but when its about to break it suddenly bursts into flames and a firebird comes out, or at least thats the idea",
         metadata=CaseMeta(
             category="creature",
-            expected_tags=["LIVING"],
-            notes="Substance ambiguous (bone, flesh). LIVING expected. Player hedging.",
+            expected_tags=[],
+            expected_categories=["CREATURE"],
+            notes="Substance ambiguous (bone, flesh). LIVING auto-derived from CREATURE. Player hedging.",
         ),
     ),
     Case(
@@ -327,8 +346,9 @@ EVAL_CASES: list[CreatorCase] = [
         metadata=CaseMeta(
             category="creature",
             expected_substance="metal",
-            expected_tags=["LIVING"],
-            notes="Metal auto-derives METALLIC+RIGID. LIVING for autonomous behavior.",
+            expected_tags=[],
+            expected_categories=["CREATURE"],
+            notes="Metal auto-derives METALLIC+RIGID. LIVING auto-derived from CREATURE category.",
         ),
     ),
     Case(
@@ -336,7 +356,8 @@ EVAL_CASES: list[CreatorCase] = [
         inputs="a golem thats made of lava and shoots lightning, like the final boss of a video game",
         metadata=CaseMeta(
             category="creature",
-            expected_tags=["LIVING"],
+            expected_tags=[],
+            expected_categories=["CREATURE"],
             notes="Substance+element combo is tricky (lava+electric). Tests constraint handling.",
         ),
     ),
@@ -480,6 +501,7 @@ EVAL_CASES: list[CreatorCase] = [
             category="utility",
             expected_substance="metal",
             expected_element="magnetic",
+            expected_categories=["TOOL"],
             notes="Metal+magnetic. Metal auto-derives METALLIC+RIGID. Magnetic gives MAGNETIC.",
         ),
     ),
@@ -489,8 +511,9 @@ EVAL_CASES: list[CreatorCase] = [
         metadata=CaseMeta(
             category="utility",
             expected_substance="wood",
-            expected_tags=["LIVING"],
-            notes="Wood for plant, LIVING for organic. Player speaking naturally.",
+            expected_tags=[],
+            expected_categories=["FOOD", "PLANT"],
+            notes="Wood for plant. Mushroom is PLANT not CREATURE. Player speaking naturally.",
         ),
     ),
     Case(
@@ -500,6 +523,7 @@ EVAL_CASES: list[CreatorCase] = [
             category="utility",
             expected_substance="metal",
             expected_element="electric",
+            expected_categories=["TOOL"],
             notes="Metal+electric. Metal auto-derives METALLIC+RIGID. Electric gives ELECTRIC.",
         ),
     ),
@@ -544,6 +568,7 @@ EVAL_CASES: list[CreatorCase] = [
             expected_substance="metal",
             expected_element="windy",
             expected_tags=["FLYING"],
+            expected_categories=["VEHICLE"],
             notes="Metal+windy+FLYING. Windy gives WIND_SOURCE. Terse single word.",
         ),
     ),
@@ -554,6 +579,7 @@ EVAL_CASES: list[CreatorCase] = [
             category="vehicle",
             expected_substance="cloth",
             expected_tags=["FLYING"],
+            expected_categories=["VEHICLE"],
             notes="Cloth auto-derives FLAMMABLE+LIGHT. FLYING for flight.",
         ),
     ),
@@ -564,6 +590,7 @@ EVAL_CASES: list[CreatorCase] = [
             category="vehicle",
             expected_substance="metal",
             expected_tags=["FLYING"],
+            expected_categories=["VEHICLE"],
             notes="Metal+FLYING. Wearable framing.",
         ),
     ),
@@ -574,6 +601,7 @@ EVAL_CASES: list[CreatorCase] = [
             category="vehicle",
             expected_substance="wood",
             expected_tags=["LIGHT"],
+            expected_categories=["VEHICLE"],
             notes="Wood auto-derives FLAMMABLE. LIGHT for buoyancy. Not FLYING.",
         ),
     ),
@@ -586,6 +614,7 @@ EVAL_CASES: list[CreatorCase] = [
         metadata=CaseMeta(
             category="traversal",
             expected_substance="cloth",
+            expected_categories=["TOOL"],
             notes="Cloth auto-derives FLAMMABLE+LIGHT. Minimal object.",
         ),
     ),
@@ -647,6 +676,7 @@ EVAL_CASES: list[CreatorCase] = [
             category="utility",
             expected_substance="wood",
             expected_element="burning",
+            expected_categories=["TOOL"],
             notes="Wood+burning. Wood auto-derives FLAMMABLE. Burning gives HEAT_SOURCE+HOT.",
         ),
     ),
@@ -656,6 +686,7 @@ EVAL_CASES: list[CreatorCase] = [
         metadata=CaseMeta(
             category="utility",
             expected_tags=["LIGHT"],
+            expected_categories=["TOOL"],
             notes="LIGHT expected. Substance ambiguous (cloth, wood, metal).",
         ),
     ),
@@ -666,6 +697,7 @@ EVAL_CASES: list[CreatorCase] = [
             category="utility",
             expected_substance="wood",
             expected_tags=["HEAVY"],
+            expected_categories=["VALUABLE"],
             notes="Wood+HEAVY. Container archetype. No behaviors.",
         ),
     ),
@@ -679,6 +711,7 @@ EVAL_CASES: list[CreatorCase] = [
             category="nature",
             expected_substance="wood",
             expected_tags=["HEAVY"],
+            expected_categories=["PLANT"],
             notes="Wood auto-derives FLAMMABLE. HEAVY for mass. Plant, not creature.",
         ),
     ),
@@ -709,8 +742,9 @@ EVAL_CASES: list[CreatorCase] = [
         metadata=CaseMeta(
             category="creature",
             expected_substance="flesh",
-            expected_tags=["LIVING", "FLYING"],
-            notes="Flesh+LIVING+FLYING. Non-hostile flying creature.",
+            expected_tags=["FLYING"],
+            expected_categories=["CREATURE"],
+            notes="Flesh+FLYING. LIVING auto-derived from CREATURE. Non-hostile flying creature.",
         ),
     ),
     Case(
@@ -719,8 +753,9 @@ EVAL_CASES: list[CreatorCase] = [
         metadata=CaseMeta(
             category="creature",
             expected_substance="flesh",
-            expected_tags=["LIVING", "HEAVY"],
-            notes="Flesh+LIVING+HEAVY. Follower creature, non-hostile.",
+            expected_tags=["HEAVY"],
+            expected_categories=["CREATURE"],
+            notes="Flesh+HEAVY. LIVING auto-derived from CREATURE. Follower creature, non-hostile.",
         ),
     ),
     # =========================================================================
@@ -732,6 +767,7 @@ EVAL_CASES: list[CreatorCase] = [
         metadata=CaseMeta(
             category="consumable",
             expected_substance="water",
+            expected_categories=["FOOD"],
             notes="Water auto-derives LIQUID+WET. Classic RPG item.",
         ),
     ),
@@ -742,6 +778,7 @@ EVAL_CASES: list[CreatorCase] = [
             category="consumable",
             expected_substance="wood",
             expected_tags=["LIGHT"],
+            expected_categories=["FOOD"],
             notes="Organic → wood. LIGHT for small food item.",
         ),
     ),
@@ -861,8 +898,9 @@ EVAL_CASES: list[CreatorCase] = [
         metadata=CaseMeta(
             category="creature",
             expected_substance="flesh",
-            expected_tags=["LIVING", "HOSTILE"],
-            notes="Meme slang for snake. Flesh+LIVING+HOSTILE.",
+            expected_tags=[],
+            expected_categories=["CREATURE"],
+            notes="Meme slang for snake. Flesh. LIVING auto-derived from CREATURE, HOSTILE auto-derived from destroy verb.",
         ),
     ),
     Case(
@@ -928,8 +966,9 @@ EVAL_CASES: list[CreatorCase] = [
         metadata=CaseMeta(
             category="creature",
             expected_substance="flesh",
-            expected_tags=["LIVING", "HOSTILE", "HEAVY"],
-            notes="Flesh+LIVING+HOSTILE+HEAVY. ALL CAPS stress test. 3-tag max.",
+            expected_tags=["HEAVY"],
+            expected_categories=["CREATURE"],
+            notes="Flesh+HEAVY. LIVING auto-derived from CREATURE, HOSTILE auto-derived from destroy verb. ALL CAPS stress test.",
         ),
     ),
     Case(
@@ -938,6 +977,7 @@ EVAL_CASES: list[CreatorCase] = [
         metadata=CaseMeta(
             category="consumable",
             expected_tags=["EXPLOSIVE"],
+            expected_categories=["FOOD"],
             notes="EXPLOSIVE from 'volatile'. Substance could be water or oil.",
         ),
     ),

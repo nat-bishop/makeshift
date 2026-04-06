@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.models.blueprint import BehaviorVerbSpec, VisualDescriptor
 from app.models.substances import Element, Substance
-from app.models.tags import LLM_VISIBLE_TAGS_V2, Tag
+from app.models.tags import LLM_VISIBLE_TAGS, Tag
 
 
 class ClassifyOutput(BaseModel):
@@ -36,9 +36,9 @@ class ClassifyOutput(BaseModel):
     @field_validator("tags")
     @classmethod
     def tags_must_be_v2_visible(cls, v: list[Tag]) -> list[Tag]:
-        invalid = [t for t in v if t not in LLM_VISIBLE_TAGS_V2]
+        invalid = [t for t in v if t not in LLM_VISIBLE_TAGS]
         if invalid:
-            valid = ", ".join(sorted(t.value for t in LLM_VISIBLE_TAGS_V2))
+            valid = ", ".join(sorted(t.value for t in LLM_VISIBLE_TAGS))
             raise ValueError(
                 f"Tags {[t.value for t in invalid]} not in V2 visible set. "
                 f"Valid tags: {valid}"
