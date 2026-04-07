@@ -1,13 +1,14 @@
 """Save, load, and convert eval results.
 
 Bridges pydantic-evals EvaluationReport to our persistent EvalRunResult format.
+Also provides baseline management and run listing for the eval workflow.
 """
 
 from __future__ import annotations
 
-import contextlib
 import json
 import re
+import shutil
 from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
@@ -52,55 +53,35 @@ def _extract_failure_retry_info(
     return retries, retry_errors
 
 
-def _resolve_behaviors(tags: list[str], signature: str | None) -> list[str]:
-    """Resolve tag-implied + signature behaviors into display strings."""
-    from app.models.behaviors import BehaviorParseError, expand_behavior_spec, parse_behavior_string
-    from app.models.tag_behaviors import resolve_implied_behaviors
-    from app.models.tags import Tag
-
-    parsed_tags: list[Tag] = []
-    for t in tags:
-        try:
-            parsed_tags.append(Tag(t))
-        except (ValueError, KeyError):
-            continue
-
-    explicit = None
-    if signature:
-        with contextlib.suppress(BehaviorParseError, ValueError):
-            explicit = expand_behavior_spec(parse_behavior_string(signature))
-
-    resolved = resolve_implied_behaviors(parsed_tags, explicit)
-
-    # Format back to readable strings
+def _format_behaviors(behaviors: list[dict]) -> list[str]:
+    """Format behavior dicts into display strings."""
     lines: list[str] = []
-    for b in resolved:
-        parts = [b.trigger.value, b.action.value, b.target.value]
-        line = " -> ".join(parts)
-        if b.tags_to_apply:
-            # Already encoded in action via parametric syntax
-            pass
-        if b.trigger_tag:
-            parts[0] = f"{b.trigger.value}({b.trigger_tag.value})"
-            line = " -> ".join(parts)
-        lines.append(line)
+    for b in behaviors:
+        verb = b.get("verb", "unknown")
+        target_tag = b.get("target_tag", "")
+        desc = b.get("target_description", b.get("target", ""))
+        tag_str = f" [{target_tag}]" if target_tag else ""
+        lines.append(f"{verb}{tag_str} ->{desc}")
     return lines
 
 
 def _parse_output(raw: str) -> ParsedOutput | None:
-    """Parse a CreatorOutputSpec JSON string into structured fields."""
+    """Parse a V2 CreatorOutput JSON string into structured fields."""
     try:
         data = json.loads(raw)
     except (json.JSONDecodeError, TypeError):
         return None
     vd = data.get("visual_descriptor", {})
     tags = data.get("tags", [])
-    signature = data.get("signature")
+    behaviors = data.get("behaviors", [])
+    categories = data.get("categories", [])
     return ParsedOutput(
         name=data.get("name", ""),
         tags=tags,
-        signature=signature,
-        resolved_behaviors=_resolve_behaviors(tags, signature),
+        categories=categories,
+        substance=data.get("substance"),
+        element=data.get("element"),
+        resolved_behaviors=_format_behaviors(behaviors),
         size_category=vd.get("size_category", "unknown") if isinstance(vd, dict) else "unknown",
         visual_description=(
             vd.get("visual_description", "") if isinstance(vd, dict) else ""
@@ -126,6 +107,9 @@ def report_to_result(
             inputs=rc.inputs,
             category=meta.category if meta else "unknown",
             expected_tags=list(meta.expected_tags) if meta else [],
+            expected_categories=list(meta.expected_categories) if meta else [],
+            expected_substance=meta.expected_substance if meta else None,
+            expected_element=meta.expected_element if meta else None,
             output_raw=rc.output,
             output=_parse_output(rc.output) if rc.output else None,
             error=None,
@@ -148,6 +132,9 @@ def report_to_result(
             inputs=fc.inputs,
             category=meta.category if meta else "unknown",
             expected_tags=list(meta.expected_tags) if meta else [],
+            expected_categories=list(meta.expected_categories) if meta else [],
+            expected_substance=meta.expected_substance if meta else None,
+            expected_element=meta.expected_element if meta else None,
             output_raw=None,
             output=None,
             error=fc.error_message,
@@ -213,7 +200,7 @@ def save_result(result: EvalRunResult) -> Path:
     """Save an EvalRunResult as JSON inside a per-run directory."""
     run_dir = _run_dir(result)
     path = run_dir / "result.json"
-    path.write_text(result.model_dump_json(indent=2))
+    path.write_text(result.model_dump_json(indent=2), encoding="utf-8")
 
     # Also save markdown report
     from evals.markdown_report import generate_markdown_report
@@ -226,7 +213,7 @@ def save_result(result: EvalRunResult) -> Path:
 
 def load_result(path: Path) -> EvalRunResult:
     """Load an EvalRunResult from a run directory."""
-    return EvalRunResult.model_validate_json((path / "result.json").read_text())
+    return EvalRunResult.model_validate_json((path / "result.json").read_text(encoding="utf-8"))
 
 
 def find_latest(name: str | None = None) -> Path | None:
@@ -243,3 +230,138 @@ def find_latest(name: str | None = None) -> Path | None:
         if name is None or d.name.endswith(f"_{name}"):
             return d
     return None
+
+
+def promote_to_baseline(name_or_path: str) -> None:
+    """Copy a result to results/current_baseline/."""
+    path = Path(name_or_path)
+    if path.is_dir() and (path / "result.json").exists():
+        source = path
+    else:
+        found = find_latest(name_or_path)
+        if found is None:
+            print(f"Error: no result found for '{name_or_path}'")  # noqa: T201
+            return
+        source = found
+
+    baseline_dir = RESULTS_DIR / "current_baseline"
+    if baseline_dir.exists():
+        shutil.rmtree(baseline_dir)
+    shutil.copytree(source, baseline_dir)
+
+    result = load_result(baseline_dir)
+    print(f"Promoted {source.name} ->current_baseline ({result.name}, {result.timestamp:%Y-%m-%d})")
+
+
+def list_all_runs() -> None:
+    """Print all saved runs with date, name, and key mean scores."""
+    if not RESULTS_DIR.exists():
+        print("No results directory found.")
+        return
+
+    dirs = sorted(
+        [
+            d for d in RESULTS_DIR.iterdir()
+            if d.is_dir() and d.name != "current_baseline" and (d / "result.json").exists()
+        ],
+        key=lambda d: d.name,
+    )
+
+    if not dirs:
+        print("No saved runs found.")
+        return
+
+    # Check for current baseline
+    baseline_dir = RESULTS_DIR / "current_baseline"
+    if baseline_dir.exists() and (baseline_dir / "result.json").exists():
+        bl = load_result(baseline_dir)
+        print(f"Current baseline: {bl.name} ({bl.timestamp:%Y-%m-%d})")
+        print()
+
+    key_metrics = ["Validity", "Faithfulness", "Delight", "Visual Clarity"]
+    header = f"{'Date':<12} {'Name':<25} {'Cases':>5}"
+    for m in key_metrics:
+        header += f"  {m:>10}"
+    print(header)
+    print("-" * len(header))
+
+    for d in dirs:
+        try:
+            result = load_result(d)
+        except Exception:
+            continue
+        line = f"{result.timestamp:%Y-%m-%d}   {result.name:<25} {result.dataset.total_cases:>5}"
+        for m in key_metrics:
+            val = result.mean_scores.get(m)
+            line += f"  {val:>10.2f}" if val is not None else f"  {'—':>10}"
+        print(line)
+
+    print()
+
+
+def save_comparison_report(
+    run_dir: Path, baseline: EvalRunResult, result: EvalRunResult
+) -> None:
+    """Save a comparison report as comparison.md in the run directory."""
+    from evals.metrics import METRIC_NAMES
+
+    lines = [
+        f"# Comparison: {result.name} vs baseline ({baseline.name})",
+        "",
+        f"**Experiment:** {result.name} ({result.timestamp:%Y-%m-%d %H:%M})",
+        f"**Baseline:** {baseline.name} ({baseline.timestamp:%Y-%m-%d %H:%M})",
+        "",
+        "## Metric comparison",
+        "",
+        f"| {'Metric':<20} | {'Baseline':>10} | {'Experiment':>10} "
+        f"| {'Delta':>8} | {'Winner':>12} |",
+        f"|{'-' * 22}|{'-' * 12}|{'-' * 12}|{'-' * 10}|{'-' * 14}|",
+    ]
+
+    scores_a = {c.case: c.scores for c in baseline.cases}
+    scores_b = {c.case: c.scores for c in result.cases}
+    common = sorted(set(scores_a) & set(scores_b))
+
+    a_wins = 0
+    b_wins = 0
+
+    for metric in METRIC_NAMES:
+        vals_a = [scores_a[c].get(metric, 0.0) for c in common]
+        vals_b = [scores_b[c].get(metric, 0.0) for c in common]
+        mean_a = sum(vals_a) / len(vals_a) if vals_a else 0.0
+        mean_b = sum(vals_b) / len(vals_b) if vals_b else 0.0
+        delta = mean_b - mean_a
+
+        p_str = ""
+        try:
+            from scipy.stats import wilcoxon  # type: ignore[import-untyped]
+
+            diffs = [a - b for a, b in zip(vals_a, vals_b, strict=True)]
+            if any(d != 0 for d in diffs):
+                _, p = wilcoxon(diffs)
+                p_str = f" (p={p:.3f}{'*' if p < 0.05 else ''})"
+        except ImportError:
+            pass
+
+        if mean_b > mean_a:
+            winner = result.name
+            b_wins += 1
+        elif mean_a > mean_b:
+            winner = baseline.name
+            a_wins += 1
+        else:
+            winner = "tie"
+
+        lines.append(
+            f"| {metric:<20} | {mean_a:>10.3f} | {mean_b:>10.3f} | "
+            f"{delta:>+8.3f} | {winner:>12} |"
+        )
+
+    overall = result.name if b_wins > a_wins else baseline.name if a_wins > b_wins else "tie"
+    lines.extend([
+        "",
+        f"**Overall winner:** {overall} "
+        f"({max(a_wins, b_wins)}/{len(METRIC_NAMES)} metrics)",
+    ])
+
+    (run_dir / "comparison.md").write_text("\n".join(lines), encoding="utf-8")

@@ -5,128 +5,105 @@ Provides deterministic validity checks and LLM-as-judge scoring.
 
 from __future__ import annotations
 
-from app.engine.rules_data import ALL_RULES
 from pydantic_ai.settings import ModelSettings
 from pydantic_evals.evaluators import LLMJudge
 
+from evals.metrics.category_accuracy import CategoryAccuracyEvaluator
+from evals.metrics.element_accuracy import ElementAccuracyEvaluator
+from evals.metrics.has_signature import HasSignatureEvaluator
 from evals.metrics.interaction_surface import InteractionSurfaceEvaluator
-from evals.metrics.living_movement import HasSignatureEvaluator
-from evals.metrics.rubric_context import get_rules_summary_string, get_tag_list_string
+from evals.metrics.rubric_context import get_tag_list_string
+from evals.metrics.substance_accuracy import SubstanceAccuracyEvaluator
 from evals.metrics.tag_recall import TagRecallEvaluator
 from evals.metrics.validity import ValidityEvaluator
 
 _TAG_LIST = get_tag_list_string()
-_RULES_SUMMARY = get_rules_summary_string()
+
+# --- Rubric design notes ---
+# All LLM judge metrics use a 3-point anchored scale (0.0 / 0.5 / 1.0) with concrete
+# game-specific examples at each level. This avoids the 0.75-compression problem where
+# 5-point scales with generic descriptions cause judges to default to "mostly fine."
+# Anchors use real game objects and tag interactions so the judge has clear boundaries.
 
 RUBRICS: dict[str, str] = {
+    # Faithfulness: does the design match the player's intent?
+    # Scored on literal fidelity, not creativity. A "fire sword" that's metal+burning+SHARP
+    # is 1.0 even if boring. Creative liberties are fine as long as they don't contradict.
     "Faithfulness": (
-        "You are evaluating a game object design for a 2D physics sandbox game "
-        "(like Scribblenauts). A player typed a description, and an AI designed a "
-        "game object with a name, tags, behaviors, and visual description.\n\n"
-        "Evaluate whether the design faithfully represents what the player asked for.\n\n"
-        "Score on this scale:\n"
-        "- 1.0: Every tag directly supports the player's description. Name matches the "
-        "concept. No irrelevant or contradictory tags.\n"
-        "- 0.75: Core concept is captured. ONE of: slightly off tag choice, target "
-        "auto-inference imprecision (NEAREST_LIVING vs NEAREST_PLAYER), or a missing "
-        "secondary attribute.\n"
-        "- 0.50: Missing a tag that defines the core concept (e.g., no FLYING for "
-        "something that flies), OR includes a tag that contradicts the description.\n"
-        "- 0.25: Multiple core tags are wrong or missing. The design could describe a "
-        "different object entirely.\n"
-        "- 0.0: No meaningful connection to the player's description.\n\n"
-        "SCORED EXAMPLES (use these to calibrate your scoring):\n\n"
-        'Example 1 — Score 1.0:\n'
-        'Input: "fire sword"\n'
-        'Output: name "Fire Sword", tags [RIGID, SHARP, HEAT_SOURCE, FLAMMABLE]\n'
-        "Why 1.0: Name matches. SHARP captures 'sword', HEAT_SOURCE captures 'fire'. "
-        "All tags reinforce the concept.\n\n"
-        'Example 2 — Score 0.75:\n'
-        'Input: "healing mushroom that heals you when you kick it"\n'
-        'Output: name "Healing Cap", tags [LIVING, BREAKABLE], '
-        'signature "ON_DAMAGED -> HEAL -> NEAREST_LIVING"\n'
-        "Why 0.75: Core concept captured (mushroom that heals on kick). Minor issue: "
-        "NEAREST_LIVING instead of NEAREST_PLAYER means it heals any creature, not "
-        "specifically the player.\n\n"
-        'Example 3 — Score 0.25:\n'
-        'Input: "a parachute that slows you down when falling"\n'
-        'Output: name "War Chute", tags [HEAVY, RIGID, SHARP], '
-        'signature "ON_PROXIMITY -> DAMAGE"\n'
-        "Why 0.25: A parachute should be LIGHT and FLYING, not HEAVY and SHARP. "
-        "The combat signature contradicts the slow-fall concept entirely.\n\n"
-        "Focus on: Does the name match the concept? Do the tags reflect the object's "
-        "core physical nature? Do the behaviors match what the player described or "
-        "implied? Does the visual description match the tags and name?\n\n"
-        f"VALID TAGS (only these exist — no others):\n{_TAG_LIST}\n\n"
-        "Do NOT penalize the design for missing tags that don't exist in this list "
-        "(e.g., there is no EDIBLE, FOOD, WOODEN, or METAL tag)."
+        "You are evaluating a game object design for a 2D physics sandbox (like Scribblenauts). "
+        "A player typed a description, and an AI designed a game object with a substance, "
+        "optional element, tags, behaviors, and visual description.\n\n"
+        "**Question: Does this design faithfully represent what the player typed?**\n\n"
+        "Score EXACTLY one of 0.0, 0.5, or 1.0:\n\n"
+        "- **0.0 — Fail:** No meaningful connection to the player's description. "
+        "Example: player typed 'fire sword' but got substance=water, no burning element, "
+        "no SHARP tag — nothing says 'fire' or 'sword.'\n\n"
+        "- **0.5 — Partial:** Core concept is present but one significant mismatch. "
+        "Example: 'wooden sword' gets substance=stone instead of wood. Or 'fire sword' has "
+        "metal+SHARP but is missing the burning element entirely.\n\n"
+        "- **1.0 — Pass:** Substance matches the material, element matches the energy type, "
+        "tags fit the concept. Creative liberties are fine — 'ice cream' mapped to "
+        "substance=slime is acceptable if the rest is coherent. Example: 'fire sword' → "
+        "metal + burning + SHARP.\n\n"
+        f"VALID TAGS (0-3 per object):\n{_TAG_LIST}\n\n"
+        "Substances: metal, wood, stone, glass, rubber, bone, ceramic, cloth, water, oil, "
+        "slime, ice, lava, fire, smoke, flesh\n"
+        "Elements: burning, electric, magnetic, freezing, acidic, toxic, windy\n"
     ),
-    "Gameplay Quality": (
-        "You are evaluating a game object design for a 2D physics sandbox where objects "
-        "interact through a TAG SYSTEM. Tags create automatic interactions — this is "
-        "the core of the game's emergent gameplay.\n\n"
-        f"VALID TAGS (2-5 per object):\n{_TAG_LIST}\n\n"
-        f"COMPLETE TAG INTERACTION RULES ({len(ALL_RULES)} rules — "
-        "these fire automatically, no behaviors needed):\n"
-        f"{_RULES_SUMMARY}\n\n"
-        "TAG-IMPLIED BEHAVIORS (automatic from tags, not authored by the designer):\n"
-        "- HOSTILE + LIVING → chases nearest creature, flees when hurt\n"
-        "- LIVING (alone) → wanders passively\n"
-        "- EXPLOSIVE → detonates when damaged\n\n"
-        "SIGNATURE BEHAVIOR (optional, at most 1 per object):\n"
-        "A single unique behavior that makes this specific object unusual — "
-        "ranged attacks, healing, tag mutation, or reactive transformations. "
-        "Most objects don't need one. Tags + implied behaviors handle the rest.\n"
-        "- ADD_TAGS is especially powerful — it can spread tags to other objects, "
-        "creating chain reactions\n\n"
-        "Evaluate the GAMEPLAY QUALITY of this design — does it create interesting "
-        "interactions?\n\n"
-        "Score on this scale:\n"
-        "- 1.0: Tags create multiple interaction surfaces with other objects. Signature "
-        "(if present) adds a capability tags can't provide. No wasted or contradictory tags.\n"
-        "- 0.75: Strong tag choices with ONE missed opportunity — a natural tag omission "
-        "(e.g., wooden object missing FLAMMABLE) or a signature that partially overlaps "
-        "with tag behavior.\n"
-        "- 0.50: Tags include a contradiction that undermines the design intent (check "
-        "the rules — does a tag enable damage the object should resist?), OR tags "
-        "create no meaningful interaction surfaces despite having room for more.\n"
-        "- 0.25: Multiple tags contradict each other or the design intent. Signature "
-        "duplicates what tags already do. Object is inert when it should be interactive.\n"
-        "- 0.0: No useful gameplay properties. Tags create zero interaction surfaces.\n\n"
-        "KEY PRINCIPLE: Tags are the primary gameplay driver. A fire sword "
-        "with HEAT_SOURCE will ignite FLAMMABLE objects without needing a signature. "
-        "Tags like SHARP, HOSTILE, HEAT_SOURCE, TOXIC, and ACIDIC all deal "
-        "contact damage automatically. LIVING creatures get movement automatically. "
-        "The signature is only for ONE unique action tags can't provide "
-        "(ranged attacks, healing, tag spreading, reactive transformations).\n\n"
-        "Simple objects with well-chosen tags CAN score 1.0. A rock doesn't need "
-        "a signature. But a fire-breathing dragon with only HOSTILE instead "
-        "of using HEAT_SOURCE + SPAWN_PROJECTILE signature should score lower."
+    # Delight: proxy for player reaction, not system correctness.
+    # A player doesn't know the 56 rules — they just want something that feels right and
+    # makes them want to experiment. No rules context is provided to the judge on purpose.
+    "Delight": (
+        "You are evaluating a game object design for a 2D physics sandbox (like Scribblenauts). "
+        "A player typed a description, and an AI designed a game object.\n\n"
+        "**Question: If you were a player who typed this, would you be delighted by the "
+        "result? Would you want to experiment with it and see what happens when you combine "
+        "it with other objects?**\n\n"
+        "Score EXACTLY one of 0.0, 0.5, or 1.0:\n\n"
+        "- **0.0 — Fail:** Boring or broken. The object contradicts the player's fantasy or "
+        "has no interesting properties. Example: player typed 'explosive barrel' but got "
+        "substance=stone with no EXPLOSIVE tag — it's just a rock shaped like a barrel.\n\n"
+        "- **0.5 — Partial:** Competent but obvious. The substance and element are correct "
+        "but the design doesn't invite experimentation. Example: 'rock' → stone with no "
+        "tags, no element — technically correct but it's just an inert lump. Or 'fire sword' "
+        "→ metal + burning + SHARP with zero behaviors — functional but predictable.\n\n"
+        "- **1.0 — Pass:** Surprising-but-fitting. The design includes choices that invite "
+        "experimentation beyond what the player explicitly asked for. Example: 'rock' → "
+        "stone + BREAKABLE (now it shatters when hit!). Or 'campfire' → fire substance + "
+        "STICKY (things get caught in the flames). Creative liberties that make you think "
+        "'oh cool, I wonder what happens if...' are exactly what earns a 1.0.\n\n"
+        "Substances: metal, wood, stone, glass, rubber, bone, ceramic, cloth, water, oil, "
+        "slime, ice, lava, fire, smoke, flesh\n"
+        "Elements: burning, electric, magnetic, freezing, acidic, toxic, windy\n"
     ),
-    "Sprite Prompt": (
-        "You are evaluating a visual description that will be used to generate a 2D "
-        "game sprite image. The description should produce a clear, recognizable sprite "
-        "when fed to an image generation model.\n\n"
-        "Score on this scale:\n"
-        "- 1.0: Description clearly specifies shape, materials, colors, and distinctive "
-        "features. Would produce a recognizable, distinctive sprite. Matches the "
-        "object's name and tags.\n"
-        "- 0.75: Good description with minor gaps — missing a color, slightly generic, "
-        "but would still produce a reasonable sprite.\n"
-        "- 0.5: Vague or partially contradictory. Would produce a generic or confusing "
-        "sprite. Missing key visual features implied by the tags.\n"
-        "- 0.25: Very vague, describes a scene instead of an object, or contradicts "
-        "the tags significantly.\n"
-        "- 0.0: Empty, nonsensical, or completely unrelated to the object.\n\n"
-        "The description should describe the object itself (shape, material, color), "
-        "not a scene or environment. It should be 1-2 sentences.\n\n"
+    # Visual Clarity: can an image model produce a recognizable sprite from this description?
+    # Penalizes scene descriptions and vagueness. Rewards specificity about shape, material,
+    # and color — the things that make a good 2D game sprite.
+    "Visual Clarity": (
+        "You are evaluating a visual description that will be sent to an image generation "
+        "model to produce a 2D game sprite.\n\n"
+        "**Question: Could an image model generate a recognizable, distinctive game sprite "
+        "from this visual description?**\n\n"
+        "Score EXACTLY one of 0.0, 0.5, or 1.0:\n\n"
+        "- **0.0 — Fail:** Empty, nonsensical, describes a scene instead of an object, or "
+        "contradicts the substance/tags. Example: the description says 'a vast mountain "
+        "landscape with rolling clouds' for what should be a single sword sprite.\n\n"
+        "- **0.5 — Partial:** Recognizable but generic — could describe many different "
+        "objects. Missing distinctive features, colors, or material cues. Example: 'a round "
+        "thing' for a health potion, or 'a creature' for an acid spider.\n\n"
+        "- **1.0 — Pass:** Clear shape, material texture, colors, and distinctive features "
+        "that match the substance and tags. Example: 'a translucent glass sphere filled with "
+        "swirling green liquid, faintly glowing, sealed with a small cork' for a health "
+        "potion. The description doesn't need to be long — just specific enough to produce "
+        "a recognizable sprite.\n\n"
         f"VALID TAGS:\n{_TAG_LIST}\n"
-        "Verify the visual description is consistent with the assigned tags."
+        "Verify the visual description is consistent with the substance and tags."
     ),
 }
 
 METRIC_NAMES: list[str] = [
-    "Validity", "Tag Recall", "Interaction Surface", "Has Signature", *RUBRICS.keys()
+    "Validity", "Substance Accuracy", "Element Accuracy", "Category Accuracy",
+    "Tag Recall", "Interaction Surface", "Has Signature", *RUBRICS.keys(),
 ]
 
 
@@ -144,12 +121,23 @@ def make_judge(name: str) -> LLMJudge:
     )
 
 
-def default_evaluators() -> list:
-    """Build the standard set of evaluators for creator agent evals."""
+def _deterministic_evaluators() -> list:
     return [
         ValidityEvaluator(),
+        SubstanceAccuracyEvaluator(),
+        ElementAccuracyEvaluator(),
+        CategoryAccuracyEvaluator(),
         TagRecallEvaluator(),
         InteractionSurfaceEvaluator(),
         HasSignatureEvaluator(),
-        *(make_judge(name) for name in RUBRICS),
     ]
+
+
+def default_evaluators() -> list:
+    """Build the standard set of evaluators for creator agent evals."""
+    return [*_deterministic_evaluators(), *(make_judge(name) for name in RUBRICS)]
+
+
+def gate_evaluators() -> list:
+    """Deterministic-only evaluators for fast gate checks. No LLM judge calls."""
+    return _deterministic_evaluators()

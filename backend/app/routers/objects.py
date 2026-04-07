@@ -7,7 +7,9 @@ import structlog
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from app.creator.agent import create_object
+from app.cache.manager import CacheManager
+from app.creator.pipeline import create_object
+from app.engine.pairwise import evaluate_new_object
 from app.models.blueprint import GameObjectBlueprint
 from app.sessions.manager import SessionManager
 from app.ws.handler import send_sprite_failed, send_sprite_ready
@@ -41,7 +43,9 @@ async def create_object_endpoint(
     Sprite generation happens async and is delivered via WebSocket.
     """
     db = request.app.state.db
+    cache_db = request.app.state.cache_db
     manager = SessionManager(db)
+    cache = CacheManager(cache_db)
 
     # Atomically reserve budget before calling the LLM
     success, budget_remaining = await manager.reserve_budget(session_id, OBJECT_CREATION_COST)
@@ -54,8 +58,8 @@ async def create_object_endpoint(
 
     logger.info("object_create_request", description_len=len(body.description))
 
-    # Create object via LLM (budget already reserved)
-    blueprint = await create_object(body.description)
+    # Create object via V3 pipeline (cache check + parallel LLM fan-out)
+    blueprint = await create_object(body.description, cache)
 
     # Save object
     await manager.save_object(session_id, blueprint)
@@ -65,12 +69,34 @@ async def create_object_endpoint(
     task = asyncio.create_task(_generate_and_deliver_sprite(session_id, blueprint))
     _background_tasks.add(task)
     task.add_done_callback(_background_tasks.discard)
-    logger.debug("sprite_task_created", session_id=session_id, object_id=blueprint.id)
+
+    # Schedule pairwise evaluation against existing scene objects
+    session = await manager.get_session(session_id)
+    if session:
+        scene_bps = [
+            obj.blueprint.model_dump() for obj in session.objects if obj.object_id != blueprint.id
+        ]
+        if scene_bps:
+            task2 = asyncio.create_task(
+                _evaluate_pairwise_bg(blueprint.model_dump(), scene_bps, cache, session_id)
+            )
+            _background_tasks.add(task2)
+            task2.add_done_callback(_background_tasks.discard)
 
     return CreateObjectResponse(
         blueprint=blueprint.model_dump(mode="json"),
         budget_remaining=budget_remaining,
     )
+
+
+async def _evaluate_pairwise_bg(
+    new_bp: dict, scene_bps: list[dict], cache: CacheManager, session_id: str
+) -> None:
+    """Background task: evaluate pairwise interactions for new object."""
+    try:
+        await evaluate_new_object(new_bp, scene_bps, cache, session_id)
+    except Exception as exc:
+        logger.error("pairwise_eval_failed", error=str(exc), exc_info=True)
 
 
 async def _generate_and_deliver_sprite(

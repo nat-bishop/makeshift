@@ -48,6 +48,13 @@ async def websocket_handler(websocket: WebSocket, session_id: str) -> None:
                 object_id = data.get("object_id", "")
                 if object_id:
                     await _handle_request_sprite(websocket, session_id, object_id)
+            elif msg_type == "reevaluate_creature":
+                creature_id = data.get("creature_id", "")
+                reason = data.get("reason", "")
+                if creature_id:
+                    await _handle_reevaluate_creature(
+                        websocket, session_id, creature_id, reason
+                    )
             else:
                 logger.warning("ws_unknown_message_type", msg_type=msg_type)
                 await websocket.send_json(
@@ -151,3 +158,90 @@ async def send_sprite_failed(session_id: str, object_id: str, reason: str = "") 
             "reason": reason,
         },
     )
+
+
+async def send_pairwise_ready(
+    session_id: str, pair_key: str, result: dict[str, object]
+) -> None:
+    """Notify clients that a pairwise interaction result is ready."""
+    logger.info("send_pairwise_ready", session_id=session_id, pair_key=pair_key)
+    await _broadcast(
+        session_id,
+        {
+            "type": "pairwise_ready",
+            "pair_key": pair_key,
+            "result": result,
+        },
+    )
+
+
+async def send_creature_behaviors(
+    session_id: str, creature_id: str, behaviors: list[dict]
+) -> None:
+    """Notify clients of creature behavior evaluation results."""
+    logger.info(
+        "send_creature_behaviors",
+        session_id=session_id,
+        creature_id=creature_id,
+        behavior_count=len(behaviors),
+    )
+    await _broadcast(
+        session_id,
+        {
+            "type": "creature_behaviors",
+            "creature_id": creature_id,
+            "behaviors": behaviors,
+        },
+    )
+
+
+async def _handle_reevaluate_creature(
+    websocket: WebSocket, session_id: str, creature_id: str, reason: str
+) -> None:
+    """Handle creature re-evaluation request from client."""
+    from app.engine.creature_behavior import evaluate_creature_behaviors
+
+    db = websocket.app.state.db
+    manager = SessionManager(db)
+    session = await manager.get_session(session_id)
+    if not session:
+        return
+
+    # Find the creature and scene objects
+    creature_bp = None
+    scene_bps = []
+    scene_names = []
+    for obj in session.objects:
+        bp = obj.blueprint.model_dump()
+        if obj.object_id == creature_id:
+            creature_bp = bp
+        else:
+            scene_bps.append(bp)
+            scene_names.append(bp["name"])
+
+    if creature_bp is None or not creature_bp.get("autonomous"):
+        return
+
+    scene_names.append(creature_bp["name"])
+    logger.info(
+        "reevaluate_creature",
+        creature_id=creature_id,
+        reason=reason,
+        scene_size=len(scene_bps),
+    )
+
+    try:
+        behaviors = await evaluate_creature_behaviors(creature_bp, scene_bps, scene_names)
+        behavior_dicts = [
+            {
+                "target_name": b.target_name,
+                "movement": b.movement,
+                "strength": b.strength,
+                "action": b.action,
+                "action_param": b.action_param,
+            }
+            for b in behaviors
+        ]
+        await send_creature_behaviors(session_id, creature_id, behavior_dicts)
+    except Exception as exc:
+        logger.error("creature_reevaluation_failed", creature_id=creature_id, error=str(exc))

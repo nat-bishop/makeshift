@@ -2,28 +2,67 @@
 
 ## Core Concept
 
-"Scribblenauts meets Terraria" — a 2D physics sandbox where players type text descriptions to create game objects. An LLM (Gemini) interprets descriptions into tagged blueprints with visual descriptors and autonomous behaviors. Gemini image generation produces sprites. Objects interact through a tag-based rule system and behavior system, enabling emergent puzzle-solving: fire melts ice, a dragon patrols and breathes fire, a time bomb explodes after a delay.
+"Scribblenauts meets Terraria" — a 2D physics sandbox where players type text descriptions to create game objects. An LLM interprets descriptions into blueprints with a substance, optional element, tags, and behaviors. Gemini image generation produces sprites. Objects interact through a tag-based rule system and verb behavior system, enabling emergent puzzle-solving: fire melts ice, a wolf hunts prey, an acid spider corrodes metal.
 
-Tags define what an object *is*; behaviors define what it *does*. Each object gets 2-5 tags and an optional signature behavior — enough to express a rich concept while keeping LLM output focused. Common behaviors (chase, flee, wander, detonate) are tag-implied and don't need explicit authoring.
+Tags define what an object *is*; verbs define what it *does*. Each object has 1 substance, 0-1 element, 0-3 tags, and 0-4 behaviors. Substance and element automatically derive most traits — LLM tags are modifiers only.
 
 ## Tag System
 
-27 LLM-visible tags across 7 categories (+ 4 internal-only). Tags are the atomic unit of the entire game — they drive physics, interactions, durability, and implied behaviors.
+12 LLM-visible tags (+ many substance/element-derived + 4 internal-only). In V2, most tags are automatically derived from substance and element — the LLM picks 0-3 independent modifiers that the substance doesn't cover.
 
-### Categories
+### LLM-Visible Tags (V2)
 
-| Category | Tags |
-|----------|------|
-| Physical State | LIQUID, GAS, RIGID, HEAVY, LIGHT |
-| Temperature | FROZEN, COLD, MOLTEN |
-| Energy | FLAMMABLE, HEAT_SOURCE, ELECTRIC, MAGNETIC, EXPLOSIVE |
-| Surface | SHARP, STICKY, REFLECTIVE |
-| Mechanical | BOUNCY, BREAKABLE |
-| Environmental | FLYING, WIND_SOURCE, ACIDIC, TOXIC, WET |
-| Special | LIVING, METALLIC, INSULATING, HOSTILE |
-| Internal-only | HOT (rule-applied burn), GLOWING (smolder + attract), BRITTLE (freeze-then-shatter), CORRODED (acid-weakened) |
+| Tag | When to use |
+|-----|------------|
+| SHARP | Cutting edge or point — swords, claws, thorns |
+| HEAVY | Dense/massive beyond substance default — anvils, safes |
+| LIGHT | Very low mass — feathers, balloons, paper |
+| BOUNCY | Elastic, high restitution — trampolines, springs |
+| BREAKABLE | Fragile — overrides substance durability |
+| STICKY | Adhesive — slows nearby to 25% speed |
+| REFLECTIVE | Mirror-like — bounces heat/electricity/acid |
+| EXPLOSIVE | Volatile — detonates under stress |
+| FLYING | Defies gravity — birds, drones, ghosts |
+| LIVING | Biological creature — enables behaviors |
+| WET | Soaked — amplifies electric, freezes faster, resists fire |
+| HOSTILE | Aggressive — damages nearby creatures in CLOSE field |
 
-**Pruned tags**: SOLID (82% filler, 0 rules — implicit default), FLEXIBLE (1 unintuitive rule), SLIPPERY (0% generated, overlaps FROZEN physics). **Renamed**: CORROSIVE→ACIDIC, CONDUCTING→METALLIC (LLM-friendly names boost generation accuracy).
+### Substance-Derived Traits (automatic)
+
+| Substance | Auto traits |
+|-----------|------------|
+| metal | METALLIC, RIGID |
+| wood | FLAMMABLE |
+| stone | RIGID, HEAVY |
+| glass | BREAKABLE, REFLECTIVE |
+| rubber | BOUNCY, INSULATING |
+| bone | RIGID |
+| ceramic | BREAKABLE, INSULATING |
+| cloth | FLAMMABLE, LIGHT |
+| water | LIQUID, WET |
+| oil | LIQUID, FLAMMABLE |
+| slime | LIQUID, STICKY, TOXIC |
+| ice | FROZEN, RIGID, COLD, BRITTLE |
+| lava | MOLTEN, LIQUID, HEAT_SOURCE |
+| fire | GAS, HEAT_SOURCE, HOT |
+| smoke | GAS, LIGHT |
+| flesh | *(none — add LIVING explicitly)* |
+
+### Element-Derived Traits (optional)
+
+| Element | Adds |
+|---------|------|
+| burning | HEAT_SOURCE, HOT |
+| electric | ELECTRIC |
+| magnetic | MAGNETIC |
+| freezing | COLD |
+| acidic | ACIDIC |
+| toxic | TOXIC |
+| windy | WIND_SOURCE |
+
+### Internal-Only Tags (rule-added)
+
+HOT (heat burn damage), GLOWING (smolder ignition + creature attraction), BRITTLE (freeze-then-shatter), CORRODED (acid-weakened, vulnerable to physical force).
 
 WET (Environmental) is a state tag applied automatically by nearby LIQUID objects (15s duration). It amplifies interactions: ELECTRIC shock deals 45 dmg instead of 30, freezing occurs faster near COLD, and fire is resisted. Contradicts MOLTEN and HEAT_SOURCE. Physics effect: linear friction 0.1 (slippery when wet). Field tag (CLOSE, periodic).
 
@@ -33,7 +72,7 @@ STICKY (Surface) is a continuous field tag (CLOSE range) that slows everything n
 
 REFLECTIVE (Surface) bounces heat, electricity, and resists acid — the `reflective_acidic_resist` rule removes ACIDIC from the attacker on contact.
 
-EXPLOSIVE is the highest-impact single tag: area damage on heat or electricity contact. Tag-implied behavior: detonates when damaged (ON_DAMAGED → EXPLODE). The LLM can override the trigger via the signature behavior.
+EXPLOSIVE is the highest-impact single tag: area damage on heat or electricity contact. Rules handle the detonation — no behavior needed.
 
 ### Contradiction Pairs (16)
 
@@ -48,7 +87,7 @@ WET↔MOLTEN       WET↔HEAT_SOURCE
 BRITTLE↔LIQUID   BRITTLE↔GAS
 ```
 
-Enforced by Pydantic validators on `CreatorOutput`. Violations trigger `ModelRetry` with feedback to the LLM, not hard failures.
+Enforced at runtime by `WorldMutations.apply_add_tag()` (auto-removes contradictory tag before adding). LLM tag validator also rejects contradictions with `ModelRetry` feedback.
 
 ## Rule System
 
@@ -99,64 +138,46 @@ Rules with empty `tags_required_b` match any second object. Used for uncondition
 
 ## Behavior System
 
-Two layers: **tag-implied behaviors** (automatic) and an optional **signature behavior** (LLM-authored).
+LLM authors 0-4 verb behaviors per object. Each behavior = verb + `target_tag` (a category or tag from `BEHAVIOR_TARGETS`). The verb defines movement and action; the target is matched at runtime by checking whether the value appears in an object's tags or categories.
 
-### Tag-Implied Behaviors
+### Verbs
 
-Common patterns are derived from tags at blueprint creation — no LLM authoring needed:
+| Verb | Movement | Action at range |
+|------|----------|----------------|
+| destroy | Toward target | Melee attack |
+| eat | Toward target | Damage + heal self |
+| investigate | Toward target (slow) | Stop at medium range |
+| follow | Toward target | Maintain close distance |
+| protect | Follow target | Attack threats near it |
+| flee | Away from target | — |
 
-| Tag Combination | Implied Behavior |
-|---|---|
-| HOSTILE + LIVING | Chase nearest living (ALWAYS → MOVE_TOWARD) |
-| HOSTILE + LIVING | Flee when hurt (ON_HEALTH_LOW → MOVE_AWAY) |
-| LIVING (no HOSTILE) | Wander (ALWAYS → PATROL) |
-| EXPLOSIVE | Detonate when damaged (ON_DAMAGED → EXPLODE) |
+### Target Matching
 
-### Signature Behavior
+`BEHAVIOR_TARGETS` = 9 values: CREATURE, FOOD, WEAPON, PLANT, VALUABLE, VEHICLE, TOOL, HOSTILE, HEAT_SOURCE. Empty `target_tag` matches every object in perception range. Non-empty checks whether the value appears in the object's tags or categories. Re-evaluated whenever an object's tags change.
 
-One optional LLM-authored behavior per object — the unique "twist" that makes this object different from others with the same tags. Format: `TRIGGER -> ACTION` or `TRIGGER -> ACTION -> TARGET, power=POWER`. Targets auto-inferred when omitted.
+destroy/eat/flee require a non-empty `target_tag`; investigate/follow/protect allow empty.
 
-If the signature shares a trigger with an implied behavior, it overrides that specific implied behavior (per-trigger, not all-or-nothing). Other implied behaviors survive.
+### Default Behavior
 
-### LLM Vocabulary
-
-7 triggers: ALWAYS, ON_TIMER, ON_PROXIMITY, ON_CONTACT, ON_DAMAGED, ON_HEALTH_LOW, ON_TAG_ADDED(TAG)
-
-7 actions: MOVE_TOWARD, MOVE_AWAY, SPAWN_PROJECTILE, EXPLODE, HEAL, ADD_TAGS, SELF_DESTRUCT
-
-3 targets: SELF, NEAREST_LIVING, NEAREST_PLAYER (+ CONTACT_BODY auto-inferred for contact triggers)
-
-Engine-internal actions (PATROL, APPLY_FORCE, ATTRACT, REMOVE_TAGS) and triggers (ON_CREATE, ON_DESTROY) exist for tag-implied behaviors but are not in the LLM vocabulary.
-
-### Composing Tags and Behaviors
-
-The tag and behavior systems interact through `ON_TAG_ADDED` triggers. This bridges the rule engine (which mutates tags on collision) to the behavior system:
-
-- Rule engine adds HOT to a bomb → ON_TAG_ADDED(HOT) triggers EXPLODE
-- Rule engine ignites an object → ON_TAG_ADDED(HEAT_SOURCE) triggers MOVE_AWAY from heat
-- Behavior adds ELECTRIC tag → rule engine propagates it to METALLIC neighbors
+Only one implied behavior: LIVING + no explicit behaviors → `investigate` with empty target (matches everything).
 
 ### Design Examples
 
-**Dragon** (aggressor):
-- Tags: LIVING, HOSTILE, HEAT_SOURCE, HEAVY
-- Signature: ON_PROXIMITY → SPAWN_PROJECTILE → NEAREST_LIVING, power=high
-- Implied: chase (HOSTILE+LIVING), flee when hurt (HOSTILE+LIVING). Signature adds ranged fire breath.
+**Hungry wolf** (substance: flesh, element: null):
+- Tags: LIVING
+- Behaviors: destroy → CREATURE, flee → HEAT_SOURCE
 
-**Time Bomb** (delayed threat):
-- Tags: EXPLOSIVE, RIGID, BREAKABLE
-- Signature: ON_TIMER → SELF_DESTRUCT
-- Implied: detonate on damage (EXPLOSIVE). Signature adds timed detonation as alternative trigger.
+**Fire sword** (substance: metal, element: burning):
+- Tags: SHARP
+- Behaviors: (none — tags handle everything)
 
-**Guard Dog** (reactive defender):
-- Tags: LIVING, SHARP, HOSTILE, RIGID
-- Signature: null
-- Implied: chase (HOSTILE+LIVING), flee when hurt. SHARP cuts on contact, HOSTILE field damages nearby. Tags fully express this object.
+**Acid spider** (substance: flesh, element: acidic):
+- Tags: LIVING
+- Behaviors: destroy → CREATURE, flee → HEAT_SOURCE
 
-**Reactive Bomb** (tag-triggered via rule engine):
-- Tags: EXPLOSIVE, FLAMMABLE, BREAKABLE
-- Signature: ON_TAG_ADDED(HEAT_SOURCE) → EXPLODE
-- Fire adds HEAT_SOURCE via rules → triggers signature EXPLODE. Overrides the implied ON_DAMAGED detonation with a more specific trigger.
+**Brave knight** (substance: flesh, element: null):
+- Tags: LIVING, HOSTILE
+- Behaviors: destroy → HOSTILE, protect → CREATURE
 
 ## Player Controls
 
@@ -209,22 +230,16 @@ During placement, the HUD hint changes to "Click: Place | Esc: Cancel".
 | Cost per object | $0.041 (LLM ~$0.001 + image ~$0.04) |
 | Session budget | $1.00 (default, configurable) |
 | Max objects per session | ~24 |
-| Tags per object | 2-5 (enforced by LLM validator) |
-| Signature behavior | 0-1 (optional, enforced by LLM validator) |
+| Substance per object | 1 (required) |
+| Element per object | 0-1 (optional) |
+| Tags per object | 0-3 (from `LLM_VISIBLE_TAGS_V2`, enforced by LLM validator) |
+| Behaviors per object | 0-4 verb + target pairs (enforced by LLM validator) |
 | Name length | 1-3 words (enforced by LLM validator) |
 
 
 ## Durability & Damage
 
-Starting durability depends on tags:
-
-| Tag | Durability |
-|-----|-----------|
-| BREAKABLE | 50 |
-| RIGID | 200 |
-| Default (neither) | 150 |
-
-Priority: BREAKABLE checked first, then RIGID, then default.
+Starting durability comes from the substance profile (`SubstanceProfile.durability`) modified by the BREAKABLE tag modifier (× 0.4). Substance base values range from 30 (fire) to 300 (stone). Examples: glass=40, wood=120, metal=250, flesh=150. The BREAKABLE tag multiplier applies on top of the substance base, so glass+BREAKABLE = 16 durability vs glass alone = 40.
 
 **Damage-over-time (DOT)** — rule-defined; applied via DAMAGE effect with `tick_interval`/`tick_duration` fields:
 - Ignition (HEAT_SOURCE + FLAMMABLE): 10 dmg/s for 5s (50 total)

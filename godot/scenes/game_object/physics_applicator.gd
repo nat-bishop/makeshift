@@ -12,17 +12,37 @@ func _ready() -> void:
 	_collision_shape = _body.get_node("CollisionShape2D")
 
 
-func apply(tags: Array, visual_descriptor: Dictionary) -> void:
-	var physics: Dictionary = PhysicsComposer.compose_physics(tags)
-	var size_category: String = visual_descriptor.get("size_category", "medium")
+func apply_from_blueprint(bp: Dictionary) -> void:
+	## V3: Read physics directly from blueprint fields (LLM-generated).
+	var mass_kg: float = bp.get("mass_kg", 1.0)
+	var friction_pct: int = bp.get("friction", 50)
+	var bounce_pct: int = bp.get("bounce", 0)
+	var gravity_pct: int = bp.get("gravity", 50)
+	var height_cm: int = bp.get("height_cm", 50)
 
-	# Apply mass (scaled by size) and gravity
-	var size_mass_mult: float = PhysicsComposer.get_size_mass_multiplier(size_category)
-	_body.mass = physics["mass"] * size_mass_mult
+	# Damping: light large things (feather) = high, heavy small (bullet) = low
+	var damping: float = clampf(float(height_cm) / (mass_kg * 100.0 + 10.0), 0.0, 10.0)
+
+	# Gravity: 0 -> -0.5 (floats), 50 -> 1.0 (normal), 100 -> 2.0 (heavy)
+	var gravity_scale: float = lerpf(-0.5, 2.0, gravity_pct / 100.0)
+
+	var size_cat: String = bp.get("visual_descriptor", {}).get("size_category", "medium")
+	var mass_mult: float = PhysicsComposer.get_size_mass_multiplier(size_cat)
+
+	apply_physics({
+		"mass": mass_kg * mass_mult,
+		"gravity": gravity_scale,
+		"friction": friction_pct / 100.0,
+		"bounce": bounce_pct / 100.0,
+		"damping": damping,
+	}, size_cat)
+
+
+func apply_physics(physics: Dictionary, size_category: String) -> void:
+	_body.mass = physics["mass"]
 	_body.gravity_scale = physics["gravity"]
 	_body.linear_damp = physics["damping"]
 
-	# Apply physics material (skip if unchanged to avoid waking the physics body)
 	var new_friction: float = physics["friction"]
 	var new_bounce: float = physics["bounce"]
 	if new_friction != _prev_friction or new_bounce != _prev_bounce:
@@ -33,10 +53,8 @@ func apply(tags: Array, visual_descriptor: Dictionary) -> void:
 		_prev_friction = new_friction
 		_prev_bounce = new_bounce
 
-	Log.debug("PhysicsApplicator: Applied physics for '%s' — size=%s, mass=%.1f, friction=%.2f, bounce=%.2f, gravity=%.1f, damp=%.1f" % [_body.blueprint.get("name", ""), size_category, _body.mass, physics["friction"], physics["bounce"], physics["gravity"], physics["damping"]])
+	Log.debug("PhysicsApplicator: V3 physics for '%s' — size=%s, mass=%.1f, friction=%.2f, bounce=%.2f, gravity=%.1f, damp=%.1f" % [_body.blueprint.get("name", ""), size_category, _body.mass, physics["friction"], physics["bounce"], physics["gravity"], physics["damping"]])
 
-	# Configure fallback collision shape from size_category
-	# Will be overridden by sprite-derived shape once sprite loads
 	if not _has_sprite_shape:
 		_configure_shape(size_category)
 
@@ -48,11 +66,9 @@ func update_shape_from_sprite(texture: Texture2D, world_size: float) -> void:
 	if used_rect.size.x == 0 or used_rect.size.y == 0:
 		return
 
-	# Scale from texture pixels to world units
 	var tex_size: float = float(image.get_width())
 	var world_scale: float = world_size / tex_size
 
-	# Offset: shift collision center to match opaque region center
 	var sprite_center := Vector2(tex_size / 2.0, float(image.get_height()) / 2.0)
 	var rect_center := Vector2(
 		used_rect.position.x + used_rect.size.x / 2.0,

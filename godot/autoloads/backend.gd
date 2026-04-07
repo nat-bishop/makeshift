@@ -9,6 +9,7 @@ var _reconnect_timer: float = 0.0
 var _reconnect_delay: float = 1.0
 var _sprite_cache: Dictionary = {}  # object_id -> Texture2D
 var _pending_sprites: Array = []  # object_ids waiting for sprites
+var _pairwise_cache: Dictionary = {}  # "name_a::name_b" -> pairwise result dict
 var _sync_timer: float = 0.0
 const SYNC_INTERVAL: float = 10.0
 var offline_mode: bool = false
@@ -44,11 +45,6 @@ func create_session() -> Dictionary:
 		_save_session_id()
 		_connect_websocket()
 
-	# Load rules from session response
-	var rules: Array = result.get("rules", [])
-	if not rules.is_empty():
-		RuleEngine.load_rules(rules)
-
 	Log.info("Backend: Session created id=%s" % session_id)
 	return result
 
@@ -64,9 +60,8 @@ func restore_session(id: String) -> Dictionary:
 	_save_session_id()
 	_connect_websocket()
 
-	var rules: Array = result.get("rules", [])
-	if not rules.is_empty():
-		RuleEngine.load_rules(rules)
+	# Fetch cached pairwise results for restored session
+	fetch_scene_pairwise(id)
 
 	return result
 
@@ -96,24 +91,38 @@ func create_object(description: String) -> Dictionary:
 	return result
 
 
-func fetch_rules() -> Array:
-	var headers: PackedStringArray = PackedStringArray()
-	if _etag != "":
-		headers.append("If-None-Match: %s" % _etag)
+func fetch_scene_pairwise(sid: String) -> void:
+	## Bulk-fetch all cached pairwise results for objects in this session.
+	var result: Dictionary = await _http_get("/api/pairwise/scene/%s" % sid)
+	if result.get("error", false):
+		Log.warn("Backend: Failed to fetch scene pairwise: %s" % result.get("message", "unknown"))
+		return
+	var pairs: Dictionary = result.get("pairs", {})
+	for key in pairs:
+		_pairwise_cache[key] = pairs[key]
+	Log.info("Backend: Loaded %d pairwise results" % pairs.size())
 
-	var result: Dictionary = await _http_get("/api/rules", headers)
 
-	if result.get("status_code", 0) == 304:
-		return []  # Not modified, use cached
+func get_pairwise(name_a: String, name_b: String) -> Dictionary:
+	## Lookup cached pairwise result. Returns empty dict if uncached.
+	var a := name_a.to_lower().strip_edges()
+	var b := name_b.to_lower().strip_edges()
+	if a > b:
+		var tmp := a
+		a = b
+		b = tmp
+	var key := a + "::" + b
+	return _pairwise_cache.get(key, {})
 
-	var new_etag: String = result.get("etag", "")
-	if new_etag != "":
-		_etag = new_etag
 
-	var rules: Array = result.get("rules", [])
-	if not rules.is_empty():
-		RuleEngine.load_rules(rules)
-	return rules
+func request_reevaluation(object_id: String, reason: String) -> void:
+	## Send creature re-evaluation request to backend via WebSocket.
+	if _ws_connected and _ws != null:
+		_ws.send_text(JSON.stringify({
+			"type": "reevaluate_creature",
+			"creature_id": object_id,
+			"reason": reason,
+		}))
 
 
 func sync_state(state: Dictionary) -> void:
@@ -193,6 +202,10 @@ func _handle_ws_message(text: String) -> void:
 			_handle_sprite_ready(data)
 		"sprite_failed":
 			_handle_sprite_failed(data)
+		"pairwise_ready":
+			_handle_pairwise_ready(data)
+		"creature_behaviors":
+			_handle_creature_behaviors(data)
 		"error":
 			Log.warn("Backend WS error: %s" % data.get("message", "unknown"))
 
@@ -234,6 +247,34 @@ func _handle_sprite_failed(data: Dictionary) -> void:
 	_pending_sprites.erase(object_id)
 	Log.warn("Backend: Sprite generation failed for %s: %s" % [object_id, reason])
 	EventBus.sprite_failed.emit(object_id)
+
+
+func _handle_pairwise_ready(data: Dictionary) -> void:
+	var pair_key: String = data.get("pair_key", "")
+	var result: Dictionary = data.get("result", {})
+	if pair_key.is_empty() or result.is_empty():
+		return
+	_pairwise_cache[pair_key] = result
+	Log.info("Backend: Pairwise ready %s" % pair_key)
+
+
+func _handle_creature_behaviors(data: Dictionary) -> void:
+	var creature_id: String = data.get("creature_id", "")
+	var behaviors: Array = data.get("behaviors", [])
+	if creature_id.is_empty():
+		return
+	# Find creature in scene and update behaviors
+	var creature := _find_game_object(creature_id)
+	if creature and creature.has_node("VerbBehaviorSystem"):
+		creature.get_node("VerbBehaviorSystem").update_behaviors(behaviors)
+		Log.info("Backend: Updated creature behaviors for %s (%d behaviors)" % [creature_id, behaviors.size()])
+
+
+func _find_game_object(object_id: String) -> Node:
+	for node in get_tree().get_nodes_in_group("game_objects"):
+		if node.has_method("get_object_id") and node.get_object_id() == object_id:
+			return node
+	return null
 
 
 func _process_reconnect(delta: float) -> void:
@@ -391,6 +432,7 @@ func _request(method: int, path: String, body: Dictionary = {}, extra_headers: P
 
 	result["status_code"] = status_code
 	return result
+
 
 
 # --- Session Persistence ---

@@ -93,10 +93,23 @@ func _on_kill_zone_entered(body: Node2D) -> void:
 		WorldMutations.apply_damage(body, 999.0)
 
 
-func _create_env_body(pos: Vector2, size: Vector2, env_tags: Array, color: Color, env_id: String = "", solid: bool = true) -> StaticBody2D:
+func _create_env_body(pos: Vector2, size: Vector2, env_name: String, color: Color, env_id: String = "", solid: bool = true) -> StaticBody2D:
+	## V3: Create environment body with blueprint-based pairwise interactions.
+	var bp: Dictionary = {
+		"id": env_id if env_id != "" else env_name + "_" + str(randi()),
+		"name": env_name,
+		"description": env_name,
+		"mass_kg": 99999, "height_cm": int(size.y),
+		"friction": 50, "bounce": 0, "gravity": 50,
+		"armor": 100, "hp": 0, "indestructible": true,
+		"has_field": true, "field_range_cm": int(size.x * 0.6),
+		"autonomous": false, "affordance": 3,
+		"visual_descriptor": {"visual_description": env_name, "size_category": "large"},
+		"destruction_result_name": "", "states": [],
+	}
 	var body := StaticBody2D.new()
 	body.set_script(ENV_BODY_SCRIPT)
 	body.position = pos + size / 2
 	add_child(body)
-	body.init_env(env_id if env_id != "" else "env_%d" % body.get_instance_id(), env_tags, size, color, solid)
+	body.init_env_v3(bp, size, color, solid)
 	return body

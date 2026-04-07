@@ -101,44 +101,29 @@ class Timer:
 
 
 async def _run_llm(description: str, timer: Timer) -> Any:
-    """Run the LLM creator agent. Uses agent.run() so PydanticAI retries ModelRetry
-    internally (sends error feedback back to the LLM for correction).
-    """
-    import uuid
+    """Run the V3 creation pipeline via create_object()."""
+    import aiosqlite
 
-    from app.creator.agent import _get_agent
-    from app.models.behaviors import expand_behavior_spec, parse_behavior_string
-    from app.models.blueprint import GameObjectBlueprint
-    from app.models.tag_behaviors import resolve_implied_behaviors
+    from app.cache.manager import CacheManager
+    from app.config import settings
+    from app.creator.pipeline import create_object
 
-    agent = _get_agent()
-    prompt = f"Create a game object for: {description}"
+    cache_db = await aiosqlite.connect(settings.cache_database_path)
+    await cache_db.execute(
+        """CREATE TABLE IF NOT EXISTS cache (
+        cache_type TEXT NOT NULL, cache_key TEXT NOT NULL,
+        value_json TEXT NOT NULL, model_version TEXT NOT NULL DEFAULT '',
+        created_at REAL NOT NULL DEFAULT 0,
+        PRIMARY KEY (cache_type, cache_key))"""
+    )
+    cache = CacheManager(cache_db)
 
     t0 = time.monotonic()
-    result = await agent.run(prompt)
+    blueprint = await create_object(description, cache)
     elapsed = time.monotonic() - t0
-    spec = result.output
-
-    usage = result.usage()
-    tok_s = round(usage.output_tokens / elapsed, 1) if elapsed > 0 else 0
-    timer.add(
-        "llm generate",
-        elapsed,
-        f"{usage.input_tokens} input, {usage.output_tokens} output tokens, {tok_s} tok/s",
-    )
-
-    explicit = None
-    if spec.signature:
-        explicit = expand_behavior_spec(parse_behavior_string(spec.signature))
-    behaviors = resolve_implied_behaviors(spec.tags, explicit)
-    return GameObjectBlueprint(
-        id=str(uuid.uuid4()),
-        name=spec.name,
-        description=description,
-        tags=spec.tags,
-        behaviors=behaviors,
-        visual_descriptor=spec.visual_descriptor,
-    )
+    timer.add("llm generate", elapsed)
+    await cache_db.close()
+    return blueprint
 
 
 async def _run_image(prompt: str, timer: Timer) -> bytes:

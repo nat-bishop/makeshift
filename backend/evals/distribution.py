@@ -1,27 +1,27 @@
-"""Distribution analysis for creator agent eval outputs.
+"""Distribution analysis for V2 creator agent eval outputs.
 
-Aggregates tag, behavior, and size frequencies across all cases
-in a saved EvalRunResult to show variety and output patterns.
+Aggregates substance, element, tag, behavior verb, and size frequencies
+across all cases in a saved EvalRunResult.
 """
 
 from __future__ import annotations
 
 from collections import Counter, defaultdict
 
-from app.models.behaviors import BehaviorParseError, parse_behavior_string
 from app.models.tags import LLM_VISIBLE_TAGS
 
 from evals.models import EvalRunResult
 
-ALL_TAGS = sorted(t.value for t in LLM_VISIBLE_TAGS)
+ALL_V2_TAGS = sorted(t.value for t in LLM_VISIBLE_TAGS)
 
 
 def print_distribution_report(result: EvalRunResult) -> None:
     """Print aggregate distribution stats from a saved eval result."""
     tag_counts: Counter[str] = Counter()
-    trigger_counts: Counter[str] = Counter()
-    action_counts: Counter[str] = Counter()
-    target_counts: Counter[str] = Counter()
+    category_counts: Counter[str] = Counter()
+    substance_counts: Counter[str] = Counter()
+    element_counts: Counter[str] = Counter()
+    verb_counts: Counter[str] = Counter()
     size_counts: Counter[str] = Counter()
     behavior_count_dist: Counter[int] = Counter()
     total = 0
@@ -32,24 +32,27 @@ def print_distribution_report(result: EvalRunResult) -> None:
         total += 1
         out = case.output
 
-        # Tags
         for tag in out.tags:
             tag_counts[tag] += 1
+        for cat in out.categories:
+            category_counts[cat] += 1
 
-        # Size
         size_counts[out.size_category] += 1
 
-        # Signature
-        has_sig = 1 if out.signature else 0
-        behavior_count_dist[has_sig] += 1
-        if out.signature:
-            try:
-                spec = parse_behavior_string(str(out.signature))
-                trigger_counts[spec.trigger.value] += 1
-                action_counts[spec.action.value] += 1
-                target_counts[spec.target.value] += 1
-            except (BehaviorParseError, ValueError):
-                pass
+        # V2: substance and element
+        if hasattr(out, "substance") and out.substance:
+            substance_counts[out.substance] += 1
+        if hasattr(out, "element") and out.element:
+            element_counts[out.element] += 1
+
+        # V2: behavior verbs
+        behaviors = getattr(out, "behaviors", [])
+        behavior_count_dist[len(behaviors)] += 1
+        for b in behaviors:
+            if isinstance(b, dict):
+                verb_counts[b.get("verb", "unknown")] += 1
+            elif hasattr(b, "verb"):
+                verb_counts[b.verb] += 1
 
     if total == 0:
         print("\n  No parseable outputs for distribution analysis.\n")
@@ -59,9 +62,33 @@ def print_distribution_report(result: EvalRunResult) -> None:
     print(f"  Distribution Analysis ({total} objects)")
     print(f"{'=' * 60}")
 
-    # Tag frequency (all tags, including zeros)
+    # Substance frequency
+    if substance_counts:
+        print("\n  Substance Frequency:")
+        for sub, count in substance_counts.most_common():
+            pct = count / total * 100
+            bar = "#" * int(pct / 2)
+            print(f"    {sub:<12} {count:>3}/{total}  ({pct:4.0f}%)  {bar}")
+
+    # Element frequency
+    print("\n  Element Frequency:")
+    no_element = total - sum(element_counts.values())
+    print(f"    {'(none)':<12} {no_element:>3}/{total}  ({no_element / total * 100:4.0f}%)")
+    for elem, count in element_counts.most_common():
+        pct = count / total * 100
+        print(f"    {elem:<12} {count:>3}/{total}  ({pct:4.0f}%)")
+
+    # Category frequency
+    if category_counts:
+        print("\n  Category Frequency:")
+        for cat, count in category_counts.most_common():
+            pct = count / total * 100
+            bar = "#" * int(pct / 2)
+            print(f"    {cat:<12} {count:>3}/{total}  ({pct:4.0f}%)  {bar}")
+
+    # Tag frequency
     print("\n  Tag Frequency:")
-    for tag in ALL_TAGS:
+    for tag in ALL_V2_TAGS:
         tag_counts.setdefault(tag, 0)
     for tag, count in tag_counts.most_common():
         pct = count / total * 100
@@ -74,30 +101,17 @@ def print_distribution_report(result: EvalRunResult) -> None:
         pct = count / total * 100
         print(f"    {size:<10} {count:>3}/{total}  ({pct:4.0f}%)")
 
-    # Signature distribution
-    print("\n  Signature Behavior:")
-    with_sig = behavior_count_dist.get(1, 0)
-    without_sig = behavior_count_dist.get(0, 0)
-    print(f"    with signature:    {with_sig:>3}/{total}  ({with_sig / total * 100:4.0f}%)")
-    print(f"    without signature: {without_sig:>3}/{total}  ({without_sig / total * 100:4.0f}%)")
+    # Behavior verb distribution
+    if verb_counts:
+        print("\n  Behavior Verbs:")
+        for verb, count in verb_counts.most_common():
+            print(f"    {verb:<20} {count:>3}")
 
-    # Trigger distribution
-    if trigger_counts:
-        print("\n  Trigger Types:")
-        for trigger, count in trigger_counts.most_common():
-            print(f"    {trigger:<20} {count:>3}")
-
-    # Action distribution
-    if action_counts:
-        print("\n  Action Types:")
-        for action, count in action_counts.most_common():
-            print(f"    {action:<20} {count:>3}")
-
-    # Target distribution
-    if target_counts:
-        print("\n  Target Types:")
-        for target, count in target_counts.most_common():
-            print(f"    {target:<20} {count:>3}")
+    # Behavior count distribution
+    print("\n  Behaviors per Object:")
+    for n in sorted(behavior_count_dist):
+        count = behavior_count_dist[n]
+        print(f"    {n} behaviors: {count:>3}/{total}")
 
     # Retry stats
     all_retries = [c.retries for c in result.cases]

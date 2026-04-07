@@ -4,6 +4,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import aiosqlite
 import structlog
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from app.config import settings
 from app.logging_setup import setup_logging
 from app.middleware import session_context_middleware
-from app.routers import objects, rules, sessions
+from app.routers import objects, pairwise, sessions
 from app.ws.handler import websocket_handler
 
 logger = structlog.get_logger()
@@ -55,9 +56,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     get_generate_image()
     get_remove_bg()
 
-    # Initialize SQLite
-    import aiosqlite
-
+    # Initialize game SQLite
     db = await aiosqlite.connect(settings.database_path)
     await db.execute(
         """
@@ -86,10 +85,24 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await db.commit()
     app.state.db = db
 
-    from app.creator.agent import _get_agent
+    # Initialize cache SQLite
+    cache_db = await aiosqlite.connect(settings.cache_database_path)
+    await cache_db.execute(
+        """
+        CREATE TABLE IF NOT EXISTS cache (
+            cache_type TEXT NOT NULL,
+            cache_key TEXT NOT NULL,
+            value_json TEXT NOT NULL,
+            model_version TEXT NOT NULL DEFAULT '',
+            created_at REAL NOT NULL DEFAULT 0,
+            PRIMARY KEY (cache_type, cache_key)
+        )
+        """
+    )
+    await cache_db.commit()
+    app.state.cache_db = cache_db
 
-    _get_agent()  # Warm up LLM agent
-    logger.info("llm_agent_ready")
+    logger.info("databases_ready")
 
     yield
 
@@ -100,6 +113,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     await close_fal_client()
     await close_local_client()
+    await cache_db.close()
     await db.close()
 
 
@@ -122,7 +136,7 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 # Include routers
 app.include_router(sessions.router)
 app.include_router(objects.router)
-app.include_router(rules.router)
+app.include_router(pairwise.router)
 
 
 # WebSocket endpoint

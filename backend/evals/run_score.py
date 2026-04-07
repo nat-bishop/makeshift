@@ -65,6 +65,8 @@ async def main() -> None:
             metadata=CaseMeta(
                 category=c.category,
                 expected_tags=c.expected_tags,
+                expected_substance=c.expected_substance,
+                expected_element=c.expected_element,
             ),
         ))
 
@@ -82,7 +84,7 @@ async def main() -> None:
 
     dataset = Dataset(cases=cases, evaluators=default_evaluators())
     report = await dataset.evaluate(
-        cached_task, name=run_name, max_concurrency=8, repeat=repeat,
+        cached_task, name=run_name, max_concurrency=64, repeat=repeat,
     )
 
     report.print(include_input=True, include_reasons=True)

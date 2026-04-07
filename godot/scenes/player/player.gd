@@ -38,9 +38,12 @@ var _prev_contacts: Dictionary = {}  # instance_id -> true
 @onready var _anim_sprite: AnimatedSprite2D = $AnimatedSprite2D
 
 
+var _categories: Array = ["CREATURE"]
+
 func _ready() -> void:
 	add_to_group("player")
 	add_to_group("living")
+	add_to_group("game_objects")
 
 	var kick_shape := RectangleShape2D.new()
 	kick_shape.size = Vector2(KICK_RANGE, KICK_HEIGHT)
@@ -241,6 +244,14 @@ func clear_speed_modifier() -> void:
 	_slow_count = maxi(0, _slow_count - 1)
 	if _slow_count == 0:
 		_speed_modifier = 1.0
+
+
+func get_tags() -> Array:
+	return ["LIVING"]
+
+
+func get_categories() -> Array:
+	return _categories
 
 
 func get_effective_tags() -> Array:

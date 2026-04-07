@@ -1,7 +1,6 @@
 """Deterministic validity evaluator — no LLM call.
 
-Checks structural correctness of CreatorOutputSpec against
-game rules: contradictions, signature parsing, count limits, etc.
+V2: checks substance, element, tags (0-3), behaviors, name, visual.
 """
 
 from __future__ import annotations
@@ -10,32 +9,29 @@ import dataclasses
 import json
 from dataclasses import dataclass
 
-from app.models.behaviors import (
-    BehaviorParseError,
-    parse_behavior_string,
-)
-from app.models.tags import (
-    TAG_CONTRADICTIONS,
-    Tag,
-)
+from app.models.blueprint import BehaviorVerb
+from app.models.substances import Element, Substance
+from app.models.tags import LLM_VISIBLE_TAGS, Category
 from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorContext
+
+_V2_TAG_VALUES = frozenset(t.value for t in LLM_VISIBLE_TAGS)
+_SUBSTANCE_VALUES = frozenset(s.value for s in Substance)
+_ELEMENT_VALUES = frozenset(e.value for e in Element)
+_VERB_VALUES = frozenset(v.value for v in BehaviorVerb)
+_CATEGORY_VALUES = frozenset(c.value for c in Category)
 
 
 @dataclass
 class ValidityEvaluator(Evaluator[str, str, object]):
-    """Deterministic checks on structured output correctness.
+    """Deterministic checks on V2 structured output correctness."""
 
-    JSON parse failure is catastrophic (score 0.0). Other checks
-    are severity-weighted: structural issues (tags, signature)
-    weigh more than cosmetic ones (name length).
-    """
-
-    # Severity weights for each check (higher = more important)
     CHECK_WEIGHTS: dict[str, int] = dataclasses.field(default_factory=lambda: {
-        "valid_tag_enums": 2,
+        "valid_substance": 2,
+        "valid_element": 1,
+        "valid_categories": 1,
+        "valid_tags": 2,
         "tag_count": 1,
-        "no_contradictions": 2,
-        "signature_parse": 2,
+        "valid_behaviors": 1,
         "name_length": 1,
         "visual_desc_length": 1,
     })
@@ -43,7 +39,6 @@ class ValidityEvaluator(Evaluator[str, str, object]):
     def evaluate(self, ctx: EvaluatorContext[str, str, object]) -> dict[str, EvaluationReason]:
         output_text = ctx.output or ""
 
-        # 1. Parse as JSON — gate check, instant 0.0 on failure
         try:
             data = json.loads(output_text)
         except (json.JSONDecodeError, TypeError):
@@ -51,44 +46,35 @@ class ValidityEvaluator(Evaluator[str, str, object]):
 
         checks: dict[str, bool] = {}
 
-        # 2. Extract and validate tags
+        # Substance (required)
+        checks["valid_substance"] = data.get("substance", "") in _SUBSTANCE_VALUES
+
+        # Element (optional)
+        element = data.get("element")
+        checks["valid_element"] = element is None or element in _ELEMENT_VALUES
+
+        # Categories (0-7, valid Category values)
+        raw_cats = data.get("categories", [])
+        checks["valid_categories"] = all(c in _CATEGORY_VALUES for c in raw_cats)
+
+        # Tags (0-3, V2 visible set)
         raw_tags = data.get("tags", [])
-        try:
-            tags = [Tag(t) for t in raw_tags]
-        except (ValueError, KeyError):
-            tags = []
-            checks["valid_tag_enums"] = False
+        checks["tag_count"] = 0 <= len(raw_tags) <= 3
+        checks["valid_tags"] = all(t in _V2_TAG_VALUES for t in raw_tags)
 
-        if "valid_tag_enums" not in checks:
-            checks["valid_tag_enums"] = True
+        # Behaviors (0-4, valid verbs)
+        behaviors = data.get("behaviors", [])
+        checks["valid_behaviors"] = all(
+            isinstance(b, dict) and b.get("verb", "") in _VERB_VALUES and b.get("target_description")
+            for b in behaviors
+        ) and len(behaviors) <= 4
 
-        # 3. Tag count (2-4)
-        checks["tag_count"] = 2 <= len(raw_tags) <= 4
-
-        # 4. No contradictions
-        if checks["valid_tag_enums"]:
-            tag_set = set(tags)
-            checks["no_contradictions"] = not any(pair <= tag_set for pair in TAG_CONTRADICTIONS)
-        else:
-            checks["no_contradictions"] = False
-
-        # 5. Signature parses (if present)
-        signature = data.get("signature")
-        if signature is not None:
-            try:
-                parse_behavior_string(str(signature))
-                checks["signature_parse"] = True
-            except (BehaviorParseError, ValueError, Exception):
-                checks["signature_parse"] = False
-        else:
-            checks["signature_parse"] = True  # None is valid (no signature)
-
-        # 6. Name length (1-3 words)
+        # Name length (1-3 words)
         name = data.get("name", "")
         words = str(name).strip().split()
         checks["name_length"] = 1 <= len(words) <= 3
 
-        # 7. Visual description length (>=40 chars for sprite generation)
+        # Visual description length (>=40 chars)
         vd = data.get("visual_descriptor", {})
         visual_desc = vd.get("visual_description", "") if isinstance(vd, dict) else ""
         checks["visual_desc_length"] = len(visual_desc) >= 40

@@ -34,6 +34,7 @@ dev = [
     "mypy>=1.14",
     "pydantic-evals>=0.1.0",
     "scipy>=1.0.0",
+    "pyyaml>=6.0",
 ]
 experiment = [
     "diffusers>=0.36.0",
@@ -74,6 +75,7 @@ select = [
 "backend/evals/run_comparison.py" = ["T20"]
 "backend/evals/run_distribution.py" = ["T20"]
 "backend/evals/distribution.py" = ["T20"]
+"backend/evals/test_embedding_match.py" = ["T20"]
 "backend/evals/dataset.py" = ["E501"]
 
 [tool.pytest.ini_options]
