@@ -70,9 +70,9 @@ func init_from_blueprint(bp: Dictionary) -> void:
 	if has_field and field_range > 0:
 		_create_object_field(field_range)
 
-	# Creature behavior (wired in Phase 8b — placeholder)
-	# if autonomous:
-	#     _create_creature_behavior()
+	# Creature behavior
+	if autonomous:
+		_create_creature_behavior()
 
 	# Debug label
 	var debug_label_script: GDScript = preload("res://scripts/ui/debug_label.gd")
@@ -168,6 +168,14 @@ func get_cascade_neighbors() -> Array:
 		if body != self and body.has_method("get_object_name"):
 			neighbors.append(body)
 	return neighbors
+
+
+func _create_creature_behavior() -> void:
+	var cb_script = preload("res://scripts/systems/creature_behavior.gd")
+	_creature_behavior = cb_script.new()
+	_creature_behavior.name = "CreatureBehavior"
+	add_child(_creature_behavior)
+	_creature_behavior.init_creature(self, object_name)
 
 
 func _create_object_field(range_cm: int) -> void:

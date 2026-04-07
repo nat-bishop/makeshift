@@ -29,7 +29,7 @@ func _on_goal_body_entered(body: Node2D) -> void:
 # --- Shared helpers ---
 
 func _is_player(body: Node) -> bool:
-	return body is CharacterBody2D and body.has_method("get_effective_tags")
+	return body is CharacterBody2D and body.is_in_group("player")
 
 
 func _respawn_player(body: Node2D) -> void:
@@ -93,10 +93,10 @@ func _on_kill_zone_entered(body: Node2D) -> void:
 		WorldMutations.apply_damage(body, 999.0)
 
 
-func _create_env_body(pos: Vector2, size: Vector2, env_tags: Array, color: Color, env_id: String = "", solid: bool = true) -> StaticBody2D:
+func _create_env_body(pos: Vector2, size: Vector2, env_name: String, bp: Dictionary, color: Color, solid: bool = true) -> StaticBody2D:
 	var body := StaticBody2D.new()
 	body.set_script(ENV_BODY_SCRIPT)
 	body.position = pos + size / 2
 	add_child(body)
-	body.init_env(env_id if env_id != "" else "env_%d" % body.get_instance_id(), env_tags, size, color, solid)
+	body.init_env(env_name, bp, size, color, solid)
 	return body

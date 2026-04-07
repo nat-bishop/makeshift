@@ -1,33 +1,31 @@
 extends PanelContainer
+## V3 debug overlay: shows name, HP/armor, states, affordance, physics.
 
-var _game_object: RigidBody2D
+var _game_object: Node
 var _name_label: Label
-var _id_label: Label
-var _tag_container: HFlowContainer
-var _last_durability: int = -1
-var _last_tags: Array[String] = []
+var _state_container: HFlowContainer
+var _last_hp: int = -1
+var _last_states: Array = []
 var _above_offset: float = 8.0
 
 
-func init(game_obj: RigidBody2D) -> void:
+func init(game_obj: Node) -> void:
 	_game_object = game_obj
 	visible = GameManager.debug_mode
 	set_process(visible)
 
-	# Semi-transparent background — compact padding
 	add_theme_stylebox_override("panel",
 		InfoWidgets.make_stylebox(Color(0.05, 0.05, 0.08, 0.75), 3, 4, 3))
 
-	# Calculate offset from object center to top of sprite
-	var vd: Dictionary = game_obj.blueprint.get("visual_descriptor", {})
-	var size_category: String = vd.get("size_category", "medium")
-	var size_data: Dictionary = PhysicsComposer.get_size_data(size_category)
+	# Position above sprite
+	var phys: Dictionary = game_obj.blueprint.get("physics", {})
+	var height_cm: int = phys.get("height_cm", 30)
+	var size_cat: String = PhysicsComposer.size_from_height(height_cm)
+	var size_data: Dictionary = PhysicsComposer.get_size_data(size_cat)
 	_above_offset = size_data["sprite"] / 2.0 + 4
 
-	# Reposition on resize so bottom of card is above sprite top, centered
 	resized.connect(_reposition)
 
-	# Build layout
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 2)
 	add_child(vbox)
@@ -38,25 +36,10 @@ func init(game_obj: RigidBody2D) -> void:
 	_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(_name_label)
 
-	# Object ID (truncated)
-	_id_label = Label.new()
-	_id_label.add_theme_font_size_override("font_size", 8)
-	_id_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.55))
-	_id_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var obj_id: String = game_obj.blueprint.get("id", "?")
-	_id_label.text = obj_id.left(12)
-	vbox.add_child(_id_label)
-
-	_tag_container = HFlowContainer.new()
-	_tag_container.add_theme_constant_override("h_separation", 2)
-	_tag_container.add_theme_constant_override("v_separation", 1)
-	vbox.add_child(_tag_container)
-
-	# Behaviors — static from blueprint
-	var behaviors: Array = game_obj.blueprint.get("behaviors", [])
-	if not behaviors.is_empty():
-		for b in behaviors:
-			vbox.add_child(InfoWidgets.create_behavior_label(b, 9))
+	_state_container = HFlowContainer.new()
+	_state_container.add_theme_constant_override("h_separation", 2)
+	_state_container.add_theme_constant_override("v_separation", 1)
+	vbox.add_child(_state_container)
 
 	EventBus.debug_toggled.connect(_on_debug_toggled)
 
@@ -70,37 +53,39 @@ func _reposition() -> void:
 
 
 func _process(_delta: float) -> void:
-	var dur: int = _game_object.current_durability
-	var tags: Array[String] = _game_object.tags
-	if dur != _last_durability or tags != _last_tags:
+	var hp: int = _game_object.current_hp if "current_hp" in _game_object else 0
+	var states: Array = _game_object.get_states() if _game_object.has_method("get_states") else []
+	if hp != _last_hp or states != _last_states:
 		_refresh()
 
 
 func _refresh() -> void:
-	_last_durability = _game_object.current_durability
-	_last_tags = _game_object.tags.duplicate()
+	_last_hp = _game_object.current_hp if "current_hp" in _game_object else 0
+	_last_states = _game_object.get_states().duplicate() if _game_object.has_method("get_states") else []
 
-	# Name + durability + size
 	var bp: Dictionary = _game_object.blueprint
-	var vd: Dictionary = bp.get("visual_descriptor", {})
-	var size_cat: String = vd.get("size_category", "medium")
-	_name_label.text = "%s [%d/%d] (%s)" % [
-		bp.get("name", "?"), _last_durability, bp.get("starting_durability", 150), size_cat
+	var phys: Dictionary = bp.get("physics", {})
+	var dest: Dictionary = bp.get("destructibility", {})
+	var aff_names := ["carry", "mount", "climb", "none"]
+	var aff: int = bp.get("affordance", 3)
+	var aff_str: String = aff_names[aff] if aff >= 0 and aff < aff_names.size() else "?"
+
+	_name_label.text = "%s [%d/%d] arm=%d %s" % [
+		bp.get("name", "?"), _last_hp, dest.get("hp", 50), dest.get("armor", 0), aff_str
 	]
 
-	# Rebuild tag badges
-	for child in _tag_container.get_children():
+	for child in _state_container.get_children():
 		child.queue_free()
-	for tag in _last_tags:
-		_tag_container.add_child(InfoWidgets.create_tag_badge(tag, 9))
+	for state in _last_states:
+		_state_container.add_child(InfoWidgets.create_state_badge(state, 9))
 
 
 func _on_debug_toggled(on: bool) -> void:
 	visible = on
 	set_process(on)
 	if on:
-		_last_durability = -1
-		_last_tags = []
+		_last_hp = -1
+		_last_states = []
 
 
 func _exit_tree() -> void:

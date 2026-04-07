@@ -245,3 +245,27 @@ func clear_speed_modifier() -> void:
 
 func get_effective_tags() -> Array:
 	return ["LIVING"]
+
+
+func get_object_name() -> String:
+	return "player"
+
+
+func get_states() -> Array:
+	return []
+
+
+func get_tags() -> Array[String]:
+	return ["LIVING"]
+
+
+func get_facing() -> int:
+	return _facing
+
+
+func add_state(_state: String, _duration: float = 0.0) -> void:
+	pass  # Player state effects handled by player-specific logic
+
+
+func remove_state(_state: String) -> void:
+	pass
