@@ -11,7 +11,7 @@ from typing import TypeAlias
 import structlog
 from PIL import Image
 
-from app.models.blueprint import GameObjectBlueprint, VisualDescriptor
+from app.models.blueprint import GameObjectBlueprint
 
 logger = structlog.get_logger()
 
@@ -81,11 +81,11 @@ def _prompt_hash(prompt: str) -> str:
     return hashlib.sha256(prompt.encode()).hexdigest()[:16]
 
 
-def build_prompt(name: str, visual_descriptor: VisualDescriptor) -> str:
-    """Build an image generation prompt from a name and VisualDescriptor."""
+def build_prompt(name: str, visual_description: str) -> str:
+    """Build an image generation prompt from a name and visual description string."""
     parts = [
         "mixed media collage style paper cutout, side view, flat lighting, clean edges",
-        f"{name}, {visual_descriptor.visual_description}",
+        f"{name}, {visual_description}",
         "single centered object, contrasting solid background color, no text",
     ]
     return ", ".join(parts)
@@ -154,7 +154,7 @@ async def generate_sprite(
     from app.config import settings
 
     object_id = blueprint.id
-    prompt = build_prompt(blueprint.name, blueprint.visual_descriptor)
+    prompt = build_prompt(blueprint.name, blueprint.visual_description)
     cache_path = get_cached_sprite_path(prompt)
     sprite_url = f"/static/sprites/{cache_path.name}"
 

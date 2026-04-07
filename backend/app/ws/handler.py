@@ -48,6 +48,18 @@ async def websocket_handler(websocket: WebSocket, session_id: str) -> None:
                 object_id = data.get("object_id", "")
                 if object_id:
                     await _handle_request_sprite(websocket, session_id, object_id)
+            elif msg_type == "state_changed":
+                object_name = data.get("object_name", "")
+                active_states = data.get("active_states", [])
+                if object_name:
+                    logger.info(
+                        "ws_state_changed",
+                        session_id=session_id,
+                        object_name=object_name,
+                        states=active_states,
+                    )
+                    # Re-evaluation is triggered by the backend when it
+                    # processes state changes. Results pushed via cache_updated.
             else:
                 logger.warning("ws_unknown_message_type", msg_type=msg_type)
                 await websocket.send_json(
@@ -83,7 +95,7 @@ async def _handle_request_sprite(
         logger.debug("request_sprite_not_found", session_id=session_id, object_id=object_id)
         return
 
-    prompt = build_prompt(blueprint.name, blueprint.visual_descriptor)
+    prompt = build_prompt(blueprint.name, blueprint.visual_description)
     cache_path = get_cached_sprite_path(prompt)
     if not cache_path.exists():
         logger.debug("request_sprite_not_ready", session_id=session_id, object_id=object_id)
@@ -149,5 +161,61 @@ async def send_sprite_failed(session_id: str, object_id: str, reason: str = "") 
             "type": "sprite_failed",
             "object_id": object_id,
             "reason": reason,
+        },
+    )
+
+
+async def send_cache_ready(
+    session_id: str, object_name: str, entries: list[dict]
+) -> None:
+    """Deliver pairwise cache entries to clients after spawn integration."""
+    logger.info(
+        "send_cache_ready",
+        session_id=session_id,
+        object_name=object_name,
+        entry_count=len(entries),
+    )
+    await _broadcast(
+        session_id,
+        {
+            "type": "cache_ready",
+            "object_name": object_name,
+            "entries": entries,
+        },
+    )
+
+
+async def send_behaviors_ready(
+    session_id: str, creature_name: str, behaviors: list[dict]
+) -> None:
+    """Deliver creature behavior entries to clients."""
+    logger.info(
+        "send_behaviors_ready",
+        session_id=session_id,
+        creature_name=creature_name,
+        behavior_count=len(behaviors),
+    )
+    await _broadcast(
+        session_id,
+        {
+            "type": "behaviors_ready",
+            "creature_name": creature_name,
+            "behaviors": behaviors,
+        },
+    )
+
+
+async def send_cache_updated(session_id: str, entries: list[dict]) -> None:
+    """Deliver re-evaluated pairwise cache entries after state change."""
+    logger.info(
+        "send_cache_updated",
+        session_id=session_id,
+        entry_count=len(entries),
+    )
+    await _broadcast(
+        session_id,
+        {
+            "type": "cache_updated",
+            "entries": entries,
         },
     )

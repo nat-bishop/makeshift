@@ -1,0 +1,79 @@
+# Expected creature behavior pairs for V3 eval.
+# Each entry describes what a creature should do when encountering a target.
+# movement: approach(0), flee(1), orbit(2), ignore(3)
+# action: nothing(0), damage(1), heal(2), add_state(3), remove_state(4), destroy(5), take(6)
+
+- creature: zombie
+  target: brain
+  expected: {movement: 0, action: 5}
+  note: "zombie eats brains — approach and destroy"
+
+- creature: zombie
+  target: fire
+  expected: {movement: 1}
+  note: "zombie avoids fire — flee"
+
+- creature: firefighter
+  target: burning tree
+  expected: {movement: 0, action: 4, param: 1}
+  note: "firefighter extinguishes fire — approach, remove on_fire"
+
+- creature: firefighter
+  target: injured person
+  expected: {movement: 0, action: 2}
+  note: "firefighter rescues injured — approach, heal"
+
+- creature: cat
+  target: mouse
+  expected: {movement: 0, action: 5}
+  note: "cat hunts mice — approach and destroy"
+
+- creature: cat
+  target: dog
+  expected: {movement: 1}
+  note: "cat runs from dogs — flee"
+
+- creature: cat
+  target: ball of yarn
+  expected: {movement: 2}
+  note: "cat plays with yarn — orbit"
+
+- creature: guard dog
+  target: player
+  expected: {movement: 2}
+  note: "guard dog patrols near player — orbit"
+
+- creature: guard dog
+  target: criminal
+  expected: {movement: 0, action: 1}
+  note: "guard dog attacks threats — approach and damage"
+
+- creature: doctor
+  target: injured person
+  expected: {movement: 0, action: 2}
+  note: "doctor heals injured — approach and heal"
+
+- creature: bee
+  target: flower
+  expected: {movement: 0}
+  note: "bee approaches flowers"
+
+- creature: bee
+  target: bear
+  expected: {movement: 0, action: 1}
+  note: "bee stings threats — approach and damage"
+
+- creature: vampire
+  target: garlic
+  expected: {movement: 1}
+  note: "vampire avoids garlic — flee"
+
+- creature: vampire
+  target: person
+  expected: {movement: 0, action: 1}
+  note: "vampire attacks people — approach and damage"
+
+- creature: chicken
+  target: wolf
+  expected: {movement: 1}
+  note: "chicken runs from predators — flee"

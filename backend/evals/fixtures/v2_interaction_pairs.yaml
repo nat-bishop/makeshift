@@ -1,0 +1,126 @@
+# Ground truth: expected pairwise interactions derived from V2 rules_data.py
+# Used by V3 eval metrics to verify LLM pairwise cache quality.
+# Format: pair [A, B], expected outcome fields.
+# Damage ranges are approximate — the LLM should produce values in the ballpark.
+
+# Fire / Heat
+- pair: [fire, wood]
+  expected: {damage_b: [5, 30], state_b: on_fire, destroy_b: false}
+  note: "heat_flammable_ignite: HEAT_SOURCE + FLAMMABLE -> ignite + DOT"
+
+- pair: [fire, ice]
+  expected: {state_b: remove_frozen, destroy_b: false}
+  note: "heat_frozen_melt: HEAT_SOURCE + FROZEN -> melt"
+
+- pair: [water, fire]
+  expected: {state_b: remove_on_fire, destroy_a: false}
+  note: "liquid_heat_extinguish: LIQUID + HEAT_SOURCE -> extinguish"
+
+- pair: [lava, wood]
+  expected: {damage_b: [10, 40], state_b: on_fire}
+  note: "molten_flammable_ignite: MOLTEN + FLAMMABLE -> ignite + DOT"
+
+- pair: [lava, person]
+  expected: {damage_b: [20, 60]}
+  note: "molten_living_burn: MOLTEN + LIVING -> severe burn"
+
+# Sharp / Impact
+- pair: [sword, glass bottle]
+  expected: {damage_b: [15, 40], destroy_b: false}
+  note: "sharp_breakable_damage: SHARP + BREAKABLE -> cut"
+
+- pair: [boulder, glass bottle]
+  expected: {damage_b: [15, 40], destroy_b: true}
+  note: "heavy_breakable_crush: HEAVY + BREAKABLE -> crush"
+
+# Cold / Freeze
+- pair: [ice cube, water]
+  expected: {state_b: frozen}
+  note: "cold_liquid_freeze: COLD + LIQUID -> freeze"
+
+- pair: [ice cube, lava]
+  expected: {state_b: remove_molten}
+  note: "cold_molten_freeze: COLD + MOLTEN -> solidify"
+
+# Explosive
+- pair: [dynamite, campfire]
+  expected: {damage_a: [50, 100], damage_b: [30, 80], force_b: [20, 80]}
+  note: "explosive_heat_detonate: EXPLOSIVE + HEAT_SOURCE -> boom"
+
+- pair: [bomb, glass window]
+  expected: {damage_b: [50, 100], destroy_b: true, force_b: [20, 60]}
+  note: "explosive_breakable_destroy: EXPLOSIVE + BREAKABLE -> obliterate"
+
+# Electricity
+- pair: [lightning rod, iron sword]
+  expected: {damage_b: [10, 40], state_b: electrified}
+  note: "electric_metallic_electrify: ELECTRIC + METALLIC -> electrify"
+
+- pair: [live wire, water puddle]
+  expected: {damage_b: [10, 40], state_b: electrified}
+  note: "electric_liquid_electrify: ELECTRIC + LIQUID -> electrify"
+
+- pair: [lightning, person]
+  expected: {damage_b: [20, 50]}
+  note: "electric_living_shock: ELECTRIC + LIVING -> shock"
+
+# Acid / Corrosion
+- pair: [acid, glass bottle]
+  expected: {damage_b: [10, 30], state_b: corroded}
+  note: "acidic_breakable_corrode: ACIDIC + BREAKABLE -> corrode + DOT"
+
+- pair: [acid, stone wall]
+  expected: {damage_b: [5, 20], state_b: corroded}
+  note: "acidic_rigid_weaken: ACIDIC + RIGID -> weaken + corrode"
+
+- pair: [acid, person]
+  expected: {damage_b: [10, 30]}
+  note: "acidic_living_damage: ACIDIC + LIVING -> acid burn"
+
+# Wind
+- pair: [fan, feather]
+  expected: {force_b: [20, 60], push_pull: push}
+  note: "wind_light_push: WIND_SOURCE + LIGHT -> push"
+
+- pair: [tornado, smoke cloud]
+  expected: {force_b: [20, 60], push_pull: push}
+  note: "wind_gas_disperse: WIND_SOURCE + GAS -> disperse"
+
+# Magnetic
+- pair: [magnet, iron sword]
+  expected: {force_b: [15, 50], push_pull: pull}
+  note: "magnetic_metallic_attract: MAGNETIC + METALLIC -> pull"
+
+# Toxic
+- pair: [poison mushroom, rabbit]
+  expected: {damage_b: [5, 20]}
+  note: "toxic_living_damage: TOXIC + LIVING -> poison"
+
+# Reflective
+- pair: [mirror shield, fire]
+  expected: {damage_b: [5, 20]}
+  note: "reflective_heat_reflect: REFLECTIVE + HEAT_SOURCE -> reflect"
+
+# Frozen + fragile
+- pair: [frozen statue, glass vase]
+  expected: {damage_b: [20, 50]}
+  note: "frozen_breakable_shatter: FROZEN + BREAKABLE -> shatter"
+
+# Sticky
+- pair: [tar pit, person]
+  expected: {force_b: [0, 10], continuous: true}
+  note: "sticky_living_struggle: slows movement"
+
+# Evaporation
+- pair: [campfire, water puddle]
+  expected: {destroy_b: false}
+  note: "heat_liquid_evaporate: HEAT_SOURCE + LIQUID -> evaporate"
+
+# Boring pairs (should produce nothing or minimal)
+- pair: [rock, rock]
+  expected: {damage_a: [0, 5], damage_b: [0, 5]}
+  note: "no rule: inert pair"
+
+- pair: [wooden sword, wooden shield]
+  expected: {damage_b: [0, 15]}
+  note: "minor: wood-on-wood"

@@ -1,3 +1,5 @@
+"""Session and world object models."""
+
 from pydantic import BaseModel, Field
 
 from app.models.blueprint import GameObjectBlueprint
@@ -8,7 +10,8 @@ class WorldObject(BaseModel):
     blueprint: GameObjectBlueprint
     x: float = 0.0
     y: float = 0.0
-    durability: float = 0.0  # DB default; actual value set from blueprint.starting_durability
+    hp: float = 0.0
+    active_states: list[int] = Field(default_factory=list)
 
 
 class Session(BaseModel):

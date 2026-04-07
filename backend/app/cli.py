@@ -101,44 +101,19 @@ class Timer:
 
 
 async def _run_llm(description: str, timer: Timer) -> Any:
-    """Run the LLM creator agent. Uses agent.run() so PydanticAI retries ModelRetry
-    internally (sends error feedback back to the LLM for correction).
-    """
-    import uuid
-
-    from app.creator.agent import _get_agent
-    from app.models.behaviors import expand_behavior_spec, parse_behavior_string
-    from app.models.blueprint import GameObjectBlueprint
-    from app.models.tag_behaviors import resolve_implied_behaviors
-
-    agent = _get_agent()
-    prompt = f"Create a game object for: {description}"
+    """Run the V3 creator pipeline: parallel 1-token LLM calls."""
+    from app.cache.store import CacheStore
+    from app.creator.pipeline import create_object
 
     t0 = time.monotonic()
-    result = await agent.run(prompt)
+    cache = await CacheStore.open("data/cache.db")
+    try:
+        blueprint = await create_object(description, cache)
+    finally:
+        await cache.close()
     elapsed = time.monotonic() - t0
-    spec = result.output
-
-    usage = result.usage()
-    tok_s = round(usage.output_tokens / elapsed, 1) if elapsed > 0 else 0
-    timer.add(
-        "llm generate",
-        elapsed,
-        f"{usage.input_tokens} input, {usage.output_tokens} output tokens, {tok_s} tok/s",
-    )
-
-    explicit = None
-    if spec.signature:
-        explicit = expand_behavior_spec(parse_behavior_string(spec.signature))
-    behaviors = resolve_implied_behaviors(spec.tags, explicit)
-    return GameObjectBlueprint(
-        id=str(uuid.uuid4()),
-        name=spec.name,
-        description=description,
-        tags=spec.tags,
-        behaviors=behaviors,
-        visual_descriptor=spec.visual_descriptor,
-    )
+    timer.add("llm create", elapsed, f"name={blueprint.name}")
+    return blueprint
 
 
 async def _run_image(prompt: str, timer: Timer) -> bytes:
@@ -218,17 +193,15 @@ async def cmd_image(prompt: str, out_path: Path) -> None:
 async def cmd_sprite(description: str, out_path: str | None, skip_llm: bool) -> None:
     from app.config import settings
     from app.images.pipeline import build_prompt
-    from app.models.blueprint import VisualDescriptor
 
     timer = Timer()
 
     if skip_llm:
         name = description
-        visual = VisualDescriptor(visual_description=description, size_category="medium")
-        prompt = build_prompt(name, visual)
+        prompt = build_prompt(name, description)
     else:
         blueprint = await _run_llm(description, timer)
-        prompt = build_prompt(blueprint.name, blueprint.visual_descriptor)
+        prompt = build_prompt(blueprint.name, blueprint.visual_description)
         name = blueprint.name
 
     raw_bytes = await _run_image(prompt, timer)

@@ -1,3 +1,5 @@
+"""Object creation endpoint — V3 pipeline with pairwise cache integration."""
+
 from __future__ import annotations
 
 import asyncio
@@ -7,16 +9,19 @@ import structlog
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from app.creator.agent import create_object
 from app.models.blueprint import GameObjectBlueprint
 from app.sessions.manager import SessionManager
-from app.ws.handler import send_sprite_failed, send_sprite_ready
+from app.ws.handler import (
+    send_behaviors_ready,
+    send_cache_ready,
+    send_sprite_failed,
+    send_sprite_ready,
+)
 
 logger = structlog.get_logger()
 
 router = APIRouter(prefix="/api/sessions/{session_id}/objects", tags=["objects"])
 
-# Per-object creation cost charged upfront: LLM (~$0.001) + image (~$0.04)
 OBJECT_CREATION_COST = 0.041
 
 _background_tasks: set[asyncio.Task[Any]] = set()
@@ -38,34 +43,37 @@ async def create_object_endpoint(
     """Create a new game object from a text description.
 
     Returns the blueprint immediately.
-    Sprite generation happens async and is delivered via WebSocket.
+    Sprite generation + pairwise cache population happen async via background tasks.
     """
     db = request.app.state.db
     manager = SessionManager(db)
+    cache = request.app.state.cache
 
-    # Atomically reserve budget before calling the LLM
-    success, budget_remaining = await manager.reserve_budget(session_id, OBJECT_CREATION_COST)
+    # Atomically reserve budget
+    success, budget_remaining = await manager.reserve_budget(
+        session_id, OBJECT_CREATION_COST
+    )
     if not success:
         if budget_remaining < 0:
-            logger.warning("object_create_session_not_found")
             raise HTTPException(status_code=404, detail="Session not found")
-        logger.warning("object_create_budget_exceeded", budget_remaining=budget_remaining)
         raise HTTPException(status_code=402, detail="Session budget exceeded")
 
     logger.info("object_create_request", description_len=len(body.description))
 
-    # Create object via LLM (budget already reserved)
-    blueprint = await create_object(body.description)
+    # Create object via V3 pipeline
+    from app.creator.pipeline import create_object
 
-    # Save object
+    blueprint = await create_object(body.description, cache)
+
+    # Save object to session
     await manager.save_object(session_id, blueprint)
-    logger.debug("object_saved", session_id=session_id, object_id=blueprint.id)
 
-    # Schedule async sprite generation (will deliver via WebSocket)
-    task = asyncio.create_task(_generate_and_deliver_sprite(session_id, blueprint))
+    # Schedule background tasks: sprite gen + pairwise integration
+    task = asyncio.create_task(
+        _background_spawn(session_id, blueprint, manager, cache)
+    )
     _background_tasks.add(task)
     task.add_done_callback(_background_tasks.discard)
-    logger.debug("sprite_task_created", session_id=session_id, object_id=blueprint.id)
 
     return CreateObjectResponse(
         blueprint=blueprint.model_dump(mode="json"),
@@ -73,11 +81,26 @@ async def create_object_endpoint(
     )
 
 
+async def _background_spawn(
+    session_id: str,
+    blueprint: GameObjectBlueprint,
+    manager: SessionManager,
+    cache: Any,
+) -> None:
+    """Background: sprite gen + pairwise screening/eval + creature behavior."""
+    # Run sprite gen and pairwise integration concurrently
+    await asyncio.gather(
+        _generate_and_deliver_sprite(session_id, blueprint),
+        _run_spawn_integration(session_id, blueprint, manager, cache),
+        return_exceptions=True,
+    )
+
+
 async def _generate_and_deliver_sprite(
     session_id: str,
     blueprint: GameObjectBlueprint,
 ) -> None:
-    """Background task: generate sprite and push via WebSocket."""
+    """Generate sprite and push via WebSocket."""
     from app.images.pipeline import generate_sprite
 
     object_id = blueprint.id
@@ -85,24 +108,110 @@ async def _generate_and_deliver_sprite(
     try:
         result = await generate_sprite(blueprint)
         if result is None:
-            logger.warning("sprite_generation_returned_none", object_id=object_id)
             await send_sprite_failed(session_id, object_id, "generation_failed")
             return
-
         await send_sprite_ready(session_id, object_id, result.sprite_url)
-        logger.info(
-            "sprite_delivery_success",
-            session_id=session_id,
-            object_id=object_id,
-            sprite_url=result.sprite_url,
-        )
     except Exception as exc:
-        logger.error(
-            "sprite_delivery_failed",
-            object_id=object_id,
-            error=str(exc),
-        )
+        logger.error("sprite_delivery_failed", object_id=object_id, error=str(exc))
         try:
             await send_sprite_failed(session_id, object_id, "generation_exception")
         except Exception:
             logger.error("sprite_failed_notify_error", object_id=object_id, exc_info=True)
+
+
+async def _run_spawn_integration(
+    session_id: str,
+    blueprint: GameObjectBlueprint,
+    manager: SessionManager,
+    cache: Any,
+) -> None:
+    """Run pairwise screening + eval + creature behavior for newly spawned object."""
+    from app.cache.scene import SceneCache
+    from app.engine.creature import evaluate_creature_behaviors
+    from app.engine.pairwise import spawn_integration
+
+    # Get or create scene cache for this session
+    scenes: dict[str, SceneCache] = getattr(cache, "_scenes", {})
+    if not hasattr(cache, "_scenes"):
+        cache._scenes = scenes
+    if session_id not in scenes:
+        scenes[session_id] = SceneCache()
+    scene = scenes[session_id]
+
+    # Load all session objects for pairwise context
+    session = await manager.get_session(session_id)
+    if session is None:
+        return
+
+    scene_objects = [
+        obj.blueprint
+        for obj in session.objects
+        if obj.blueprint.id != blueprint.id
+    ]
+
+    # Pairwise integration
+    try:
+        results = await spawn_integration(blueprint, scene_objects, cache, scene)
+        if results:
+            entries = []
+            for target_name, pr in results.items():
+                entry = pr.to_dict()
+                key = scene.get_pairwise(blueprint.name, target_name)
+                # Include names for client-side cache key construction
+                a, b = sorted(
+                    [blueprint.name.lower(), target_name.lower()]
+                )
+                entry["name_a"] = a
+                entry["name_b"] = b
+                entries.append(entry)
+            await send_cache_ready(session_id, blueprint.name, entries)
+    except Exception:
+        logger.error(
+            "spawn_integration_failed",
+            session_id=session_id,
+            object_name=blueprint.name,
+            exc_info=True,
+        )
+
+    # Creature behavior (if new object is autonomous or scene has creatures)
+    try:
+        if blueprint.autonomous:
+            scene_names = [o.name for o in scene_objects]
+            behaviors = await evaluate_creature_behaviors(
+                blueprint, scene_objects, scene_names, scene
+            )
+            if behaviors:
+                await send_behaviors_ready(
+                    session_id,
+                    blueprint.name,
+                    [
+                        {"target": name, **b.to_dict()}
+                        for name, b in behaviors.items()
+                    ],
+                )
+
+        # Also evaluate existing creatures against the new object
+        for obj in scene_objects:
+            if obj.autonomous:
+                scene_names = [
+                    o.name for o in scene_objects if o.id != obj.id
+                ] + [blueprint.name]
+                behaviors = await evaluate_creature_behaviors(
+                    obj, [blueprint], scene_names, scene
+                )
+                if behaviors:
+                    await send_behaviors_ready(
+                        session_id,
+                        obj.name,
+                        [
+                            {"target": name, **b.to_dict()}
+                            for name, b in behaviors.items()
+                        ],
+                    )
+    except Exception:
+        logger.error(
+            "creature_eval_failed",
+            session_id=session_id,
+            object_name=blueprint.name,
+            exc_info=True,
+        )

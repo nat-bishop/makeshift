@@ -1,3 +1,5 @@
+"""FastAPI application — V3 with cache.db for pairwise interactions."""
+
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
@@ -12,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from app.config import settings
 from app.logging_setup import setup_logging
 from app.middleware import session_context_middleware
-from app.routers import objects, rules, sessions
+from app.routers import interactions, objects, sessions
 from app.ws.handler import websocket_handler
 
 logger = structlog.get_logger()
@@ -25,7 +27,6 @@ DATA_DIR = Path(settings.database_path).parent
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     setup_logging()
 
-    # Optionally enable Logfire observability
     if settings.logfire_enabled:
         import logfire
 
@@ -49,13 +50,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     (STATIC_DIR / "sprites").mkdir(exist_ok=True)
     DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Warm up image pipeline singletons (lazy init on first call)
+    # Warm up image pipeline singletons
     from app.images.pipeline import get_generate_image, get_remove_bg
 
     get_generate_image()
     get_remove_bg()
 
-    # Initialize SQLite
+    # Initialize game.db (sessions + objects)
     import aiosqlite
 
     db = await aiosqlite.connect(settings.database_path)
@@ -86,10 +87,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await db.commit()
     app.state.db = db
 
-    from app.creator.agent import _get_agent
+    # Initialize cache.db (creation + pairwise caches, separate from game.db)
+    from app.cache.store import CacheStore
 
-    _get_agent()  # Warm up LLM agent
-    logger.info("llm_agent_ready")
+    cache_path = str(DATA_DIR / "cache.db")
+    cache = await CacheStore.open(cache_path)
+    app.state.cache = cache
+    logger.info("cache_db_initialized", path=cache_path)
+
+    logger.info("server_ready")
 
     yield
 
@@ -100,6 +106,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     await close_fal_client()
     await close_local_client()
+    await cache.close()
     await db.close()
 
 
@@ -122,7 +129,7 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 # Include routers
 app.include_router(sessions.router)
 app.include_router(objects.router)
-app.include_router(rules.router)
+app.include_router(interactions.router)
 
 
 # WebSocket endpoint
