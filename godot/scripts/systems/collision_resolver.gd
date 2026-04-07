@@ -1,110 +1,133 @@
 extends Node
 
+## V3 Collision Resolver: pairwise cache lookup replaces rule engine.
+## Effects are applied inline — no separate EffectExecutor.
+
 const CL = preload("res://scripts/data/collision_layers.gd")
 
 const MAX_CASCADE_DEPTH: int = 3
 const CASCADE_RADIUS: float = 96.0
+const DEFAULT_STATE_DURATION: float = 10.0
+const FORCE_SCALE: float = 5.0  # Multiply 0-100 LLM force to impulse magnitude
 
-var _effect_executor: Node
-
-
-func _ready() -> void:
-	_effect_executor = preload("res://scripts/systems/effect_executor.gd").new()
-	add_child(_effect_executor)
-
-
-func resolve_and_notify(body_a: Node, body_b: Node, cascade_depth: int = 0, trigger_mode_filter: String = "") -> void:
-	## Resolve tag-based rules AND fire ON_CONTACT behavior trigger on body_b.
-	## Consolidates the common pattern used by player, game_object, and kick.
-	resolve_collision(body_a, body_b, cascade_depth, trigger_mode_filter)
-	if body_b.has_method("fire_behavior_trigger"):
-		body_b.fire_behavior_trigger("ON_CONTACT", body_a)
+const STATE_NAMES: Array[String] = [
+	"", "on_fire", "frozen", "wet", "electrified", "poisoned", "corroded", "molten"
+]
 
 
-func resolve_collision(body_a: Node, body_b: Node, cascade_depth: int = 0, trigger_mode_filter: String = "", _resolved: Dictionary = {}) -> void:
-	# Top-level calls get a fresh dedup dict; cascades inherit the parent's.
-	# (GDScript default Dictionary is shared across calls — same as Python's mutable default.)
+func resolve_collision(body_a: Node, body_b: Node, cascade_depth: int = 0, _resolved: Dictionary = {}) -> void:
 	if cascade_depth == 0:
 		_resolved = {}
 
 	if cascade_depth > MAX_CASCADE_DEPTH:
-		Log.debug("CollisionResolver: Cascade depth exceeded for %s vs %s" % [body_a.name, body_b.name])
 		return
 
-	# Per-chain dedup: same pair can't fire twice in one resolution chain.
-	var id_a: String = _get_body_id(body_a)
-	var id_b: String = _get_body_id(body_b)
-	var pair_key: String
-	if id_a < id_b:
-		pair_key = "%s:%s:%s" % [id_a, id_b, trigger_mode_filter]
-	else:
-		pair_key = "%s:%s:%s" % [id_b, id_a, trigger_mode_filter]
-
-	if pair_key in _resolved:
-		return
-	_resolved[pair_key] = true
-
-	# Get tags from bodies
-	var tags_a: Array = TagColors.get_body_tags(body_a)
-	var tags_b: Array = TagColors.get_body_tags(body_b)
-
-	if tags_a.is_empty() and tags_b.is_empty():
+	var name_a: String = _get_name(body_a)
+	var name_b: String = _get_name(body_b)
+	if name_a.is_empty() or name_b.is_empty():
 		return
 
-	# Find matching rules
-	var rules: Array = RuleEngine.find_matching_rules(tags_a, tags_b)
-
-	# Filter by trigger mode if requested (e.g., "FIELD" from periodic tick)
-	if trigger_mode_filter != "":
-		var filtered: Array = []
-		for rule in rules:
-			if rule.get("trigger_mode", "CONTACT") == trigger_mode_filter:
-				filtered.append(rule)
-		rules = filtered
-
-	if rules.is_empty():
+	# Per-chain dedup
+	var dedup_key: String = InteractionCache.pair_key(name_a, name_b)
+	if dedup_key in _resolved:
 		return
+	_resolved[dedup_key] = true
 
-	Log.debug("CollisionResolver: %d rules matched for %s vs %s" % [rules.size(), body_a.name, body_b.name])
+	# Pairwise cache lookup
+	var entry: Dictionary = InteractionCache.lookup_pairwise(name_a, name_b)
+	if entry.is_empty():
+		return  # Uncached = nothing happens
 
-	# Record tags before effects for cascade detection
-	var tags_a_before: Array = tags_a.duplicate()
-	var tags_b_before: Array = tags_b.duplicate()
+	# Map A/B to sorted order (cache key convention: lexicographic)
+	var sorted_a: String = name_a.to_lower() if name_a.to_lower() <= name_b.to_lower() else name_b.to_lower()
+	var target_a: Node = body_a if _get_name(body_a).to_lower() == sorted_a else body_b
+	var target_b: Node = body_b if target_a == body_a else body_a
 
-	# Execute effects for each rule
-	var any_cascade_eligible: bool = false
-	for rule in rules:
-		_effect_executor.execute(rule, body_a, body_b, cascade_depth)
-		if rule.get("cascade_eligible", false):
-			any_cascade_eligible = true
+	# Record states before for cascade detection
+	var states_a_before: Array = _get_states(target_a).duplicate()
+	var states_b_before: Array = _get_states(target_b).duplicate()
 
-	# Check for cascade
-	if any_cascade_eligible and cascade_depth < MAX_CASCADE_DEPTH:
-		var tags_a_after: Array = TagColors.get_body_tags(body_a)
-		var tags_b_after: Array = TagColors.get_body_tags(body_b)
-		var a_changed: bool = not _arrays_equal(tags_a_before, tags_a_after)
-		var b_changed: bool = not _arrays_equal(tags_b_before, tags_b_after)
+	# --- Apply effects inline ---
 
-		if a_changed:
-			Log.debug("CollisionResolver: Tags changed on %s, cascading at depth %d" % [body_a.name, cascade_depth + 1])
-			_cascade_to_neighbors(body_a, cascade_depth + 1, _resolved)
-		if b_changed:
-			Log.debug("CollisionResolver: Tags changed on %s, cascading at depth %d" % [body_b.name, cascade_depth + 1])
-			_cascade_to_neighbors(body_b, cascade_depth + 1, _resolved)
+	# Damage
+	var dmg_a: int = entry.get("damage_a", 0)
+	var dmg_b: int = entry.get("damage_b", 0)
+	if dmg_a > 0:
+		WorldMutations.apply_damage(target_a, float(dmg_a))
+	if dmg_b > 0:
+		WorldMutations.apply_damage(target_b, float(dmg_b))
+
+	# State changes (0=none, 1-7=add, 8-14=remove)
+	_apply_state_change(target_a, entry.get("state_change_a", 0))
+	_apply_state_change(target_b, entry.get("state_change_b", 0))
+
+	# Force
+	var force_b: int = entry.get("force_b", 0)
+	if force_b > 0:
+		var push_pull: int = entry.get("push_pull", 0)
+		var from_pos: Vector2 = target_a.global_position if target_a is Node2D else Vector2.ZERO
+		var to_pos: Vector2 = target_b.global_position if target_b is Node2D else Vector2.ZERO
+		var force_dir: Vector2 = (to_pos - from_pos).normalized()
+		if push_pull == 1:  # pull
+			force_dir = -force_dir
+		WorldMutations.apply_impulse(target_b, force_dir, float(force_b) * FORCE_SCALE)
+		# Newton's 3rd law: force_a = force_b * mass_b / mass_a
+		if target_a is RigidBody2D and target_b is RigidBody2D:
+			var ratio: float = target_b.mass / maxf(target_a.mass, 0.001)
+			WorldMutations.apply_impulse(target_a, -force_dir, float(force_b) * FORCE_SCALE * ratio)
+
+	# Destruction
+	if entry.get("destroy_a", false):
+		_destroy(target_a)
+	if entry.get("destroy_b", false):
+		_destroy(target_b)
+
+	# Cascade on state changes
+	if cascade_depth < MAX_CASCADE_DEPTH:
+		var states_a_after: Array = _get_states(target_a)
+		var states_b_after: Array = _get_states(target_b)
+		if not _arrays_equal(states_a_before, states_a_after):
+			_cascade_to_neighbors(target_a, cascade_depth + 1, _resolved)
+		if not _arrays_equal(states_b_before, states_b_after):
+			_cascade_to_neighbors(target_b, cascade_depth + 1, _resolved)
+
+
+func _apply_state_change(target: Node, change: int) -> void:
+	if change == 0:
+		return
+	if change >= 1 and change <= 7:
+		WorldMutations.apply_add_state(target, STATE_NAMES[change], DEFAULT_STATE_DURATION)
+	elif change >= 8 and change <= 14:
+		WorldMutations.apply_remove_state(target, STATE_NAMES[change - 7])
+
+
+func _destroy(target: Node) -> void:
+	if target.has_method("take_damage"):
+		target.take_damage(99999.0)
+	elif is_instance_valid(target):
+		target.queue_free()
+
+
+func _get_name(body: Node) -> String:
+	if body.has_method("get_object_name"):
+		return body.get_object_name()
+	return ""
+
+
+func _get_states(body: Node) -> Array:
+	if body.has_method("get_states"):
+		return body.get_states()
+	return []
 
 
 func _cascade_to_neighbors(body: Node, cascade_depth: int, _resolved: Dictionary) -> void:
 	if body is not Node2D:
 		return
-
 	if body.has_method("get_cascade_neighbors"):
-		var neighbors = body.get_cascade_neighbors()
-		for neighbor in neighbors:
-			if not is_instance_valid(neighbor):
-				continue
-			resolve_collision(body, neighbor, cascade_depth, "", _resolved)
+		for neighbor in body.get_cascade_neighbors():
+			if is_instance_valid(neighbor):
+				resolve_collision(body, neighbor, cascade_depth, _resolved)
 		return
-
 	_cascade_via_space_query(body, cascade_depth, _resolved)
 
 
@@ -119,29 +142,17 @@ func _cascade_via_space_query(body: Node2D, cascade_depth: int, _resolved: Dicti
 	query.transform = Transform2D(0, body.global_position)
 	query.collision_mask = CL.OBJECTS
 	query.exclude = [body.get_rid()] if body is PhysicsBody2D else []
-
-	var results: Array = space_state.intersect_shape(query, 32)
-	Log.debug("CollisionResolver: Space query found %d neighbors near %s at %s" % [results.size(), body.name, body.global_position])
-	for result in results:
+	for result in space_state.intersect_shape(query, 32):
 		var neighbor: Node = result.get("collider", null)
-		if neighbor == null or neighbor == body:
-			continue
-		if not is_instance_valid(neighbor):
-			continue
-		resolve_collision(body, neighbor, cascade_depth, "", _resolved)
-
-
-func _get_body_id(body: Node) -> String:
-	if body.has_method("get_object_id"):
-		return body.get_object_id()
-	return str(body.get_instance_id())
+		if neighbor != null and neighbor != body and is_instance_valid(neighbor):
+			resolve_collision(body, neighbor, cascade_depth, _resolved)
 
 
 func _arrays_equal(a: Array, b: Array) -> bool:
 	if a.size() != b.size():
 		return false
-	var sorted_a: Array = a.duplicate()
-	var sorted_b: Array = b.duplicate()
-	sorted_a.sort()
-	sorted_b.sort()
-	return sorted_a == sorted_b
+	var sa: Array = a.duplicate()
+	var sb: Array = b.duplicate()
+	sa.sort()
+	sb.sort()
+	return sa == sb

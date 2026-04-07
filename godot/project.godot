@@ -23,9 +23,9 @@ config/features=PackedStringArray("4.6", "GL Compatibility")
 Log="*res://autoloads/logger.gd"
 EventBus="*res://autoloads/event_bus.gd"
 GameManager="*res://autoloads/game_manager.gd"
-RuleEngine="*res://autoloads/rule_engine.gd"
-Backend="*res://autoloads/backend.gd"
+InteractionCache="*res://autoloads/interaction_cache.gd"
 CollisionResolver="*res://scripts/systems/collision_resolver.gd"
+Backend="*res://autoloads/backend.gd"
 
 [display]
 

@@ -1,11 +1,18 @@
 extends RigidBody2D
 
+## V3 GameObject: LLM-generated physics, states instead of tags,
+## affordance instead of categories, no behavior verbs.
+
 var object_id: String = ""
 var blueprint: Dictionary = {}
-var current_durability: int = 150
-var _tag_manager: TagManager = null
-var _behavior_executor: Node = null
-var _tag_field: Node = null
+var object_name: String = ""
+var current_hp: int = 50
+var armor: int = 30
+var affordance: int = 3  # 0=carry 1=mount 2=climb 3=nothing
+var autonomous: bool = false
+var _state_manager: StateManager = null
+var _object_field: Node = null
+var _creature_behavior: Node = null
 
 @onready var physics_applicator: Node = $PhysicsApplicator
 @onready var object_visual: Node = $ObjectVisual
@@ -23,166 +30,171 @@ func _ready() -> void:
 func init_from_blueprint(bp: Dictionary) -> void:
 	blueprint = bp
 	object_id = bp.get("id", "")
+	object_name = bp.get("name", "")
 
-	# Initialize tag manager
-	_tag_manager = TagManager.new()
-	_tag_manager.name = "TagManager"
-	add_child(_tag_manager)
-	_tag_manager.init_tags(bp.get("tags", []), bp.get("name", "?"))
-	_tag_manager.tag_added.connect(_on_tag_added)
-	_tag_manager.tags_changed.connect(_on_tags_changed)
+	# Destructibility
+	var dest: Dictionary = bp.get("destructibility", {})
+	current_hp = dest.get("hp", 50)
+	armor = dest.get("armor", 30)
+	var indestructible: bool = dest.get("indestructible", false)
+	if indestructible:
+		current_hp = 999999
 
-	current_durability = bp.get("starting_durability", 150)
+	# Classification
+	affordance = bp.get("affordance", 3)
+	autonomous = bp.get("autonomous", false)
 
-	var visual_descriptor: Dictionary = bp.get("visual_descriptor", {})
-	physics_applicator.apply(tags, visual_descriptor)
+	# State manager (objects are born stateless)
+	_state_manager = StateManager.new()
+	_state_manager.name = "StateManager"
+	add_child(_state_manager)
+	_state_manager.init_states(object_name)
+	_state_manager.state_added.connect(_on_state_added)
+	_state_manager.states_changed.connect(_on_states_changed)
+
+	# Physics from LLM-generated values
+	physics_applicator.apply_from_blueprint(bp)
+
+	# Visual
 	object_visual.set_object_id(object_id)
-	object_visual.init_programmatic_anims(tags)
+	object_visual.init_visuals(bp)
 
-	# Add to groups for behavior target resolution
+	# Groups
 	add_to_group("game_objects")
-	if "LIVING" in tags:
+	if autonomous:
 		add_to_group("living")
 
-	# Initialize behavior system if behaviors present
-	var behaviors: Array = bp.get("behaviors", [])
-	if not behaviors.is_empty():
-		var executor_script = preload("res://scripts/systems/behavior_executor.gd")
-		_behavior_executor = executor_script.new()
-		_behavior_executor.name = "BehaviorExecutor"
-		add_child(_behavior_executor)
-		_behavior_executor.init_behaviors(behaviors, self)
+	# Field system
+	var has_field: bool = bp.get("has_field", false)
+	var field_range: int = bp.get("field_range_cm", 0)
+	if has_field and field_range > 0:
+		_create_object_field(field_range)
 
-	# Initialize field system if object has field-emitting tags
-	if FieldConfig.has_any_field_tag(tags):
-		_create_tag_field(tags)
+	# Creature behavior (wired in Phase 8b — placeholder)
+	# if autonomous:
+	#     _create_creature_behavior()
 
-	# Debug label for overlay
+	# Debug label
 	var debug_label_script: GDScript = preload("res://scripts/ui/debug_label.gd")
 	var debug_label := PanelContainer.new()
 	debug_label.set_script(debug_label_script)
 	add_child(debug_label)
 	debug_label.init(self)
 
-	Log.info("GameObject: Initialized '%s' (id=%s) with %d tags, %d behaviors, durability=%d" % [bp.get("name", "?"), object_id, tags.size(), behaviors.size(), current_durability])
+	Log.info("GameObject: Initialized '%s' (id=%s) hp=%d armor=%d affordance=%d" % [
+		object_name, object_id, current_hp, armor, affordance
+	])
+
+
+func get_object_name() -> String:
+	return object_name
 
 
 func get_blueprint() -> Dictionary:
 	return blueprint
 
 
-var tags: Array[String]:
-	get: return _tag_manager.tags if _tag_manager != null else []
+func get_states() -> Array:
+	return _state_manager.get_states() if _state_manager != null else []
 
 
 func get_tags() -> Array[String]:
-	return tags
+	## Compatibility: return states as "tags" for systems that expect get_tags().
+	var result: Array[String] = []
+	for s in get_states():
+		result.append(s)
+	return result
 
 
 func get_object_id() -> String:
 	return object_id
 
 
-func is_passively_pushable() -> bool:
-	if "HEAVY" in tags:
-		return false
-	var size: String = blueprint.get("visual_descriptor", {}).get("size_category", "medium")
-	return size == "tiny"
+func take_damage(amount: float, _element_color: Color = Color.WHITE) -> void:
+	# Armor reduces incoming damage. Corroded state halves armor effectiveness.
+	var effective_armor: int = armor
+	if _state_manager != null and _state_manager.has_state("corroded"):
+		effective_armor = int(armor * 0.5)
+	var effective: float = amount * (1.0 - effective_armor / 100.0)
+	current_hp -= int(maxf(effective, 1.0))  # Minimum 1 damage
 
+	object_visual.flash_hit(_element_color)
 
-func is_heavy() -> bool:
-	return "HEAVY" in tags
-
-
-func take_damage(amount: float, element_color: Color = Color.WHITE) -> void:
-	current_durability -= int(amount)
-	Log.debug("GameObject: '%s' took %.0f damage, durability=%d" % [blueprint.get("name", object_id), amount, current_durability])
-	object_visual.flash_hit(element_color)
-
-	if current_durability <= 0:
-		if _behavior_executor != null:
-			_behavior_executor.fire_trigger("ON_DESTROY")
-		Log.info("GameObject: '%s' (id=%s) destroyed, final durability=%d" % [blueprint.get("name", "?"), object_id, current_durability])
+	if current_hp <= 0:
+		Log.info("GameObject: '%s' destroyed" % object_name)
 		queue_free()
-		return
-
-	# Fire damage-related behavior triggers
-	if _behavior_executor != null:
-		_behavior_executor.fire_trigger("ON_DAMAGED")
-		var starting: int = blueprint.get("starting_durability", 150)
-		if current_durability < starting / 2:
-			_behavior_executor.fire_trigger("ON_HEALTH_LOW")
 
 
 func heal(amount: float) -> void:
-	var starting: int = blueprint.get("starting_durability", 150)
-	current_durability = min(current_durability + int(amount), starting)
-	Log.debug("GameObject: '%s' healed %.0f, durability=%d" % [blueprint.get("name", object_id), amount, current_durability])
-	object_visual.flash_hit(TagColors.HEAL)
+	var max_hp: int = blueprint.get("destructibility", {}).get("hp", 50)
+	current_hp = mini(current_hp + int(amount), max_hp)
+	object_visual.flash_hit(StateVisuals.HEAL_COLOR)
 
 
-func add_tag(tag: String, duration: float = 0.0) -> void:
-	_tag_manager.add_tag(tag, duration)
+func add_state(state: String, duration: float = 0.0) -> void:
+	if _state_manager != null:
+		_state_manager.add_state(state, duration)
 
 
-func remove_tag(tag: String) -> void:
-	_tag_manager.remove_tag(tag)
+func remove_state(state: String) -> void:
+	if _state_manager != null:
+		_state_manager.remove_state(state)
 
 
-func _on_tag_added(tag: String) -> void:
-	# Add-only effects (common effects handled by _on_tags_changed)
-	if tag in TagColors.COLORS:
-		object_visual.spawn_particles(TagColors.get_color(tag))
-	if _behavior_executor != null:
-		_behavior_executor.on_tag_added(tag)
-	# Create tag field if this is the first field tag (update handled by _on_tags_changed)
-	if _tag_field == null and FieldConfig.is_field_tag(tag):
-		_create_tag_field(tags)
+func _on_state_added(state: String) -> void:
+	# Visual feedback
+	if state in StateVisuals.COLORS:
+		object_visual.spawn_particles(StateVisuals.COLORS[state])
+	# Mark pairwise cache stale
+	InteractionCache.mark_stale(object_name)
+	# Frozen → immobilize
+	if state == "frozen":
+		freeze = true
 
 
-func _on_tags_changed(_updated_tags: Array[String]) -> void:
-	# Common effects for both add and remove
-	_reapply_physics()
-	object_visual.refresh_tag_visuals(tags)
-	if _tag_field != null:
-		_tag_field.on_tags_changed(tags)
+func _on_states_changed(_updated_states: Array) -> void:
+	# Refresh visuals
+	object_visual.refresh_state_visuals(get_states())
+	# Unfreeze if no longer frozen
+	if _state_manager != null and not _state_manager.has_state("frozen"):
+		freeze = false
+	# Notify backend for lazy re-evaluation
+	# Backend.send_state_changed(object_name, get_states())  # wired in Phase 8a
 
 
 func get_cascade_neighbors() -> Array:
 	var neighbors: Array = []
 	for body in cascade_area.get_overlapping_bodies():
-		if body != self and body.has_method("get_tags"):
+		if body != self and body.has_method("get_object_name"):
 			neighbors.append(body)
 	return neighbors
 
 
-func _create_tag_field(current_tags: Array) -> void:
-	var field_script = preload("res://scripts/systems/tag_field.gd")
-	_tag_field = field_script.new()
-	_tag_field.name = "TagField"
-	add_child(_tag_field)
-	_tag_field.init_field(self, current_tags)
+func _create_object_field(range_cm: int) -> void:
+	var field_script = preload("res://scripts/systems/object_field.gd")
+	_object_field = field_script.new()
+	_object_field.name = "ObjectField"
+	add_child(_object_field)
+	_object_field.init_field(self, float(range_cm))
 
 
-func _reapply_physics() -> void:
-	var visual_descriptor: Dictionary = blueprint.get("visual_descriptor", {})
-	physics_applicator.apply(tags, visual_descriptor)
+func is_passively_pushable() -> bool:
+	var phys: Dictionary = blueprint.get("physics", {})
+	return phys.get("mass_kg", 1.0) < 0.5
 
 
-func fire_behavior_trigger(trigger_name: String, source: Node = null) -> void:
-	if _behavior_executor != null:
-		_behavior_executor.fire_trigger(trigger_name, source)
+func is_heavy() -> bool:
+	var phys: Dictionary = blueprint.get("physics", {})
+	return phys.get("mass_kg", 1.0) > 50.0
 
 
 func _on_body_entered(body: Node) -> void:
-	if not TagColors.is_taggable(body):
+	if not body.has_method("get_object_name") and not body.has_method("get_states"):
 		return
-	# Defer to avoid "Can't change state while flushing queries" —
-	# collision resolution can chain to add_tag → _reapply_physics → new shapes.
 	call_deferred("_resolve_deferred", body)
 
 
 func _resolve_deferred(body: Node) -> void:
 	if not is_instance_valid(body):
 		return
-	CollisionResolver.resolve_and_notify(self, body)
+	CollisionResolver.resolve_collision(self, body)

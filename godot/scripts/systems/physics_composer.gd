@@ -1,10 +1,8 @@
 class_name PhysicsComposer
+extends RefCounted
 
-const DEFAULT_MASS: float = 1.0
-const DEFAULT_GRAVITY: float = 1.0
-const DEFAULT_FRICTION: float = 0.5
-const DEFAULT_BOUNCE: float = 0.0
-const DEFAULT_DAMPING: float = 0.5
+## V3: size tables only. Physics values come from LLM-generated blueprint,
+## not from tag-based composition.
 
 const SIZE_TO_PHYSICS: Dictionary = {
 	"tiny": {"sprite": 24, "collision": 16},
@@ -27,64 +25,13 @@ static func get_size_mass_multiplier(size_category: String) -> float:
 	return SIZE_MASS_MULTIPLIER.get(size_category, 1.0)
 
 
-static func compose_physics(tags: Array) -> Dictionary:
-	var mass_entries: Array = []
-	var gravity_entries: Array = []
-	var friction_entries: Array = []
-	var bounce_entries: Array = []
-	var damping_entries: Array = []
-
-	for tag in tags:
-		var tag_str: String = str(tag)
-		if tag_str not in TagPhysicsMap.TAG_PHYSICS:
-			continue
-		var props: Dictionary = TagPhysicsMap.TAG_PHYSICS[tag_str]
-		var priority: int = props["priority"]
-
-		if props["mass"] >= 0.0:
-			mass_entries.append({"priority": priority, "value": props["mass"]})
-		if props["gravity"] > -2.0 and props["gravity"] != -1.0:
-			gravity_entries.append({"priority": priority, "value": props["gravity"]})
-		if props["friction"] >= 0.0:
-			friction_entries.append({"priority": priority, "value": props["friction"]})
-		if props["bounce"] >= 0.0:
-			bounce_entries.append({"priority": priority, "value": props["bounce"]})
-		if props.get("damping", -1.0) >= 0.0:
-			damping_entries.append({"priority": priority, "value": props["damping"]})
-
-	return {
-		"mass": _resolve_property(mass_entries, DEFAULT_MASS),
-		"gravity": _resolve_property(gravity_entries, DEFAULT_GRAVITY),
-		"friction": _resolve_property(friction_entries, DEFAULT_FRICTION),
-		"bounce": _resolve_property(bounce_entries, DEFAULT_BOUNCE),
-		"damping": _resolve_property(damping_entries, DEFAULT_DAMPING),
-	}
-
-
-static func _resolve_property(entries: Array, default_value: float) -> float:
-	if entries.is_empty():
-		return default_value
-
-	# Find highest priority
-	var max_priority: int = -1
-	for entry in entries:
-		if entry["priority"] > max_priority:
-			max_priority = entry["priority"]
-
-	# Collect all values at highest priority
-	var values: Array = []
-	for entry in entries:
-		if entry["priority"] == max_priority:
-			values.append(entry["value"])
-
-	# Same priority -> average
-	var total: float = 0.0
-	for v in values:
-		total += v
-	return total / values.size()
-
-
 static func get_size_data(size_category: String) -> Dictionary:
 	return SIZE_TO_PHYSICS.get(size_category, SIZE_TO_PHYSICS["medium"])
 
 
+static func size_from_height(height_cm: int) -> String:
+	if height_cm < 10: return "tiny"
+	if height_cm < 50: return "small"
+	if height_cm < 150: return "medium"
+	if height_cm < 400: return "large"
+	return "huge"
