@@ -361,7 +361,7 @@ def save_comparison_report(
     lines.extend([
         "",
         f"**Overall winner:** {overall} "
-        f"({max(a_wins, b_wins)}/{len(METRIC_NAMES)} metrics){p_str}",
+        f"({max(a_wins, b_wins)}/{len(METRIC_NAMES)} metrics)",
     ])
 
     (run_dir / "comparison.md").write_text("\n".join(lines), encoding="utf-8")

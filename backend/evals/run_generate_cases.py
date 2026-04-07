@@ -29,24 +29,11 @@ SYSTEM_PROMPT = """\
 You generate test cases for evaluating a 2D physics sandbox game object creator (like Scribblenauts).
 Players type a description and an LLM creates a game object with tags and behaviors.
 
-AVAILABLE TAGS (1-4 per object):
-Physical: RIGID (hard/unyielding), HEAVY (resists force, crushes), LIGHT (easily pushed), \
-LIQUID (flows), GAS (disperses)
-Temperature: FROZEN (icy, shatters), COLD (freezes liquid/wet), MOLTEN (extreme heat liquid), \
-HEAT_SOURCE (fire, ignites)
-Energy: FLAMMABLE (catches fire), ELECTRIC (shocks, propagates), MAGNETIC (attracts metal), \
-EXPLOSIVE (detonates from heat/electricity)
-Surface: SHARP (cut damage), STICKY (slows nearby), REFLECTIVE (bounces heat/electricity)
-Mechanical: BOUNCY (rebounds), BREAKABLE (fragile, 50 HP)
-Environmental: FLYING (hovers/flies), WIND_SOURCE (pushes light objects), ACIDIC (dissolves), \
-TOXIC (poisons living), WET (amplifies electric)
-Special: LIVING (creature/organism), METALLIC (conducts), INSULATING (blocks conduction), \
-HOSTILE (aggressive damage aura)
+LLM-VISIBLE TAGS (0-3 per object, the only tags the creator LLM can pick):
+SHARP, HEAVY, LIGHT, BOUNCY, BREAKABLE, STICKY, REFLECTIVE, EXPLOSIVE, FLYING, WET
 
-TAG CONTRADICTIONS (cannot coexist):
-FROZEN/HEAT_SOURCE, FROZEN/MOLTEN, COLD/HEAT_SOURCE, COLD/MOLTEN, HEAVY/LIGHT, \
-RIGID/LIQUID, RIGID/GAS, GAS/HEAVY, LIQUID/GAS, METALLIC/INSULATING, WET/MOLTEN, \
-WET/HEAT_SOURCE
+Other tags (LIVING, HOSTILE, METALLIC, RIGID, FLAMMABLE, etc.) are auto-derived from \
+substance, element, or category — the LLM does not pick them directly.
 
 GUIDELINES:
 - Diverse: cover all categories, not just weapons and creatures
@@ -134,7 +121,7 @@ async def main():
         cat = c.metadata.category if c.metadata else "?"
         print(f"  [{cat}] {c.name}: {c.inputs!r} -> {tags}")
 
-    print(f"\nReview {output_path} and cherry-pick good cases into dataset.py.")
+    print(f"\nReview {output_path} and cherry-pick good cases into dataset.yaml.")
 
 
 if __name__ == "__main__":

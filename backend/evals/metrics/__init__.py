@@ -5,19 +5,17 @@ Provides deterministic validity checks and LLM-as-judge scoring.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 from pydantic_ai.settings import ModelSettings
-from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorContext, LLMJudge
+from pydantic_evals.evaluators import LLMJudge
 
 from evals.metrics.category_accuracy import CategoryAccuracyEvaluator
 from evals.metrics.element_accuracy import ElementAccuracyEvaluator
+from evals.metrics.has_signature import HasSignatureEvaluator
 from evals.metrics.interaction_surface import InteractionSurfaceEvaluator
-from evals.metrics.living_movement import HasSignatureEvaluator
 from evals.metrics.rubric_context import get_tag_list_string
 from evals.metrics.substance_accuracy import SubstanceAccuracyEvaluator
 from evals.metrics.tag_recall import TagRecallEvaluator
-from evals.metrics.validity import ValidityEvaluator, is_structurally_valid
+from evals.metrics.validity import ValidityEvaluator
 
 _TAG_LIST = get_tag_list_string()
 
@@ -109,10 +107,10 @@ METRIC_NAMES: list[str] = [
 ]
 
 
-JUDGE_SETTINGS = ModelSettings(temperature=0.0, max_tokens=300)
+JUDGE_SETTINGS = ModelSettings(temperature=0.0)
 
 
-def _make_judge(name: str) -> LLMJudge:
+def make_judge(name: str) -> LLMJudge:
     """Create an LLM-as-judge evaluator for the given metric."""
     return LLMJudge(
         rubric=RUBRICS[name],
@@ -123,57 +121,23 @@ def _make_judge(name: str) -> LLMJudge:
     )
 
 
-@dataclass
-class SafeJudge(Evaluator[str, str, object]):
-    """LLM judge wrapper: skips on structurally invalid output, 0.0 on failure."""
-
-    judge_name: str
-
-    def __post_init__(self):
-        self._judge = _make_judge(self.judge_name)
-
-    async def evaluate(
-        self, ctx: EvaluatorContext[str, str, object]
-    ) -> dict[str, EvaluationReason]:
-        if not is_structurally_valid(ctx.output or ""):
-            return {
-                self.judge_name: EvaluationReason(
-                    value=0.0, reason="Structurally invalid output — judge skipped"
-                )
-            }
-        try:
-            result = await self._judge.evaluate(ctx)
-            return result  # type: ignore[return-value]
-        except Exception as e:
-            return {
-                self.judge_name: EvaluationReason(
-                    value=0.0, reason=f"Judge call failed: {e}"
-                )
-            }
+def _deterministic_evaluators() -> list:
+    return [
+        ValidityEvaluator(),
+        SubstanceAccuracyEvaluator(),
+        ElementAccuracyEvaluator(),
+        CategoryAccuracyEvaluator(),
+        TagRecallEvaluator(),
+        InteractionSurfaceEvaluator(),
+        HasSignatureEvaluator(),
+    ]
 
 
 def default_evaluators() -> list:
     """Build the standard set of evaluators for creator agent evals."""
-    return [
-        ValidityEvaluator(),
-        SubstanceAccuracyEvaluator(),
-        ElementAccuracyEvaluator(),
-        CategoryAccuracyEvaluator(),
-        TagRecallEvaluator(),
-        InteractionSurfaceEvaluator(),
-        HasSignatureEvaluator(),
-        *(SafeJudge(judge_name=name) for name in RUBRICS),
-    ]
+    return [*_deterministic_evaluators(), *(make_judge(name) for name in RUBRICS)]
 
 
 def gate_evaluators() -> list:
     """Deterministic-only evaluators for fast gate checks. No LLM judge calls."""
-    return [
-        ValidityEvaluator(),
-        SubstanceAccuracyEvaluator(),
-        ElementAccuracyEvaluator(),
-        CategoryAccuracyEvaluator(),
-        TagRecallEvaluator(),
-        InteractionSurfaceEvaluator(),
-        HasSignatureEvaluator(),
-    ]
+    return _deterministic_evaluators()

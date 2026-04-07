@@ -34,7 +34,7 @@ from app.config import settings
 from pydantic_evals import Dataset
 
 from evals.conftest import make_agent, make_split_task, make_task
-from evals.dataset import EVAL_CASES, build_dataset
+from evals.dataset import build_dataset
 from evals.distribution import print_distribution_report
 from evals.io import (
     RESULTS_DIR,
@@ -120,7 +120,8 @@ async def main():
         run_name = f"gate_{run_name}"
     elif args.cases:
         requested = {c.strip().lower() for c in args.cases.split(",")}
-        cases = [c for c in EVAL_CASES if c.name and c.name.lower() in requested]
+        all_cases = build_dataset().cases
+        cases = [c for c in all_cases if c.name and c.name.lower() in requested]
         if not cases:
             print(f"Error: no matching cases for '{args.cases}'")
             sys.exit(1)
@@ -148,7 +149,7 @@ async def main():
         task_fn = make_task(agent)
 
     report = await dataset.evaluate(
-        task_fn, name=run_name, max_concurrency=8, repeat=repeat,
+        task_fn, name=run_name, max_concurrency=64, repeat=repeat,
     )
 
     # Print pydantic-evals report (may fail on Windows legacy terminals with Unicode)

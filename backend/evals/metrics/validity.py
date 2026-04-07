@@ -21,24 +21,6 @@ _VERB_VALUES = frozenset(v.value for v in BehaviorVerb)
 _CATEGORY_VALUES = frozenset(c.value for c in Category)
 
 
-def is_structurally_valid(output_text: str) -> bool:
-    """Quick pass/fail: is the output parseable JSON with required fields?
-
-    Used by SafeJudge to skip LLM calls on garbage output.
-    """
-    try:
-        data = json.loads(output_text)
-    except (json.JSONDecodeError, TypeError):
-        return False
-    return (
-        isinstance(data, dict)
-        and data.get("substance", "") in _SUBSTANCE_VALUES
-        and isinstance(data.get("tags"), list)
-        and isinstance(data.get("name"), str)
-        and len(data.get("name", "").strip()) > 0
-    )
-
-
 @dataclass
 class ValidityEvaluator(Evaluator[str, str, object]):
     """Deterministic checks on V2 structured output correctness."""
@@ -83,7 +65,7 @@ class ValidityEvaluator(Evaluator[str, str, object]):
         # Behaviors (0-4, valid verbs)
         behaviors = data.get("behaviors", [])
         checks["valid_behaviors"] = all(
-            isinstance(b, dict) and b.get("verb", "") in _VERB_VALUES and b.get("target")
+            isinstance(b, dict) and b.get("verb", "") in _VERB_VALUES and b.get("target_description")
             for b in behaviors
         ) and len(behaviors) <= 4
 

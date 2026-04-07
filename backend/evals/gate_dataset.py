@@ -9,7 +9,7 @@ from __future__ import annotations
 from pydantic_evals import Dataset
 from pydantic_evals.evaluators import Evaluator
 
-from evals.dataset import EVAL_CASES, CaseMeta
+from evals.dataset import CaseMeta, build_dataset
 
 # Cases chosen for strong, unambiguous expected outputs across categories.
 # ~4 mundane, ~3 weapons, ~3 creatures, ~2 adversarial, ~2 abstract.
@@ -40,5 +40,6 @@ def build_gate_dataset(
     evaluators: list[Evaluator] | None = None,
 ) -> Dataset[str, str, CaseMeta]:
     """Build a Dataset containing only the gate cases."""
-    cases = [c for c in EVAL_CASES if c.name in GATE_CASE_NAMES]
+    all_cases = build_dataset().cases
+    cases = [c for c in all_cases if c.name in GATE_CASE_NAMES]
     return Dataset(cases=cases, evaluators=evaluators or [])
