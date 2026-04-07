@@ -54,7 +54,7 @@ The base cost wall means parallel calls are dramatically more efficient than seq
 
 The math: with sequential calls, you pay the base cost N times (N × 55ms). With parallel calls, the base cost is paid roughly once and the GPU batches the work. This is why **splitting a 10-token output into 10 parallel 1-token calls is faster** — you trade 1×(55+70)ms = 125ms for ~145ms... wait, that's actually slower. The breakpoint is around 15-20 output tokens, where the serial cost exceeds the parallel overhead.
 
-**Rule of thumb: if a single call would output >10 tokens, consider splitting into parallel calls. If <10 tokens, a single call is fine.**
+**Rule of thumb: if a single call would output >10 tokens, consider splitting into parallel calls. If <10 tokens, a single call is fine.** Exception: when the LLM needs to see all items together to make relative judgments (e.g., screening which pairs are interesting), a single multi-token call is better than N independent calls even if output exceeds 10 tokens.
 
 ### Input is cheap (for latency)
 
@@ -192,11 +192,34 @@ Conditional — depends on batch 1 results:
   If has field → field range (already asked in batch 1)
 
 Spawn integration — depends on creation results:
-  Pairwise interactions (pattern 1: parallel fan-out)
+  Pairwise screening (pattern 5: batch screening)
+  Pairwise full eval (pattern 1: parallel fan-out, screened pairs only)
   Creature behavior stages (pattern 2+3: sequential seeding + filter)
 ```
 
 Independent work runs in parallel. Dependent work waits for prior results. Conditional paths skip unnecessary work.
+
+### 5. Batch screening
+
+One call that triages many items at once, returning a short list. Unlike per-item binary screening (N calls, 1 token each), the LLM sees all candidates together and can make relative judgments.
+
+```
+"New object: fire sword (2kg, hot, sharp, metal).
+ Scene objects:
+ 1. wooden shield (3kg, flammable, wood)
+ 2. rock (5kg, stone)
+ 3. glass bottle (0.3kg, fragile, glass)
+ 4. rope (0.5kg, fiber)
+ 5. campfire (hot, fire)
+ Which would interact interestingly with fire sword? List numbers."
+ → "1,3"
+```
+
+Output is ~5-15 tokens depending on how many items pass the screen. This intentionally exceeds the "split above 10 tokens" guideline because the LLM needs full context to make good judgments — it can see that fire sword + campfire is redundant (both hot) while fire sword + wooden shield is meaningful.
+
+**When to use:** You need to select a subset from a larger set, and the selection benefits from seeing all candidates together. The output is a short list of IDs, not detailed answers — keep expensive follow-up for the items that pass.
+
+**Used in:** Pairwise interaction screening — identifies which object pairs are worth fully evaluating. Most pairs (~75%) are boring and get filtered.
 
 ---
 
@@ -212,7 +235,7 @@ Ask the same question 3 times with different calibration examples, take the medi
 
 Ask a rough question first, refine only if interesting: "Is this object dangerous? 0=no 1=yes" → if yes → "How dangerous 0-100?"
 
-**Why not for this game:** The refinement saves 1 call for non-interesting objects but adds a sequential dependency (~55ms base cost) for ALL objects. Net slower unless >50% of objects skip the refinement. For pairwise interactions, most pairs DO interact (the interesting ones), so the filter doesn't save enough.
+**Why not for this game:** The refinement saves 1 call for non-interesting objects but adds a sequential dependency (~55ms base cost) for ALL objects. Net slower unless >50% of objects skip the refinement. Note: this is about per-item binary screening — batch screening (one call that triages many items, see pattern 5) is a different and often better approach when most items can be skipped.
 
 ---
 

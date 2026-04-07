@@ -11,8 +11,8 @@ The architecture keeps: a state system (smaller), behavior verbs (same), afforda
 See [llm-design-patterns.md](llm-design-patterns.md) for inference constraints. Key numbers:
 - ~55ms base cost per call, input tokens are free
 - ~7ms per output token — use numbered choices, not words
-- Up to 8 parallel calls ≈ cost of 1 call
-- 32 concurrent calls before GPU saturation
+- 8 parallel calls ≈ 2.2x cost of 1 call (not 8x)
+- 32 concurrent calls before GPU degradation — fire all via `asyncio.gather()`, let SGLang batch internally
 
 ---
 
@@ -56,24 +56,43 @@ The core data structure. A lookup table mapping object pairs to interaction outc
 
 ### Cache population
 
-When a new object enters the scene, evaluate it against every existing object:
+When a new object enters the scene, a single screening call identifies which existing objects it would interact with interestingly. Only those pairs get fully evaluated.
 
+**Screening (1 call per new object, ~5-15 output tokens):**
 ```
-Per pair, 5 parallel calls (1 token each, ~60ms):
-- Damage to A? 0-100
-- Damage to B? 0-100
-- State change? 0-12 (from closed state list)
-- Force? 0-100, 0=push/1=pull
-- Mode? 0=instant, 1=continuous
+"New object: fire sword (2kg, armor 80, hot, sharp, metal).
+ Scene objects:
+ 1. wooden shield (3kg, armor 20, flammable, wood)
+ 2. rock (5kg, armor 70, stone)
+ 3. glass bottle (0.3kg, armor 5, fragile)
+ Which would interact interestingly? List numbers."
+ → "1,3"
 ```
 
-Include both objects' physics properties in the prompt (input is free):
+The LLM sees all objects at once and makes relative judgments. Missed pairs default to "nothing happens" — low stakes, lazily evaluated on actual contact if needed.
+
+**Full evaluation (interesting pairs only, 9 parallel calls each, 1 token, ~145ms):**
 ```
-"[fire sword: 2kg, toughness 90, emits heat] hits 
+1. Damage to A? 0-100
+2. Damage to B? 0-100
+3. State change on A? 0-14  (0=none, 1-7=add state, 8-14=remove state)
+4. State change on B? 0-14
+5. Force on B? 0-100
+6. Push or pull? 0=push 1=pull
+7. A destroyed? 0=no 1=yes
+8. B destroyed? 0=no 1=yes
+9. Instant or continuous? 0=instant 1=continuous
+```
+
+Include both objects' physics properties and active states in the prompt (input is free):
+```
+"[fire sword: 2kg, armor 80, hp 90, emits heat] hits 
  [wooden shield: 3kg, armor 20, hp 40]. Damage to B? 0-100"
 ```
 
-The physics properties act as calibration anchors — the LLM sees toughness 40 and produces consistent damage across similar targets.
+The physics properties act as calibration anchors — the LLM sees armor 20 and produces consistent damage across similar targets. Force on A is engine-derived via Newton's 3rd law heuristic, not LLM-evaluated.
+
+**A and B always refer to the first and second name in lexicographic sort order.** The engine maps collision participants to cache A/B by sorting their names. See [cache.md](cache.md) for key normalization.
 
 ### State changes and cache invalidation
 
@@ -102,26 +121,36 @@ A firefighter doesn't have one behavior. It extinguishes fire, rescues people, a
 Follows the graph thesis: simple questions, 1 token each, sequential stages that seed context forward.
 
 **Stage 1 — Movement (parallel, all creature×object pairs, 1 token each):**
+
+All creature behavior prompts include the scene inventory for context (input is free). This lets the LLM make contextually-aware decisions — a firefighter cares about water more when fire exists.
+
 ```
-"Firefighter sees [burning tree]. 0=approach 1=flee 2=orbit 3=ignore"
+"Scene: [burning tree, bucket of water, trapped person, fire hydrant].
+ Firefighter sees [burning tree]. 0=approach 1=flee 2=orbit 3=ignore"
 → 0 (approach)
 
-"Firefighter sees [stone wall]. 0=approach 1=flee 2=orbit 3=ignore"
+"Scene: [burning tree, bucket of water, trapped person, fire hydrant].
+ Firefighter sees [stone wall]. 0=approach 1=flee 2=orbit 3=ignore"
 → 3 (ignore)
 ```
 
 **Stage 1b — Strength (parallel with stage 1, 1 token each):**
+
+Same scene context as stage 1 — strength should reflect scene-aware priority, not just the pair in isolation.
+
 ```
-"How strongly does firefighter react to [burning tree]? 0-100"
+"Scene: [burning tree, bucket of water, trapped person, fire hydrant].
+ How strongly does firefighter react to [burning tree]?
+ 0=ignores, 25=mild interest, 50=moderate, 75=strong drive, 100=absolute priority"
 → 90
 ```
 
 **Filter:** only pairs that returned approach (0) or orbit (2) continue. Flee and ignore pairs are complete — the creature never reaches the target so no outcome is needed.
 
 **Stage 2 — Action (parallel, approaching/orbiting pairs only, 1 token each):**
-Seeded with the movement decision from stage 1:
+Seeded with the movement decision from stage 1. Motivation is templated from the movement type (approach="wants to interact with", orbit="is cautious about") — no extra LLM call needed:
 ```
-"Firefighter is approaching [burning tree] because it wants to help.
+"Firefighter is APPROACHING [burning tree] and wants to interact with it.
  On arrival: 0=nothing 1=damage 2=heal 3=add state 4=remove state 5=destroy 6=take"
 → 4 (remove state)
 ```
@@ -164,9 +193,16 @@ Cat + ball of yarn → orbit 50, nothing
 Cat + dog → flee 80
 ```
 
-### New objects in existing scenes
+### New objects and re-evaluation triggers
 
-When a new object spawns, run stages 1-3 for all existing creatures against it. When a new creature spawns, run stages 1-3 for it against all existing objects. When an object changes state, re-evaluate affected creature pairs (lazy — only nearby creatures).
+When a new object spawns, run stages 1-3 for all existing creatures against it. When a new creature spawns, run stages 1-3 for it against all existing objects.
+
+**Re-evaluation triggers** — re-evaluate affected creature×object pairs when:
+- **Object changes state** (gains on_fire, frozen, etc.) — re-evaluate pairs involving that object, since creature reactions change (firefighter doesn't need to approach a tree that's no longer burning)
+- **Creature picks up or drops an object** — re-evaluate that creature's pairs with updated context ("Firefighter [holding: bucket of water] sees burning tree" → approach with higher strength)
+- **Scene inventory changes** — since creature behavior prompts include the scene list, new objects or destroyed objects change the context for all creatures
+
+Re-evaluation is lazy: fires on the creature's next behavior tick (~1s), not immediately on state change. Only nearby creatures (within perception range) are re-evaluated.
 
 ---
 
@@ -212,8 +248,8 @@ Define LLM calls as data, not code. The orchestration is generic — to add, rem
 
 ```python
 CREATION_QUESTIONS = [
-    Question(key="mass",    prompt="How heavy is {name} in kg? (ant=0.001, sword=1.5, car=1500)", max_tokens=1),
-    Question(key="height",  prompt="How tall is {name} in meters? (ant=0.01, sword=1.2, house=8)", max_tokens=1),
+    Question(key="mass",    prompt="How heavy is {name} in kg? (ant=0.001, sword=1.5, car=1500)", max_tokens=4),
+    Question(key="height",  prompt="How tall is {name} in cm? (ant=1, sword=120, human=170, house=800)", max_tokens=2),
     Question(key="friction", prompt="How grippy is {name} 0-100? (ice=0, rubber=90)", max_tokens=1),
     # ... add/remove/edit lines here during playtesting
 ]

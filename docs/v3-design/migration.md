@@ -60,7 +60,7 @@ V3 has no tags. Environment bodies need a different approach.
 Treat each env body as a named object ("acid pool", "lava pit", "electric fence"). Run the creation graph at level load to get physics. Evaluate pairwise interactions with all scene objects. Env bodies participate in the cache like any other object.
 
 **Pro:** Unified system — no special cases. The LLM decides "acid pool hits wooden crate → damage 40, add corroded" naturally.
-**Con:** O(N) additional pairwise evaluations per env body. Level load time increases. Env bodies need creation cache entries.
+**Con:** Env bodies need creation cache entries + pairwise evaluations. Mitigated by pairwise screening (~75% of pairs filtered as uninteresting) and level pre-warming (ship seeded `cache.db` — see [cache.md](cache.md)).
 
 ### Option B: Direct state applicators
 

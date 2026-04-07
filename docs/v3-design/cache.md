@@ -12,11 +12,10 @@ One cache backend with typed entries, not separate systems per cache type. Singl
 
 | Type | Key | Value | Example |
 |------|-----|-------|---------|
-| `creation` | `"fire sword"` | All physics/affordance/destructibility/field/behavior properties | mass, height, friction, etc. |
-| `pairwise` | `"fire sword::wooden shield"` | `{damage_a, damage_b, state_change, force, direction, mode}` | Collision outcome |
-| `state_interaction` | `"wooden chair::on_fire"` | `{damage, state_change, mode}` | State effect on object |
-| `movement_reaction` | `"zombie cop::donut"` | `{reaction, strength}` | Creature movement response |
-| `destruction_result` | `"wooden shield::fire"` | `"pile of charred splinters"` + pre-generated blueprint | What remains after destruction |
+| `creation` | `"fire sword"` | All physics/affordance/destructibility/field properties | mass, height, friction, etc. |
+| `pairwise` | `"fire sword::wooden shield"` | `{damage_a, damage_b, state_change_a, state_change_b, force_b, direction_b, destroy_a, destroy_b, mode}` | Collision outcome (9 fields) |
+| `creature_behavior` | `"zombie cop::donut"` | `{reaction, strength, action, param}` | Full creature×object behavior (scene-local, not persistent — see below) |
+| `destruction_result` | `"wooden shield"` | `"broken wooden shield"` + pre-generated blueprint | What remains after destruction |
 
 All types have the same access pattern: composite key, JSON value, check before compute, write once.
 
@@ -85,19 +84,21 @@ Cache keys use **object names**, not UUIDs. This is both a correctness requireme
 
 **Creation cache — critical (correctness).** Without it, two "fire swords" get different physics. Players can't predict what they're creating.
 
-**Pairwise + state caches — critical (performance).** Without caching, every collision needs an LLM call at runtime. The entire V3 architecture depends on pre-computing interactions at spawn time.
+**Pairwise cache — critical (performance).** Without caching, every collision needs an LLM call at runtime. The entire V3 architecture depends on pre-computing interactions at spawn time.
+
+**Creature behavior — scene-local only, not in persistent cache.db.** Creature behavior prompts include scene context ("Scene: [burning tree, bucket of water, ...]"), so results are scene-dependent — a firefighter reacts differently to water when fire exists. The cache key `"firefighter::bucket of water"` can't capture this. Creature behavior is stored in-memory per scene, computed at spawn time (~180ms for 3 creatures × 14 objects), and re-evaluated on scene changes. Cheap enough to recompute — no persistence needed.
 
 **Destruction results — important (latency).** Generating remains at destruction time would mean a visible delay (LLM call + image gen). Pre-caching makes destruction feel instant.
-
-**Movement reactions — important (behavior).** Creatures need to know how to react to objects immediately, not after a 60ms delay.
 
 ---
 
 ## Edge cases
 
-### Asymmetric pair keys
+### Sorted-key convention
 
-"Fire sword hits wooden shield" and "wooden shield hits fire sword" are the same collision. The cache stores damage to BOTH objects in one entry. Key is always the sorted pair so lookup order doesn't matter.
+Pair keys are lexicographically sorted: `"fire sword::wooden shield"`. At runtime, collision participants arrive in arbitrary order. Convention: `damage_a`, `state_change_a`, `destroy_a` always refer to the **first name in lexicographic sort order**. The engine maps collision participants to cache A/B by sorting their names.
+
+"Fire sword hits wooden shield" and "wooden shield hits fire sword" are the same collision. The cache stores effects on BOTH objects in one entry. Key is always the sorted pair so lookup order doesn't matter.
 
 ### Destruction creates new objects
 
@@ -107,7 +108,7 @@ Cache keys use **object names**, not UUIDs. This is both a correctness requireme
 
 Player creates object A, spawn integration starts. Player creates object B before A's integration finishes. Object B's integration needs pairs with A.
 
-Solution: creation cache is populated **synchronously** (before returning the blueprint to the client). Only pairwise/state/movement caches are populated asynchronously in the background. Object B can read A's creation cache immediately.
+Solution: creation cache is populated **synchronously** (before returning the blueprint to the client). Only pairwise and creature behavior caches are populated asynchronously in the background. Object B can read A's creation cache immediately.
 
 ### Cache size growth
 
@@ -125,10 +126,26 @@ Runtime lookups during collisions and field ticks must be fast. At scene load, r
 
 ---
 
-## Open questions
+## Pairwise cache re-evaluation on state change
 
-1. **Fallback for uncached collisions** — When two objects collide before spawn integration completes, options: (a) "nothing" safe default, (b) synchronous LLM call (60ms, noticeable but not terrible). Leaning toward (a) since integration should finish well before the player can engineer collisions.
+When an object gains or loses a state, its pairwise cache entries are stale. Strategy: **always re-evaluate on state change.** The base entry is overwritten. When the state is later removed, re-evaluate again to restore base behavior.
 
-2. **Level pre-warming** — For built-in levels with known objects, should the cache be pre-populated at build time (ship a seeded `cache.db`) or computed on first load?
+This is cheap because re-evaluation is **lazy** — only triggered on next collision or field tick. Most stale pairs never get re-evaluated because the objects aren't near each other. Cost per actual re-evaluation: 9 parallel 1-token calls (~145ms).
 
-3. **Cloud LLM dual-path** — The 1-token call pattern is optimized for local inference (input tokens are free). Cloud APIs charge per input token, so 13 fat-prompt calls would cost more than 1 structured call. May need a dual-path if cloud support matters.
+Re-evaluation prompts include active states in the object description:
+```
+"[fire sword: 2kg, armor 80, hp 90, field 150cm] collides with
+ [wooden shield [ON_FIRE]: 3kg, armor 20, hp 40, no field]."
+```
+
+Same 9-call format, same parallelism.
+
+---
+
+## Design decisions
+
+**Uncached collision fallback:** "nothing" safe default. Spawn integration runs during sprite gen (2-5s). Players can't engineer collisions with a half-spawned object that fast. If they do, "nothing" is harmless — the interaction works normally once the cache populates.
+
+**Level pre-warming:** Ship a seeded `cache.db` for release builds (eliminates first-load latency). Compute on first load for dev to test the pipeline.
+
+**Cloud LLM dual-path:** Not a cache concern — the cache stores results regardless of how they were computed. The 1-token call pattern is optimized for local inference (input tokens are free). Cloud APIs charge per input token, so a dual-path with structured output may be needed. See [architecture.md](architecture.md) for inference strategy.
