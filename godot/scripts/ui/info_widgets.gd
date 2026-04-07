@@ -1,27 +1,14 @@
 class_name InfoWidgets
 
 
-static func create_tag_badge(tag: String, font_size: int = 12) -> Label:
+static func create_state_badge(state: String, font_size: int = 12) -> Label:
 	var badge := Label.new()
-	badge.text = " %s " % tag
+	badge.text = " %s " % state
 	badge.add_theme_font_size_override("font_size", font_size)
-	var color: Color = TagColors.get_color(tag)
+	var color: Color = StateVisuals.COLORS.get(state, Color(0.6, 0.6, 0.6))
 	badge.add_theme_color_override("font_color", color)
 	badge.add_theme_stylebox_override("normal", make_stylebox(Color(color, 0.15), 3, 4, 1))
-	badge.mouse_filter = Control.MOUSE_FILTER_STOP
-	badge.tooltip_text = TagDescriptions.get_description(tag)
 	return badge
-
-
-static func create_behavior_label(behavior: Dictionary, font_size: int = 12) -> Label:
-	var label := Label.new()
-	var is_implied: bool = behavior.get("implied", false)
-	var prefix: String = "[implied] " if is_implied else "[signature] "
-	label.text = prefix + BehaviorDisplay.format_behavior(behavior)
-	label.add_theme_font_size_override("font_size", font_size)
-	var color := Color(0.55, 0.55, 0.6) if is_implied else Color(0.85, 0.85, 0.5)
-	label.add_theme_color_override("font_color", color)
-	return label
 
 
 static func make_stylebox(

@@ -164,17 +164,12 @@ func _create_placement_ghost() -> Node2D:
 		var world_size: float = PhysicsComposer.get_size_data(vd.get("size_category", "medium"))["sprite"]
 		sprite.scale = Vector2.ONE * (world_size / cached.get_width())
 	else:
-		var vd: Dictionary = _pending_blueprint.get("visual_descriptor", {})
-		var size_category: String = vd.get("size_category", "medium")
+		var phys: Dictionary = _pending_blueprint.get("physics", {})
+		var height_cm: int = phys.get("height_cm", 30)
+		var size_category: String = PhysicsComposer.size_from_height(height_cm)
 		var size_data: Dictionary = PhysicsComposer.get_size_data(size_category)
 		var sprite_size: int = size_data["sprite"]
-		var tags: Array = _pending_blueprint.get("tags", [])
-		var color: Color = TagColors.DEFAULT
-		for tag in tags:
-			var c: Color = TagColors.get_color(str(tag))
-			if c != TagColors.DEFAULT:
-				color = c
-				break
+		var color := Color(0.6, 0.7, 0.8, 0.8)  # Neutral placeholder
 		var image := Image.create(sprite_size, sprite_size, false, Image.FORMAT_RGBA8)
 		image.fill(color)
 		sprite.texture = ImageTexture.create_from_image(image)

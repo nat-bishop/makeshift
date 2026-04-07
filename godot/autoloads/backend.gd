@@ -44,11 +44,6 @@ func create_session() -> Dictionary:
 		_save_session_id()
 		_connect_websocket()
 
-	# Load rules from session response
-	var rules: Array = result.get("rules", [])
-	if not rules.is_empty():
-		RuleEngine.load_rules(rules)
-
 	Log.info("Backend: Session created id=%s" % session_id)
 	return result
 
@@ -63,10 +58,6 @@ func restore_session(id: String) -> Dictionary:
 	session_id = id
 	_save_session_id()
 	_connect_websocket()
-
-	var rules: Array = result.get("rules", [])
-	if not rules.is_empty():
-		RuleEngine.load_rules(rules)
 
 	return result
 
@@ -96,24 +87,16 @@ func create_object(description: String) -> Dictionary:
 	return result
 
 
-func fetch_rules() -> Array:
-	var headers: PackedStringArray = PackedStringArray()
-	if _etag != "":
-		headers.append("If-None-Match: %s" % _etag)
-
-	var result: Dictionary = await _http_get("/api/rules", headers)
-
-	if result.get("status_code", 0) == 304:
-		return []  # Not modified, use cached
-
-	var new_etag: String = result.get("etag", "")
-	if new_etag != "":
-		_etag = new_etag
-
-	var rules: Array = result.get("rules", [])
-	if not rules.is_empty():
-		RuleEngine.load_rules(rules)
-	return rules
+func send_state_changed(object_name: String, active_states: Array) -> void:
+	## Notify backend that an object's states changed (triggers lazy re-eval).
+	if _ws == null or not _ws_connected:
+		return
+	var msg: Dictionary = {
+		"type": "state_changed",
+		"object_name": object_name,
+		"active_states": active_states,
+	}
+	_ws.send_text(JSON.stringify(msg))
 
 
 func sync_state(state: Dictionary) -> void:
@@ -193,6 +176,19 @@ func _handle_ws_message(text: String) -> void:
 			_handle_sprite_ready(data)
 		"sprite_failed":
 			_handle_sprite_failed(data)
+		"cache_ready":
+			var entries: Array = data.get("entries", [])
+			InteractionCache.load_pairwise_batch(entries)
+			Log.info("Backend: Cache ready for '%s' (%d entries)" % [data.get("object_name", "?"), entries.size()])
+		"behaviors_ready":
+			var creature_name: String = data.get("creature_name", "")
+			var behaviors: Array = data.get("behaviors", [])
+			InteractionCache.load_creature_batch(creature_name, behaviors)
+			Log.info("Backend: Behaviors ready for '%s' (%d entries)" % [creature_name, behaviors.size()])
+		"cache_updated":
+			var entries: Array = data.get("entries", [])
+			InteractionCache.load_pairwise_batch(entries)
+			Log.info("Backend: Cache updated (%d entries)" % entries.size())
 		"error":
 			Log.warn("Backend WS error: %s" % data.get("message", "unknown"))
 
