@@ -53,6 +53,7 @@ func init_from_blueprint(bp: Dictionary) -> void:
 	add_to_group("game_objects")
 	if _autonomous:
 		add_to_group("living")
+		_create_verb_behavior_system()
 
 	# Field system
 	if bp.get("has_field", false):
@@ -187,6 +188,14 @@ func get_cascade_neighbors() -> Array:
 		if body != self and (body.has_method("get_states") or body.has_method("get_tags")):
 			neighbors.append(body)
 	return neighbors
+
+
+func _create_verb_behavior_system() -> void:
+	var vbs_script = preload("res://scripts/systems/verb_behavior_system.gd")
+	var vbs = vbs_script.new()
+	vbs.name = "VerbBehaviorSystem"
+	add_child(vbs)
+	vbs.init_behaviors([], self)
 
 
 func _create_field_system(bp: Dictionary) -> void:
