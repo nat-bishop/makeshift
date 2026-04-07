@@ -143,50 +143,40 @@ No separate affordance needed for:
 
 ---
 
-## Behavior verbs
+## Creature behavior (per-pair)
 
-What autonomous creatures do. Classified once at creation time. Each verb has a movement pattern and an on-reach action.
-
-| # | Verb | Movement | On reaching target | Engine action |
-|---|---|---|---|---|
-| 0 | **destroy** | Approach | Attack target | Apply pairwise cache damage |
-| 1 | **eat** | Approach | Consume target | Destroy target + heal self (fixed amount or from cache) |
-| 2 | **investigate** | Orbit / approach slowly | Idle near target | No action, may lose interest after timeout |
-| 3 | **follow** | Maintain distance | Track without engaging | No action, persistent |
-| 4 | **guard** | Stay near target | Attack threats to target | Monitor damage events on guarded target, approach + attack aggressors |
-| 5 | **flee** | Run away | — | No contact, purely movement |
-
-One LLM call at creation, ~15-20 output tokens:
-```
-"What does a zombie cop do? Up to 5 entries.
- Format: verb_number, target_description
- Verbs: 0=destroy 1=eat 2=investigate 3=follow 4=guard 5=flee"
-→ 1, brains
-  1, donuts
-  0, criminals
-  5, fire
-```
-
-The target_description is for human readability and movement evaluation context — it's NOT used for semantic matching. Movement reactions are evaluated directly per creature×object pair (see [architecture.md](architecture.md)).
+Autonomous creatures don't have fixed behavior verbs. Instead, each creature×object relationship is evaluated independently at spawn time. A firefighter extinguishes fire, rescues people, and chases arsonists — different behavior for different targets.
 
 ### Movement patterns
 
-Movement reactions are evaluated per creature×object at spawn time:
+| # | Movement | Engine behavior |
+|---|---|---|
+| 0 | **approach** | Move toward target, stop at contact |
+| 1 | **flee** | Move away from target |
+| 2 | **orbit** | Circle target at range |
+| 3 | **ignore** | No movement reaction |
 
-```
-"Zombie cop sees [donut]. 0=approach 1=flee 2=orbit 3=ignore. Strength 0-100?"
-→ 0, 90
-```
+Each creature×object pair gets a movement (0-3) and a strength (0-100) at spawn time.
 
-The behavior verb determines what happens on REACHING the target. The movement reaction determines WHETHER and HOW FAST the creature moves toward/away from it.
+### On-arrival actions
 
-### Guard — threat tracking
+For pairs where the creature approaches or orbits, the LLM decides what happens on arrival:
 
-The guard verb requires a threat-tracking subsystem:
-1. Engine monitors damage events on the guarded target
-2. Maintains an aggressor list (who damaged the guarded target recently)
-3. Guard switches from "stay near" to "approach aggressor" when threat detected
-4. Returns to guard position when threat eliminated
+| # | Action | Parameters | Examples |
+|---|---|---|---|
+| 0 | **nothing** | — | Cat orbits ball of yarn, just watches |
+| 1 | **damage** | amount (0-100) | Cop attacks criminal |
+| 2 | **heal** | amount (0-100) | Doctor heals injured person |
+| 3 | **add state** | state_id (1-7) | Wizard curses enemy (if cursed state existed) |
+| 4 | **remove state** | state_id (1-7) | Firefighter removes on_fire from tree |
+| 5 | **destroy** | — | Zombie destroys brain (instant kill) |
+| 6 | **take** | — | Thief takes gold (pickup holdable) |
+
+These are the same engine primitives as interaction outcomes. The creature behavior system and the pairwise collision cache both produce the same effect types — the engine doesn't care which system generated the effect.
+
+### Staged evaluation
+
+See [architecture.md](architecture.md) for the full staged evaluation flow. Three sequential stages, each parallel internally, each seeding context to the next. 1 token per call. ~104 calls for 3 creatures × 14 objects, ~180ms total.
 
 ---
 
@@ -205,33 +195,8 @@ Fields tick every 2s (rate limit, part of cascade control). First tick is immedi
 
 ---
 
-## Destruction results
+## Destruction
 
-When an object is destroyed, it can leave behind remains. Destruction results are driven by the interaction cache — not speculative.
+When an object reaches 0 HP, it plays a death animation (shrink, fade, particle burst) and is removed from the scene. No runtime LLM calls or image generation.
 
-### How it works
-
-After the pairwise interaction cache is populated at spawn, the engine scans it for any interaction that produces a DESTROY outcome. For each destruction path found:
-
-```
-"A [wooden shield] is destroyed by [fire]. What remains? 3-5 words."
-→ "pile of charred splinters"
-```
-
-One LLM call per destruction path, ~5 tokens. The result sprite is generated in the background. At destruction time: play death animation → swap to pre-cached remains sprite. Instant, no runtime LLM call or image gen.
-
-### Only generates what can actually happen
-
-- If nothing in the scene can destroy the wooden shield, no remains sprite is generated
-- Indestructible objects: skip always
-- When a NEW object enters the scene, scan its new pairwise entries for destruction paths and generate any new remains
-
-This means the cost scales with actual destruction paths in the scene, not with the number of objects. A scene with one fire source and 3 wooden objects: 3 destruction result calls + 3 background image gens. A scene with no fire: 0.
-
-### Remains as objects
-
-The remains ("pile of charred splinters") is itself a new object. Its creation graph runs in the background at spawn time — physics, affordances, destructibility, etc. By the time the original object is actually destroyed, the remains object is fully pre-computed and ready to spawn.
-
-### State changes don't trigger new images
-
-An object gaining on_fire doesn't need a new sprite — fire particles and shaders handle the visual. Only destruction (HP reaches 0) produces a new image. This keeps image gen out of the gameplay loop entirely.
+See [future-features.md](future-features.md) for destruction remains (generating "pile of charred splinters" sprites).

@@ -1,6 +1,6 @@
 # V3 Creation Pipeline
 
-The exact sequence of LLM calls from player input to spawned object. All call counts assume the model and prompt formats from [local-llm-rules.md](local-llm-rules.md).
+The exact sequence of LLM calls from player input to spawned object. All call counts assume the model and prompt formats from [llm-design-patterns.md](llm-design-patterns.md).
 
 ---
 
@@ -31,12 +31,12 @@ These take more output tokens but run simultaneously:
                                      blade and ember particles" (~20-30 tokens)
 13. Affordance 0-3               → 0 (carry)
 
-=== Batch 2: Conditional (~60-190ms, only if needed) ===
-14. If autonomous: behavior list  → verb,target entries (~15-20 tokens)
+Total creation calls: 13
+Total output tokens: ~15 for properties + ~25 for visual = ~40
+Wall time: ~200ms (batches 1+1b in parallel)
 
-Total creation calls: 13-14
-Total output tokens: ~15 for properties + ~25 for visual + ~15 for behaviors = ~55
-Wall time: ~200ms (batches 1+1b in parallel, batch 2 if needed)
+Note: no behavior classification at creation time. Creature behavior is
+evaluated per-pair at spawn time (see below).
 ```
 
 ---
@@ -61,44 +61,24 @@ Per pair, 5 parallel calls (1 token each, ~60ms):
 
 Include physics properties in the prompt. Input is free — stuff as much calibration context as needed.
 
-### Movement reactions (autonomous creatures only)
+### Creature behavior (staged, autonomous creatures only)
 
-For every autonomous creature in the scene, evaluate its reaction to the new object:
-
-```
-Per creature × new object (1 call, 2 tokens):
-"Zombie cop sees [fire sword: flaming longsword with ember particles]. 
- 0=approach 1=flee 2=orbit 3=ignore. Strength 0-100?"
-→ 1, 70 (flee, fire)
-```
-
-Also: if the NEW object is autonomous, evaluate its reaction to every existing object.
-
-### State-based interaction table
-
-For every object in the scene, evaluate its interaction with each of the 7 states:
+For every autonomous creature in the scene, evaluate its relationship with each object in 3 sequential stages. See [architecture.md](architecture.md) for the full staged evaluation design.
 
 ```
-Per object × 7 states, 3 parallel calls (1 token each):
-"An on_fire object is near [wooden chair: 1kg, armor 20, hp 30]. 
- Damage? 0-100"     → 20
-"State change? 0-7"  → 1 (on_fire)
-"Mode? 0=instant 1=continuous" → 1
+Stage 1 + 1b (parallel, all creature×object pairs, 1 token each):
+  Movement: "Zombie cop sees [fire sword]. 0=approach 1=flee 2=orbit 3=ignore" → 1
+  Strength: "How strongly? 0-100" → 70
+
+Stage 2 (parallel, approaching/orbiting pairs only, 1 token each):
+  Action: "Zombie cop is approaching [donut]. On arrival? 0=nothing 1=damage 
+           2=heal 3=add state 4=remove state 5=destroy 6=take" → 5 (destroy)
+
+Stage 3 (parallel, actions needing parameters, 1 token each):
+  Params: damage amount, which state, etc.
 ```
 
-This provides categorical state interactions (fire burns wood) without runtime LLM calls. See [architecture.md](architecture.md) for why this exists.
-
-### Destruction results
-
-After pairwise cache is populated, scan for DESTROY outcomes. For each destruction path:
-
-```
-Per destruction path (1 call, ~5 tokens):
-"A [wooden shield] destroyed by [fire]. What remains? 3-5 words."
-→ "pile of charred splinters"
-```
-
-Then in background: run creation graph for the remains + generate sprite. Not a fixed cost — scales with actual destruction paths in the scene.
+If the NEW object is autonomous, run stages 1-3 for it against all existing objects.
 
 ---
 
@@ -109,24 +89,24 @@ Then in background: run creation graph for the remains + generate sprite. Not a 
 | Phase | Calls | Tokens | Wall time |
 |---|---|---|---|
 | Creation (new object) | 13 | ~40 | ~200ms |
-| Passive pairwise (6 pairs) | 30 | 30 | ~240ms |
-| State interaction table (1 new object × 7 states × 3 calls) | 21 | 21 | ~180ms |
-| Movement reactions (1 creature × 1 new object) | 1 | 2 | ~60ms |
-| Destruction results (~2 paths) | 2 | ~10 | ~60ms |
-| **Total** | **67** | **~103** | **~740ms** |
+| Passive pairwise (6 pairs × 5 calls) | 30 | 30 | ~240ms |
+| Creature behavior stage 1+1b (1 creature × 1 object × 2) | 2 | 2 | ~60ms |
+| Creature behavior stage 2 (~1 approaching pair) | 1 | 1 | ~60ms |
+| Creature behavior stage 3 (~1 needing params) | 1 | 1 | ~60ms |
+| **Total** | **47** | **~74** | **~620ms** |
 
 ### 15-object scene, 3 creatures
 
 | Phase | Calls | Tokens | Wall time |
 |---|---|---|---|
-| Creation (new object) | 14 | ~55 | ~200ms |
-| Passive pairwise (14 pairs with new object) | 70 | 70 | ~540ms |
-| State interaction table (1 new object × 7 states × 3 calls) | 21 | 21 | ~180ms |
-| Movement reactions (3 creatures × 1 new) | 3 | 6 | ~60ms |
-| Movement reactions (if new is creature: 1 × 14 objects) | 14 | 28 | ~120ms |
-| Destruction results (~3 paths) | 3 | ~15 | ~60ms |
-| **Total (new non-creature)** | **111** | **~167** | **~1,040ms** |
-| **Total (new creature)** | **125** | **~195** | **~1,160ms** |
+| Creation (new object) | 13 | ~40 | ~200ms |
+| Passive pairwise (14 pairs × 5 calls) | 70 | 70 | ~540ms |
+| Creature behavior stage 1+1b (3 creatures × 1 object × 2) | 6 | 6 | ~60ms |
+| Creature behavior stage 2 (~2 approaching) | 2 | 2 | ~60ms |
+| Creature behavior stage 3 (~1 needing params) | 1 | 1 | ~60ms |
+| **Total (new non-creature)** | **92** | **~119** | **~920ms** |
+
+If new object is autonomous, add: stage 1+1b (14 objects × 2 = 28), stage 2 (~5), stage 3 (~3) = **~128 calls, ~1,100ms**.
 
 All spawn integration runs during the 2-5s sprite gen window. Player sees no interaction latency.
 
@@ -134,14 +114,14 @@ All spawn integration runs during the 2-5s sprite gen window. Player sees no int
 
 | Phase | Calls | Tokens |
 |---|---|---|
-| Creation (15 objects) | 15 × 13 = 195 | ~600 |
-| Passive pairwise (105 pairs) | 105 × 5 = 525 | 525 |
-| State interaction table (15 objects × 7 states × 3 calls) | 315 | 315 |
-| Movement reactions (3 creatures × 14 objects) | 42 | 84 |
-| Destruction results (~10 paths) | 10 | ~50 |
-| **Total** | **1,087** | **~1,574** |
+| Creation (15 objects × 13) | 195 | ~600 |
+| Passive pairwise (105 pairs × 5) | 525 | 525 |
+| Creature behavior stage 1+1b (3 creatures × 14 objects × 2) | 84 | 84 |
+| Creature behavior stage 2 (~12 approaching pairs) | 12 | 12 |
+| Creature behavior stage 3 (~8 needing params) | 8 | 8 |
+| **Total** | **824** | **~1,229** |
 
-At 8 parallel, 60ms per batch: ~136 batches × 60ms = **~8.2 seconds**. This is scene load time, not per-object. Runs once when the level starts.
+At 8 parallel, 60ms per batch: ~103 batches × 60ms = **~6.2 seconds**. This is scene load time, not per-object. Runs once when the level starts.
 
 ---
 
@@ -162,8 +142,7 @@ Scribblenauts on DS managed 10-15 simultaneous objects. Reasonable starting targ
 ## Pre-caching strategy
 
 1. **Creation cache:** Same object name → same physics from cache. "Fire sword" always gets mass 2.0 after first creation.
-2. **Destruction results:** Only generated for destruction paths that exist in the current scene. Background image gen, non-blocking.
-3. **Sprite cache:** Keyed by SHA-256 of description. Identical descriptions share sprites across sessions.
+2. **Sprite cache:** Keyed by SHA-256 of description. Identical descriptions share sprites across sessions.
 
 ---
 
@@ -173,4 +152,17 @@ Scribblenauts on DS managed 10-15 simultaneous objects. Reasonable starting targ
 
 **Balance.** All numbers from the LLM. Calibration examples set the scale. No global balance constraint. May need post-hoc validation: flag results where damage > HP (one-shot kills) for review.
 
-**State interaction table granularity.** Currently evaluated as "an on_fire object near [X]" — no distinction between a burning wall and a burning sword. This matches V2's behavior (HEAT_SOURCE is HEAT_SOURCE) but loses specificity. May need refinement if players expect different heat intensities from different burning objects.
+**State change re-evaluation.** When an object gains a state, its pairwise cache entries are stale. Lazy invalidation (re-evaluate on next contact/field tick) means a brief window where stale data could be used. In practice, the state change and the next interaction are usually triggered by the same event (fire sword hits wall → wall gains on_fire → field tick re-evaluates nearby pairs).
+
+---
+
+## Implementation notes
+
+### Orchestration pattern
+
+Use `asyncio.gather()` with a data-driven question list. Preferred over `asyncio.TaskGroup` because:
+- All calls are independent (no inter-task dependencies)
+- If one fails, retry it individually rather than canceling siblings
+- `gather(return_exceptions=True)` gives per-call error handling
+
+The question list pattern (see [architecture.md](architecture.md)) makes the pipeline editable during playtesting — add/remove/tweak properties by editing a data list, not orchestration code.

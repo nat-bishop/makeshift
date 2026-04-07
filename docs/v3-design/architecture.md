@@ -8,7 +8,7 @@ The pitch isn't "delete everything and just ask the LLM." It's: **automate the m
 
 The architecture keeps: a state system (smaller), behavior verbs (same), affordances (simpler), contradiction resolution, and cascade control. What it replaces: substance profiles with LLM-generated numbers, hand-authored rules with an LLM-populated cache, tag derivation with interaction-only states, and the single complex creator call with a graph of tiny parallel calls.
 
-See [local-llm-rules.md](local-llm-rules.md) for inference constraints. Key numbers:
+See [llm-design-patterns.md](llm-design-patterns.md) for inference constraints. Key numbers:
 - ~55ms base cost per call, input tokens are free
 - ~7ms per output token — use numbered choices, not words
 - Up to 8 parallel calls ≈ cost of 1 call
@@ -75,23 +75,9 @@ Include both objects' physics properties in the prompt (input is free):
 
 The physics properties act as calibration anchors — the LLM sees toughness 40 and produces consistent damage across similar targets.
 
-### State-based interaction table
+### State changes and cache invalidation
 
-States are a closed set of 7. The effect of being `on_fire` on nearby objects is categorical — fire burns wood regardless of whether a wall or a sword is on fire. This means state interactions can be pre-computed at spawn time per object × per state, not per pair:
-
-```
-Per object × 7 states (1 call each, 1 token, ~60ms per batch):
-"An on_fire object is near [wooden chair: 1kg, armor 20, hp 30]. 
- Damage? 0-100"  → 20
-"State change? 0-7" → 1 (on_fire — fire spreads)
-"Mode? 0=instant 1=continuous" → 1
-```
-
-This is O(N) per state, not O(N²). When the wall catches fire, the engine looks up "on_fire + wooden chair" from this pre-computed table — no runtime LLM call, no cache invalidation. The state interaction table provides the same categorical generalization that V2's tag rules provided (HEAT_SOURCE + FLAMMABLE → ignite), just auto-generated.
-
-### Pairwise cache invalidation
-
-The pairwise cache (object A hits object B) is for BASE interactions between objects without states. When an object gains a state, its state-based interactions are handled by the state interaction table above — not by invalidating and re-evaluating the pairwise cache. The pairwise cache stays valid because it describes what happens when the objects collide in their base form.
+When an object gains or loses a state, its cached interactions are stale — "wooden shield [on_fire]" interacts differently than "wooden shield." The engine marks affected cache entries as stale and re-evaluates them lazily: only when the pair next collides or enters field range. Most stale pairs are objects that aren't near each other and don't need re-evaluation until they actually meet.
 
 ---
 
@@ -105,24 +91,82 @@ Exact name match only. "Fire sword" and "big fire sword" are different cache ent
 
 ---
 
-## Creature movement — direct pairwise evaluation
+## Creature behavior — per-pair evaluation
 
-Replaces seek/avoid lists and semantic target matching from V2.
+Replaces both behavior verbs AND seek/avoid targeting from V2. Instead of classifying a creature into fixed verbs at creation ("firefighter investigates fire") and then separately evaluating movement at spawn, evaluate BOTH movement and outcome per creature×object pair.
 
-When an autonomous creature spawns, evaluate its movement reaction to every object in the scene:
+A firefighter doesn't have one behavior. It extinguishes fire, rescues people, and chases arsonists. The LLM decides what the creature does with EACH specific thing it encounters.
+
+### Staged evaluation (sequential + parallel)
+
+Follows the graph thesis: simple questions, 1 token each, sequential stages that seed context forward.
+
+**Stage 1 — Movement (parallel, all creature×object pairs, 1 token each):**
+```
+"Firefighter sees [burning tree]. 0=approach 1=flee 2=orbit 3=ignore"
+→ 0 (approach)
+
+"Firefighter sees [stone wall]. 0=approach 1=flee 2=orbit 3=ignore"
+→ 3 (ignore)
+```
+
+**Stage 1b — Strength (parallel with stage 1, 1 token each):**
+```
+"How strongly does firefighter react to [burning tree]? 0-100"
+→ 90
+```
+
+**Filter:** only pairs that returned approach (0) or orbit (2) continue. Flee and ignore pairs are complete — the creature never reaches the target so no outcome is needed.
+
+**Stage 2 — Action (parallel, approaching/orbiting pairs only, 1 token each):**
+Seeded with the movement decision from stage 1:
+```
+"Firefighter is approaching [burning tree] because it wants to help.
+ On arrival: 0=nothing 1=damage 2=heal 3=add state 4=remove state 5=destroy 6=take"
+→ 4 (remove state)
+```
+
+**Stage 3 — Parameters (parallel, actions that need them, 1 token each):**
+Seeded with the action from stage 2:
+```
+"Firefighter will remove a state from [burning tree]. Which?
+ 1=on_fire 2=frozen 3=wet 4=electrified 5=poisoned 6=corroded 7=molten"
+→ 1 (on_fire)
+```
+
+### Why staged
+
+Each question is trivially simple because prior answers provide context. "Firefighter removes a state from a burning tree — which state?" is a question a 1.5B model can answer. "What does a firefighter do when it encounters a burning tree? Describe the movement pattern, action type, and parameters" is much harder.
+
+The sequential filtering also saves work. With 3 creatures × 14 objects = 42 pairs in stage 1, maybe 12 survive to stage 2, and 8 need parameters in stage 3. Total: ~104 calls, all 1 token, across 3 sequential batches (~180ms).
+
+### What this replaces
+
+| V2 | Per-pair behavior |
+|---|---|
+| 6 behavior verbs (creation-time) | Dropped — outcomes are per-pair, not per-creature |
+| Seek/avoid target strings | Dropped — no freeform targets, no semantic matching |
+| BEHAVIOR_TARGETS enum (9 values) | Dropped — LLM evaluates each specific object directly |
+| Fixed creature classification | Each creature×object pair gets its own movement + outcome |
+
+### Examples
 
 ```
-Per creature × object (1 call, 2 tokens):
-"Zombie cop sees donut. 
- 0=approach 1=flee 2=orbit 3=ignore. Strength 0-100?"
-→ 0, 90 (approach, strongly)
+Zombie cop + donut → approach 90, destroy + heal (eats it)
+Zombie cop + criminal → approach 80, damage
+Zombie cop + fire → flee 70
+Zombie cop + citizen → orbit 40, nothing (patrols)
+Firefighter + burning tree → approach 90, remove on_fire
+Firefighter + trapped person → approach 80, heal
+Doctor + injured person → approach 90, heal
+Cat + mouse → approach 70, destroy
+Cat + ball of yarn → orbit 50, nothing
+Cat + dog → flee 80
 ```
 
-No freeform target strings. No "is glazed pastry a match for donuts?" semantic matching. Just direct pairwise: does THIS creature care about THIS specific object?
+### New objects in existing scenes
 
-**Why this replaces seek/avoid:** V2 used freeform target strings ("donuts +90") then matched each scene object against them. This had vocabulary drift problems — the same issues that killed embeddings for targeting. Direct pairwise evaluation is cheaper (fewer calls), more accurate (no matching layer), and doesn't drift.
-
-When a new object spawns, evaluate it against all existing creatures' movement reactions. When an object changes state, re-evaluate affected creature reactions (lazy, same as passive cache).
+When a new object spawns, run stages 1-3 for all existing creatures against it. When a new creature spawns, run stages 1-3 for it against all existing objects. When an object changes state, re-evaluate affected creature pairs (lazy — only nearby creatures).
 
 ---
 
@@ -146,8 +190,70 @@ State changes from interactions can cascade (fire spreads to nearby wood). Same 
 
 3. **Graph-based creator** — parallel 1-token calls instead of 1 complex call. Faster, more reliable, works on smaller models.
 
-4. **Direct pairwise movement** — "zombie cop sees donut → approach 90" evaluated directly, no intermediate matching layer.
+4. **Per-pair creature behavior** — firefighter extinguishes fire, rescues people, chases arsonists. Each creature×object relationship gets its own movement + outcome via staged LLM evaluation. Replaces fixed verb classification.
 
-5. **State-based interaction table** — categorical state effects (fire burns wood) pre-computed at spawn. No runtime LLM calls for state cascades.
+5. **No creator-assigned tags** — objects are born stateless. All states come from interactions.
 
-6. **No creator-assigned tags** — objects are born stateless. All states come from interactions.
+---
+
+## Implementation decisions
+
+### The creation pipeline is not a graph
+
+The parallel LLM calls are a **fan-out/fan-in** pattern, not a DAG or state machine. 13 independent calls fire in parallel, results are assembled, then a conditional batch runs if the object is autonomous. There's no branching, no cycles, no node-to-node data flow.
+
+**pydantic-ai Graph is the wrong tool.** It's a finite state machine — nodes execute sequentially, each node's return type picks the next node. No built-in parallelism. Using it would mean stuffing all parallel calls inside a single node's `run()` method, making the Graph wrapper pure boilerplate.
+
+**Use `asyncio.gather()`** for fan-out. It supports per-call error handling via `return_exceptions=True`, which is what we want — if one call fails, retry it individually rather than canceling the others.
+
+### Data-driven question lists
+
+Define LLM calls as data, not code. The orchestration is generic — to add, remove, or edit a property during playtesting, edit the question list:
+
+```python
+CREATION_QUESTIONS = [
+    Question(key="mass",    prompt="How heavy is {name} in kg? (ant=0.001, sword=1.5, car=1500)", max_tokens=1),
+    Question(key="height",  prompt="How tall is {name} in meters? (ant=0.01, sword=1.2, house=8)", max_tokens=1),
+    Question(key="friction", prompt="How grippy is {name} 0-100? (ice=0, rubber=90)", max_tokens=1),
+    # ... add/remove/edit lines here during playtesting
+]
+
+async def create_object(name: str) -> dict:
+    results = dict(await asyncio.gather(*[
+        ask(q.prompt.format(name=name), q.max_tokens) for q in CREATION_QUESTIONS
+    ]))
+    if results["autonomous"] == "1":
+        results["behaviors"] = await ask_behaviors(name)
+    return results
+```
+
+Same pattern for pairwise interaction calls and creature behavior stage calls.
+
+### No client-side rate limiting
+
+SGLang uses continuous batching — it internally queues requests and schedules them across GPU resources, batching prefill and decode phases independently. This is smarter than a client-side semaphore that treats all calls as equal-cost.
+
+Fire all requests concurrently. SGLang handles scheduling. If overloaded, it returns 503 — handle with retry (PydanticAI has built-in retry).
+
+### LLM client — PydanticAI for everything
+
+Use PydanticAI agents for all LLM calls to start. One system, consistent API. For 1-token calls, use `Agent` with `output_type=int` and `max_tokens=1`.
+
+See [future-optimizations.md](future-optimizations.md) for a potential raw httpx + SGLang constrained decoding path if parsing failures become a problem.
+
+### Interaction resolver — cache-backed
+
+`RuleResolver` (V2's static rule matching) is replaced by cache lookups. Same interface shape — `resolve(obj_a, obj_b) -> list[Effect]` — but reads from the pairwise cache instead of hand-authored rules. See [cache.md](cache.md) for the cache design.
+
+### Library decisions
+
+| Library | Decision | Reason |
+|---------|----------|--------|
+| pydantic-ai Graph | Skip | FSM, not a parallel runner — wrong abstraction |
+| asyncio.gather | Use | Fan-out/fan-in with per-call error handling |
+| PydanticAI agents | Use | Consistent API for all LLM calls |
+| aiosqlite | Keep | Already using; works for both game.db and cache.db |
+| diskcache | Skip | Sync-only — every read needs `run_in_executor()` in async code |
+| aiocache | Skip | No SQLite backend; needs Redis for persistence (overkill for local-first) |
+| stamina | Skip for now | PydanticAI has built-in retry; revisit if using raw httpx later |
+| SGLang constrained decoding | Future | Log as optimization, don't implement yet |

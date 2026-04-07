@@ -63,6 +63,8 @@ bench_output/
 benchmark_*.html
 benchmark_*.json
 backend/benchmark_images/
+benchmarks/samples/
+benchmarks/dashboard.html
 
 # Art test/wip assets
 art/test/
