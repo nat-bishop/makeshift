@@ -5,9 +5,21 @@ import time
 import aiosqlite
 
 
+_CACHE_DDL = """CREATE TABLE IF NOT EXISTS cache (
+    cache_type TEXT NOT NULL, cache_key TEXT NOT NULL,
+    value_json TEXT NOT NULL, model_version TEXT NOT NULL DEFAULT '',
+    created_at REAL NOT NULL DEFAULT 0,
+    PRIMARY KEY (cache_type, cache_key))"""
+
+
 class CacheManager:
     def __init__(self, db: aiosqlite.Connection):
         self._db = db
+
+    @classmethod
+    async def ensure_schema(cls, db: aiosqlite.Connection) -> None:
+        await db.execute(_CACHE_DDL)
+        await db.commit()
 
     @staticmethod
     def normalize_key(name: str) -> str:
@@ -52,11 +64,16 @@ class CacheManager:
 
     async def get_all_for_names(self, cache_type: str, names: list[str]) -> dict[str, dict]:
         """Return all pairwise entries involving any of the given names."""
-        results = {}
+        keys = []
         for i, a in enumerate(names):
             for b in names[i + 1 :]:
-                key = self.pair_key(a, b)
-                data = await self.get(cache_type, key)
-                if data:
-                    results[key] = data
-        return results
+                keys.append(self.pair_key(a, b))
+        if not keys:
+            return {}
+        placeholders = ",".join("?" for _ in keys)
+        cursor = await self._db.execute(
+            f"SELECT cache_key, value_json FROM cache"  # noqa: S608
+            f" WHERE cache_type = ? AND cache_key IN ({placeholders})",
+            (cache_type, *keys),
+        )
+        return {row[0]: json.loads(row[1]) async for row in cursor}

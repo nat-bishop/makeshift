@@ -165,8 +165,20 @@ func _on_states_changed(updated_states: Array) -> void:
 	if _field_system != null:
 		_field_system.on_states_changed(_states)
 	EventBus.object_tags_changed.emit(self)
-	# Request creature behavior re-evaluation for nearby autonomous objects
-	Backend.request_reevaluation(object_id, "state_change")
+	# Debounce re-evaluation requests to avoid LLM API spam during cascades
+	_schedule_reevaluation()
+
+
+var _reeval_pending: bool = false
+
+func _schedule_reevaluation() -> void:
+	if _reeval_pending:
+		return
+	_reeval_pending = true
+	get_tree().create_timer(0.5).timeout.connect(func():
+		_reeval_pending = false
+		Backend.request_reevaluation(object_id, "state_change")
+	)
 
 
 func get_cascade_neighbors() -> Array:

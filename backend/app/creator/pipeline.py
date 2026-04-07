@@ -17,7 +17,7 @@ from app.creator.questions import (
     Question,
     parse_bool,
 )
-from app.models.blueprint import GameObjectBlueprint, VisualDescriptor
+from app.models.blueprint import GameObjectBlueprint
 
 logger = structlog.get_logger()
 
@@ -60,7 +60,7 @@ async def create_object(description: str, cache: CacheManager) -> GameObjectBlue
     props: dict[str, Any] = {}
     for i, r in enumerate(results):
         q = all_questions[i]
-        if isinstance(r, Exception):
+        if isinstance(r, BaseException):
             logger.warning("question_failed", key=q.key, error=str(r))
             if q.key == "visual_description":
                 props[q.key] = f"a {name}"

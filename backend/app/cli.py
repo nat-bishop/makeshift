@@ -109,13 +109,7 @@ async def _run_llm(description: str, timer: Timer) -> Any:
     from app.creator.pipeline import create_object
 
     cache_db = await aiosqlite.connect(settings.cache_database_path)
-    await cache_db.execute(
-        """CREATE TABLE IF NOT EXISTS cache (
-        cache_type TEXT NOT NULL, cache_key TEXT NOT NULL,
-        value_json TEXT NOT NULL, model_version TEXT NOT NULL DEFAULT '',
-        created_at REAL NOT NULL DEFAULT 0,
-        PRIMARY KEY (cache_type, cache_key))"""
-    )
+    await CacheManager.ensure_schema(cache_db)
     cache = CacheManager(cache_db)
 
     t0 = time.monotonic()

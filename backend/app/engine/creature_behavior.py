@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import asyncio
-import re
 from dataclasses import dataclass
 
 import structlog
 from pydantic_ai import Agent
 
 from app.creator.llm import build_model
+from app.creator.questions import parse_int
 
 logger = structlog.get_logger()
 
@@ -73,8 +73,8 @@ async def evaluate_creature_behaviors(
             model_settings={"max_tokens": 1, "temperature": 0.3},
         )
         r = await agent.run(prompt)
-        m = re.search(r"\d", r.output)
-        return (target_name, int(m.group()) if m else 3)
+        val = parse_int(r.output)
+        return (target_name, val if val in (0, 1, 2, 3) else 3)
 
     async def _ask_strength(target_name: str) -> tuple[str, int]:
         prompt = STRENGTH_PROMPT.format(
@@ -86,8 +86,7 @@ async def evaluate_creature_behaviors(
             model_settings={"max_tokens": 1, "temperature": 0.3},
         )
         r = await agent.run(prompt)
-        m = re.search(r"\d+", r.output)
-        return (target_name, int(m.group()) if m else 0)
+        return (target_name, parse_int(r.output))
 
     movement_results = await asyncio.gather(
         *[_ask_movement(bp["name"]) for bp in scene_bps], return_exceptions=True
@@ -100,8 +99,8 @@ async def evaluate_creature_behaviors(
     behaviors = []
     stage2_pairs: list[tuple[int, CreatureBehavior]] = []
     for i, bp in enumerate(scene_bps):
-        mv = movement_results[i][1] if not isinstance(movement_results[i], Exception) else 3
-        st = strength_results[i][1] if not isinstance(strength_results[i], Exception) else 0
+        mv = movement_results[i][1] if not isinstance(movement_results[i], BaseException) else 3
+        st = strength_results[i][1] if not isinstance(strength_results[i], BaseException) else 0
         cb = CreatureBehavior(
             target_name=bp["name"], movement=mv, strength=st, action=0, action_param=0
         )
@@ -126,15 +125,14 @@ async def evaluate_creature_behaviors(
             model_settings={"max_tokens": 1, "temperature": 0.3},
         )
         r = await agent.run(prompt)
-        m = re.search(r"\d", r.output)
-        return (idx, int(m.group()) if m else 0)
+        return (idx, parse_int(r.output))
 
     if stage2_pairs:
         action_results = await asyncio.gather(
             *[_ask_action(idx, cb) for idx, cb in stage2_pairs], return_exceptions=True
         )
         for r in action_results:
-            if not isinstance(r, Exception):
+            if not isinstance(r, BaseException):
                 idx, action = r
                 behaviors[idx].action = action
 
@@ -157,15 +155,14 @@ async def evaluate_creature_behaviors(
             model_settings={"max_tokens": 2, "temperature": 0.3},
         )
         r = await agent.run(prompt)
-        m = re.search(r"\d+", r.output)
-        return (idx, int(m.group()) if m else 0)
+        return (idx, parse_int(r.output))
 
     if stage3_pairs:
         param_results = await asyncio.gather(
             *[_ask_param(idx, cb) for idx, cb in stage3_pairs], return_exceptions=True
         )
         for r in param_results:
-            if not isinstance(r, Exception):
+            if not isinstance(r, BaseException):
                 idx, param = r
                 behaviors[idx].action_param = param
 

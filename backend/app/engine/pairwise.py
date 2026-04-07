@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import asyncio
-import re
 
 import structlog
 from pydantic_ai import Agent
 
 from app.cache.manager import CacheManager
 from app.creator.llm import build_model
+from app.creator.questions import parse_int
 from app.models.pairwise import PairwiseResult
 from app.ws.handler import send_pairwise_ready
 
@@ -105,6 +105,8 @@ async def screen_pairs(
     text = result.output.strip()
     if "none" in text.lower():
         return []
+    import re
+
     indices = [int(m) - 1 for m in re.findall(r"\d+", text)]  # 1-indexed -> 0-indexed
     return [i for i in indices if 0 <= i < len(scene_bps)]
 
@@ -130,8 +132,7 @@ async def evaluate_pair(bp_a: dict, bp_b: dict, cache: CacheManager) -> Pairwise
             model_settings={"max_tokens": 2, "temperature": 0.3},
         )
         r = await agent.run(prompt)
-        m = re.search(r"\d+", r.output.strip())
-        return (key, int(m.group()) if m else 0)
+        return (key, parse_int(r.output.strip()))
 
     results = await asyncio.gather(
         *[_ask_pairwise(k, t) for k, t in PAIRWISE_QUESTIONS],
@@ -140,7 +141,7 @@ async def evaluate_pair(bp_a: dict, bp_b: dict, cache: CacheManager) -> Pairwise
     props = {}
     for i, r in enumerate(results):
         k = PAIRWISE_QUESTIONS[i][0]
-        props[k] = r[1] if not isinstance(r, Exception) else 0
+        props[k] = r[1] if not isinstance(r, BaseException) else 0
 
     result = PairwiseResult(
         damage_a=min(100, max(0, props.get("damage_a", 0))),

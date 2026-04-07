@@ -10,6 +10,7 @@ from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from app.cache.manager import CacheManager
 from app.config import settings
 from app.logging_setup import setup_logging
 from app.middleware import session_context_middleware
@@ -87,19 +88,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     # Initialize cache SQLite
     cache_db = await aiosqlite.connect(settings.cache_database_path)
-    await cache_db.execute(
-        """
-        CREATE TABLE IF NOT EXISTS cache (
-            cache_type TEXT NOT NULL,
-            cache_key TEXT NOT NULL,
-            value_json TEXT NOT NULL,
-            model_version TEXT NOT NULL DEFAULT '',
-            created_at REAL NOT NULL DEFAULT 0,
-            PRIMARY KEY (cache_type, cache_key)
-        )
-        """
-    )
-    await cache_db.commit()
+    await CacheManager.ensure_schema(cache_db)
     app.state.cache_db = cache_db
 
     logger.info("databases_ready")

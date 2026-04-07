@@ -140,7 +140,7 @@ class SessionManager:
     ) -> None:
         """Save or update a world object in the session."""
         blueprint_json = blueprint.model_dump_json()
-        durability = float(blueprint.starting_durability)
+        durability = float(blueprint.hp * 2) if blueprint.hp > 0 else 9999.0
 
         await self._db.execute(
             """
@@ -173,7 +173,7 @@ class SessionManager:
                     bp.model_dump_json(),
                     0.0,
                     0.0,
-                    float(bp.starting_durability),
+                    float(bp.hp * 2) if bp.hp > 0 else 9999.0,
                 )
                 for bp in blueprints
             ],
