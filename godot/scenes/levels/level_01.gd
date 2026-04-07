@@ -6,12 +6,17 @@ extends BaseLevel
 const CRATE_BLUEPRINT := {
 	"id": "crate_level01",
 	"name": "Wooden Crate",
-	"tags": ["RIGID", "FLAMMABLE", "BREAKABLE"],
-	"starting_durability": 50,
+	"mass_kg": 10, "height_cm": 40,
+	"friction": 50, "bounce": 10, "gravity": 50,
+	"armor": 10, "hp": 50, "indestructible": false,
+	"has_field": false, "field_range_cm": 0,
+	"autonomous": false, "affordance": 0,
 	"visual_descriptor": {
 		"visual_description": "a small wooden shipping crate with planks and nails",
 		"size_category": "small",
 	},
+	"destruction_result_name": "wood splinters",
+	"states": [],
 }
 
 
@@ -33,7 +38,7 @@ func _build_terrain() -> void:
 	_create_platform(Vector2(880, 568), Vector2(16, 128))
 	_create_env_body(
 		Vector2(400, 632), Vector2(480, 48),
-		["ACIDIC", "TOXIC", "LIQUID"],
+		"acid pool",
 		Color(0.2, 0.9, 0.1, 0.8), "acid_pool", false
 	)
 	_create_kill_zone(Vector2(400, 700), Vector2(480, 64))

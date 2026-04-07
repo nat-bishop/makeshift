@@ -1,0 +1,98 @@
+- creature: zombie
+  target: brain
+  expected_movement: approach
+  expected_action: destroy
+  notes: classic zombie behavior
+
+- creature: firefighter
+  target: burning tree
+  expected_movement: approach
+  expected_action: remove_state
+  expected_param: on_fire
+
+- creature: firefighter
+  target: trapped person
+  expected_movement: approach
+  expected_action: heal
+
+- creature: cat
+  target: mouse
+  expected_movement: approach
+  expected_action: destroy
+
+- creature: cat
+  target: dog
+  expected_movement: flee
+
+- creature: cat
+  target: ball of yarn
+  expected_movement: orbit
+  expected_action: nothing
+
+- creature: guard dog
+  target: burglar
+  expected_movement: approach
+  expected_action: damage
+
+- creature: guard dog
+  target: owner
+  expected_movement: orbit
+  expected_action: nothing
+  notes: protective orbiting
+
+- creature: vampire
+  target: garlic
+  expected_movement: flee
+
+- creature: vampire
+  target: human
+  expected_movement: approach
+  expected_action: damage
+
+- creature: rabbit
+  target: carrot
+  expected_movement: approach
+  expected_action: destroy
+  notes: eating
+
+- creature: rabbit
+  target: wolf
+  expected_movement: flee
+
+- creature: zombie cop
+  target: donut
+  expected_movement: approach
+  expected_action: destroy
+  notes: eats it
+
+- creature: zombie cop
+  target: criminal
+  expected_movement: approach
+  expected_action: damage
+
+- creature: doctor
+  target: injured person
+  expected_movement: approach
+  expected_action: heal
+
+- creature: bee
+  target: flower
+  expected_movement: approach
+  expected_action: nothing
+  notes: pollinating
+
+- creature: bee
+  target: bear
+  expected_movement: approach
+  expected_action: damage
+  notes: defensive stinging
+
+- creature: dragon
+  target: knight
+  expected_movement: approach
+  expected_action: damage
+
+- creature: dragon
+  target: gold coin
+  expected_movement: approach
+  expected_action: take

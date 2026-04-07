@@ -13,15 +13,33 @@ func _ready() -> void:
 
 
 func apply_from_blueprint(bp: Dictionary) -> void:
-	## Read physics from pre-computed substance_profile in blueprint.
-	var physics: Dictionary = SubstancePhysics.resolve_physics(bp)
-	var size_category: String = bp.get("visual_descriptor", {}).get("size_category", "medium")
-	apply_physics(physics, size_category)
+	## V3: Read physics directly from blueprint fields (LLM-generated).
+	var mass_kg: float = bp.get("mass_kg", 1.0)
+	var friction_pct: int = bp.get("friction", 50)
+	var bounce_pct: int = bp.get("bounce", 0)
+	var gravity_pct: int = bp.get("gravity", 50)
+	var height_cm: int = bp.get("height_cm", 50)
+
+	# Damping: light large things (feather) = high, heavy small (bullet) = low
+	var damping: float = clampf(float(height_cm) / (mass_kg * 100.0 + 10.0), 0.0, 10.0)
+
+	# Gravity: 0 -> -0.5 (floats), 50 -> 1.0 (normal), 100 -> 2.0 (heavy)
+	var gravity_scale: float = lerpf(-0.5, 2.0, gravity_pct / 100.0)
+
+	var size_cat: String = bp.get("visual_descriptor", {}).get("size_category", "medium")
+	var mass_mult: float = PhysicsComposer.get_size_mass_multiplier(size_cat)
+
+	apply_physics({
+		"mass": mass_kg * mass_mult,
+		"gravity": gravity_scale,
+		"friction": friction_pct / 100.0,
+		"bounce": bounce_pct / 100.0,
+		"damping": damping,
+	}, size_cat)
 
 
 func apply_physics(physics: Dictionary, size_category: String) -> void:
-	var size_mass_mult: float = PhysicsComposer.get_size_mass_multiplier(size_category)
-	_body.mass = physics["mass"] * size_mass_mult
+	_body.mass = physics["mass"]
 	_body.gravity_scale = physics["gravity"]
 	_body.linear_damp = physics["damping"]
 
@@ -35,7 +53,7 @@ func apply_physics(physics: Dictionary, size_category: String) -> void:
 		_prev_friction = new_friction
 		_prev_bounce = new_bounce
 
-	Log.debug("PhysicsApplicator: Applied physics for '%s' — size=%s, mass=%.1f, friction=%.2f, bounce=%.2f, gravity=%.1f, damp=%.1f" % [_body.blueprint.get("name", ""), size_category, _body.mass, physics["friction"], physics["bounce"], physics["gravity"], physics["damping"]])
+	Log.debug("PhysicsApplicator: V3 physics for '%s' — size=%s, mass=%.1f, friction=%.2f, bounce=%.2f, gravity=%.1f, damp=%.1f" % [_body.blueprint.get("name", ""), size_category, _body.mass, physics["friction"], physics["bounce"], physics["gravity"], physics["damping"]])
 
 	if not _has_sprite_shape:
 		_configure_shape(size_category)

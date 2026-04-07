@@ -11,20 +11,21 @@ var _base_sprite_scale: Vector2 = Vector2.ONE
 var _programmatic_initialized: bool = false
 var _hit_flash_timer: float = 0.0
 
-# Active animation configs (rebuilt when tags change)
-var _active_bobbing: Array = []
-var _active_swaying: Array = []
-var _active_breathing: Array = []
-var _active_alpha_pulse: Array = []
-var _active_color_shift: Array = []
-var _active_flash: Array = []
-var _active_jitter: Array = []
+# V3: Physics-derived animation flags
+var _do_bobbing: bool = false
+var _bobbing_amplitude: float = 3.0
+var _bobbing_speed: float = 2.0
+var _do_breathing: bool = false
+var _breathing_amplitude: float = 0.03
+var _breathing_speed: float = 1.5
 var _has_bouncy: bool = false
-var _active_shader_affects_alpha: bool = false
 var _bounce_tween: Tween = null
 
-# Ambient particle emitters (tag -> CPUParticles2D node)
+# State visual nodes
 var _particle_nodes: Dictionary = {}
+var _state_light: PointLight2D = null
+var _active_color_shift: Color = Color.WHITE
+var _has_color_shift: bool = false
 
 
 func _ready() -> void:
@@ -80,116 +81,81 @@ func _on_sprite_ready(id: String, texture: Texture2D) -> void:
 		set_sprite(texture)
 
 
-# ── Tag flag collection ──────────────────────────────────────────────────
+# ── V3: Blueprint-driven init ───────────────────────────────────────────
 
-func _update_tag_flags(tags: Array) -> void:
-	_active_bobbing = _collect(tags, TagAnimations.BOBBING)
-	_active_swaying = _collect(tags, TagAnimations.SWAYING)
-	_active_breathing = _collect(tags, TagAnimations.BREATHING)
-	_active_alpha_pulse = _collect(tags, TagAnimations.ALPHA_PULSE)
-	_active_color_shift = _collect(tags, TagAnimations.COLOR_SHIFT)
-	_active_jitter = _collect(tags, TagAnimations.JITTER)
-	_update_flash_entries(tags)
-	_has_bouncy = "BOUNCY" in tags
+func init_from_blueprint(bp: Dictionary) -> void:
+	_base_sprite_y = _sprite.position.y
+	_base_sprite_scale = _sprite.scale
 
+	# Physics-derived animations
+	var gravity_pct: int = bp.get("gravity", 50)
+	if gravity_pct < 25:
+		_do_bobbing = true
 
-func _collect(tags: Array, anim_dict: Dictionary) -> Array:
-	var result: Array = []
-	for tag in tags:
-		if tag in anim_dict:
-			var entry: Dictionary = anim_dict[tag].duplicate()
-			entry["tag"] = tag
-			result.append(entry)
-	return result
+	if bp.get("autonomous", false):
+		_do_breathing = true
 
+	var bounce_pct: int = bp.get("bounce", 0)
+	if bounce_pct > 60:
+		_has_bouncy = true
+		get_parent().body_entered.connect(_on_bounce_collision)
 
-func _update_flash_entries(tags: Array) -> void:
-	# Preserve timer state for tags that remain active
-	var existing: Dictionary = {}
-	for entry in _active_flash:
-		existing[entry["tag"]] = entry
-	_active_flash = []
-	for tag in tags:
-		if tag in TagAnimations.FLASH:
-			if tag in existing:
-				_active_flash.append(existing[tag])
-			else:
-				var entry: Dictionary = TagAnimations.FLASH[tag].duplicate()
-				entry["tag"] = tag
-				entry["_next_time"] = randf_range(entry["min_interval"], entry["max_interval"])
-				entry["_flash_timer"] = 0.0
-				_active_flash.append(entry)
+	if _do_bobbing or _do_breathing or _has_bouncy:
+		_programmatic_initialized = true
+		set_process(true)
 
 
-func _has_any_animations() -> bool:
-	return (
-		not _active_bobbing.is_empty()
-		or not _active_swaying.is_empty()
-		or not _active_breathing.is_empty()
-		or not _active_alpha_pulse.is_empty()
-		or not _active_color_shift.is_empty()
-		or not _active_flash.is_empty()
-		or not _active_jitter.is_empty()
-		or _has_bouncy
-	)
+# ── V3: State-driven visuals ────────────────────────────────────────────
+
+func refresh_state_visuals(states: Array) -> void:
+	_clear_state_effects()
+	_has_color_shift = false
+	_active_color_shift = Color.WHITE
+
+	for state in states:
+		if state in StateVisuals.STATE_PARTICLES:
+			_add_state_particles(state, StateVisuals.STATE_PARTICLES[state])
+		if state in StateVisuals.STATE_SHADERS:
+			_apply_shader_path(StateVisuals.STATE_SHADERS[state])
+		if state in StateVisuals.STATE_COLOR_SHIFTS:
+			_active_color_shift = StateVisuals.STATE_COLOR_SHIFTS[state]
+			_has_color_shift = true
+		if state in StateVisuals.STATE_LIGHTS:
+			_add_state_light(StateVisuals.STATE_LIGHTS[state])
+
+	# Update modulate for color shift
+	if _has_color_shift:
+		_sprite.modulate = _active_color_shift
+	elif _hit_flash_timer <= 0.0:
+		_sprite.modulate = Color.WHITE
 
 
-func _has_color_anims() -> bool:
-	return (
-		not _active_alpha_pulse.is_empty()
-		or not _active_color_shift.is_empty()
-		or not _active_flash.is_empty()
-	)
+func _clear_state_effects() -> void:
+	# Remove particle nodes
+	for key in _particle_nodes.keys():
+		_particle_nodes[key].queue_free()
+	_particle_nodes.clear()
+	# Remove light
+	if _state_light != null:
+		_state_light.queue_free()
+		_state_light = null
+	# Clear shader
+	if _sprite != null:
+		_sprite.material = null
 
 
-# ── Shaders ──────────────────────────────────────────────────────────────
-
-func _apply_tag_shaders(tags: Array) -> void:
-	for tag in tags:
-		if tag in TagAnimations.SHADERS:
-			var data: Dictionary = TagAnimations.SHADERS[tag]
-			var shader: Shader = data["shader"]
-			if _sprite.material is ShaderMaterial and _sprite.material.shader == shader:
-				_active_shader_affects_alpha = data.get("affects_alpha", false)
-				return
-			var mat := ShaderMaterial.new()
-			mat.shader = shader
-			for param_name in data["params"]:
-				mat.set_shader_parameter(param_name, data["params"][param_name])
-			_sprite.material = mat
-			_active_shader_affects_alpha = data.get("affects_alpha", false)
-			return
-	_sprite.material = null
-	_active_shader_affects_alpha = false
-
-
-# ── Ambient particles ────────────────────────────────────────────────────
-
-func _update_particles(tags: Array) -> void:
-	# Remove particles for tags no longer present
-	for tag in _particle_nodes.keys():
-		if tag not in tags:
-			_particle_nodes[tag].queue_free()
-			_particle_nodes.erase(tag)
-	# Add particles for new tags
-	for tag in tags:
-		if tag in TagAnimations.PARTICLES and tag not in _particle_nodes:
-			_particle_nodes[tag] = _create_particle_emitter(tag)
-
-
-func _create_particle_emitter(tag: String) -> CPUParticles2D:
-	var data: Dictionary = TagAnimations.PARTICLES[tag]
+func _add_state_particles(state: String, data: Dictionary) -> void:
 	var emitter := CPUParticles2D.new()
 	emitter.emitting = true
 	emitter.amount = data["amount"]
-	emitter.lifetime = data["lifetime"]
+	emitter.lifetime = 1.0
 	emitter.direction = data["direction"]
-	emitter.spread = data["spread"]
-	emitter.initial_velocity_min = data["velocity_min"]
-	emitter.initial_velocity_max = data["velocity_max"]
-	emitter.scale_amount_min = data["scale_min"]
-	emitter.scale_amount_max = data["scale_max"]
-	emitter.gravity = data["gravity"]
+	emitter.spread = 30.0
+	emitter.initial_velocity_min = 10.0
+	emitter.initial_velocity_max = 30.0
+	emitter.scale_amount_min = 1.0
+	emitter.scale_amount_max = 2.0
+	emitter.gravity = Vector2(0, -20) if data["direction"] == Vector2.UP else Vector2(0, 20)
 	emitter.color = data["color"]
 	# Fade out over lifetime
 	var ramp := Gradient.new()
@@ -197,137 +163,49 @@ func _create_particle_emitter(tag: String) -> CPUParticles2D:
 	ramp.set_color(1, Color(data["color"].r, data["color"].g, data["color"].b, 0.0))
 	emitter.color_ramp = ramp
 	add_child(emitter)
-	return emitter
+	_particle_nodes[state] = emitter
 
 
-# ── Init and refresh ─────────────────────────────────────────────────────
-
-func init_programmatic_anims(tags: Array) -> void:
-	_base_sprite_y = _sprite.position.y
-	_base_sprite_scale = _sprite.scale
-	_update_tag_flags(tags)
-	_apply_tag_shaders(tags)
-	_update_particles(tags)
-
-	if _has_bouncy:
-		get_parent().body_entered.connect(_on_bounce_collision)
-
-	if _has_any_animations():
-		_programmatic_initialized = true
-		set_process(true)
+func _apply_shader_path(shader_path: String) -> void:
+	if _sprite == null:
+		return
+	var shader_res = load(shader_path)
+	if shader_res == null:
+		return
+	var mat := ShaderMaterial.new()
+	mat.shader = shader_res
+	_sprite.material = mat
 
 
-func refresh_tag_visuals(tags: Array) -> void:
-	_update_tag_flags(tags)
-	_apply_tag_shaders(tags)
-	_update_particles(tags)
-
-	var needs_process: bool = _has_any_animations()
-	if needs_process:
-		_programmatic_initialized = true
-		set_process(true)
-	elif _programmatic_initialized:
-		# Reset sprite state when no animated tags remain
-		_sprite.modulate = Color.WHITE
-		_sprite.position.y = _base_sprite_y
-		_sprite.position.x = 0.0
-		_sprite.rotation = 0.0
-		_sprite.scale = _base_sprite_scale
-		_programmatic_initialized = false
-		set_process(false)
+func _add_state_light(data: Dictionary) -> void:
+	if _state_light != null:
+		_state_light.queue_free()
+	_state_light = PointLight2D.new()
+	_state_light.color = data["color"]
+	_state_light.energy = data["energy"]
+	_state_light.texture = preload("res://icon.svg")  # fallback light texture
+	_state_light.texture_scale = data["texture_scale"] / 128.0
+	add_child(_state_light)
 
 
-# ── Per-frame animation ──────────────────────────────────────────────────
+# ── Per-frame animation ─────────────────────────────────────────────────
 
 func _apply_programmatic_anims(delta: float) -> void:
-	# Position
-	var pos_y_offset: float = _calc_bobbing()
-	var jitter_offset: Vector2 = _calc_jitter()
-	_sprite.position.y = _base_sprite_y + pos_y_offset + jitter_offset.y
-	_sprite.position.x = jitter_offset.x
+	# Bobbing
+	if _do_bobbing:
+		_sprite.position.y = _base_sprite_y + _bobbing_amplitude * sin(_time * _bobbing_speed)
 
-	# Rotation
-	_sprite.rotation = _calc_swaying()
+	# Breathing
+	if _do_breathing and not (_bounce_tween and _bounce_tween.is_running()):
+		var pulse: float = _breathing_amplitude * sin(_time * _breathing_speed)
+		_sprite.scale = _base_sprite_scale + Vector2(pulse, pulse)
 
-	# Scale (skip if bounce tween is running — it owns scale briefly)
-	if not (_bounce_tween and _bounce_tween.is_running()):
-		_sprite.scale = _base_sprite_scale + _calc_breathing()
-
-	# Color/alpha composition
-	var color := Color.WHITE
-	var alpha := 1.0
-	if not _active_shader_affects_alpha:
-		alpha = _calc_alpha_pulse(alpha)
-	color = _calc_color_shift(color)
-	color = _calc_flash(color, delta)
-
+	# Hit flash countdown
 	if _hit_flash_timer > 0.0:
 		_hit_flash_timer -= delta
-	elif _has_color_anims():
-		_sprite.modulate = Color(color.r, color.g, color.b, alpha)
 
 
-func _calc_bobbing() -> float:
-	var offset := 0.0
-	for entry in _active_bobbing:
-		offset += entry["amplitude"] * sin(_time * entry["speed"])
-	return offset
-
-
-func _calc_swaying() -> float:
-	var rotation := 0.0
-	for entry in _active_swaying:
-		rotation += entry["amplitude"] * sin(_time * entry["speed"])
-	return rotation
-
-
-func _calc_breathing() -> Vector2:
-	var scale_delta := Vector2.ZERO
-	for entry in _active_breathing:
-		var pulse: float = entry["amplitude"] * sin(_time * entry["speed"])
-		scale_delta += Vector2(pulse, pulse)
-	return scale_delta
-
-
-func _calc_alpha_pulse(current_alpha: float) -> float:
-	for entry in _active_alpha_pulse:
-		current_alpha = entry["base_alpha"] + entry["amplitude"] * sin(_time * entry["speed"])
-	return current_alpha
-
-
-func _calc_color_shift(color: Color) -> Color:
-	for entry in _active_color_shift:
-		var pulse: float = entry["amplitude"] * sin(_time * entry["speed"])
-		color.r += entry["r_offset"] * pulse
-		color.g += entry["g_offset"] * pulse
-		color.b += entry["b_offset"] * pulse
-	return color
-
-
-func _calc_flash(color: Color, delta: float) -> Color:
-	for entry in _active_flash:
-		if entry["_flash_timer"] > 0.0:
-			entry["_flash_timer"] -= delta
-			if entry["_flash_timer"] > 0.0:
-				color = entry["color"]
-		else:
-			entry["_next_time"] -= delta
-			if entry["_next_time"] <= 0.0:
-				color = entry["color"]
-				entry["_flash_timer"] = entry["duration"]
-				entry["_next_time"] = randf_range(entry["min_interval"], entry["max_interval"])
-	return color
-
-
-func _calc_jitter() -> Vector2:
-	var offset := Vector2.ZERO
-	for entry in _active_jitter:
-		offset.x += randf_range(-1.0, 1.0) * entry["intensity"]
-		offset.y += randf_range(-1.0, 1.0) * entry["intensity"]
-	return offset
-
-
-# ── Event-triggered effects (not data-driven) ───────────────────────────
+# ── Event-triggered effects ─────────────────────────────────────────────
 
 func flash_hit(color: Color) -> void:
 	if _sprite == null:

@@ -1,0 +1,1130 @@
+[
+  {
+    "rule_id": "heat_flammable_ignite",
+    "tags_a": [
+      "HEAT_SOURCE"
+    ],
+    "tags_b": [
+      "FLAMMABLE"
+    ],
+    "expected_effects": [
+      {
+        "type": "ADD_TAG",
+        "target": "b",
+        "tag": "HEAT_SOURCE"
+      },
+      {
+        "type": "ADD_TAG",
+        "target": "b",
+        "tag": "HOT"
+      },
+      {
+        "type": "DAMAGE",
+        "target": "b",
+        "damage_amount": 10.0
+      }
+    ],
+    "description": "Ignition"
+  },
+  {
+    "rule_id": "heat_frozen_melt",
+    "tags_a": [
+      "HEAT_SOURCE"
+    ],
+    "tags_b": [
+      "FROZEN"
+    ],
+    "expected_effects": [
+      {
+        "type": "REMOVE_TAG",
+        "target": "b",
+        "tag": "FROZEN"
+      },
+      {
+        "type": "REMOVE_TAG",
+        "target": "b",
+        "tag": "RIGID"
+      },
+      {
+        "type": "ADD_TAG",
+        "target": "b",
+        "tag": "LIQUID"
+      }
+    ],
+    "description": "Melting"
+  },
+  {
+    "rule_id": "liquid_heat_extinguish",
+    "tags_a": [
+      "LIQUID"
+    ],
+    "tags_b": [
+      "HEAT_SOURCE"
+    ],
+    "expected_effects": [
+      {
+        "type": "REMOVE_TAG",
+        "target": "b",
+        "tag": "HEAT_SOURCE"
+      },
+      {
+        "type": "REMOVE_TAG",
+        "target": "b",
+        "tag": "HOT"
+      }
+    ],
+    "description": "Extinguish"
+  },
+  {
+    "rule_id": "sharp_breakable_damage",
+    "tags_a": [
+      "SHARP"
+    ],
+    "tags_b": [
+      "BREAKABLE"
+    ],
+    "expected_effects": [
+      {
+        "type": "DAMAGE",
+        "target": "b",
+        "damage_amount": 25.0
+      }
+    ],
+    "description": "Cut"
+  },
+  {
+    "rule_id": "cold_liquid_freeze",
+    "tags_a": [
+      "COLD"
+    ],
+    "tags_b": [
+      "LIQUID"
+    ],
+    "expected_effects": [
+      {
+        "type": "ADD_TAG",
+        "target": "b",
+        "tag": "FROZEN"
+      },
+      {
+        "type": "ADD_TAG",
+        "target": "b",
+        "tag": "RIGID"
+      },
+      {
+        "type": "REMOVE_TAG",
+        "target": "b",
+        "tag": "LIQUID"
+      },
+      {
+        "type": "ADD_TAG",
+        "target": "b",
+        "tag": "BRITTLE"
+      }
+    ],
+    "description": "Freeze Liquid"
+  },
+  {
+    "rule_id": "explosive_heat_detonate",
+    "tags_a": [
+      "EXPLOSIVE"
+    ],
+    "tags_b": [
+      "HEAT_SOURCE"
+    ],
+    "expected_effects": [
+      {
+        "type": "DAMAGE",
+        "target": "a",
+        "damage_amount": 99999.0
+      },
+      {
+        "type": "DAMAGE",
+        "target": "b",
+        "damage_amount": 80.0
+      },
+      {
+        "type": "APPLY_FORCE",
+        "target": "b",
+        "force_magnitude": 500.0
+      }
+    ],
+    "description": "Detonation"
+  },
+  {
+    "rule_id": "electric_metallic_electrify",
+    "tags_a": [
+      "ELECTRIC"
+    ],
+    "tags_b": [
+      "METALLIC"
+    ],
+    "expected_effects": [
+      {
+        "type": "DAMAGE",
+        "target": "b",
+        "damage_amount": 30.0
+      },
+      {
+        "type": "ADD_TAG",
+        "target": "b",
+        "tag": "ELECTRIC"
+      },
+      {
+        "type": "ADD_TAG",
+        "target": "b",
+        "tag": "GLOWING"
+      }
+    ],
+    "description": "Electrical Conduction"
+  },
+  {
+    "rule_id": "electric_liquid_electrify",
+    "tags_a": [
+      "ELECTRIC"
+    ],
+    "tags_b": [
+      "LIQUID"
+    ],
+    "expected_effects": [
+      {
+        "type": "DAMAGE",
+        "target": "b",
+        "damage_amount": 30.0
+      },
+      {
+        "type": "ADD_TAG",
+        "target": "b",
+        "tag": "ELECTRIC"
+      },
+      {
+        "type": "ADD_TAG",
+        "target": "b",
+        "tag": "GLOWING"
+      }
+    ],
+    "description": "Electrified Liquid"
+  },
+  {
+    "rule_id": "acidic_breakable_corrode",
+    "tags_a": [
+      "ACIDIC"
+    ],
+    "tags_b": [
+      "BREAKABLE"
+    ],
+    "expected_effects": [
+      {
+        "type": "DAMAGE",
+        "target": "b",
+        "damage_amount": 15.0
+      }
+    ],
+    "description": "Acid Corrosion"
+  },
+  {
+    "rule_id": "wind_light_push",
+    "tags_a": [
+      "WIND_SOURCE"
+    ],
+    "tags_b": [
+      "LIGHT"
+    ],
+    "expected_effects": [
+      {
+        "type": "APPLY_FORCE",
+        "target": "b",
+        "force_magnitude": 45.0
+      }
+    ],
+    "description": "Wind Push"
+  },
+  {
+    "rule_id": "wind_gas_disperse",
+    "tags_a": [
+      "WIND_SOURCE"
+    ],
+    "tags_b": [
+      "GAS"
+    ],
+    "expected_effects": [
+      {
+        "type": "APPLY_FORCE",
+        "target": "b",
+        "force_magnitude": 50.0
+      }
+    ],
+    "description": "Gas Dispersal"
+  },
+  {
+    "rule_id": "magnetic_metallic_attract",
+    "tags_a": [
+      "MAGNETIC"
+    ],
+    "tags_b": [
+      "METALLIC"
+    ],
+    "expected_effects": [
+      {
+        "type": "APPLY_FORCE",
+        "target": "b",
+        "force_magnitude": -35.0
+      }
+    ],
+    "description": "Magnetic Attraction"
+  },
+  {
+    "rule_id": "toxic_living_damage",
+    "tags_a": [
+      "TOXIC"
+    ],
+    "tags_b": [
+      "LIVING"
+    ],
+    "expected_effects": [
+      {
+        "type": "DAMAGE",
+        "target": "b",
+        "damage_amount": 10.0
+      }
+    ],
+    "description": "Poison"
+  },
+  {
+    "rule_id": "reflective_heat_reflect",
+    "tags_a": [
+      "REFLECTIVE"
+    ],
+    "tags_b": [
+      "HEAT_SOURCE"
+    ],
+    "expected_effects": [
+      {
+        "type": "DAMAGE",
+        "target": "b",
+        "damage_amount": 10.0
+      }
+    ],
+    "description": "Heat Reflection"
+  },
+  {
+    "rule_id": "cold_molten_freeze",
+    "tags_a": [
+      "COLD"
+    ],
+    "tags_b": [
+      "MOLTEN"
+    ],
+    "expected_effects": [
+      {
+        "type": "ADD_TAG",
+        "target": "b",
+        "tag": "RIGID"
+      },
+      {
+        "type": "REMOVE_TAG",
+        "target": "b",
+        "tag": "MOLTEN"
+      },
+      {
+        "type": "REMOVE_TAG",
+        "target": "b",
+        "tag": "LIQUID"
+      },
+      {
+        "type": "ADD_TAG",
+        "target": "b",
+        "tag": "BRITTLE"
+      }
+    ],
+    "description": "Solidify Lava"
+  },
+  {
+    "rule_id": "reflective_electric_reflect",
+    "tags_a": [
+      "REFLECTIVE"
+    ],
+    "tags_b": [
+      "ELECTRIC"
+    ],
+    "expected_effects": [
+      {
+        "type": "DAMAGE",
+        "target": "b",
+        "damage_amount": 30.0
+      }
+    ],
+    "description": "Electrical Reflection"
+  },
+  {
+    "rule_id": "heavy_breakable_crush",
+    "tags_a": [
+      "HEAVY"
+    ],
+    "tags_b": [
+      "BREAKABLE"
+    ],
+    "expected_effects": [
+      {
+        "type": "DAMAGE",
+        "target": "b",
+        "damage_amount": 20.0
+      }
+    ],
+    "description": "Crush"
+  },
+  {
+    "rule_id": "explosive_sharp_shrapnel",
+    "tags_a": [
+      "EXPLOSIVE"
+    ],
+    "tags_b": [
+      "SHARP"
+    ],
+    "expected_effects": [
+      {
+        "type": "DAMAGE",
+        "target": "both",
+        "damage_amount": 40.0
+      },
+      {
+        "type": "APPLY_FORCE",
+        "target": "both",
+        "force_magnitude": 300.0
+      }
+    ],
+    "description": "Shrapnel"
+  },
+  {
+    "rule_id": "acidic_rigid_weaken",
+    "tags_a": [
+      "ACIDIC"
+    ],
+    "tags_b": [
+      "RIGID"
+    ],
+    "expected_effects": [
+      {
+        "type": "DAMAGE",
+        "target": "b",
+        "damage_amount": 10.0
+      },
+      {
+        "type": "ADD_TAG",
+        "target": "b",
+        "tag": "CORRODED"
+      }
+    ],
+    "description": "Acid Weakening"
+  },
+  {
+    "rule_id": "molten_flammable_ignite",
+    "tags_a": [
+      "MOLTEN"
+    ],
+    "tags_b": [
+      "FLAMMABLE"
+    ],
+    "expected_effects": [
+      {
+        "type": "ADD_TAG",
+        "target": "b",
+        "tag": "HEAT_SOURCE"
+      },
+      {
+        "type": "ADD_TAG",
+        "target": "b",
+        "tag": "HOT"
+      },
+      {
+        "type": "DAMAGE",
+        "target": "b",
+        "damage_amount": 15.0
+      }
+    ],
+    "description": "Molten Ignition"
+  },
+  {
+    "rule_id": "molten_living_burn",
+    "tags_a": [
+      "MOLTEN"
+    ],
+    "tags_b": [
+      "LIVING"
+    ],
+    "expected_effects": [
+      {
+        "type": "DAMAGE",
+        "target": "b",
+        "damage_amount": 40.0
+      }
+    ],
+    "description": "Molten Burn"
+  },
+  {
+    "rule_id": "hot_living_burn",
+    "tags_a": [
+      "HOT"
+    ],
+    "tags_b": [
+      "LIVING"
+    ],
+    "expected_effects": [
+      {
+        "type": "DAMAGE",
+        "target": "b",
+        "damage_amount": 5.0
+      }
+    ],
+    "description": "Heat Burn"
+  },
+  {
+    "rule_id": "frozen_breakable_shatter",
+    "tags_a": [
+      "FROZEN"
+    ],
+    "tags_b": [
+      "BREAKABLE"
+    ],
+    "expected_effects": [
+      {
+        "type": "DAMAGE",
+        "target": "b",
+        "damage_amount": 35.0
+      }
+    ],
+    "description": "Shatter"
+  },
+  {
+    "rule_id": "electric_living_shock",
+    "tags_a": [
+      "ELECTRIC"
+    ],
+    "tags_b": [
+      "LIVING"
+    ],
+    "expected_effects": [
+      {
+        "type": "DAMAGE",
+        "target": "b",
+        "damage_amount": 30.0
+      }
+    ],
+    "description": "Electric Shock"
+  },
+  {
+    "rule_id": "wind_flying_launch",
+    "tags_a": [
+      "WIND_SOURCE"
+    ],
+    "tags_b": [
+      "FLYING"
+    ],
+    "expected_effects": [
+      {
+        "type": "APPLY_FORCE",
+        "target": "b",
+        "force_magnitude": 60.0
+      }
+    ],
+    "description": "Wind Launch"
+  },
+  {
+    "rule_id": "acidic_living_damage",
+    "tags_a": [
+      "ACIDIC"
+    ],
+    "tags_b": [
+      "LIVING"
+    ],
+    "expected_effects": [
+      {
+        "type": "DAMAGE",
+        "target": "b",
+        "damage_amount": 20.0
+      }
+    ],
+    "description": "Acid Burn"
+  },
+  {
+    "rule_id": "magnetic_magnetic_attract",
+    "tags_a": [
+      "MAGNETIC"
+    ],
+    "tags_b": [
+      "MAGNETIC"
+    ],
+    "expected_effects": [
+      {
+        "type": "APPLY_FORCE",
+        "target": "both",
+        "force_magnitude": -30.0
+      }
+    ],
+    "description": "Magnetic Pair"
+  },
+  {
+    "rule_id": "bouncy_rigid_extrabounce",
+    "tags_a": [
+      "BOUNCY"
+    ],
+    "tags_b": [
+      "RIGID"
+    ],
+    "expected_effects": [
+      {
+        "type": "APPLY_FORCE",
+        "target": "a",
+        "force_magnitude": 150.0
+      }
+    ],
+    "description": "Hard Bounce"
+  },
+  {
+    "rule_id": "heat_liquid_evaporate",
+    "tags_a": [
+      "HEAT_SOURCE"
+    ],
+    "tags_b": [
+      "LIQUID"
+    ],
+    "expected_effects": [
+      {
+        "type": "REMOVE_TAG",
+        "target": "b",
+        "tag": "LIQUID"
+      },
+      {
+        "type": "ADD_TAG",
+        "target": "b",
+        "tag": "GAS"
+      }
+    ],
+    "description": "Evaporation"
+  },
+  {
+    "rule_id": "explosive_breakable_destroy",
+    "tags_a": [
+      "EXPLOSIVE"
+    ],
+    "tags_b": [
+      "BREAKABLE"
+    ],
+    "expected_effects": [
+      {
+        "type": "DAMAGE",
+        "target": "b",
+        "damage_amount": 99999.0
+      },
+      {
+        "type": "APPLY_FORCE",
+        "target": "b",
+        "force_magnitude": 400.0
+      }
+    ],
+    "description": "Blast Destruction"
+  },
+  {
+    "rule_id": "frozen_living_cold",
+    "tags_a": [
+      "FROZEN"
+    ],
+    "tags_b": [
+      "LIVING"
+    ],
+    "expected_effects": [
+      {
+        "type": "DAMAGE",
+        "target": "b",
+        "damage_amount": 8.0
+      }
+    ],
+    "description": "Frostbite"
+  },
+  {
+    "rule_id": "acidic_metallic_dissolve",
+    "tags_a": [
+      "ACIDIC"
+    ],
+    "tags_b": [
+      "METALLIC"
+    ],
+    "expected_effects": [
+      {
+        "type": "DAMAGE",
+        "target": "b",
+        "damage_amount": 20.0
+      },
+      {
+        "type": "ADD_TAG",
+        "target": "b",
+        "tag": "CORRODED"
+      }
+    ],
+    "description": "Metal Dissolution"
+  },
+  {
+    "rule_id": "sharp_living_cut",
+    "tags_a": [
+      "SHARP"
+    ],
+    "tags_b": [
+      "LIVING"
+    ],
+    "expected_effects": [
+      {
+        "type": "DAMAGE",
+        "target": "b",
+        "damage_amount": 25.0
+      }
+    ],
+    "description": "Laceration"
+  },
+  {
+    "rule_id": "flying_heavy_cancel",
+    "tags_a": [
+      "FLYING"
+    ],
+    "tags_b": [
+      "HEAVY"
+    ],
+    "expected_effects": [
+      {
+        "type": "REMOVE_TAG",
+        "target": "a",
+        "tag": "FLYING"
+      }
+    ],
+    "description": "Too Heavy to Fly"
+  },
+  {
+    "rule_id": "explosive_electric_detonate",
+    "tags_a": [
+      "EXPLOSIVE"
+    ],
+    "tags_b": [
+      "ELECTRIC"
+    ],
+    "expected_effects": [
+      {
+        "type": "DAMAGE",
+        "target": "a",
+        "damage_amount": 99999.0
+      },
+      {
+        "type": "APPLY_FORCE",
+        "target": "a",
+        "force_magnitude": 500.0
+      }
+    ],
+    "description": "Electrical Detonation"
+  },
+  {
+    "rule_id": "heat_metallic_transfer",
+    "tags_a": [
+      "HEAT_SOURCE"
+    ],
+    "tags_b": [
+      "METALLIC"
+    ],
+    "expected_effects": [
+      {
+        "type": "ADD_TAG",
+        "target": "b",
+        "tag": "HOT"
+      },
+      {
+        "type": "ADD_TAG",
+        "target": "b",
+        "tag": "GLOWING"
+      }
+    ],
+    "description": "Heat Conduction"
+  },
+  {
+    "rule_id": "cold_metallic_transfer",
+    "tags_a": [
+      "COLD"
+    ],
+    "tags_b": [
+      "METALLIC"
+    ],
+    "expected_effects": [
+      {
+        "type": "ADD_TAG",
+        "target": "b",
+        "tag": "COLD"
+      }
+    ],
+    "description": "Cold Conduction"
+  },
+  {
+    "rule_id": "molten_breakable_destroy",
+    "tags_a": [
+      "MOLTEN"
+    ],
+    "tags_b": [
+      "BREAKABLE"
+    ],
+    "expected_effects": [
+      {
+        "type": "DAMAGE",
+        "target": "b",
+        "damage_amount": 99999.0
+      }
+    ],
+    "description": "Molten Destruction"
+  },
+  {
+    "rule_id": "toxic_gas_cloud",
+    "tags_a": [
+      "TOXIC"
+    ],
+    "tags_b": [
+      "GAS"
+    ],
+    "expected_effects": [
+      {
+        "type": "ADD_TAG",
+        "target": "b",
+        "tag": "TOXIC"
+      }
+    ],
+    "description": "Toxic Cloud"
+  },
+  {
+    "rule_id": "electric_breakable_damage",
+    "tags_a": [
+      "ELECTRIC"
+    ],
+    "tags_b": [
+      "BREAKABLE"
+    ],
+    "expected_effects": [
+      {
+        "type": "DAMAGE",
+        "target": "b",
+        "damage_amount": 30.0
+      }
+    ],
+    "description": "Electric Damage"
+  },
+  {
+    "rule_id": "electric_flammable_spark",
+    "tags_a": [
+      "ELECTRIC"
+    ],
+    "tags_b": [
+      "FLAMMABLE"
+    ],
+    "expected_effects": [
+      {
+        "type": "ADD_TAG",
+        "target": "b",
+        "tag": "HEAT_SOURCE"
+      },
+      {
+        "type": "ADD_TAG",
+        "target": "b",
+        "tag": "HOT"
+      },
+      {
+        "type": "DAMAGE",
+        "target": "b",
+        "damage_amount": 8.0
+      }
+    ],
+    "description": "Spark Ignition"
+  },
+  {
+    "rule_id": "electric_gas_ionize",
+    "tags_a": [
+      "ELECTRIC"
+    ],
+    "tags_b": [
+      "GAS"
+    ],
+    "expected_effects": [
+      {
+        "type": "ADD_TAG",
+        "target": "b",
+        "tag": "ELECTRIC"
+      },
+      {
+        "type": "ADD_TAG",
+        "target": "b",
+        "tag": "GLOWING"
+      },
+      {
+        "type": "ADD_TAG",
+        "target": "b",
+        "tag": "HEAT_SOURCE"
+      },
+      {
+        "type": "DAMAGE",
+        "target": "b",
+        "damage_amount": 10.0
+      }
+    ],
+    "description": "Gas Ionization"
+  },
+  {
+    "rule_id": "reflective_acidic_resist",
+    "tags_a": [
+      "REFLECTIVE"
+    ],
+    "tags_b": [
+      "ACIDIC"
+    ],
+    "expected_effects": [
+      {
+        "type": "REMOVE_TAG",
+        "target": "b",
+        "tag": "ACIDIC"
+      }
+    ],
+    "description": "Acid Resistance"
+  },
+  {
+    "rule_id": "liquid_wet_spread",
+    "tags_a": [
+      "LIQUID"
+    ],
+    "tags_b": [],
+    "expected_effects": [
+      {
+        "type": "ADD_TAG",
+        "target": "b",
+        "tag": "WET"
+      }
+    ],
+    "description": "Soak"
+  },
+  {
+    "rule_id": "wet_electric_amplify",
+    "tags_a": [
+      "WET"
+    ],
+    "tags_b": [
+      "ELECTRIC"
+    ],
+    "expected_effects": [
+      {
+        "type": "DAMAGE",
+        "target": "a",
+        "damage_amount": 45.0
+      }
+    ],
+    "description": "Wet Shock"
+  },
+  {
+    "rule_id": "wet_cold_freeze",
+    "tags_a": [
+      "WET"
+    ],
+    "tags_b": [
+      "COLD"
+    ],
+    "expected_effects": [
+      {
+        "type": "ADD_TAG",
+        "target": "a",
+        "tag": "FROZEN"
+      },
+      {
+        "type": "ADD_TAG",
+        "target": "a",
+        "tag": "RIGID"
+      },
+      {
+        "type": "REMOVE_TAG",
+        "target": "a",
+        "tag": "WET"
+      },
+      {
+        "type": "ADD_TAG",
+        "target": "a",
+        "tag": "BRITTLE"
+      }
+    ],
+    "description": "Wet Freeze"
+  },
+  {
+    "rule_id": "heat_wet_dry",
+    "tags_a": [
+      "HEAT_SOURCE"
+    ],
+    "tags_b": [
+      "WET"
+    ],
+    "expected_effects": [
+      {
+        "type": "REMOVE_TAG",
+        "target": "b",
+        "tag": "WET"
+      }
+    ],
+    "description": "Dry Out"
+  },
+  {
+    "rule_id": "brittle_heavy_shatter",
+    "tags_a": [
+      "BRITTLE"
+    ],
+    "tags_b": [
+      "HEAVY"
+    ],
+    "expected_effects": [
+      {
+        "type": "DAMAGE",
+        "target": "a",
+        "damage_amount": 40.0
+      },
+      {
+        "type": "APPLY_FORCE",
+        "target": "a",
+        "force_magnitude": 200.0
+      }
+    ],
+    "description": "Shatter"
+  },
+  {
+    "rule_id": "brittle_sharp_crack",
+    "tags_a": [
+      "BRITTLE"
+    ],
+    "tags_b": [
+      "SHARP"
+    ],
+    "expected_effects": [
+      {
+        "type": "DAMAGE",
+        "target": "a",
+        "damage_amount": 35.0
+      }
+    ],
+    "description": "Crack"
+  },
+  {
+    "rule_id": "corroded_heavy_crush",
+    "tags_a": [
+      "CORRODED"
+    ],
+    "tags_b": [
+      "HEAVY"
+    ],
+    "expected_effects": [
+      {
+        "type": "DAMAGE",
+        "target": "a",
+        "damage_amount": 35.0
+      }
+    ],
+    "description": "Crush Weakened"
+  },
+  {
+    "rule_id": "corroded_sharp_slice",
+    "tags_a": [
+      "CORRODED"
+    ],
+    "tags_b": [
+      "SHARP"
+    ],
+    "expected_effects": [
+      {
+        "type": "DAMAGE",
+        "target": "a",
+        "damage_amount": 40.0
+      }
+    ],
+    "description": "Slice Weakened"
+  },
+  {
+    "rule_id": "glowing_flammable_smolder",
+    "tags_a": [
+      "GLOWING"
+    ],
+    "tags_b": [
+      "FLAMMABLE"
+    ],
+    "expected_effects": [
+      {
+        "type": "ADD_TAG",
+        "target": "b",
+        "tag": "HOT"
+      }
+    ],
+    "description": "Smolder"
+  },
+  {
+    "rule_id": "glowing_living_attract",
+    "tags_a": [
+      "GLOWING"
+    ],
+    "tags_b": [
+      "LIVING"
+    ],
+    "expected_effects": [
+      {
+        "type": "APPLY_FORCE",
+        "target": "b",
+        "force_magnitude": -20.0
+      }
+    ],
+    "description": "Light Attraction"
+  },
+  {
+    "rule_id": "sticky_slow",
+    "tags_a": [
+      "STICKY"
+    ],
+    "tags_b": [],
+    "expected_effects": [
+      {
+        "type": "APPLY_SLOW",
+        "target": "b",
+        "slow_factor": 0.25
+      }
+    ],
+    "description": "Sticky Slow"
+  },
+  {
+    "rule_id": "sticky_living_struggle",
+    "tags_a": [
+      "STICKY"
+    ],
+    "tags_b": [
+      "LIVING"
+    ],
+    "expected_effects": [
+      {
+        "type": "DAMAGE",
+        "target": "b",
+        "damage_amount": 2.0
+      }
+    ],
+    "description": "Struggle"
+  },
+  {
+    "rule_id": "sticky_heat_fuel",
+    "tags_a": [
+      "STICKY"
+    ],
+    "tags_b": [
+      "HEAT_SOURCE"
+    ],
+    "expected_effects": [
+      {
+        "type": "ADD_TAG",
+        "target": "a",
+        "tag": "HEAT_SOURCE"
+      },
+      {
+        "type": "ADD_TAG",
+        "target": "a",
+        "tag": "HOT"
+      }
+    ],
+    "description": "Sticky Fuel"
+  }
+]

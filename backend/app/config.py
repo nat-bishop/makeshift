@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     image_timeout_seconds: int = 120
     max_concurrent_image_requests: int = 3
     database_path: str = "data/game.db"
+    cache_database_path: str = "data/cache.db"
     host: str = "0.0.0.0"
     port: int = 8000
 

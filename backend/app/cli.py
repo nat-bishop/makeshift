@@ -101,13 +101,28 @@ class Timer:
 
 
 async def _run_llm(description: str, timer: Timer) -> Any:
-    """Run the LLM creator agent via create_object()."""
-    from app.creator.agent import create_object
+    """Run the V3 creation pipeline via create_object()."""
+    import aiosqlite
+
+    from app.cache.manager import CacheManager
+    from app.config import settings
+    from app.creator.pipeline import create_object
+
+    cache_db = await aiosqlite.connect(settings.cache_database_path)
+    await cache_db.execute(
+        """CREATE TABLE IF NOT EXISTS cache (
+        cache_type TEXT NOT NULL, cache_key TEXT NOT NULL,
+        value_json TEXT NOT NULL, model_version TEXT NOT NULL DEFAULT '',
+        created_at REAL NOT NULL DEFAULT 0,
+        PRIMARY KEY (cache_type, cache_key))"""
+    )
+    cache = CacheManager(cache_db)
 
     t0 = time.monotonic()
-    blueprint = await create_object(description)
+    blueprint = await create_object(description, cache)
     elapsed = time.monotonic() - t0
     timer.add("llm generate", elapsed)
+    await cache_db.close()
     return blueprint
 
 

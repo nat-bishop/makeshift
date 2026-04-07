@@ -1,267 +1,161 @@
 extends Node
 
-## Verb Behavior System — single-value target matching + per-frame verb execution.
-##
-## Targeting: each behavior has a target_tag (category or tag string).
-##   Empty target_tag matches everything. Non-empty checks obj tags + categories.
-## Action layer: per-frame, picks best target by priority + distance, executes verb.
+## V3 Verb Behavior System — receives behaviors from backend via WebSocket.
+## Each behavior: {target_name, movement (0-3), strength (0-100), action (0-6), action_param}
+## Movement: 0=approach, 1=flee, 2=orbit, 3=ignore
+## Action: 0=nothing, 1=damage, 2=heal, 3=add state, 4=remove state, 5=destroy, 6=take
 
 const MELEE_RANGE: float = 48.0
-const INVESTIGATE_RANGE: float = 128.0
-const FOLLOW_RANGE: float = 64.0
-const FLEE_SPEED_MULT: float = 1.5
-const DESTROY_SPEED: float = 200.0
-const EAT_SPEED: float = 180.0
-const INVESTIGATE_SPEED: float = 80.0
-const FOLLOW_SPEED: float = 160.0
-const PROTECT_SPEED: float = 180.0
-const FLEE_SPEED: float = 250.0
-const MELEE_DAMAGE: float = 15.0
-const EAT_HEAL_AMOUNT: float = 10.0
 const MELEE_COOLDOWN: float = 1.0
+const MOVE_SPEED: float = 150.0
+const FLEE_SPEED: float = 250.0
+const ORBIT_DISTANCE: float = 80.0
+const ORBIT_SPEED: float = 100.0
 const MAX_ERRORS: int = 5
+const PERCEPTION_RANGE: float = 400.0
 
 var _owner_body: RigidBody2D
-var _behaviors: Array = []  # Array of {verb, target_description, target_tag}
-var _target_lists: Array = []  # Array of Arrays — per-behavior list of matching objects
+var _behaviors: Array = []
 var _error_count: int = 0
 var _disabled: bool = false
 var _melee_timer: float = 0.0
 
 
-func init_behaviors(compiled_behaviors: Array, owner: RigidBody2D) -> void:
+func init_behaviors(behaviors: Array, owner: RigidBody2D) -> void:
 	_owner_body = owner
-	_behaviors = []
-	_target_lists = []
-
-	for cb in compiled_behaviors:
-		var entry: Dictionary = cb if cb is Dictionary else {}
-		_behaviors.append({
-			"verb": entry.get("verb", "investigate"),
-			"target_description": entry.get("target_description", ""),
-			"target_tag": entry.get("target_tag", ""),
-		})
-		_target_lists.append([])
-
-	# Listen for scene events
-	EventBus.object_entered_scene.connect(_on_object_entered)
-	EventBus.object_exited_scene.connect(_on_object_exited)
-	EventBus.object_tags_changed.connect(_on_tags_changed)
-
-	# Scan existing objects already in the scene (e.g., level load)
-	call_deferred("_scan_existing_objects")
+	_behaviors = behaviors
 
 
-func _scan_existing_objects() -> void:
-	for node in _owner_body.get_tree().get_nodes_in_group("game_objects"):
-		_on_object_entered(node)
+func update_behaviors(behaviors: Array) -> void:
+	## Called when backend sends updated creature_behaviors.
+	_behaviors = behaviors
 
-
-func _exit_tree() -> void:
-	if EventBus.object_entered_scene.is_connected(_on_object_entered):
-		EventBus.object_entered_scene.disconnect(_on_object_entered)
-	if EventBus.object_exited_scene.is_connected(_on_object_exited):
-		EventBus.object_exited_scene.disconnect(_on_object_exited)
-	if EventBus.object_tags_changed.is_connected(_on_tags_changed):
-		EventBus.object_tags_changed.disconnect(_on_tags_changed)
-
-
-# ---------------------------------------------------------------------------
-# Perception layer (event-driven)
-# ---------------------------------------------------------------------------
-
-func _on_object_entered(game_object: Node) -> void:
-	if game_object == _owner_body or not is_instance_valid(game_object):
-		return
-	_check_object_against_all_behaviors(game_object)
-
-
-func _on_object_exited(game_object: Node) -> void:
-	for i in range(_target_lists.size()):
-		_target_lists[i].erase(game_object)
-
-
-func _on_tags_changed(game_object: Node) -> void:
-	if game_object == _owner_body or not is_instance_valid(game_object):
-		return
-	_check_object_against_all_behaviors(game_object)
-
-
-func _check_object_against_all_behaviors(game_object: Node) -> void:
-	var obj_tags: Array = game_object.get_tags() if game_object.has_method("get_tags") else []
-	var obj_cats: Array = game_object.get_categories() if game_object.has_method("get_categories") else []
-	for i in range(_behaviors.size()):
-		var target_tag: String = _behaviors[i].get("target_tag", "")
-		var is_match: bool = _matches_target(target_tag, obj_tags, obj_cats)
-		if is_match:
-			if game_object not in _target_lists[i]:
-				_target_lists[i].append(game_object)
-		else:
-			_target_lists[i].erase(game_object)
-
-
-static func _matches_target(target_tag: String, obj_tags: Array, obj_categories: Array) -> bool:
-	if target_tag.is_empty():
-		return true  # empty target_tag matches everything
-	return target_tag in obj_tags or target_tag in obj_categories
-
-
-# ---------------------------------------------------------------------------
-# Action layer (per-frame)
-# ---------------------------------------------------------------------------
 
 func _physics_process(delta: float) -> void:
-	if _disabled or not is_instance_valid(_owner_body):
+	if _disabled or _behaviors.is_empty() or _owner_body == null:
 		return
 
 	_melee_timer = maxf(0.0, _melee_timer - delta)
 
-	# Walk behaviors in priority order (first in list = highest priority)
-	for i in range(_behaviors.size()):
-		var targets: Array = _target_lists[i]
-		# Clean invalid references
-		var j: int = 0
-		while j < targets.size():
-			if not is_instance_valid(targets[j]):
-				targets.remove_at(j)
-			else:
-				j += 1
+	# Utility-based priority selection
+	var best_target: Node = null
+	var best_utility: float = -1.0
+	var best_behavior: Dictionary = {}
 
-		if targets.is_empty():
+	for behavior in _behaviors:
+		if behavior is not Dictionary:
 			continue
-
-		var verb: String = _behaviors[i]["verb"]
-		var nearest: Node = _find_nearest(targets)
-		if nearest == null:
+		var target := _find_target_by_name(behavior.get("target_name", ""))
+		if target == null or not is_instance_valid(target):
 			continue
-
-		var success: bool = _execute_verb(verb, nearest, delta)
-		if not success:
-			_error_count += 1
-			if _error_count >= MAX_ERRORS:
-				_disabled = true
-				Log.warn("VerbBehaviorSystem: Disabled after %d errors on '%s'" % [MAX_ERRORS, _owner_body.blueprint.get("name", "?")])
-		else:
-			_error_count = 0
-		return  # Only execute the highest-priority behavior with targets
-
-
-func _find_nearest(targets: Array) -> Node:
-	var best: Node = null
-	var best_dist: float = INF
-	for t in targets:
-		if not is_instance_valid(t) or not (t is Node2D):
+		var dist: float = _owner_body.global_position.distance_to(target.global_position)
+		if dist > PERCEPTION_RANGE:
 			continue
-		var d: float = _owner_body.global_position.distance_squared_to(t.global_position)
-		if d < best_dist:
-			best_dist = d
-			best = t
-	return best
+		var strength: float = float(behavior.get("strength", 50))
+		var utility: float = strength / (1.0 + dist / PERCEPTION_RANGE)
+		var movement: int = behavior.get("movement", 3)
+		if movement == 1:  # flee
+			utility *= 1.5
+		if utility > best_utility:
+			best_utility = utility
+			best_target = target
+			best_behavior = behavior
+
+	if best_target == null:
+		return
+
+	var movement: int = best_behavior.get("movement", 3)
+	match movement:
+		0: _approach(best_target)
+		1: _flee_from(best_target)
+		2: _orbit(best_target)
+
+	# On-arrival action for approach/orbit
+	if movement in [0, 2]:
+		var dist: float = _owner_body.global_position.distance_to(best_target.global_position)
+		if dist < MELEE_RANGE:
+			_execute_action(best_behavior, best_target)
 
 
-func _execute_verb(verb: String, target: Node, delta: float) -> bool:
-	if not (target is Node2D):
-		return false
-
-	match verb:
-		"destroy":
-			_move_toward(target, DESTROY_SPEED, delta)
-			if _in_range(target, MELEE_RANGE) and _melee_timer <= 0.0:
-				_attack(target)
-				_melee_timer = MELEE_COOLDOWN
-			return true
-
-		"eat":
-			_move_toward(target, EAT_SPEED, delta)
-			if _in_range(target, MELEE_RANGE) and _melee_timer <= 0.0:
-				_consume(target)
-				_melee_timer = MELEE_COOLDOWN
-			return true
-
-		"investigate":
-			if not _in_range(target, INVESTIGATE_RANGE):
-				_move_toward(target, INVESTIGATE_SPEED, delta)
-			return true
-
-		"follow":
-			if not _in_range(target, FOLLOW_RANGE):
-				_move_toward(target, FOLLOW_SPEED, delta)
-			return true
-
-		"protect":
-			# Follow the target + attack nearby HOSTILE threats
-			if not _in_range(target, FOLLOW_RANGE):
-				_move_toward(target, PROTECT_SPEED, delta)
-			# Scan for threats near the protected target
-			var threat: Node = _find_nearest_threat(target as Node2D)
-			if threat != null and _melee_timer <= 0.0:
-				if _in_range(threat as Node2D, MELEE_RANGE):
-					_attack(threat)
-					_melee_timer = MELEE_COOLDOWN
-				else:
-					_move_toward(threat as Node2D, DESTROY_SPEED, delta)
-			return true
-
-		"flee":
-			_move_away(target, FLEE_SPEED, delta)
-			return true
-
-	return false
-
-
-func _move_toward(target: Node2D, speed: float, _delta: float) -> void:
+func _approach(target: Node) -> void:
+	if target is not Node2D:
+		return
 	var direction: Vector2 = (target.global_position - _owner_body.global_position).normalized()
-	var desired: Vector2 = direction * speed
-	var force: Vector2 = (desired - _owner_body.linear_velocity) * _owner_body.mass
-	_owner_body.apply_central_force(force)
+	WorldMutations.apply_movement_force(_owner_body, direction, MOVE_SPEED, MOVE_SPEED)
 
 
-func _move_away(target: Node2D, speed: float, _delta: float) -> void:
+func _flee_from(target: Node) -> void:
+	if target is not Node2D:
+		return
 	var direction: Vector2 = (_owner_body.global_position - target.global_position).normalized()
-	var desired: Vector2 = direction * speed
-	var force: Vector2 = (desired - _owner_body.linear_velocity) * _owner_body.mass
-	_owner_body.apply_central_force(force)
+	WorldMutations.apply_movement_force(_owner_body, direction, FLEE_SPEED, FLEE_SPEED)
 
 
-func _in_range(target: Node2D, range_px: float) -> bool:
-	return _owner_body.global_position.distance_to(target.global_position) <= range_px
+func _orbit(target: Node) -> void:
+	if target is not Node2D:
+		return
+	var to_target: Vector2 = target.global_position - _owner_body.global_position
+	var dist: float = to_target.length()
+	if dist < 1.0:
+		return
+
+	# Move tangentially while maintaining orbit distance
+	var tangent := Vector2(-to_target.y, to_target.x).normalized()
+	var radial: Vector2 = to_target.normalized()
+	var radial_correction: float = (dist - ORBIT_DISTANCE) / ORBIT_DISTANCE
+	var direction: Vector2 = (tangent + radial * radial_correction).normalized()
+	WorldMutations.apply_movement_force(_owner_body, direction, ORBIT_SPEED, ORBIT_SPEED)
 
 
-func _find_nearest_threat(protected_target: Node2D) -> Node:
-	## Find the nearest HOSTILE object near the protected target.
-	const PROTECT_RADIUS: float = 192.0
-	var best: Node = null
-	var best_dist: float = INF
-	for node in _owner_body.get_tree().get_nodes_in_group("game_objects"):
-		if node == _owner_body or node == protected_target:
+func _execute_action(behavior: Dictionary, target: Node) -> void:
+	if _melee_timer > 0.0:
+		return
+	_melee_timer = MELEE_COOLDOWN
+
+	var action: int = behavior.get("action", 0)
+	var param: int = behavior.get("action_param", 0)
+
+	match action:
+		0: pass  # nothing
+		1:  # damage
+			WorldMutations.apply_damage(target, float(param))
+		2:  # heal
+			WorldMutations.apply_heal(target, float(param))
+		3:  # add state
+			if param >= 1 and param <= 7:
+				var state_name: String = EffectExecutor.STATES[param - 1]
+				if target.has_method("add_state"):
+					target.add_state(state_name)
+				elif target.has_method("add_tag"):
+					target.add_tag(state_name)
+		4:  # remove state
+			if param >= 1 and param <= 7:
+				var state_name: String = EffectExecutor.STATES[param - 1]
+				if target.has_method("remove_state"):
+					target.remove_state(state_name)
+				elif target.has_method("remove_tag"):
+					target.remove_tag(state_name)
+		5:  # destroy
+			if target.has_method("take_damage"):
+				target.take_damage(99999)
+		6: pass  # take — requires affordance system
+
+
+func _find_target_by_name(target_name: String) -> Node:
+	if target_name.is_empty():
+		return null
+	var lower_name: String = target_name.to_lower()
+	for node in get_tree().get_nodes_in_group("game_objects"):
+		if node == _owner_body:
 			continue
-		if not is_instance_valid(node) or not (node is Node2D):
+		if not is_instance_valid(node):
 			continue
-		if not node.has_method("get_tags"):
-			continue
-		var node_tags: Array = node.get_tags()
-		if "HOSTILE" not in node_tags:
-			continue
-		var d: float = protected_target.global_position.distance_to(node.global_position)
-		if d < PROTECT_RADIUS and d < best_dist:
-			best_dist = d
-			best = node
-	return best
-
-
-func _attack(target: Node) -> void:
-	var damage: float = MELEE_DAMAGE
-	# Use combat_profile if available
-	var combat: Dictionary = _owner_body.blueprint.get("combat_profile", {})
-	if combat.has("melee_damage"):
-		damage = combat["melee_damage"]
-	if target.has_method("take_damage"):
-		var color: Color = TagColors.derive_element_color(_owner_body)
-		target.take_damage(damage, color)
-
-
-func _consume(target: Node) -> void:
-	# Damage target, heal self, destroy target if health low
-	_attack(target)
-	if _owner_body.has_method("heal"):
-		_owner_body.heal(EAT_HEAL_AMOUNT)
+		if node.has_method("get_blueprint"):
+			var bp: Dictionary = node.get_blueprint()
+			if bp.get("name", "").to_lower() == lower_name:
+				return node
+	# Also check player
+	var player := get_tree().get_first_node_in_group("player")
+	if player != null and "player" in lower_name:
+		return player
+	return null

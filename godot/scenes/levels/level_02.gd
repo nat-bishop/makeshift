@@ -6,50 +6,49 @@ extends BaseLevel
 const TURRET_BLUEPRINT := {
 	"id": "turret_level02",
 	"name": "Sentry Turret",
-	"tags": ["RIGID", "HEAVY", "HEAT_SOURCE"],
-	"starting_durability": 200,
+	"mass_kg": 50, "height_cm": 80,
+	"friction": 70, "bounce": 5, "gravity": 50,
+	"armor": 60, "hp": 200, "indestructible": false,
+	"has_field": true, "field_range_cm": 300,
+	"autonomous": true, "affordance": 3,
 	"visual_descriptor": {
 		"visual_description": "a mechanical sentry turret with a rotating barrel mounted on a tripod base",
 		"size_category": "medium",
 	},
-	"behaviors": [
-		{
-			"trigger": "ALWAYS",
-			"action": "PATROL",
-			"target": "SELF",
-			"speed": "SLOW",
-		},
-		{
-			"trigger": "ON_PROXIMITY",
-			"action": "SPAWN_PROJECTILE",
-			"target": "NEAREST_PLAYER",
-			"intensity": "MEDIUM",
-			"range": "FAR",
-			"interval": "SLOW",
-		},
-	],
+	"destruction_result_name": "scrap metal",
+	"states": [],
 }
 
 const BARRICADE_BLUEPRINT := {
 	"id": "barricade_level02",
 	"name": "Wooden Barricade",
-	"tags": ["RIGID", "FLAMMABLE", "BREAKABLE"],
-	"starting_durability": 50,
+	"mass_kg": 30, "height_cm": 150,
+	"friction": 60, "bounce": 5, "gravity": 50,
+	"armor": 15, "hp": 50, "indestructible": false,
+	"has_field": false, "field_range_cm": 0,
+	"autonomous": false, "affordance": 3,
 	"visual_descriptor": {
 		"visual_description": "a tall wooden barricade made of thick planks nailed together",
 		"size_category": "large",
 	},
+	"destruction_result_name": "wood splinters",
+	"states": [],
 }
 
 const SHIELD_BLUEPRINT := {
 	"id": "shield_level02",
 	"name": "Metal Shield",
-	"tags": ["RIGID", "REFLECTIVE", "METALLIC"],
-	"starting_durability": 200,
+	"mass_kg": 8, "height_cm": 80,
+	"friction": 40, "bounce": 10, "gravity": 50,
+	"armor": 80, "hp": 200, "indestructible": false,
+	"has_field": false, "field_range_cm": 0,
+	"autonomous": false, "affordance": 0,
 	"visual_descriptor": {
 		"visual_description": "a polished metal tower shield with riveted edges",
 		"size_category": "medium",
 	},
+	"destruction_result_name": "",
+	"states": [],
 }
 
 

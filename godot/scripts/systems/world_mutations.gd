@@ -23,27 +23,42 @@ static func apply_heal(target: Node, amount: float) -> void:
 
 
 static func apply_add_tag(target: Node, tag: String, duration: float = 0.0) -> void:
-	if not target.has_method("add_tag"):
-		Log.debug("WorldMutations: %s has no add_tag method, skipping" % target.name)
+	## V3 compat: routes to add_state if available, falls back to add_tag.
+	apply_add_state(target, tag, duration)
+
+
+static func apply_add_state(target: Node, state: String, duration: float = 0.0) -> void:
+	if target.has_method("add_state"):
+		target.add_state(state, duration)
+	elif target.has_method("add_tag"):
+		# Auto-remove contradictions using StateContradictions
+		var contras: Array = StateContradictions.get_contradictions(state)
+		if not contras.is_empty() and target.has_method("remove_tag"):
+			var body_tags: Array = target.get_tags() if target.has_method("get_tags") else []
+			for contra in contras:
+				if contra in body_tags:
+					target.remove_tag(contra)
+		target.add_tag(state, duration)
+	else:
+		Log.debug("WorldMutations: %s has no add_state/add_tag method, skipping" % target.name)
 		return
-	# Auto-remove contradictory tags (e.g., adding HEAT_SOURCE removes WET)
-	var contras: Array = TagContradictions.get_contradictions(tag)
-	if not contras.is_empty() and target.has_method("remove_tag"):
-		var body_tags: Array = TagColors.get_body_tags(target)
-		for contra in contras:
-			if contra in body_tags:
-				Log.debug("WorldMutations: Removing contradictory tag %s before adding %s to %s" % [contra, tag, target.name])
-				target.remove_tag(contra)
-	Log.debug("WorldMutations: apply_add_tag %s to %s%s" % [tag, target.name, " (%.1fs)" % duration if duration > 0.0 else ""])
-	target.add_tag(tag, duration)
+	Log.debug("WorldMutations: apply_add_state %s to %s%s" % [state, target.name, " (%.1fs)" % duration if duration > 0.0 else ""])
 
 
 static func apply_remove_tag(target: Node, tag: String) -> void:
-	if not target.has_method("remove_tag"):
-		Log.debug("WorldMutations: %s has no remove_tag method, skipping" % target.name)
+	## V3 compat: routes to remove_state if available, falls back to remove_tag.
+	apply_remove_state(target, tag)
+
+
+static func apply_remove_state(target: Node, state: String) -> void:
+	if target.has_method("remove_state"):
+		target.remove_state(state)
+	elif target.has_method("remove_tag"):
+		target.remove_tag(state)
+	else:
+		Log.debug("WorldMutations: %s has no remove_state/remove_tag method, skipping" % target.name)
 		return
-	Log.debug("WorldMutations: apply_remove_tag %s from %s" % [tag, target.name])
-	target.remove_tag(tag)
+	Log.debug("WorldMutations: apply_remove_state %s from %s" % [state, target.name])
 
 
 static func apply_impulse(target: Node, direction: Vector2, magnitude: float) -> void:
