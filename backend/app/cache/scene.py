@@ -130,6 +130,20 @@ class SceneCache:
             del self._creature[k]
         return stale_keys
 
+    def mark_creature_stale_for_creature(self, creature_name: str) -> list[str]:
+        """Remove all behavior entries where this creature is the source.
+
+        Used when a creature's own state changes (e.g., zombie catches fire),
+        since its behaviors toward other objects may differ.
+        Same logic as mark_creature_stale_for_target — pair_key is sorted,
+        so the creature name can be on either side.
+        """
+        n = normalize_name(creature_name)
+        stale_keys = [k for k in self._creature if n in k.split("::")]
+        for k in stale_keys:
+            del self._creature[k]
+        return stale_keys
+
     def clear_creature(self) -> None:
         self._creature.clear()
 

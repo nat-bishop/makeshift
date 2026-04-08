@@ -158,9 +158,7 @@ async def _run_spawn_integration(
     from app.cache.scene import SceneCache
     from app.engine.creature import evaluate_creature_behaviors
     from app.engine.pairwise import spawn_integration
-    if session_id not in scenes:
-        scenes[session_id] = SceneCache()
-    scene = scenes[session_id]
+    scene = scenes.setdefault(session_id, SceneCache())
 
     # Load all session objects for pairwise context
     session = await manager.get_session(session_id)

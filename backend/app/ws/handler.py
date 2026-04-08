@@ -121,17 +121,20 @@ async def _handle_request_sprite(
 async def _handle_state_changed(
     websocket: WebSocket, session_id: str, object_name: str
 ) -> None:
-    """Re-evaluate creature behaviors toward a changed object."""
+    """Re-evaluate pairwise + creature behaviors for a changed object."""
     from app.cache.scene import SceneCache
     from app.engine.creature import evaluate_creature_behaviors
+    from app.engine.pairwise import evaluate_pair
 
     scenes: dict = websocket.app.state.scenes
-    if session_id not in scenes:
-        scenes[session_id] = SceneCache()
-    scene = scenes[session_id]
+    scene = scenes.setdefault(session_id, SceneCache())
+    cache = websocket.app.state.cache
 
     # Invalidate stale creature behaviors for this target
     scene.mark_creature_stale_for_target(object_name)
+
+    # Invalidate stale pairwise entries involving this object
+    stale_keys = scene.mark_stale(object_name)
 
     db = websocket.app.state.db
     manager = SessionManager(db)
@@ -139,37 +142,104 @@ async def _handle_state_changed(
     if session is None:
         return
 
-    # Find all autonomous creatures and the changed object's blueprint
     from app.cache.store import normalize_name
 
     target_norm = normalize_name(object_name)
     creatures = []
     changed_bp = None
+    bp_by_name: dict[str, object] = {}
     for obj in session.objects:
-        if normalize_name(obj.blueprint.name) == target_norm:
-            changed_bp = obj.blueprint
-        if obj.blueprint.autonomous:
-            creatures.append(obj.blueprint)
+        bp = obj.blueprint
+        bp_by_name[normalize_name(bp.name)] = bp
+        if normalize_name(bp.name) == target_norm:
+            changed_bp = bp
+        if bp.autonomous:
+            creatures.append(bp)
 
-    if changed_bp is None or not creatures:
+    if changed_bp is None:
         return
 
-    # Re-evaluate each creature's behavior toward the changed object only
+    # If the changed object is itself a creature, invalidate its outgoing behaviors
+    if changed_bp.autonomous:
+        scene.mark_creature_stale_for_creature(object_name)
+
     scene_names = [obj.blueprint.name for obj in session.objects]
 
-    async def _eval_one(creature_bp):
+    # Re-evaluate stale pairwise pairs in background
+    async def _reeval_pairwise() -> None:
+        if not stale_keys:
+            return
+        reeval_tasks = []
+        for key in stale_keys:
+            a_name, b_name = key.split("::")
+            bp_a = bp_by_name.get(a_name)
+            bp_b = bp_by_name.get(b_name)
+            if bp_a is not None and bp_b is not None:
+                reeval_tasks.append(evaluate_pair(bp_a, bp_b, cache, scene))
+
+        if not reeval_tasks:
+            return
+        results = await asyncio.gather(*reeval_tasks, return_exceptions=True)
+        await cache.flush()
+
+        entries = []
+        for key, result in zip(stale_keys, results, strict=False):
+            if isinstance(result, Exception):
+                logger.warning("pairwise_reeval_failed", key=key, error=str(result))
+                continue
+            entry = result.to_dict()
+            a_name, b_name = key.split("::")
+            entry["name_a"] = a_name
+            entry["name_b"] = b_name
+            entries.append(entry)
+        if entries:
+            await send_cache_updated(session_id, entries)
+
+    # Re-evaluate creature behaviors toward the changed object
+    async def _reeval_creatures() -> None:
+        if not creatures:
+            return
+
+        async def _eval_one(creature_bp):
+            behaviors = await evaluate_creature_behaviors(
+                creature_bp, [changed_bp], scene_names, scene
+            )
+            if behaviors:
+                from app.routers.objects import _format_behaviors
+
+                await send_behaviors_ready(
+                    session_id, creature_bp.name, _format_behaviors(behaviors)
+                )
+
+        await asyncio.gather(
+            *[_eval_one(c) for c in creatures], return_exceptions=True
+        )
+
+    # Re-evaluate changed creature's behaviors toward all scene objects
+    async def _reeval_changed_creature() -> None:
+        if not changed_bp.autonomous:
+            return
+        targets = [
+            bp_by_name[n] for n in bp_by_name
+            if n != target_norm
+        ]
+        if not targets:
+            return
         behaviors = await evaluate_creature_behaviors(
-            creature_bp, [changed_bp], scene_names, scene
+            changed_bp, targets, scene_names, scene
         )
         if behaviors:
             from app.routers.objects import _format_behaviors
 
             await send_behaviors_ready(
-                session_id, creature_bp.name, _format_behaviors(behaviors)
+                session_id, changed_bp.name, _format_behaviors(behaviors)
             )
 
     await asyncio.gather(
-        *[_eval_one(c) for c in creatures], return_exceptions=True
+        _reeval_pairwise(),
+        _reeval_creatures(),
+        _reeval_changed_creature(),
+        return_exceptions=True,
     )
 
 

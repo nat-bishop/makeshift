@@ -1,10 +1,8 @@
 """Tests for V3 cache system (store + scene)."""
 
 import pytest
-
 from app.cache.scene import CreatureBehavior, PairwiseResult, SceneCache, nothing_happens
 from app.cache.store import CacheStore, normalize_name, pair_key
-
 
 # --- Key normalization ---
 
@@ -171,9 +169,23 @@ class TestSceneCache:
         assert sc.get_creature("cat", "sword") is None
         assert sc.get_creature("zombie", "rock") is not None
 
+    def test_mark_creature_stale_for_creature(self):
+        sc = SceneCache()
+        sc.put_creature("zombie", "sword", CreatureBehavior(0, 90, 1, 20))
+        sc.put_creature("zombie", "rock", CreatureBehavior(2, 50, 0, 0))
+        sc.put_creature("cat", "sword", CreatureBehavior(1, 80, 0, 0))
+        # Mark zombie stale — zombie->sword and zombie->rock should be removed
+        removed = sc.mark_creature_stale_for_creature("zombie")
+        assert len(removed) == 2
+        assert sc.get_creature("zombie", "sword") is None
+        assert sc.get_creature("zombie", "rock") is None
+        assert sc.get_creature("cat", "sword") is not None
+
     def test_all_pairwise_for(self):
         sc = SceneCache()
-        sc.put_pairwise("fire sword", "wood", PairwiseResult(10, 20, 0, 0, 0, 0, False, False, False))
+        sc.put_pairwise(
+            "fire sword", "wood", PairwiseResult(10, 20, 0, 0, 0, 0, False, False, False),
+        )
         sc.put_pairwise("fire sword", "rock", PairwiseResult(0, 5, 0, 0, 0, 0, False, False, False))
         sc.put_pairwise("rock", "wood", PairwiseResult(0, 0, 0, 0, 0, 0, False, False, False))
         results = sc.all_pairwise_for("fire sword")
