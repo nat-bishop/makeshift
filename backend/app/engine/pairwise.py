@@ -2,7 +2,7 @@
 
 Two phases:
   1. Screening: 1 call per new object (~5-15 output tokens), identifies interesting pairs
-  2. Full eval: 6 parallel 1-token calls per interesting pair
+  2. Full eval: 6 parallel 1-token calls per interesting pair via run_questions()
 
 6 pairwise questions per pair:
   damage_a (0-100, 100=destroyed), damage_b (0-100, 100=destroyed),
@@ -26,7 +26,8 @@ import structlog
 from app.cache.scene import PairwiseResult, SceneCache
 from app.cache.store import CacheStore, normalize_name
 from app.config import settings
-from app.creator.llm import ask_bool, ask_int, ask_text
+from app.creator.llm import ask_text
+from app.creator.question_graph import Question, run_questions
 from app.models.blueprint import GameObjectBlueprint
 from app.models.state import STATE_CHANGE_PROMPT
 
@@ -45,6 +46,46 @@ def _obj_summary(bp: GameObjectBlueprint) -> str:
     if bp.destructibility.indestructible:
         parts.append("indestructible")
     return f"{bp.name} ({', '.join(parts)})"
+
+
+# ---- Pairwise questions (6 per pair, all flat / no gates) ----
+
+PAIR_QUESTIONS: list[Question] = [
+    Question(
+        "damage_a",
+        "{a_desc} collides with {b_desc}. Damage to {a}? "
+        "0=none 10=scratch 25=moderate 50=severe 75=critical 100=destroyed",
+        "int",
+    ),
+    Question(
+        "damage_b",
+        "{a_desc} collides with {b_desc}. Damage to {b}? "
+        "0=none 10=scratch 25=moderate 50=severe 75=critical 100=destroyed",
+        "int",
+    ),
+    Question(
+        "state_change_a",
+        "{a_desc} collides with {b_desc}. State change on {a}? " + STATE_CHANGE_PROMPT,
+        "int", 0, 8, 0,
+    ),
+    Question(
+        "state_change_b",
+        "{a_desc} collides with {b_desc}. State change on {b}? " + STATE_CHANGE_PROMPT,
+        "int", 0, 8, 0,
+    ),
+    Question(
+        "force_b",
+        "{a_desc} collides with {b_desc}. "
+        "Force on {b}? -100(pull) to 100(push), 0=none",
+        "int", -100, 100, 0,
+    ),
+    Question(
+        "continuous",
+        "Is the interaction between {a} and {b} instant or continuous "
+        "while touching? 0=instant 1=continuous",
+        "bool",
+    ),
+]
 
 
 # ---- Screening ----
@@ -94,38 +135,6 @@ async def screen_pairs(
 
 # ---- Full pairwise evaluation ----
 
-# 6 questions. Each produces 1 token.
-PAIR_QUESTIONS: list[tuple[str, str, str]] = [
-    (
-        "damage_a", "int",
-        "{a_desc} collides with {b_desc}. Damage to {a}? "
-        "0=none 10=scratch 25=moderate 50=severe 75=critical 100=destroyed",
-    ),
-    (
-        "damage_b", "int",
-        "{a_desc} collides with {b_desc}. Damage to {b}? "
-        "0=none 10=scratch 25=moderate 50=severe 75=critical 100=destroyed",
-    ),
-    (
-        "state_change_a", "state",
-        "{a_desc} collides with {b_desc}. State change on {a}? " + STATE_CHANGE_PROMPT,
-    ),
-    (
-        "state_change_b", "state",
-        "{a_desc} collides with {b_desc}. State change on {b}? " + STATE_CHANGE_PROMPT,
-    ),
-    (
-        "force_b", "signed",
-        "{a_desc} collides with {b_desc}. "
-        "Force on {b}? -100(pull) to 100(push), 0=none",
-    ),
-    (
-        "continuous", "bool",
-        "Is the interaction between {a} and {b} instant or continuous "
-        "while touching? 0=instant 1=continuous",
-    ),
-]
-
 
 async def evaluate_pair(
     bp_a: GameObjectBlueprint,
@@ -159,33 +168,20 @@ async def evaluate_pair(
             scene.put_pairwise(name_a, name_b, result)
             return result
 
-    # 3. LLM evaluation: 6 parallel calls
+    # 3. LLM evaluation: 6 parallel calls via run_questions()
     a_desc, b_desc = _obj_summary(bp_a), _obj_summary(bp_b)
-    fmt = {"a": name_a, "b": name_b, "a_desc": a_desc, "b_desc": b_desc}
-
-    async def _ask(field: str, qtype: str, template: str) -> tuple[str, int | bool]:
-        prompt = template.format(**fmt)
-        if qtype == "bool":
-            return (field, await ask_bool(prompt))
-        elif qtype == "state":
-            return (field, await ask_int(prompt, 0, 8, 0))
-        elif qtype == "signed":
-            return (field, await ask_int(prompt, -100, 100, 0))
-        else:
-            return (field, await ask_int(prompt))
-
-    raw_results = await asyncio.gather(
-        *[_ask(f, t, p) for f, t, p in PAIR_QUESTIONS]
+    raw = await run_questions(
+        PAIR_QUESTIONS,
+        {"a": name_a, "b": name_b, "a_desc": a_desc, "b_desc": b_desc},
     )
-    raw = dict(raw_results)
 
     result = PairwiseResult(
-        damage_a=int(raw["damage_a"]),
-        damage_b=int(raw["damage_b"]),
-        state_change_a=int(raw["state_change_a"]),
-        state_change_b=int(raw["state_change_b"]),
-        force_b=int(raw["force_b"]),
-        continuous=bool(raw["continuous"]),
+        damage_a=int(raw.get("damage_a", 50)),
+        damage_b=int(raw.get("damage_b", 50)),
+        state_change_a=int(raw.get("state_change_a", 0)),
+        state_change_b=int(raw.get("state_change_b", 0)),
+        force_b=int(raw.get("force_b", 0)),
+        continuous=bool(raw.get("continuous", False)),
     )
 
     # Write through to both caches

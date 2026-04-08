@@ -3,7 +3,11 @@
 Flow:
   1. Check creation cache (description -> cached blueprint)
   2. Generate name (~3 tokens, sequential — other prompts use it)
-  3. Fan-out: 12 parallel 1-token calls + visual description (~25 tokens)
+  3. Fan-out: gated parallel calls via run_questions()
+     - Unconditional: mass, height, friction, bounce, gravity, has_field,
+       indestructible, autonomous, affordance, visual_description
+     - Gated on has_field: field_range_cm
+     - Gated on indestructible=false: armor, hp, destruction_result_name
   4. Parse and assemble GameObjectBlueprint
   5. Cache creation result
   6. Return blueprint
@@ -11,7 +15,6 @@ Flow:
 
 from __future__ import annotations
 
-import asyncio
 import time
 import uuid
 
@@ -19,14 +22,9 @@ import structlog
 
 from app.cache.store import CacheStore
 from app.config import settings
-from app.creator.llm import ask_bool, ask_float, ask_int, ask_text
-from app.creator.questions import (
-    CREATION_QUESTIONS,
-    DESTRUCTION_PROMPT,
-    NAME_PROMPT,
-    VISUAL_PROMPT,
-    Question,
-)
+from app.creator.llm import ask_text
+from app.creator.question_graph import run_questions
+from app.creator.questions import ALL_CREATION_QUESTIONS, NAME_QUESTION
 from app.models.blueprint import (
     Destructibility,
     GameObjectBlueprint,
@@ -36,33 +34,10 @@ from app.models.blueprint import (
 logger = structlog.get_logger()
 
 
-async def _ask_question(q: Question, name: str) -> tuple[str, int | float | bool]:
-    """Dispatch one question to the appropriate ask_* function."""
-    prompt = q.prompt.format(name=name)
-    if q.qtype == "float":
-        return (q.key, await ask_float(prompt, float(q.lo), float(q.hi), float(q.default)))
-    elif q.qtype == "bool":
-        return (q.key, await ask_bool(prompt))
-    else:
-        return (q.key, await ask_int(prompt, int(q.lo), int(q.hi), int(q.default)))
-
-
-async def _ask_visual(name: str, description: str) -> tuple[str, str]:
-    prompt = VISUAL_PROMPT.format(name=name, description=description)
-    text = await ask_text(prompt, max_tokens=40, default=f"a {description}")
-    return ("visual_description", text)
-
-
-async def _ask_destruction(name: str) -> tuple[str, str]:
-    prompt = DESTRUCTION_PROMPT.format(name=name)
-    text = await ask_text(prompt, max_tokens=8, default="nothing")
-    return ("destruction_result_name", text.strip().lower())
-
-
 async def create_object(description: str, cache: CacheStore) -> GameObjectBlueprint:
     """Create a V3 game object from a player description.
 
-    Checks creation cache first. On miss, runs 13 parallel LLM calls.
+    Checks creation cache first. On miss, runs gated parallel LLM calls.
     Returns a complete GameObjectBlueprint ready for the client.
     """
     t0 = time.monotonic()
@@ -78,31 +53,20 @@ async def create_object(description: str, cache: CacheStore) -> GameObjectBluepr
 
     # 2. Generate name (~3 tokens, must run first — other prompts reference it)
     raw_name = await ask_text(
-        NAME_PROMPT.format(description=description),
-        max_tokens=8,
-        default=description,
+        NAME_QUESTION.prompt.format(description=description),
+        max_tokens=NAME_QUESTION.max_tokens,
+        default=str(NAME_QUESTION.default),
     )
     words = raw_name.split()
     name = " ".join(words[:3]) if len(words) > 3 else raw_name
     if not name.strip():
         name = description.split()[0].capitalize() if description.strip() else "Object"
 
-    # 3. Fan-out: all questions + visual description in parallel
-    # Use player's description (not LLM-generated name) for physics/classification
-    # questions — name is display-only. Avoids drift: "boulder" → "Rock" → 10kg.
-    tasks: list = [_ask_question(q, description) for q in CREATION_QUESTIONS]
-    tasks.append(_ask_visual(name, description))
-    tasks.append(_ask_destruction(description))
-
-    results_list = await asyncio.gather(*tasks, return_exceptions=True)
-
-    # Collect results, using defaults for any failures
-    answers: dict = {}
-    for r in results_list:
-        if isinstance(r, tuple) and len(r) == 2:
-            answers[r[0]] = r[1]
-        elif isinstance(r, BaseException):
-            logger.warning("creation_question_failed", error=str(r))
+    # 3. Fan-out: gated parallel calls
+    answers = await run_questions(
+        ALL_CREATION_QUESTIONS,
+        {"name": description, "description": description},
+    )
 
     # 4. Assemble
     has_field = bool(answers.get("has_field", False))
@@ -126,7 +90,9 @@ async def create_object(description: str, cache: CacheStore) -> GameObjectBluepr
 
     blueprint_data = {
         "name": name,
-        "visual_description": str(answers.get("visual_description", f"a {description}")),
+        "visual_description": str(
+            answers.get("visual_description", f"a {description}")
+        ),
         "physics": physics.model_dump(),
         "destructibility": destructibility.model_dump(),
         "affordance": int(answers.get("affordance", 3)),

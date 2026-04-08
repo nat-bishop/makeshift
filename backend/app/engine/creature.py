@@ -1,6 +1,6 @@
 """Creature behavior: per-pair staged evaluation.
 
-Three sequential stages, each parallel internally:
+Three sequential stages, each parallel internally via run_questions():
   Stage 1: movement (0-3) + strength (0-100) — all creature x object pairs
   Stage 2: action (0-6) — approach/orbit pairs only (filtered)
   Stage 3: params — actions needing them (filtered)
@@ -16,7 +16,7 @@ import asyncio
 import structlog
 
 from app.cache.scene import CreatureBehavior, SceneCache
-from app.creator.llm import ask_int
+from app.creator.question_graph import Question, run_questions
 from app.models.blueprint import GameObjectBlueprint
 from app.models.state import STATE_LIST_PROMPT
 
@@ -28,47 +28,60 @@ ACTIONS_NEEDING_PARAMS = {1, 2, 3, 4}  # damage, heal, add_state, remove_state
 # Movement motivation templates for seeding stage 2
 MOVEMENT_MOTIVATION = {0: "wants to interact with", 2: "is cautious about"}
 
-# ---- Prompt templates ----
+# ---- Question definitions per stage ----
 
-STAGE1_MOVEMENT = (
-    "Scene: [{scene_list}].\n"
-    "{creature} sees {target}. How does it react?\n"
-    "0=approach 1=flee 2=orbit 3=ignore"
-)
+STAGE1_QUESTIONS: list[Question] = [
+    Question(
+        "movement",
+        "Scene: [{scene_list}].\n"
+        "{creature} sees {target}. How does it react?\n"
+        "0=approach 1=flee 2=orbit 3=ignore",
+        "int", 0, 3, 3,
+    ),
+    Question(
+        "strength",
+        "Scene: [{scene_list}].\n"
+        "How strongly does {creature} react to {target}?\n"
+        "0=ignores 25=mild interest 50=moderate 75=strong drive 100=absolute priority",
+        "int", 0, 100, 0,
+    ),
+]
 
-STAGE1_STRENGTH = (
-    "Scene: [{scene_list}].\n"
-    "How strongly does {creature} react to {target}?\n"
-    "0=ignores 25=mild interest 50=moderate 75=strong drive 100=absolute priority"
-)
-
-STAGE2_ACTION = (
+STAGE2_QUESTION = Question(
+    "action",
     "{creature} is {movement_verb} {target} and {motivation} it.\n"
     "What does {creature} do to {target}?\n"
     "0=nothing 1=damage/attack 2=heal/repair/extinguish 3=add state "
-    "4=remove state 5=destroy 6=take/eat/consume"
+    "4=remove state 5=destroy 6=take/eat/consume",
+    "int", 0, 6, 0,
 )
 
-STAGE3_AMOUNT = "{creature} will {action_verb} {target}. How much (0-100)?"
+STAGE3_AMOUNT = Question(
+    "param",
+    "{creature} will {action_verb} {target}. How much (0-100)?",
+    "int", 0, 100, 20,
+)
 
-STAGE3_STATE = (
-    "{creature} will {action_verb} a state on {target}. Which?\n"
-    + STATE_LIST_PROMPT
+STAGE3_STATE = Question(
+    "param",
+    "{creature} will {action_verb} a state on {target}. Which?\n" + STATE_LIST_PROMPT,
+    "int", 1, 4, 1,
 )
 
 
-def _collect_gather_results(
-    raw: list[tuple[str, int] | BaseException],
+def _collect_results(
+    raw: list[dict[str, int | float | bool | str] | BaseException],
+    target_names: list[str],
     event_name: str,
     creature_name: str,
-) -> dict[str, int]:
-    """Filter gather results, logging exceptions and collecting successful tuples."""
-    results: dict[str, int] = {}
-    for r in raw:
+) -> dict[str, dict[str, int | float | bool | str]]:
+    """Zip gather results with target names, logging exceptions."""
+    results: dict[str, dict[str, int | float | bool | str]] = {}
+    for name, r in zip(target_names, raw, strict=True):
         if isinstance(r, BaseException):
-            logger.warning(event_name, creature=creature_name, error=str(r))
-        elif isinstance(r, tuple):
-            results[r[0]] = r[1]
+            logger.warning(event_name, creature=creature_name, target=name, error=str(r))
+        else:
+            results[name] = r
     return results
 
 
@@ -91,42 +104,27 @@ async def evaluate_creature_behaviors(
 
     # --- Stage 1: movement + strength (parallel, all pairs) ---
 
-    async def _stage1(target: GameObjectBlueprint) -> tuple[str, int, int]:
-        movement, strength = await asyncio.gather(
-            ask_int(
-                STAGE1_MOVEMENT.format(
-                    scene_list=scene_list,
-                    creature=creature.name,
-                    target=target.name,
-                ),
-                0, 3, 3,
-            ),
-            ask_int(
-                STAGE1_STRENGTH.format(
-                    scene_list=scene_list,
-                    creature=creature.name,
-                    target=target.name,
-                ),
-                0, 100, 0,
-            ),
-        )
-        return (target.name, movement, strength)
-
+    target_names_s1 = [t.name for t in targets]
     stage1_raw = await asyncio.gather(
-        *[_stage1(t) for t in targets], return_exceptions=True
-    )
-    stage1_results: list[tuple[str, int, int]] = []
-    for i, r in enumerate(stage1_raw):
-        if isinstance(r, BaseException):
-            logger.warning(
-                "creature_stage1_failed",
-                creature=creature.name,
-                target=targets[i].name,
-                error=str(r),
+        *[
+            run_questions(
+                STAGE1_QUESTIONS,
+                {"scene_list": scene_list, "creature": creature.name, "target": t.name},
             )
-            stage1_results.append((targets[i].name, 3, 0))  # ignore, no strength
+            for t in targets
+        ],
+        return_exceptions=True,
+    )
+    stage1 = _collect_results(stage1_raw, target_names_s1, "creature_stage1_failed", creature.name)
+
+    # Build stage1_results with defaults for failures
+    stage1_results: list[tuple[str, int, int]] = []
+    for t in targets:
+        if t.name in stage1:
+            r = stage1[t.name]
+            stage1_results.append((t.name, int(r.get("movement", 3)), int(r.get("strength", 0))))
         else:
-            stage1_results.append(r)
+            stage1_results.append((t.name, 3, 0))  # ignore, no strength
 
     # Filter: only approach (0) and orbit (2) continue to stage 2
     approach_orbit = [
@@ -135,61 +133,61 @@ async def evaluate_creature_behaviors(
 
     # --- Stage 2: action (parallel, filtered pairs only) ---
 
-    async def _stage2(name: str, movement: int) -> tuple[str, int]:
-        mv_verb = "APPROACHING" if movement == 0 else "ORBITING"
-        motivation = MOVEMENT_MOTIVATION[movement]
-        action = await ask_int(
-            STAGE2_ACTION.format(
-                creature=creature.name,
-                movement_verb=mv_verb,
-                target=name,
-                motivation=motivation,
-            ),
-            0, 6, 0,
-        )
-        return (name, action)
-
     stage2: dict[str, int] = {}
     if approach_orbit:
-        s2_raw = await asyncio.gather(
-            *[_stage2(name, mv) for name, mv, _ in approach_orbit],
+        target_names_s2 = [name for name, _, _ in approach_orbit]
+        stage2_raw = await asyncio.gather(
+            *[
+                run_questions(
+                    [STAGE2_QUESTION],
+                    {
+                        "creature": creature.name,
+                        "movement_verb": "APPROACHING" if mv == 0 else "ORBITING",
+                        "target": name,
+                        "motivation": MOVEMENT_MOTIVATION[mv],
+                    },
+                )
+                for name, mv, _ in approach_orbit
+            ],
             return_exceptions=True,
         )
-        stage2 = _collect_gather_results(s2_raw, "creature_stage2_failed", creature.name)
+        s2_results = _collect_results(
+            stage2_raw, target_names_s2, "creature_stage2_failed", creature.name
+        )
+        stage2 = {name: int(r.get("action", 0)) for name, r in s2_results.items()}
 
     # --- Stage 3: params (parallel, actions needing them) ---
-
-    async def _stage3(name: str, action: int) -> tuple[str, int]:
-        if action in (1, 2):  # damage/heal -> amount
-            action_verb = "damage" if action == 1 else "heal"
-            amount = await ask_int(
-                STAGE3_AMOUNT.format(
-                    creature=creature.name, action_verb=action_verb, target=name
-                ),
-                0, 100, 20,
-            )
-            return (name, amount)
-        elif action in (3, 4):  # add/remove state -> state id
-            action_verb = "add" if action == 3 else "remove"
-            state_id = await ask_int(
-                STAGE3_STATE.format(
-                    creature=creature.name, action_verb=action_verb, target=name
-                ),
-                1, 4, 1,
-            )
-            return (name, state_id)
-        return (name, 0)
 
     needs_params = [
         (n, a) for n, a in stage2.items() if a in ACTIONS_NEEDING_PARAMS
     ]
     stage3: dict[str, int] = {}
     if needs_params:
-        s3_raw = await asyncio.gather(
-            *[_stage3(n, a) for n, a in needs_params],
+        target_names_s3 = [n for n, _ in needs_params]
+
+        def _s3_question(action: int) -> Question:
+            if action in (1, 2):
+                return STAGE3_AMOUNT
+            return STAGE3_STATE
+
+        def _s3_context(name: str, action: int) -> dict[str, str]:
+            if action in (1, 2):
+                action_verb = "damage" if action == 1 else "heal"
+            else:
+                action_verb = "add" if action == 3 else "remove"
+            return {"creature": creature.name, "action_verb": action_verb, "target": name}
+
+        stage3_raw = await asyncio.gather(
+            *[
+                run_questions([_s3_question(a)], _s3_context(n, a))
+                for n, a in needs_params
+            ],
             return_exceptions=True,
         )
-        stage3 = _collect_gather_results(s3_raw, "creature_stage3_failed", creature.name)
+        s3_results = _collect_results(
+            stage3_raw, target_names_s3, "creature_stage3_failed", creature.name
+        )
+        stage3 = {name: int(r.get("param", 0)) for name, r in s3_results.items()}
 
     # --- Assemble all behaviors ---
     for name, movement, strength in stage1_results:

@@ -1,25 +1,24 @@
-"""Data-driven question lists for V3 creator pipeline.
+"""Data-driven question definitions for all LLM call pipelines.
 
-Each question is a single LLM call producing 1-4 tokens.
-Edit this file to add, remove, or tweak object properties during playtesting.
+Creation, pairwise, and creature questions are all defined here as Question
+instances. Edit this file to add, remove, or tweak object properties during
+playtesting. Gate conditions control conditional fan-out (e.g. field_range_cm
+only fires when has_field=true).
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from app.creator.question_graph import Gate, Question
 
+# ---- Reusable gate conditions ----
 
-@dataclass(frozen=True)
-class Question:
-    key: str
-    prompt: str  # f-string with {name} placeholder
-    qtype: str  # "int", "float", "bool"
-    lo: int | float = 0
-    hi: int | float = 100
-    default: int | float = 50
+GATE_HAS_FIELD = Gate("has_field", lambda v: bool(v))
+GATE_DESTRUCTIBLE = Gate("indestructible", lambda v: not bool(v))
 
+# ---- Creation questions ----
+# All fired via run_questions() after name generation resolves.
+# Prompts use {name} and {description} placeholders.
 
-# All fired in parallel via asyncio.gather (~200ms wall time)
 CREATION_QUESTIONS: list[Question] = [
     # Physics (5 questions)
     Question(
@@ -51,24 +50,7 @@ CREATION_QUESTIONS: list[Question] = [
         "(balloon=5, smoke=15, ghost=30, feather=40, normal=50, rock=60, anvil=75)",
         "int",
     ),
-    # Destructibility (3 questions)
-    Question(
-        "armor",
-        "How resistant to damage is {name} 0-100? (paper=5, wood=30, steel=80, diamond=99)",
-        "int", 0, 100, 30,
-    ),
-    Question(
-        "hp",
-        "How much punishment before {name} is destroyed 0-100? "
-        "(balloon=5, wood=40, steel=80)",
-        "int", 0, 100, 50,
-    ),
-    Question(
-        "indestructible",
-        "Can {name} be destroyed? 0=yes 1=no (mountain=1, sword=0)",
-        "bool",
-    ),
-    # Classification (3 questions)
+    # Gate triggers (unconditional — these gate downstream questions)
     Question(
         "has_field",
         "Does {name} affect nearby things without touching "
@@ -77,18 +59,39 @@ CREATION_QUESTIONS: list[Question] = [
         "bool",
     ),
     Question(
+        "indestructible",
+        "Can {name} be destroyed? 0=yes 1=no (mountain=1, sword=0)",
+        "bool",
+    ),
+    # Gated on has_field=true
+    Question(
         "field_range_cm",
         "If {name} has area effect, range in cm? "
         "(candle=50, campfire=250, bonfire=500, volcano=1000)",
         "int", 10, 1000, 100,
+        gates=(GATE_HAS_FIELD,),
     ),
+    # Gated on indestructible=false
+    Question(
+        "armor",
+        "How resistant to damage is {name} 0-100? (paper=5, wood=30, steel=80, diamond=99)",
+        "int", 0, 100, 30,
+        gates=(GATE_DESTRUCTIBLE,),
+    ),
+    Question(
+        "hp",
+        "How much punishment before {name} is destroyed 0-100? "
+        "(balloon=5, wood=40, steel=80)",
+        "int", 0, 100, 50,
+        gates=(GATE_DESTRUCTIBLE,),
+    ),
+    # Other unconditional
     Question(
         "autonomous",
         "Does {name} move and act on its own? "
         "(rock=0, sword=0, horse=1, zombie=1, cat=1, robot=1) 0=no 1=yes",
         "bool",
     ),
-    # Affordance (1 question — single choice, 1 token)
     Question(
         "affordance",
         "When a player interacts with {name}: "
@@ -98,20 +101,36 @@ CREATION_QUESTIONS: list[Question] = [
     ),
 ]
 
-NAME_PROMPT = (
+# Text questions — also Question instances with gates
+
+NAME_QUESTION = Question(
+    "name",
     "Give a 1-3 word game object name for: {description}. "
-    "Reply with ONLY the name, nothing else."
+    "Reply with ONLY the name, nothing else.",
+    "text", max_tokens=8, default="Object",
 )
 
-VISUAL_PROMPT = (
+VISUAL_QUESTION = Question(
+    "visual_description",
     "Describe the appearance of '{name}' ({description}) for a 2D sprite artist. "
     "Shape, material, colors, distinctive features. "
-    "Max 2 sentences. Reply with ONLY the description."
+    "Max 2 sentences. Reply with ONLY the description.",
+    "text", max_tokens=40, default="a {description}",
 )
 
-DESTRUCTION_PROMPT = (
+DESTRUCTION_QUESTION = Question(
+    "destruction_result_name",
     "When {name} is destroyed, what remains? "
     "Reply with a 1-3 word name for the debris/remains, or 'nothing' if it vanishes completely. "
     "Examples: wooden sword -> splinters, glass bottle -> glass shards, balloon -> nothing, "
-    "ice block -> puddle, robot -> scrap metal"
+    "ice block -> puddle, robot -> scrap metal",
+    "text", max_tokens=8, default="nothing",
+    gates=(GATE_DESTRUCTIBLE,),
 )
+
+# Combined list for the creation pipeline (name is handled separately)
+ALL_CREATION_QUESTIONS: list[Question] = [
+    *CREATION_QUESTIONS,
+    VISUAL_QUESTION,
+    DESTRUCTION_QUESTION,
+]
