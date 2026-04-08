@@ -56,14 +56,16 @@ class CreatureBehavior:
     movement: int  # 0=approach, 1=flee, 2=orbit, 3=ignore
     strength: int  # 0-100
     action: int  # 0=nothing,1=damage,2=heal,3=add_state,4=remove_state,5=destroy,6=take
-    param: int  # damage/heal amount or state_id (1-4)
+    amount: int  # 0-100 damage/heal intensity (action 1,2)
+    state_id: int  # 1-4 State enum value (action 3,4)
 
     def to_dict(self) -> dict:
         return {
             "movement": self.movement,
             "strength": self.strength,
             "action": self.action,
-            "param": self.param,
+            "amount": self.amount,
+            "state_id": self.state_id,
         }
 
     @classmethod
@@ -72,7 +74,8 @@ class CreatureBehavior:
             movement=d.get("movement", 3),
             strength=d.get("strength", 0),
             action=d.get("action", 0),
-            param=d.get("param", 0),
+            amount=d.get("amount", 0),
+            state_id=d.get("state_id", 0),
         )
 
 

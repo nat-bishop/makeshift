@@ -209,7 +209,7 @@ class TestModelRoundtrips:
         assert pr.damage_a == 50
 
     def test_creature_behavior_roundtrip(self) -> None:
-        cb = CreatureBehavior(movement=0, strength=90, action=5, param=0)
+        cb = CreatureBehavior(movement=0, strength=90, action=5, amount=0, state_id=0)
         d = cb.to_dict()
         cb2 = CreatureBehavior.from_dict(d)
         assert cb == cb2
@@ -219,7 +219,8 @@ class TestModelRoundtrips:
         assert cb.movement == 3  # ignore
         assert cb.strength == 0
         assert cb.action == 0
-        assert cb.param == 0
+        assert cb.amount == 0
+        assert cb.state_id == 0
 
     def test_blueprint_roundtrip(self) -> None:
         bp = GameObjectBlueprint(

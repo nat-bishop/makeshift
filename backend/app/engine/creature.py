@@ -57,13 +57,14 @@ STAGE2_QUESTION = Question(
 )
 
 STAGE3_AMOUNT = Question(
-    "param",
-    "{creature} will {action_verb} {target}. How much (0-100)?",
+    "amount",
+    "{creature} will {action_verb} {target}. How much (0-100)?\n"
+    "5=scratch 15=light 30=moderate 50=serious 75=devastating 100=lethal",
     "int", 0, 100, 20,
 )
 
 STAGE3_STATE = Question(
-    "param",
+    "state_id",
     "{creature} will {action_verb} a state on {target}. Which?\n" + STATE_LIST_PROMPT,
     "int", 1, 4, 1,
 )
@@ -187,14 +188,18 @@ async def evaluate_creature_behaviors(
         s3_results = _collect_results(
             stage3_raw, target_names_s3, "creature_stage3_failed", creature.name
         )
-        stage3 = {name: int(r.get("param", 0)) for name, r in s3_results.items()}
+        stage3 = {name: dict(r) for name, r in s3_results.items()}
 
     # --- Assemble all behaviors ---
     for name, movement, strength in stage1_results:
         action = stage2.get(name, 0)
-        param = stage3.get(name, 0)
+        s3 = stage3.get(name, {})
         behavior = CreatureBehavior(
-            movement=movement, strength=strength, action=action, param=param
+            movement=movement,
+            strength=strength,
+            action=action,
+            amount=int(s3.get("amount", 0)),
+            state_id=int(s3.get("state_id", 0)),
         )
         behaviors[name] = behavior
         scene.put_creature(creature.name, name, behavior)

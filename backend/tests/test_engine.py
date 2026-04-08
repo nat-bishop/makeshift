@@ -54,7 +54,7 @@ class TestPairwiseResult:
 
 class TestCreatureBehavior:
     def test_to_dict_roundtrip(self):
-        cb = CreatureBehavior(movement=0, strength=90, action=5, param=0)
+        cb = CreatureBehavior(movement=0, strength=90, action=5, amount=0, state_id=0)
         d = cb.to_dict()
         cb2 = CreatureBehavior.from_dict(d)
         assert cb2.movement == 0

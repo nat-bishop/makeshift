@@ -127,7 +127,8 @@ func _execute_action(entry: Dictionary, target: Node) -> void:
 		_error_count += 1
 		return
 	var action: int = entry.get("action", 0)
-	var param: int = entry.get("param", 0)
+	var amount: int = entry.get("amount", 0)
+	var state_id: int = entry.get("state_id", 0)
 	match action:
 		0:  # nothing
 			pass
@@ -135,25 +136,25 @@ func _execute_action(entry: Dictionary, target: Node) -> void:
 			if not target.has_method("take_damage"):
 				_error_count += 1
 				return
-			WorldMutations.apply_damage(target, float(param) if param > 0 else 15.0)
+			WorldMutations.apply_damage(target, float(amount) if amount > 0 else 15.0)
 		2:  # heal
 			if not target.has_method("heal"):
 				_error_count += 1
 				return
-			WorldMutations.apply_heal(target, float(param) if param > 0 else 10.0)
+			WorldMutations.apply_heal(target, float(amount) if amount > 0 else 10.0)
 		3:  # add_state
-			if param < 1 or param > 7 or not target.has_method("add_state"):
+			if state_id < 1 or state_id > 7 or not target.has_method("add_state"):
 				_error_count += 1
 				return
 			WorldMutations.apply_add_state(
-				target, CollisionResolver.STATE_NAMES[param], 10.0
+				target, CollisionResolver.STATE_NAMES[state_id], 10.0
 			)
 		4:  # remove_state
-			if param < 1 or param > 7 or not target.has_method("remove_state"):
+			if state_id < 1 or state_id > 7 or not target.has_method("remove_state"):
 				_error_count += 1
 				return
 			WorldMutations.apply_remove_state(
-				target, CollisionResolver.STATE_NAMES[param]
+				target, CollisionResolver.STATE_NAMES[state_id]
 			)
 		5:  # destroy
 			if not target.has_method("take_damage"):

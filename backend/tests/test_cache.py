@@ -145,7 +145,7 @@ class TestSceneCache:
 
     def test_creature_behavior(self):
         sc = SceneCache()
-        cb = CreatureBehavior(movement=0, strength=90, action=5, param=0)
+        cb = CreatureBehavior(movement=0, strength=90, action=5, amount=0, state_id=0)
         sc.put_creature("zombie", "brain", cb)
         assert sc.get_creature("zombie", "brain") is cb
         assert sc.get_creature("zombie", "rock") is None
@@ -159,9 +159,9 @@ class TestSceneCache:
 
     def test_mark_creature_stale_for_target(self):
         sc = SceneCache()
-        sc.put_creature("zombie", "sword", CreatureBehavior(0, 90, 1, 20))
-        sc.put_creature("zombie", "rock", CreatureBehavior(2, 50, 0, 0))
-        sc.put_creature("cat", "sword", CreatureBehavior(1, 80, 0, 0))
+        sc.put_creature("zombie", "sword", CreatureBehavior(0, 90, 1, 20, 0))
+        sc.put_creature("zombie", "rock", CreatureBehavior(2, 50, 0, 0, 0))
+        sc.put_creature("cat", "sword", CreatureBehavior(1, 80, 0, 0, 0))
         # Mark sword stale — zombie->sword and cat->sword should be removed
         removed = sc.mark_creature_stale_for_target("sword")
         assert len(removed) == 2
@@ -171,9 +171,9 @@ class TestSceneCache:
 
     def test_mark_creature_stale_for_creature(self):
         sc = SceneCache()
-        sc.put_creature("zombie", "sword", CreatureBehavior(0, 90, 1, 20))
-        sc.put_creature("zombie", "rock", CreatureBehavior(2, 50, 0, 0))
-        sc.put_creature("cat", "sword", CreatureBehavior(1, 80, 0, 0))
+        sc.put_creature("zombie", "sword", CreatureBehavior(0, 90, 1, 20, 0))
+        sc.put_creature("zombie", "rock", CreatureBehavior(2, 50, 0, 0, 0))
+        sc.put_creature("cat", "sword", CreatureBehavior(1, 80, 0, 0, 0))
         # Mark zombie stale — zombie->sword and zombie->rock should be removed
         removed = sc.mark_creature_stale_for_creature("zombie")
         assert len(removed) == 2
