@@ -5,9 +5,8 @@ from collections.abc import AsyncIterator
 
 import aiosqlite
 import pytest
-from app.models.blueprint import GameObjectBlueprint, VisualDescriptor
+from app.models.blueprint import Destructibility, GameObjectBlueprint, PhysicsProperties
 from app.models.session import Session, WorldObject
-from app.models.tags import Tag
 from app.sessions.manager import SessionManager
 
 
@@ -42,18 +41,14 @@ async def _setup_db() -> aiosqlite.Connection:
     return db
 
 
-def _make_blueprint(
-    name: str = "Test Object", tags: list[Tag] | None = None
-) -> GameObjectBlueprint:
+def _make_blueprint(name: str = "test object") -> GameObjectBlueprint:
     return GameObjectBlueprint(
         id=str(uuid.uuid4()),
         name=name,
         description="test",
-        tags=tags or [Tag.RIGID, Tag.HEAVY],
-        visual_descriptor=VisualDescriptor(
-            visual_description="a gray stone cube",
-            size_category="medium",
-        ),
+        visual_description="a gray stone cube",
+        physics=PhysicsProperties(mass_kg=5.0, height_cm=30, friction=50, bounce=10, gravity=50),
+        destructibility=Destructibility(armor=50, hp=50),
     )
 
 
@@ -204,7 +199,7 @@ async def test_save_state_sync_objects(manager: SessionManager) -> None:
         blueprint=bps[0],
         x=1.0,
         y=2.0,
-        durability=float(bps[0].starting_durability),
+        hp=float(bps[0].destructibility.hp),
     )
     await manager.save_state(session.id, objects=[keep])
 

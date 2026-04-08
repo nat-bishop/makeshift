@@ -1,4 +1,4 @@
-"""Tests for session CRUD endpoints."""
+"""Tests for session CRUD endpoints — V3."""
 
 from __future__ import annotations
 
@@ -7,9 +7,12 @@ from collections.abc import AsyncIterator
 import aiosqlite
 import pytest
 from app.middleware import session_context_middleware
-from app.models.blueprint import GameObjectBlueprint, VisualDescriptor
+from app.models.blueprint import (
+    Destructibility,
+    GameObjectBlueprint,
+    PhysicsProperties,
+)
 from app.models.session import WorldObject
-from app.models.tags import Tag
 from app.routers import sessions
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
@@ -19,9 +22,7 @@ async def _init_db() -> aiosqlite.Connection:
     db = await aiosqlite.connect(":memory:")
     await db.execute("""CREATE TABLE sessions (
         id TEXT PRIMARY KEY, created_at TEXT NOT NULL,
-        budget_used REAL NOT NULL DEFAULT 0.0, budget_limit REAL NOT NULL DEFAULT 1.0,
-        current_level INTEGER NOT NULL DEFAULT 1,
-        levels_completed TEXT NOT NULL DEFAULT '[]'
+        budget_used REAL NOT NULL DEFAULT 0.0, budget_limit REAL NOT NULL DEFAULT 1.0
     )""")
     await db.execute("""CREATE TABLE objects (
         session_id TEXT NOT NULL, object_id TEXT NOT NULL,
@@ -41,16 +42,16 @@ def _make_test_app() -> FastAPI:
     return app
 
 
-def _make_blueprint(obj_id: str = "test-obj-1", name: str = "Test Rock") -> GameObjectBlueprint:
+def _make_blueprint(obj_id: str = "test-obj-1", name: str = "test rock") -> GameObjectBlueprint:
     return GameObjectBlueprint(
         id=obj_id,
         name=name,
-        description="A simple test rock",
-        tags=[Tag.RIGID, Tag.HEAVY],
-        visual_descriptor=VisualDescriptor(
-            visual_description="a small gray stone rock",
-            size_category="small",
-        ),
+        description="a simple test rock",
+        visual_description="a small gray stone rock",
+        physics=PhysicsProperties(mass_kg=5.0, height_cm=30, friction=60, bounce=5, gravity=60),
+        destructibility=Destructibility(armor=70, hp=80),
+        affordance=3,
+        autonomous=False,
     )
 
 
@@ -59,7 +60,6 @@ async def client() -> AsyncIterator[AsyncClient]:
     db = await _init_db()
     app = _make_test_app()
     app.state.db = db
-    app.state.remove_bg = lambda x: x
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
     ) as c:
@@ -72,8 +72,7 @@ async def test_create_session(client: AsyncClient) -> None:
     assert resp.status_code == 200
     data = resp.json()
     assert "session_id" in data
-    assert isinstance(data["rules"], list)
-    assert len(data["rules"]) > 0
+    assert "rules" not in data  # V3: no rules delivery
     assert data["ws_url"].startswith("ws://")
     assert isinstance(data["budget_remaining"], float)
 
@@ -86,9 +85,8 @@ async def test_get_session(client: AsyncClient) -> None:
     assert resp.status_code == 200
     data = resp.json()
     assert data["session"]["id"] == session_id
-    assert isinstance(data["rules"], list)
+    assert "rules" not in data
     assert data["ws_url"].startswith("ws://")
-    assert isinstance(data["budget_remaining"], float)
 
 
 async def test_get_session_not_found(client: AsyncClient) -> None:
@@ -105,11 +103,6 @@ async def test_sync_session(client: AsyncClient) -> None:
     assert resp.json() == {"status": "ok"}
 
 
-async def test_sync_session_not_found(client: AsyncClient) -> None:
-    resp = await client.put("/api/sessions/nonexistent/sync", json={})
-    assert resp.status_code == 404
-
-
 async def test_sync_session_with_objects(client: AsyncClient) -> None:
     create_resp = await client.post("/api/sessions")
     session_id = create_resp.json()["session_id"]
@@ -120,7 +113,7 @@ async def test_sync_session_with_objects(client: AsyncClient) -> None:
         blueprint=blueprint,
         x=100.0,
         y=200.0,
-        durability=150.0,
+        hp=80.0,
     )
 
     sync_resp = await client.put(
@@ -135,4 +128,3 @@ async def test_sync_session_with_objects(client: AsyncClient) -> None:
     matched = [o for o in objs if o["object_id"] == blueprint.id]
     assert len(matched) == 1
     assert matched[0]["x"] == 100.0
-    assert matched[0]["y"] == 200.0

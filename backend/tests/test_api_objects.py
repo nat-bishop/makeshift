@@ -1,3 +1,5 @@
+"""Tests for object creation endpoint — V3."""
+
 from __future__ import annotations
 
 import uuid
@@ -7,8 +9,11 @@ from unittest.mock import AsyncMock, patch
 
 import aiosqlite
 from app.middleware import session_context_middleware
-from app.models.blueprint import GameObjectBlueprint, VisualDescriptor
-from app.models.tags import Tag
+from app.models.blueprint import (
+    Destructibility,
+    GameObjectBlueprint,
+    PhysicsProperties,
+)
 from app.routers import objects, sessions
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
@@ -25,13 +30,13 @@ def _make_app() -> FastAPI:
 def _make_blueprint() -> GameObjectBlueprint:
     return GameObjectBlueprint(
         id=str(uuid.uuid4()),
-        name="Fire Sword",
+        name="fire sword",
         description="a fire sword",
-        tags=[Tag.RIGID, Tag.SHARP, Tag.HEAT_SOURCE],
-        visual_descriptor=VisualDescriptor(
-            visual_description="a curved steel sword with a fiery red blade wreathed in flames",
-            size_category="medium",
-        ),
+        visual_description="a curved steel sword with a fiery red blade",
+        physics=PhysicsProperties(mass_kg=1.5, height_cm=120, friction=30, bounce=10, gravity=50),
+        destructibility=Destructibility(armor=80, hp=90),
+        affordance=0,
+        autonomous=False,
     )
 
 
@@ -53,9 +58,12 @@ async def _test_client() -> AsyncIterator[tuple[AsyncClient, FastAPI]]:
     )""")
     await db.commit()
     app.state.db = db
-    # Mock pipeline singletons so background sprite task doesn't hit real backends.
-    import app.images.pipeline as _pipeline
 
+    from app.cache.store import CacheStore
+    cache = await CacheStore.open(":memory:")
+    app.state.cache = cache
+
+    import app.images.pipeline as _pipeline
     orig_gen, orig_bg = _pipeline._generate_image, _pipeline._remove_bg
     _pipeline._generate_image = AsyncMock(return_value=b"fake_image")
     _pipeline._remove_bg = AsyncMock(return_value=b"fake_image")
@@ -67,21 +75,21 @@ async def _test_client() -> AsyncIterator[tuple[AsyncClient, FastAPI]]:
     finally:
         _pipeline._generate_image = orig_gen
         _pipeline._remove_bg = orig_bg
+        await cache.close()
         await db.close()
 
 
 async def _create_session(client: AsyncClient) -> str:
     resp = await client.post("/api/sessions")
     assert resp.status_code == 200
-    session_id: str = resp.json()["session_id"]
-    return session_id
+    return resp.json()["session_id"]
 
 
 async def test_create_object_success() -> None:
     async with _test_client() as (client, _app):
         session_id = await _create_session(client)
         with patch(
-            "app.routers.objects.create_object", new_callable=AsyncMock
+            "app.creator.pipeline.create_object", new_callable=AsyncMock
         ) as mock_create:
             mock_create.return_value = _make_blueprint()
             resp = await client.post(
@@ -97,7 +105,7 @@ async def test_create_object_success() -> None:
 async def test_create_object_session_not_found() -> None:
     async with _test_client() as (client, _app):
         with patch(
-            "app.routers.objects.create_object", new_callable=AsyncMock
+            "app.creator.pipeline.create_object", new_callable=AsyncMock
         ) as mock_create:
             mock_create.return_value = _make_blueprint()
             resp = await client.post(
@@ -118,7 +126,7 @@ async def test_create_object_budget_exceeded() -> None:
         await db.commit()
 
         with patch(
-            "app.routers.objects.create_object", new_callable=AsyncMock
+            "app.creator.pipeline.create_object", new_callable=AsyncMock
         ) as mock_create:
             mock_create.return_value = _make_blueprint()
             resp = await client.post(
@@ -128,11 +136,11 @@ async def test_create_object_budget_exceeded() -> None:
         assert resp.status_code == 402
 
 
-async def test_create_object_blueprint_structure() -> None:
+async def test_create_object_blueprint_v3_structure() -> None:
     async with _test_client() as (client, _app):
         session_id = await _create_session(client)
         with patch(
-            "app.routers.objects.create_object", new_callable=AsyncMock
+            "app.creator.pipeline.create_object", new_callable=AsyncMock
         ) as mock_create:
             mock_create.return_value = _make_blueprint()
             resp = await client.post(
@@ -140,5 +148,10 @@ async def test_create_object_blueprint_structure() -> None:
                 json={"description": "fire sword"},
             )
         blueprint = resp.json()["blueprint"]
-        for key in ("id", "name", "tags", "visual_descriptor", "description", "behaviors"):
-            assert key in blueprint, f"Missing key: {key}"
+        # V3 fields
+        for key in ("id", "name", "physics", "destructibility", "affordance",
+                     "autonomous", "visual_description"):
+            assert key in blueprint, f"Missing V3 key: {key}"
+        # V2 fields should be absent
+        for key in ("tags", "behaviors", "visual_descriptor", "substance"):
+            assert key not in blueprint, f"Unexpected V2 key: {key}"

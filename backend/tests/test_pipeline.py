@@ -11,59 +11,48 @@ from app.images.pipeline import (
     build_prompt,
     get_cached_sprite_path,
 )
-from app.models.blueprint import VisualDescriptor
 from PIL import Image
 
 
-def _make_visual(**kwargs: object) -> VisualDescriptor:
-    defaults: dict[str, object] = {
-        "visual_description": "a gray stone cube",
-        "size_category": "medium",
-    }
-    defaults.update(kwargs)
-    return VisualDescriptor(**defaults)  # type: ignore[arg-type]
-
-
 def test_prompt_hash_deterministic() -> None:
-    prompt = build_prompt("Cube", _make_visual())
+    prompt = build_prompt("Cube", "a gray stone cube")
     assert _prompt_hash(prompt) == _prompt_hash(prompt)
 
 
 def test_prompt_hash_different_inputs() -> None:
-    a = build_prompt("Cube", _make_visual(visual_description="a gray cube"))
-    b = build_prompt("Sphere", _make_visual(visual_description="a red sphere"))
+    a = build_prompt("Cube", "a gray cube")
+    b = build_prompt("Sphere", "a red sphere")
     assert _prompt_hash(a) != _prompt_hash(b)
 
 
 def test_prompt_hash_length() -> None:
-    h = _prompt_hash(build_prompt("Cube", _make_visual()))
+    h = _prompt_hash(build_prompt("Cube", "a gray stone cube"))
     assert len(h) == 16
     assert re.fullmatch(r"[0-9a-f]{16}", h)
 
 
 def test_build_prompt_content() -> None:
-    vd = _make_visual(visual_description="a silver iron sword with black hilt")
-    prompt = build_prompt("Fire Sword", vd)
+    prompt = build_prompt("Fire Sword", "a silver iron sword with black hilt")
     assert "Fire Sword" in prompt
     assert "silver iron sword" in prompt
     assert "contrasting solid background color" in prompt
 
 
 def test_build_prompt_no_double_commas() -> None:
-    prompt = build_prompt("Test", _make_visual())
+    prompt = build_prompt("Test", "a gray stone cube")
     assert ",," not in prompt
     assert ", ," not in prompt
 
 
 def test_get_cached_sprite_path() -> None:
-    prompt = build_prompt("Cube", _make_visual())
+    prompt = build_prompt("Cube", "a gray stone cube")
     path = get_cached_sprite_path(prompt)
     assert path.suffix == ".png"
     assert path.parent == STATIC_DIR / "sprites"
 
 
 def test_get_cached_sprite_path_deterministic() -> None:
-    prompt = build_prompt("Cube", _make_visual())
+    prompt = build_prompt("Cube", "a gray stone cube")
     assert get_cached_sprite_path(prompt) == get_cached_sprite_path(prompt)
 
 

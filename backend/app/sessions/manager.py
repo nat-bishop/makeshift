@@ -173,7 +173,7 @@ class SessionManager:
                     bp.model_dump_json(),
                     0.0,
                     0.0,
-                    float(bp.starting_durability),
+                    float(bp.destructibility.hp),
                 )
                 for bp in blueprints
             ],
