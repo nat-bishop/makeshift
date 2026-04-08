@@ -15,12 +15,18 @@ This project has layered documentation:
 
 - **README.md** (project root): User-facing quick start — prerequisites, setup, commands, and links to detailed docs. Keep it short and actionable. No architecture or implementation details.
 - **CLAUDE.md** (project root): The authoritative quick-reference for developers/AI. Contains architecture overview, running instructions, code conventions, Godot client details, API endpoints, and gotchas. This is the primary source of truth for how things work.
-- **docs/ARCHITECTURE.md**: System architecture deep-dive — object creation pipeline, image generation, rule engine, collision/cascade system, physics composition, session persistence, WebSocket protocol. Covers the *how* of implementation.
-- **docs/GAME_DESIGN.md**: Game design document — tag system design rationale, rule system philosophy, object economy, equipment system, durability mechanics, and level design. Covers the *what* and *why* of design decisions.
+- **docs/architecture.md**: System architecture — pairwise cache, creature behavior, two interaction systems (passive collisions vs intentional creature actions), what the engine handles vs what the LLM generates.
+- **docs/engine-primitives.md**: What the engine can execute — physics values, outcomes (damage, state changes, force, destruction), 7 states, affordances, creature behavior, fields.
+- **docs/creation-pipeline.md**: Call sequence from player input to spawned object — parallel question fan-out, batching, scaling, cost breakdown.
+- **docs/cache.md**: Unified cache design — types (creation, pairwise, destruction), key normalization, SQLite schema, edge cases.
+- **docs/llm-design-patterns.md**: Core LLM decomposition patterns — fan-out, sequential seeding, filter, the decomposition principle. Foundation for all LLM interactions.
+- **docs/LEVEL_DESIGN.md**: Level creation patterns, environment bodies, BaseLevel API.
+- **docs/reference/**: Research references — not actively maintained. Scribblenauts engine analysis, LLM behavior systems literature review, animation pipeline spec.
+- **docs/archive/**: Historical documents — do not update. V2 architecture, game design, implementation plans, migration notes.
 
 ## Key Principles
 
-1. **Delete aggressively.** If information is redundant across files, keep it in the most appropriate single location and remove it elsewhere. A cross-reference ("See ARCHITECTURE.md for details") is better than duplication. Duplication creates contradictions — when one copy is updated and the other isn't, developers get wrong answers with high confidence.
+1. **Delete aggressively.** If information is redundant across files, keep it in the most appropriate single location and remove it elsewhere. A cross-reference ("See architecture.md for details") is better than duplication. Duplication creates contradictions — when one copy is updated and the other isn't, developers get wrong answers with high confidence.
 
 2. **Density over completeness.** Every sentence should convey information that isn't obvious from the code itself. Remove filler, hedging language, obvious statements, and excessive examples. Verbose docs get skimmed or skipped entirely. Dense docs get read.
 
@@ -43,17 +49,33 @@ This project has layered documentation:
 - Keep entries terse — this is a reference card, not a tutorial
 - If you add detail here, check if docs/ files have redundant content to trim
 
-### docs/ARCHITECTURE.md
-- Covers implementation architecture, data flow, component relationships
-- Update when: pipeline changes, new systems added, collision/physics modified, WebSocket protocol changes, image generation modified
+### docs/architecture.md
+- System design: interaction systems, pairwise cache, creature behavior staging
+- Update when: interaction model changes, new cache types, behavior evaluation changes
 - Should go deeper than CLAUDE.md but not repeat it verbatim
-- Remove sections about planned architecture that was never built or was built differently
 
-### docs/GAME_DESIGN.md
-- Covers tag system design, rule philosophy, object economy, equipment, durability, levels
-- Update when: tags/rules change, budget/costs change, new levels added, equipment system changes, seed objects change
-- Remove mockups or designs for features that shipped differently than planned
-- Don't duplicate mechanical details already in CLAUDE.md — reference them
+### docs/engine-primitives.md
+- What the engine executes: physics values, state codes, affordances, outcomes
+- Update when: state list changes, new affordance types, outcome format changes, pairwise result fields change
+
+### docs/creation-pipeline.md
+- Call sequence, parallelism, cost model, scaling
+- Update when: questions change, fan-out pattern changes, cost/latency changes
+
+### docs/cache.md
+- Cache types, key normalization, schema, invalidation
+- Update when: new cache types, key format changes, schema changes
+
+### docs/llm-design-patterns.md
+- Decomposition patterns for LLM calls
+- Update when: new patterns emerge, existing patterns change
+
+### docs/LEVEL_DESIGN.md
+- Level creation patterns, environment bodies, BaseLevel API
+- Update when: level helpers change, new environment body types, new level patterns
+
+### docs/reference/ and docs/archive/
+- **Do not update.** Reference docs are frozen research. Archive docs are historical. If something in archive becomes relevant again, promote it to docs/ root and update it there.
 
 ## Workflow
 
@@ -70,35 +92,35 @@ This project has layered documentation:
 - Don't expand bullet points into paragraphs when the bullet was sufficient
 - Don't duplicate information across files — pick one home and reference it
 - Don't preserve outdated information out of caution — if it's wrong, remove or fix it
+- Don't update anything in `docs/archive/` or `docs/reference/`
 
 ## Examples
 
-**Bloated prose → dense structure:**
+**Bloated prose -> dense structure:**
 
 ```
 BEFORE:
-  The session manager handles creating new sessions. When a new session
-  is created, it generates a UUID, initializes 8 empty inventory slots,
-  creates empty equipment, and saves 15 seed objects. The session is
-  persisted to SQLite.
+  The creation pipeline handles creating new objects. When a new object
+  is created, it checks the cache, then asks 14 LLM questions in parallel,
+  clamps the values, derives the size category, and assembles a blueprint.
 
 AFTER:
-  `SessionManager.create_session()`: UUID → 8 empty inventory slots →
-  empty equipment → 15 seed objects batch-inserted → SQLite commit.
+  `create_object()`: cache check -> parallel fan-out (14 questions) ->
+  clamp -> derive size_category -> assemble GameObjectBlueprint -> cache.
 ```
 
-**Duplication → cross-reference:**
+**Duplication -> cross-reference:**
 
 ```
-BEFORE (in ARCHITECTURE.md):
-  Tags cost 1-5 points. The budget is 10 per object. There are 12
-  contradiction pairs that can't coexist. FROZEN and HOT contradict,
-  HEAVY and LIGHT contradict...
-  [repeats tag system explanation from GAME_DESIGN.md]
+BEFORE (in architecture.md):
+  The pairwise cache stores 9 values per pair: damage_a, damage_b,
+  state_change_a, state_change_b, force_b, direction_b, destroy_a,
+  destroy_b, mode. State changes are encoded as 0-14...
+  [repeats PairwiseResult format from CLAUDE.md]
 
 AFTER:
-  Validators enforce: budget ≤ 10, no contradictions, 2-6 tags.
-  See GAME_DESIGN.md for tag system design rationale.
+  Each pair gets a PairwiseResult with 9 LLM-generated values
+  (see CLAUDE.md for field details). Cached by lexicographic pair key.
 ```
 
 ## Definition of Done

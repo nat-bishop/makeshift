@@ -14,5 +14,3 @@ const HEAL: Color = Color(0.3, 1.0, 0.3)
 static func get_color(state: String) -> Color:
 	return COLORS.get(state, Color.WHITE)
 
-static func is_stateful(body: Node) -> bool:
-	return body.has_method("get_states")

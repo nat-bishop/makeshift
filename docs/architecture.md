@@ -1,8 +1,8 @@
-# V3 Architecture
+# Architecture
 
-## What this actually is
+## Overview
 
-V2 with fewer enums, LLM-generated physics, and auto-populated interaction rules instead of hand-authored ones.
+LLM-generated physics, auto-populated interaction rules (pairwise cache), and per-pair creature behavior — no hand-authored enums or rules.
 
 The pitch isn't "delete everything and just ask the LLM." It's: **automate the most tedious part (rule authoring) while keeping the engine infrastructure that makes the game work.**
 

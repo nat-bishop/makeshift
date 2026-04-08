@@ -93,7 +93,7 @@ func _on_body_entered(body: Node) -> void:
 
 
 func _create_visual(payload_tag: String) -> void:
-	var color: Color = TagColors.get_color(payload_tag) if not payload_tag.is_empty() else Color(0.8, 0.8, 0.8)
+	var color: Color = StateColors.get_color(payload_tag) if not payload_tag.is_empty() else Color(0.8, 0.8, 0.8)
 	var key := color.to_html()
 	if key not in _texture_cache:
 		var image := Image.create(16, 16, false, Image.FORMAT_RGBA8)

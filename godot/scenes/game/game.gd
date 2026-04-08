@@ -169,10 +169,10 @@ func _create_placement_ghost() -> Node2D:
 		var size_data: Dictionary = PhysicsComposer.get_size_data(size_category)
 		var sprite_size: int = size_data["sprite"]
 		var tags: Array = _pending_blueprint.get("tags", [])
-		var color: Color = TagColors.DEFAULT
+		var color: Color = Color.WHITE
 		for tag in tags:
-			var c: Color = TagColors.get_color(str(tag))
-			if c != TagColors.DEFAULT:
+			var c: Color = StateColors.get_color(str(tag))
+			if c != Color.WHITE:
 				color = c
 				break
 		var image := Image.create(sprite_size, sprite_size, false, Image.FORMAT_RGBA8)

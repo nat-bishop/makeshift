@@ -9,7 +9,7 @@ const SOLID_DURATION := 0.75
 const FONT_SIZE := 18
 const OUTLINE_SIZE := 4
 const OUTLINE_COLOR := Color.BLACK
-const HEAL_COLOR := TagColors.HEAL
+const HEAL_COLOR := StateColors.HEAL
 const X_SCATTER := 20.0
 
 var _active_labels: Array[Label] = []

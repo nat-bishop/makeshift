@@ -32,16 +32,6 @@ make cli-image PROMPT="a red sword"        # generate raw image (no bg removal)
 make cli-sprite PROMPT="fire sword"        # full pipeline: LLM → image → bg removal → crop
 make cli-status                            # check health of configured services
 
-# Evals — LLM output quality evaluation (costs money, not in `make test`):
-make eval-gate                                   # fast gate check (deterministic only, no LLM judges)
-make eval NAME=my_experiment                     # full eval run (90 cases × 10 metrics)
-make eval NAME=my_experiment COMPARE=1           # full eval + auto-compare to baseline
-make eval-promote NAME=my_experiment             # promote run to current baseline
-make eval-compare NAME=my_experiment             # compare a run against baseline
-make eval-compare A=run1 B=run2                  # compare two specific runs
-make eval-list                                   # list all saved runs with scores
-cd backend && uv run pytest evals/test_eval.py -v  # pytest runner (also saves results)
-
 # For more granular control:
 uv run pytest backend/tests/test_tags.py  # single test file
 uv run pytest -k "test_name"              # single test by name
@@ -51,69 +41,70 @@ uv run pytest -k "test_name"              # single test by name
 
 **Backend** (`backend/app/`): FastAPI application with these key subsystems:
 
-- **Object creation pipeline** (`creator/agent.py` → `routers/objects.py` → `images/pipeline.py` → `ws/handler.py`): Player text → PydanticAI agent → `CreatorOutput` (substance + element + 0-3 tags + 0-3 categories + behaviors) → `resolve_implied_behaviors()` → `derive_traits()` → `resolve_profile()` + `compute_combat_profile()` → immediate JSON response (blueprint + `budget_remaining`) → background sprite generation → WebSocket `sprite_ready` delivery. See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for full pipeline flow.
+- **Object creation pipeline** (`creator/pipeline.py`, `creator/questions.py`): Player text → cache check (`CacheManager.get("creation", key)`) → parallel fan-out of 14 LLM questions via `asyncio.gather()` → clamp to safe ranges → derive `size_category` from `height_cm` → assemble `GameObjectBlueprint` → cache result → background sprite generation → background pairwise evaluation. Each question is a 1-4 token LLM call with `temperature=0.3`. Uses PydanticAI `Agent` per question with `build_model()` from `creator/llm.py`.
 
-- **Tag system** (`models/tags.py`): 31 `Tag` StrEnum values total. `LLM_VISIBLE_TAGS_V2` frozenset — 10 tags the LLM can pick directly (SHARP, HEAVY, LIGHT, BOUNCY, BREAKABLE, STICKY, REFLECTIVE, EXPLOSIVE, FLYING, WET). Most tags are derived from substance/element/category, not chosen by the LLM. Internal-only: BRITTLE (freeze rules), CORRODED (acid rules), GLOWING (smolder + attraction), HOT (heat damage). LIVING auto-derived from CREATURE category; HOSTILE auto-derived from destroy verb. 16 contradiction pairs enforced at runtime. `TAG_DESCRIPTIONS` for validation error messages. `Category` enum (7 values): CREATURE, FOOD, WEAPON, PLANT, VALUABLE, VEHICLE, TOOL — set at creation, never mutated by tag operations. See [GAME_DESIGN.md](docs/GAME_DESIGN.md) for design rationale.
+- **Creation questions** (`creator/questions.py`): 14 `Question` dataclasses (key, prompt_template, max_tokens, parse function). 12 physics questions: `mass_kg` (float, 0.001-100000), `height_cm` (int, 1-5000), `friction` (0-100), `bounce` (0-100), `gravity` (0-100), `armor` (0-100), `hp` (0-100), `indestructible` (bool), `has_field` (bool), `field_range_cm` (int), `autonomous` (bool), `affordance` (0-3: carry/mount/climb/nothing). Plus `visual_description` (60 tokens, text) and `destruction_result_name` (8 tokens, text).
 
-- **Substance system** (`models/substances.py`, `engine/trait_deriver.py`): V2 foundation. LLM picks 1 `Substance` (16 options: metal, wood, stone, glass, rubber, bone, ceramic, cloth, water, oil, slime, ice, lava, fire, smoke, flesh) and 0-1 `Element` (7 options: burning, electric, magnetic, freezing, acidic, toxic, windy). `SUBSTANCE_PROFILES` dict: mass, durability, friction, conductivity, burn_rate, specific_heat, heat_output, state. `SUBSTANCE_AUTO_TRAITS` maps substance → tag list. `ELEMENT_TRAITS` maps element → tag list. `derive_traits(substance, element, tags, behavior_verbs, categories)` merges all sources + behavior-derived traits (destroy verb → HOSTILE) + category-derived traits (CREATURE → LIVING). `resolve_profile()` applies element overrides + tag modifiers (HEAVY, LIGHT, BOUNCY, STICKY, FLYING) to produce final `SubstanceProfile`. `compute_combat_profile()` derives melee/crush damage from mass + heat output.
+- **Pairwise interaction system** (`engine/pairwise.py`): When a new object spawns, `evaluate_new_object()` runs: (1) screening — one LLM call identifies which scene objects would interact interestingly (~25% pass), (2) full evaluation — 9 parallel 1-token LLM calls per interesting pair (`PairwiseResult`: damage_a, damage_b, state_change_a/b as 0-14 codes, force_b, direction_b, destroy_a/b, mode). Lexicographic A/B key ordering via `CacheManager.pair_key()`. Results cached in SQLite and broadcast via WebSocket `pairwise_ready`.
 
-- **Behavior system** (`models/blueprint.py`, `models/tag_behaviors.py`): V2 verb-based. LLM outputs 0-4 `BehaviorVerbSpec` items (verb + `target_description: str` + `target_tag: str` — single value from `BEHAVIOR_TARGETS` or empty). `BEHAVIOR_TARGETS` = 9 values: all 7 categories (CREATURE, FOOD, WEAPON, PLANT, VALUABLE, VEHICLE, TOOL) + HOSTILE + HEAT_SOURCE. destroy/eat/flee MUST have non-empty `target_tag` (ModelRetry if empty); investigate/follow/protect allow empty (matches everything). Verbs: destroy, eat, investigate, follow, protect, flee. `resolve_implied_behaviors()` adds one default only: CREATURE with no behaviors → `investigate` with empty target. Behaviors compiled at creation time into `compiled_behaviors: list[dict]` (each entry: verb, target_description, target_tag) stored in `GameObjectBlueprint`.
+- **Creature behavior system** (`engine/creature_behavior.py`): 3-stage sequential evaluation for autonomous objects. Stage 1: movement (0=approach, 1=flee, 2=orbit, 3=ignore) + strength (0-100), all targets in parallel. Stage 2: action (0=nothing through 6=take) for approach/orbit pairs only. Stage 3: parameters (damage/heal amount or state_id 1-7) for actions needing them. Returns `list[CreatureBehavior]` (filtered: ignore removed). Scene context seeded into prompts.
 
-- **Rule engine** (`engine/resolver.py`, `engine/rules_data.py`): `RuleResolver` — two-tier matching (O(1) pair index + O(n) wildcard scan). 56 rules, ~28 annotated `trigger_mode=TriggerMode.FIELD`. `InteractionRule.execution_order` (int, higher fires first). `TriggerMode` StrEnum (CONTACT | FIELD) on `InteractionRule` — default CONTACT. Mirrored client-side in Godot's `RuleEngine` autoload. 6 `EffectType` primitives: DAMAGE, HEAL, ADD_TAG, REMOVE_TAG, APPLY_FORCE, APPLY_SLOW. Environmental hazard damage flows through substance-derived tags (HEAT_SOURCE, ACIDIC); creature-vs-creature combat routes through VerbBehaviorSystem, not rules.
+- **States system** (`models/states.py`): 7 `State` StrEnum values: on_fire, frozen, wet, electrified, poisoned, corroded, molten. `STATE_CONTRADICTIONS` dict: adding on_fire removes frozen/wet, adding frozen removes on_fire/molten, etc. `decode_state_change(0-14)` maps pairwise codes to (action, state) tuples. States are engine-enforced, not LLM-decided.
 
-- **Image pipeline** (`images/pipeline.py`, `images/gemini_client.py`, `images/local_image.py`): Lazy singletons (`get_generate_image()`, `get_remove_bg()`). Three backends via `IMAGE_BACKEND`: gemini, local (SGLang FLUX), fal. All → bg removal → crop to 512×512 → cache by SHA-256(prompt). Prompt template in `pipeline.py`. Standalone via `make cli-sprite`.
+- **Cache system** (`cache/manager.py`): `CacheManager` wraps aiosqlite. Single `cache` table with `(cache_type, cache_key)` composite PK. Four cache types: `creation` (blueprint by normalized name), `pairwise` (interaction results by lexicographic pair key), `creature_behavior` (in-memory per scene), `destruction_result` (pre-cached debris blueprints). `normalize_key()` lowercases + collapses whitespace. `pair_key(a, b)` returns `"min::max"` for consistent A/B ordering. Bulk ops: `get_by_prefix()`, `get_all_for_names()`.
 
-- **Session persistence** (`sessions/manager.py`): aiosqlite, 2 tables (sessions, objects). Session financial budget: $1.00 at $0.041/object.
+- **Image pipeline** (`images/pipeline.py`, `images/gemini_client.py`, `images/local_image.py`): Lazy singletons (`get_generate_image()`, `get_remove_bg()`). Three backends via `IMAGE_BACKEND`: gemini, local (SGLang FLUX), fal. All → bg removal → crop to 512x512 → cache by SHA-256(prompt). Prompt template in `pipeline.py`. Standalone via `make cli-sprite`.
 
-- **WebSocket** (`ws/handler.py`): Per-session multi-client broadcast. Messages: sprite_ready, sprite_failed, error, ping/pong.
+- **Session persistence** (`sessions/manager.py`): aiosqlite, 2 tables (sessions, objects). Session financial budget: $1.00 at $0.041/object. `reserve_budget()` atomically deducts before LLM calls.
 
-- **Eval suite** (`backend/evals/`): pydantic-evals framework. 90 curated test cases × 10 metrics — 7 deterministic (Validity, Substance Accuracy, Element Accuracy, Category Accuracy, Tag Recall, Interaction Surface, Has Signature) + 3 LLM-as-judge via Gemini on 3-point anchored scales (Faithfulness, Delight, Visual Clarity). 14-case gate dataset for fast deterministic-only checks (`--gate`). Baseline management: `--promote` saves current baseline, `--compare` auto-compares against it, `--list` shows run history. `run_eval.py` runs evals and saves `EvalRunResult` JSON to `evals/results/`. `run_comparison.py` loads saved results for offline Wilcoxon comparison. Prompt variants defined in `evals/prompts.py`.
+- **WebSocket** (`ws/handler.py`): Per-session multi-client broadcast. Messages: `sprite_ready`, `sprite_failed`, `pairwise_ready`, `creature_behaviors`, `error`, `ping/pong`. Client can send `request_sprite` (re-check cache) and `reevaluate_creature` (re-run behavior eval).
+
+- **Eval suite** (`backend/evals/`): Currently contains only `dataset.yaml` (90 curated test cases) and fixture data. Eval runner and metrics are being rebuilt for V3.
 
 **Godot Client** (`godot/`): Godot 4.3, GDScript.
 
 | Autoload | Purpose |
 |----------|---------|
-| `EventBus` | Central signal bus (17 signals: interaction_triggered, object_created, sprite_ready, sprite_failed, level_completed, creation_requested, creation_failed, placement_started, placement_ended, debug_toggled, player_died, player_damaged, player_healed, effect_applied, object_entered_scene, object_exited_scene, object_tags_changed) |
-| `Backend` | HTTP + WebSocket client, session persistence, sprite cache, 10s sync timer |
+| `EventBus` | Central signal bus (18 signals: interaction_triggered, object_created, sprite_ready, sprite_failed, level_completed, creation_requested, creation_failed, placement_started, placement_ended, debug_toggled, player_died, player_damaged, player_healed, effect_applied, object_entered_scene, object_exited_scene, object_tags_changed, post_process_changed) |
+| `Backend` | HTTP + WebSocket client, session persistence, sprite cache, pairwise cache, 10s sync timer |
 | `GameManager` | Game state (MENU/PLAYING/PAUSED), level management, scene transitions, `debug_mode` flag (toggled by `toggle_debug` input, emits `debug_toggled`) |
-| `RuleEngine` | Client-side rule matching (mirrors backend resolver) |
-| `CollisionResolver` | Per-frame collision resolution, per-chain dedup, cascade (depth 3, 96px radius) |
 | `Log` | Structured logging (`autoloads/logger.gd`) |
 
 | System | File | Purpose |
 |--------|------|---------|
+| `CollisionResolver` | `scripts/systems/collision_resolver.gd` | V3 pairwise cache lookup for collisions. Cascade depth 3, 96px radius, per-chain dedup |
+| `EffectExecutor` | `scripts/systems/effect_executor.gd` | Executes pairwise results: damage, state changes, force, destruction |
+| `VerbBehaviorSystem` | `scripts/systems/verb_behavior_system.gd` | Per-creature behavior runtime. Utility-scored target selection (strength / distance, 1.5x flee bias). Movement + on-arrival actions. Disables after 5 errors |
+| `FieldSystem` | `scripts/systems/field_system.gd` | Per-object Area2D field (from blueprint `has_field` + `field_range_cm`). Periodic 2s tick routes through CollisionResolver for pairwise lookups |
+| `AffordanceSystem` | `scripts/systems/affordance_system.gd` | Carry (reparent to hand), mount (player reparents under object), climb (vertical override). 64px interact range |
 | `WorldMutations` | `scripts/systems/world_mutations.gd` | Static class — all game-state mutations route through here |
-| `EffectExecutor` | `scripts/systems/effect_executor.gd` | 5 effects: DAMAGE, HEAL, ADD_TAG, REMOVE_TAG, APPLY_FORCE. DAMAGE + tick params = DOT. V2: reads `combat_profile`/`substance_profile` from blueprint for parameterized damage |
-| `PhysicsApplicator` | `scenes/game_object/physics_applicator.gd` | V2: reads physics from blueprint's `substance_profile` via `PhysicsComposer.compose_physics_v2()`. Mass = `substance_mass × size_mass_multiplier` |
-| `PhysicsComposer` | `scripts/systems/physics_composer.gd` | Size multipliers (tiny 0.25×…huge 10×), `DEFAULT_DAMPING=0.5`. V2: `compose_physics_v2()` delegates to `SubstancePhysics.resolve_physics()` |
-| `SubstancePhysics` | `scripts/data/substance_physics.gd` | V2: reads `substance_profile` from blueprint dict → resolves gravity/damping/friction/bounce/mass. State-derived defaults: solid(1.0, 0.5), liquid(1.0, 2.0), gas(-0.2, 4.0), energy(0.0, 0.0) |
-| `VerbBehaviorSystem` | `scripts/systems/verb_behavior_system.gd` | V2: per-object behavior runtime. Event-driven perception (object_entered/exited/tags_changed signals). Single-value target matching: `_matches_target(target_tag, obj_tags, obj_categories)` — empty `target_tag` matches everything; non-empty checks object's tags OR categories. `init_behaviors()` takes `compiled_behaviors: Array`. Action layer executes highest-priority verb with targets per frame. Disables after 5 errors. Player is in `"game_objects"` group and targetable (exposes `get_tags()` → ["LIVING"], `get_categories()` → ["CREATURE"]) |
-| `TagField` | `scripts/systems/tag_field.gd` | Per-object Area2D field: continuous per-frame forces + periodic 2s rule eval |
-| `FieldConfig` | `scripts/data/field_config.gd` | Maps field-emitting tags → range category + mode |
-| `TagDecay` | `scripts/systems/tag_decay.gd` | Node component managing temporary-tag timers for `GameObject` and `EnvironmentBody`. Extracted from both to avoid duplication |
-| `TagContradictions` | `scripts/data/tag_contradictions.gd` | Runtime mirror of backend `TAG_CONTRADICTIONS`. Used by `WorldMutations.apply_add_tag()` to auto-remove contradictory tags |
-| `EnvironmentBody` | `scenes/environment_body/environment_body.gd` | StaticBody2D tagged hazard (acid, fire). Indestructible (no `take_damage`/`heal`). `solid=false` → pass-through; FROZEN makes solid |
-| `DebugLabel` | `scripts/ui/debug_label.gd` | Floating overlay (name, durability, tags, behaviors). Driven by `GameManager.debug_mode` |
+| `PhysicsApplicator` | `scenes/game_object/physics_applicator.gd` | Reads physics from blueprint (mass, friction, bounce, gravity) via PhysicsComposer |
+| `PhysicsComposer` | `scripts/systems/physics_composer.gd` | Size multipliers (tiny 0.25x...huge 10x), `DEFAULT_DAMPING=0.5` |
+| `StateContradictions` | `scripts/data/state_contradictions.gd` | Runtime mirror of backend `STATE_CONTRADICTIONS`. Auto-removes contradictory states |
+| `StateColors` | `scripts/data/state_colors.gd` | Color mapping for states (on_fire=orange, frozen=blue, etc.) + HEAL color |
+| `StateVisuals` | `scripts/data/state_visuals.gd` | Particle/shader effects for active states |
+| `TagDecay` | `scripts/systems/tag_decay.gd` | Node component managing temporary-state timers (10s default) |
+| `EnvironmentBody` | `scenes/environment_body/environment_body.gd` | StaticBody2D hazard (acid, fire). Indestructible. `solid=false` = pass-through |
+| `DebugLabel` | `scripts/ui/debug_label.gd` | Floating overlay (name, durability, states, behaviors). Driven by `GameManager.debug_mode` |
 
-**Player interaction:** Passive push (force 80, tiny-sized only, not HEAVY) · Kick (force 400, 48px range, 0.5s cooldown — impulse skipped on HEAVY, damage still applies) · Knockback (`EFFECTIVE_MASS=0.4`, decay 800 px/s², control min 15% at 1000 px/s) · BOUNCY objects bounce player on contact (120% energy return)
+**Player interaction:** Passive push (force 80, tiny-sized only, not HEAVY) . Kick (force 400, 48px range, 0.5s cooldown -- impulse skipped on HEAVY, damage still applies) . Knockback (`EFFECTIVE_MASS=0.4`, decay 800 px/s^2, control min 15% at 1000 px/s) . BOUNCY objects bounce player on contact (120% energy return)
 
-**BaseLevel helpers:** `_create_env_body(pos, size, tags, color, id, solid)` (pos = top-left) · `_spawn_game_object(blueprint, pos) -> Node` · `_create_kill_zone(pos, size)` (respawns player, 999 dmg to objects)
+**BaseLevel helpers:** `_create_env_body(pos, size, tags, color, id, solid)` (pos = top-left) . `_spawn_game_object(blueprint, pos) -> Node` . `_create_kill_zone(pos, size)` (respawns player, 999 dmg to objects)
 
 ## API Endpoints
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| POST | `/api/sessions` | Create session (returns rules, ws_url) |
+| POST | `/api/sessions` | Create session (returns session_id, ws_url) |
 | GET | `/api/sessions/{id}` | Restore session |
 | PUT | `/api/sessions/{id}/sync` | Batch state sync from client |
 | POST | `/api/sessions/{id}/objects` | Create object from description |
-| GET | `/api/rules` | Download rules (ETag caching) |
 | GET | `/health` | Health check |
-| WS | `/ws/{session_id}` | Sprite delivery + keepalive |
+| WS | `/ws/{session_id}` | Sprite delivery, pairwise results, creature behaviors, keepalive |
 
 ## Data Model Flow
 
-`CreatorOutput` (LLM output: name, substance, element, 0-3 tags, 0-7 `categories`, 0-4 `BehaviorVerbSpec` [verb + target_description + target_tag], `visual_descriptor`) → `resolve_implied_behaviors()` → `derive_traits(substance, element, tags, verbs, categories)` → `resolve_profile()` → `compute_combat_profile()` → compile `compiled_behaviors` list → `GameObjectBlueprint` (adds id, `starting_durability`, full trait list, `substance_profile`, `combat_profile`, `categories`, `compiled_behaviors`) → persisted as `objects` table row (`blueprint_json` column). `VisualDescriptor`: `visual_description: str` (sprite prompt only) + `size_category` (world display size).
+Player text → `create_object(description, cache)` → cache check by `normalize_key(name)` → parallel fan-out of 14 LLM questions → clamp/validate → derive `size_category` from `height_cm` → `GameObjectBlueprint` (id, name, description, mass_kg, height_cm, friction, bounce, gravity, armor, hp, indestructible, has_field, field_range_cm, autonomous, affordance, visual_descriptor, destruction_result_name, states=[]) → cache in SQLite → immediate JSON response → background: sprite generation + pairwise evaluation against scene objects. `VisualDescriptor`: `visual_description: str` (sprite prompt) + `size_category` (tiny/small/medium/large/huge).
 
 ## Environment
 
@@ -123,8 +114,8 @@ Requires `.env` file (see `.env.example`):
 - `IMAGE_MODEL` — Gemini image model. Default: `gemini-3.1-flash-image-preview`
 - `IMAGE_BACKEND` — `gemini`, `local` (SGLang FLUX), or `fal`. Default: gemini
 - `LOCAL_IMAGE_URL` — SGLang FLUX server URL. Default: `http://127.0.0.1:5100`
-- `LOCAL_IMAGE_MODEL` — FLUX model name (cosmetic, server ignores it). Default: `black-forest-labs/FLUX.2-klein-4B`
-- `HF_TOKEN` — HuggingFace token for gated model downloads (FLUX.2-klein-9B)
+- `LOCAL_IMAGE_MODEL` — FLUX model name (cosmetic, server ignores it). Default: `black-forest-labs/FLUX.2-klein-9B`
+- `HF_TOKEN` — HuggingFace token for gated model downloads
 - `BG_REMOVAL_BACKEND` — `local` (GPU via PyTorch) or `cloud` (fal.ai birefnet). Default: local
 - `BG_REMOVAL_MODEL` — HuggingFace BiRefNet model. Default: `briaai/RMBG-2.0`
 - `SPRITE_CACHE_ENABLED` — toggles sprite cache read/write. Default: true
@@ -140,7 +131,6 @@ Requires `.env` file (see `.env.example`):
 
 - Python 3.11+, type annotations throughout
 - Ruff line-length: 100. Rule set: E, F, I, W, UP, B, SIM, RUF, PIE, C4, T20
-- `creator/agent.py` is exempt from E501 (long system prompt)
 - MyPy with Pydantic plugin; strict on untyped defs and implicit optionals
 - Models use Pydantic v2 with `StrEnum` for enums
 - Async everywhere in the backend (aiosqlite, httpx, FastAPI)
@@ -148,40 +138,32 @@ Requires `.env` file (see `.env.example`):
 ## Gotchas
 
 - `pytest-asyncio` is configured with `asyncio_mode = "auto"` — `async def` tests run without extra markers
-- Background `asyncio.Task`s must be held in a module-level `set` to prevent GC before completion (see `routers/objects.py`)
-- Pydantic-AI validators raise `ModelRetry` (not `ValidationError`) to trigger agent retries with feedback
-- `@computed_field` properties require `# type: ignore[prop-decorator]` — mypy still doesn't support decorators above `@property`
+- Background `asyncio.Task`s must be held in a module-level `set` to prevent GC before completion (see `routers/objects.py`, `creator/pipeline.py`)
 - WebSocket connection rejected with close code 4004 if session doesn't exist
 - Sprite cache keyed by SHA-256 hash of the image prompt (first 16 hex chars), not object ID — identical prompts share sprites. Controlled by `SPRITE_CACHE_ENABLED` setting.
-- `CreatorOutput` has `substance`, `element`, `tags` (0-3 from `LLM_VISIBLE_TAGS_V2`), `categories` (0-7 from `Category`), and `behaviors` (0-4 `BehaviorVerbSpec` with `target_description` + `target_tag`). Old trigger/action/target behavior string format and `models/behaviors.py` are removed.
-- Hallucinated tags get a `ModelRetry` with the `TAG_DESCRIPTIONS` list. No `TAG_AUTO_CORRECTIONS` — uses `LLM_VISIBLE_TAGS_V2` validator that rejects unknown tags outright. LIVING and HOSTILE are not in `LLM_VISIBLE_TAGS_V2` — they are derived only.
-- destroy/eat/flee behaviors require a non-empty `target_tag` — validator raises `ModelRetry` if missing. `target_tag` must be one of `BEHAVIOR_TARGETS` = {CREATURE, FOOD, WEAPON, PLANT, VALUABLE, VEHICLE, TOOL, HOSTILE, HEAT_SOURCE}.
-- `creator/agent.py` SYSTEM_PROMPT substance/element tables reflect `SUBSTANCE_AUTO_TRAITS` and `ELEMENT_TRAITS` — if those change, update the prompt tables to match
+- V3 creation pipeline asks 14 parallel 1-token LLM questions per object. Each uses a fresh `Agent()` instance. Questions fail gracefully to defaults (0 for numbers, False for bools, `"a {name}"` for visual description).
+- `CacheManager.pair_key()` uses lexicographic ordering — `pair_key("sword", "fire")` == `pair_key("fire", "sword")` == `"fire::sword"`. Always use `pair_key()` to look up pairwise results.
+- Pairwise state changes encoded as 0-14: 0=none, 1-7=add state (on_fire through molten), 8-14=remove state. Decoded by `states.decode_state_change()`.
 - `VerbBehaviorSystem` disables itself after 5 consecutive action errors to prevent runaway behavior on bad data
-- Behavior-added tags (via rule `ADD_TAG` effect) have a 10s duration (`EffectExecutor.DYNAMIC_TAG_DURATION`); decay managed by the `TagDecay` child node
-- `VerbBehaviorSystem` single-value matching: empty `target_tag` matches every object in perception range; non-empty checks whether the object's tags OR categories contain that value. No embeddings involved.
+- Dynamic states (added by interactions) have a 10s duration; decay managed by the `TagDecay` child node
 - `ObjectVisual.set_sprite()` is guarded by `_sprite_applied: bool` — prevents double application when cache hit races with late `sprite_ready`. Sets texture + scale directly (no tween)
-- `body_entered` collision handling is deferred via `call_deferred("_resolve_deferred", body)` — resolving collisions directly in the signal callback crashes Godot with "Can't change state while flushing queries" because resolution can chain into `add_tag` → `_reapply_physics` → new shapes
-- `CollisionResolver` uses per-chain deduplication (not cooldowns): `_resolved` dict passed through cascade, keyed `"idA:idB:trigger_mode_filter"`. Top-level calls start with a fresh dict; cascades inherit it. Same pair can't fire twice in one resolution chain but can fire again from an independent collision. FIELD and CONTACT interactions dedup independently (different key suffixes).
-- `WorldMutations.apply_add_tag()` auto-removes contradictory tags before adding (e.g., adding HEAT_SOURCE removes WET). Uses `TagContradictions.get_contradictions()` — runtime mirror of the backend contradiction list
+- `body_entered` collision handling is deferred via `call_deferred("_resolve_deferred", body)` — resolving collisions directly in the signal callback crashes Godot with "Can't change state while flushing queries" because resolution can chain into state changes -> physics changes -> new shapes
+- `CollisionResolver` uses per-chain deduplication (not cooldowns): `_resolved` dict passed through cascade, keyed `"idA:idB:trigger_mode_filter"`. Top-level calls start with a fresh dict; cascades inherit it.
 - Backend autoload uses `127.0.0.1` not `localhost` — avoids DNS resolution delays and IPv6 fallback issues on some systems
-- In Godot 4.3+, assigning an untyped `Array` (e.g. from JSON parsing) to a typed `Array[Dictionary]` or `Array[String]` silently fails — the typed array rejects the source and remains empty. Use untyped `Array` or iterate-and-append. Pattern: `game_object.gd` tags use manual iterate/append; `verb_behavior_system.gd` `_behaviors` and `_target_lists` use untyped `Array`.
-- `TagField` is lazily created by `game_object.gd`: created at `init_from_blueprint()` if field tags are present, or on first `add_tag()` that introduces a field tag. This means fire-spread (rule adds HEAT_SOURCE) or WET propagation (LIQUID adds WET) automatically promotes a non-field object into a field emitter.
-- Continuous field rules (`WIND_SOURCE`, `MAGNETIC`, `STICKY`) use `apply_central_force()` or `APPLY_SLOW` per physics frame — `force_magnitude` tuned for per-frame, not impulse. `STICKY` slow is driven by the `sticky_slow` rule's `APPLY_SLOW` effect (generalized in `TagField._apply_slow_field()`). Periodic rules fire on 2s timer; first tick immediate via `call_deferred`.
-- DOT timer replacement (`WorldMutations.apply_dot`): must `stop()` + `remove_child()` before `queue_free()` — `queue_free()` alone leaves the node until end-of-frame, causing Godot to auto-rename the replacement (appending `@2`).
-- `Backend` autoload has `process_mode = PROCESS_MODE_ALWAYS` — it must process during pause (creation panel pauses the game, but WebSocket keepalive and sprite delivery must continue).
-- `EnvironmentBody` periodic tick: `solid=false` uses no trigger_mode filter (ALL rules — being inside non-solid = continuous contact); `solid=true` filters to FIELD only (CONTACT fires via `body_entered`). Player detected via env body's own FieldArea (`move_and_slide` doesn't trigger `body_entered` on other bodies).
+- In Godot 4.3+, assigning an untyped `Array` (e.g. from JSON parsing) to a typed `Array[Dictionary]` or `Array[String]` silently fails — the typed array rejects the source and remains empty. Use untyped `Array` or iterate-and-append.
 - GDScript `:=` type inference fails on Variant-returning functions — `abs()`, `clamp()`, `min()`, `max()`, array/dict element access, `instantiate()` all return Variant. Use explicit type (`var x: float = abs(speed)`) or untyped (`var x = abs(speed)`), never `:=`.
 - `@onready` vars are null before `add_child()` — if a setup method (like `init_from_blueprint()`) runs before the node enters the tree, `@onready` references are null. Store params in plain vars, apply to nodes in `_ready()`.
 - Collision layer bitmask vs UI index — `collision_layer`/`collision_mask` are bitmasks in code, not UI layer numbers. UI Layer 1 = bit 1, Layer 2 = bit 2, Layer 3 = bit 4 (powers of 2). `collision_layer = 4` means UI Layer 3, not Layer 4.
+- `Backend` autoload has `process_mode = PROCESS_MODE_ALWAYS` — it must process during pause (creation panel pauses the game, but WebSocket keepalive and sprite delivery must continue).
+- DOT timer replacement (`WorldMutations.apply_dot`): must `stop()` + `remove_child()` before `queue_free()` — `queue_free()` alone leaves the node until end-of-frame, causing Godot to auto-rename the replacement (appending `@2`).
 
 ## Documentation
 
-- [Architecture](docs/ARCHITECTURE.md) — object creation pipeline, image generation, rule engine, behavior system, collision/cascade, physics, persistence, WebSocket protocol
-- [Game Design](docs/GAME_DESIGN.md) — tag system, behavior system design, rule philosophy, object economy, durability, levels
+- [Architecture](docs/architecture.md) — Core system design: pairwise cache, creature behavior, interaction systems
+- [Engine Primitives](docs/engine-primitives.md) — What the engine executes: physics, outcomes, 7 states, affordances, fields
+- [Creation Pipeline](docs/creation-pipeline.md) — Call sequence from player input to spawned object, batching, scaling
+- [Cache](docs/cache.md) — Unified cache design: types, key normalization, edge cases
+- [LLM Design Patterns](docs/llm-design-patterns.md) — Decomposition patterns: fan-out, sequential seeding, filter
 - [Level Design](docs/LEVEL_DESIGN.md) — Level creation patterns, environment bodies, BaseLevel API
-- [Animation Pipeline](docs/ANIMATION_PIPELINE.md) — sprite sheet animation generation reference (not yet in production)
-- [Action Plan](docs/action-plan.md) — unified roadmap from all design analyses
-- [Scribblenauts Deep Dive](docs/scribblenauts-deep-dive.md) — Objectnaut engine research
-- [LLM Behavior Systems](docs/llm-behavior-systems.md) — literature review of LLM behavior generation
-- Archived analyses in `docs/archive/` — historical design documents consolidated into action-plan.md
+- `docs/reference/` — Research references (Scribblenauts deep dive, LLM behavior systems, animation pipeline)
+- `docs/archive/` — Historical design documents (V2 architecture, game design, implementation plans)

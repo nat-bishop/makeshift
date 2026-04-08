@@ -1,4 +1,4 @@
-# V3 Cache Design
+# Cache Design
 
 The V3 architecture pre-computes all LLM-driven interactions at spawn time and looks them up at runtime. The cache is what makes this work — without it, every collision would need a 55ms+ LLM call.
 

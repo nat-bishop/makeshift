@@ -1,4 +1,4 @@
-.PHONY: dev gpu api stop gpu-restart gpu-logs godot play install test lint fix format typecheck check clear-sprites cli-create cli-image cli-sprite cli-status eval eval-gate eval-compare eval-promote eval-list ollama help
+.PHONY: dev gpu api stop gpu-restart gpu-logs godot play install test lint fix format typecheck check clear-sprites cli-create cli-image cli-sprite cli-status ollama help
 
 GODOT ?= godot
 VERBOSE ?= 0
@@ -88,32 +88,6 @@ cli-status: ## Check health of configured services
 cli-animate: ## Test I2V animation (SPRITE=path.png PROMPT="walk cycle")
 	cd backend && uv run python -m experiments.i2v_animation_test $(if $(SPRITE),--sprite "$(SPRITE)") $(if $(PROMPT),--prompt "$(PROMPT)")
 
-PROMPT_A ?= baseline
-
-eval: ## Full eval run (NAME=experiment VARIANT=baseline CASES="rock,sword")
-	cd backend && uv run python -m evals.run_eval \
-		$(if $(NAME),--name "$(NAME)") \
-		$(if $(VARIANT),--variant "$(VARIANT)") \
-		$(if $(CASES),--cases "$(CASES)") \
-		$(if $(COMPARE),--compare)
-
-eval-gate: ## Fast gate check — deterministic only, no LLM judges
-	cd backend && uv run python -m evals.run_eval --gate
-
-eval-compare: ## Compare a run to baseline (NAME=experiment), or two runs (A=x B=y)
-	@if [ -n "$(A)" ] && [ -n "$(B)" ]; then \
-		cd backend && uv run python -m evals.run_comparison --a "$(A)" --b "$(B)"; \
-	elif [ -n "$(NAME)" ]; then \
-		cd backend && uv run python -m evals.run_comparison --a current_baseline --b "$(NAME)"; \
-	else \
-		echo "Usage: make eval-compare NAME=experiment  or  make eval-compare A=run1 B=run2"; \
-	fi
-
-eval-promote: ## Promote a run to current baseline (NAME=experiment)
-	cd backend && uv run python -m evals.run_eval --promote "$(NAME)"
-
-eval-list: ## List all saved eval runs
-	cd backend && uv run python -m evals.run_eval --list
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
