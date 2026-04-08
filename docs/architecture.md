@@ -25,9 +25,9 @@ This is the key architectural idea. The same two objects can produce different o
 Physics-driven. Object A bumps into object B. Nobody intended it. The engine resolves it from the cached LLM evaluation.
 
 **Examples:**
-- Fire sword falls onto wooden shield → damage 40, add state on_fire
+- Fire sword falls onto wooden shield → damage 40, add state burning
 - Rock rolls into glass bottle → damage 60, destroy bottle
-- Water splashes onto campfire → remove on_fire state, destroy water
+- Water splashes onto campfire → remove burning state, destroy water
 
 The LLM is asked at spawn time: "fire sword hits wooden shield, what happens?" The answer is cached. At runtime, the engine just looks it up. No LLM call during gameplay.
 
@@ -71,17 +71,14 @@ When a new object enters the scene, a single screening call identifies which exi
 
 The LLM sees all objects at once and makes relative judgments. Missed pairs default to "nothing happens" — low stakes, lazily evaluated on actual contact if needed.
 
-**Full evaluation (interesting pairs only, 9 parallel calls each, 1 token, ~145ms):**
+**Full evaluation (interesting pairs only, 6 parallel calls each, 1 token, ~145ms):**
 ```
-1. Damage to A? 0-100
-2. Damage to B? 0-100
-3. State change on A? 0-14  (0=none, 1-7=add state, 8-14=remove state)
-4. State change on B? 0-14
-5. Force on B? 0-100
-6. Push or pull? 0=push 1=pull
-7. A destroyed? 0=no 1=yes
-8. B destroyed? 0=no 1=yes
-9. Instant or continuous? 0=instant 1=continuous
+1. Damage to A? 0-100  (100=destroyed)
+2. Damage to B? 0-100  (100=destroyed)
+3. State change on A? 0-8  (0=none, 1-4=add state, 5-8=remove state)
+4. State change on B? 0-8
+5. Force on B? -100 to 100  (negative=pull, positive=push)
+6. Instant or continuous? 0=instant 1=continuous
 ```
 
 Include both objects' physics properties and active states in the prompt (input is free):
@@ -96,7 +93,7 @@ The physics properties act as calibration anchors — the LLM sees armor 20 and 
 
 ### State changes and cache invalidation
 
-When an object gains or loses a state, its cached interactions are stale — "wooden shield [on_fire]" interacts differently than "wooden shield." The engine marks affected cache entries as stale and re-evaluates them lazily: only when the pair next collides or enters field range. Most stale pairs are objects that aren't near each other and don't need re-evaluation until they actually meet.
+When an object gains or loses a state, its cached interactions are stale — "wooden shield [BURNING]" interacts differently than "wooden shield." The engine marks affected cache entries as stale and re-evaluates them lazily: only when the pair next collides or enters field range. Most stale pairs are objects that aren't near each other and don't need re-evaluation until they actually meet.
 
 ---
 
@@ -159,8 +156,8 @@ Seeded with the movement decision from stage 1. Motivation is templated from the
 Seeded with the action from stage 2:
 ```
 "Firefighter will remove a state from [burning tree]. Which?
- 1=on_fire 2=frozen 3=wet 4=electrified 5=poisoned 6=corroded 7=molten"
-→ 1 (on_fire)
+ 1=burning 2=frozen 3=wet 4=electrified"
+→ 1 (burning)
 ```
 
 ### Why staged
@@ -185,7 +182,7 @@ Zombie cop + donut → approach 90, destroy + heal (eats it)
 Zombie cop + criminal → approach 80, damage
 Zombie cop + fire → flee 70
 Zombie cop + citizen → orbit 40, nothing (patrols)
-Firefighter + burning tree → approach 90, remove on_fire
+Firefighter + burning tree → approach 90, remove burning
 Firefighter + trapped person → approach 80, heal
 Doctor + injured person → approach 90, heal
 Cat + mouse → approach 70, destroy
@@ -198,7 +195,7 @@ Cat + dog → flee 80
 When a new object spawns, run stages 1-3 for all existing creatures against it. When a new creature spawns, run stages 1-3 for it against all existing objects.
 
 **Re-evaluation triggers** — re-evaluate affected creature×object pairs when:
-- **Object changes state** (gains on_fire, frozen, etc.) — re-evaluate pairs involving that object, since creature reactions change (firefighter doesn't need to approach a tree that's no longer burning)
+- **Object changes state** (gains burning, frozen, etc.) — re-evaluate pairs involving that object, since creature reactions change (firefighter doesn't need to approach a tree that's no longer burning)
 - **Creature picks up or drops an object** — re-evaluate that creature's pairs with updated context ("Firefighter [holding: bucket of water] sees burning tree" → approach with higher strength)
 - **Scene inventory changes** — since creature behavior prompts include the scene list, new objects or destroyed objects change the context for all creatures
 
@@ -214,7 +211,7 @@ State changes from interactions can cascade (fire spreads to nearby wood). Same 
 - **Dedup:** pair key `(id_a, id_b)` can't fire twice in one cascade chain
 - **No recursive triggers:** state changes from cascaded interactions don't trigger further cascades
 - **Field rate limit:** field effects tick every 2s, not every frame
-- **State contradictions:** adding on_fire removes frozen and wet automatically (engine-enforced, see [engine-primitives.md](engine-primitives.md))
+- **State contradictions:** adding burning removes frozen and wet automatically (engine-enforced, see [engine-primitives.md](engine-primitives.md))
 
 ---
 

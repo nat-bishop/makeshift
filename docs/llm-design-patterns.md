@@ -140,8 +140,8 @@ Stage 2: "Firefighter is APPROACHING burning tree because it wants to help.
   → 4 (remove state)
 
 Stage 3: "Firefighter will REMOVE A STATE from burning tree. Which?
-          1=on_fire 2=frozen 3=wet 4=electrified 5=poisoned 6=corroded 7=molten"
-  → 1 (on_fire)
+          1=burning 2=frozen 3=wet 4=electrified"
+  → 1 (burning)
 ```
 
 Stage 2 includes "is APPROACHING because it wants to help" — seeded from stage 1's answer. Stage 3 includes "will REMOVE A STATE" — seeded from stage 2. The model doesn't re-derive intent; it's given. This makes each question trivially simple even for very small models.

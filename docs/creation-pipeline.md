@@ -65,27 +65,24 @@ Two phases: a single screening call identifies interesting pairs, then only thos
 
 The LLM sees all objects at once and makes relative judgments — fire sword + campfire is redundant (both hot), fire sword + rock is boring (nothing happens), but fire sword + wooden shield and fire sword + glass bottle are interesting. A missed pair defaults to "nothing happens" — low stakes since pairs can be lazily evaluated on actual contact.
 
-**Phase 2 — Full eval (K interesting pairs × 9 parallel calls, ~145ms per batch):**
+**Phase 2 — Full eval (K interesting pairs × 6 parallel calls, ~145ms per batch):**
 
-Only pairs from the screening list get evaluated. 9 calls per pair, all 1 token, all parallel:
+Only pairs from the screening list get evaluated. 6 calls per pair, all 1 token, all parallel:
 
 ```
-Context prefix (shared across all 9 calls, input is free):
+Context prefix (shared across all 6 calls, input is free):
 "[fire sword: 2kg, armor 80, hp 90, emits heat] collides with
  [wooden shield: 3kg, armor 20, hp 40]."
 
-1. "Damage to fire sword? 0-100"                  → 0
-2. "Damage to wooden shield? 0-100"                → 40
-3. "State change on fire sword? 0-14"              → 0   (none)
-4. "State change on wooden shield? 0-14"           → 1   (add on_fire)
-5. "Force on wooden shield? 0-100"                 → 20
-6. "Push or pull? 0=push 1=pull"                   → 0
-7. "Fire sword destroyed? 0=no 1=yes"              → 0
-8. "Wooden shield destroyed? 0=no 1=yes"           → 0
-9. "Instant or continuous? 0=instant 1=continuous"  → 0
+1. "Damage to fire sword? 0-100"                       → 0
+2. "Damage to wooden shield? 0-100"                     → 40   (100=destroyed)
+3. "State change on fire sword? 0-8"                    → 0    (none)
+4. "State change on wooden shield? 0-8"                 → 1    (add burning)
+5. "Force on wooden shield? -100(pull) to 100(push)"   → 20
+6. "Instant or continuous? 0=instant 1=continuous"      → 0
 ```
 
-State encoding 0-14: `0`=none, `1-7`=add state (on_fire, frozen, wet, electrified, poisoned, corroded, molten), `8-14`=remove same states. Covers both add and remove — needed because `electrified`, `poisoned`, `corroded` have no contradictions and can only be removed explicitly.
+State encoding 0-8: `0`=none, `1-4`=add state (burning, frozen, wet, electrified), `5-8`=remove same states. `damage=100` means instant destroy — no separate destroy field. `force_b` is signed: negative=pull, positive=push — no separate direction field.
 
 A and B refer to the first and second name in lexicographic sort order. See [cache.md](cache.md) for key convention.
 
@@ -120,11 +117,11 @@ If the NEW object is autonomous, run stages 1-3 for it against all existing obje
 |---|---|---|---|
 | Creation (new object) | 13 | ~40 | ~200ms |
 | Pairwise screening (1 call) | 1 | ~5 | ~90ms |
-| Pairwise full eval (~2 interesting pairs × 9 calls) | 18 | 18 | ~145ms |
+| Pairwise full eval (~2 interesting pairs × 6 calls) | 12 | 12 | ~145ms |
 | Creature behavior stage 1+1b (1 creature × 1 object × 2) | 2 | 2 | ~60ms |
 | Creature behavior stage 2 (~1 approaching pair) | 1 | 1 | ~60ms |
 | Creature behavior stage 3 (~1 needing params) | 1 | 1 | ~60ms |
-| **Total** | **36** | **~67** | **~615ms** |
+| **Total** | **30** | **~61** | **~615ms** |
 
 ### 15-object scene, 3 creatures
 
@@ -132,11 +129,11 @@ If the NEW object is autonomous, run stages 1-3 for it against all existing obje
 |---|---|---|---|
 | Creation (new object) | 13 | ~40 | ~200ms |
 | Pairwise screening (1 call) | 1 | ~10 | ~125ms |
-| Pairwise full eval (~4 interesting pairs × 9 calls) | 36 | 36 | ~145ms |
+| Pairwise full eval (~4 interesting pairs × 6 calls) | 24 | 24 | ~145ms |
 | Creature behavior stage 1+1b (3 creatures × 1 object × 2) | 6 | 6 | ~60ms |
 | Creature behavior stage 2 (~2 approaching) | 2 | 2 | ~60ms |
 | Creature behavior stage 3 (~1 needing params) | 1 | 1 | ~60ms |
-| **Total (new non-creature)** | **59** | **~95** | **~650ms** |
+| **Total (new non-creature)** | **47** | **~83** | **~650ms** |
 
 If new object is autonomous, add: stage 1+1b (14 objects × 2 = 28), stage 2 (~5), stage 3 (~3) = **~95 calls, ~830ms**.
 
@@ -148,11 +145,11 @@ All spawn integration runs during the 2-5s sprite gen window. Player sees no int
 |---|---|---|
 | Creation (15 objects × 13) | 195 | ~600 |
 | Pairwise screening (15 calls, 1 per object as it enters) | 15 | ~100 |
-| Pairwise full eval (~25 interesting pairs × 9) | 225 | 225 |
+| Pairwise full eval (~25 interesting pairs × 6) | 150 | 150 |
 | Creature behavior stage 1+1b (3 creatures × 14 objects × 2) | 84 | 84 |
 | Creature behavior stage 2 (~12 approaching pairs) | 12 | 12 |
 | Creature behavior stage 3 (~8 needing params) | 8 | 8 |
-| **Total** | **539** | **~1,029** |
+| **Total** | **464** | **~954** |
 
 Fire all calls via `asyncio.gather()` — SGLang's continuous batching handles scheduling. At effective concurrency of ~32, 60ms per batch: ~17 batches × 65ms = **~1.1 seconds**. This is scene load time, not per-object. Runs once when the level starts.
 
@@ -162,11 +159,11 @@ Fire all calls via `asyncio.gather()` — SGLang's continuous batching handles s
 
 Pairwise evaluation is O(N²) in theory, but screened pairwise reduces this significantly — most pairs are uninteresting (rock+rock, sword+sword). The screening call identifies ~25% of pairs as worth evaluating:
 
-| Objects | Pairs | Screening calls | Interesting pairs (~25%) | Full eval calls (9 per pair) |
+| Objects | Pairs | Screening calls | Interesting pairs (~25%) | Full eval calls (6 per pair) |
 |---|---|---|---|---|
-| 7 | 21 | 7 | ~5 | ~45 |
-| 15 | 105 | 15 | ~25 | ~225 |
-| 30 | 435 | 30 | ~60 | ~540 |
+| 7 | 21 | 7 | ~5 | ~30 |
+| 15 | 105 | 15 | ~25 | ~150 |
+| 30 | 435 | 30 | ~60 | ~360 |
 
 Screening adds 1 call per new object (~100-160ms). Missed pairs default to "nothing happens" and can be lazily evaluated on actual contact.
 

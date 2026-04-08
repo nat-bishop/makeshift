@@ -13,7 +13,7 @@ One cache backend with typed entries, not separate systems per cache type. Singl
 | Type | Key | Value | Example |
 |------|-----|-------|---------|
 | `creation` | `"fire sword"` | All physics/affordance/destructibility/field properties | mass, height, friction, etc. |
-| `pairwise` | `"fire sword::wooden shield"` | `{damage_a, damage_b, state_change_a, state_change_b, force_b, direction_b, destroy_a, destroy_b, mode}` | Collision outcome (9 fields) |
+| `pairwise` | `"fire sword::wooden shield"` | `{damage_a, damage_b, state_change_a, state_change_b, force_b, continuous}` | Collision outcome (6 fields) |
 | `creature_behavior` | `"zombie cop::donut"` | `{reaction, strength, action, param}` | Full creature×object behavior (scene-local, not persistent — see below) |
 | `destruction_result` | `"wooden shield"` | `"broken wooden shield"` + pre-generated blueprint | What remains after destruction |
 
@@ -96,7 +96,7 @@ Cache keys use **object names**, not UUIDs. This is both a correctness requireme
 
 ### Sorted-key convention
 
-Pair keys are lexicographically sorted: `"fire sword::wooden shield"`. At runtime, collision participants arrive in arbitrary order. Convention: `damage_a`, `state_change_a`, `destroy_a` always refer to the **first name in lexicographic sort order**. The engine maps collision participants to cache A/B by sorting their names.
+Pair keys are lexicographically sorted: `"fire sword::wooden shield"`. At runtime, collision participants arrive in arbitrary order. Convention: `damage_a`, `state_change_a` always refer to the **first name in lexicographic sort order**. The engine maps collision participants to cache A/B by sorting their names.
 
 "Fire sword hits wooden shield" and "wooden shield hits fire sword" are the same collision. The cache stores effects on BOTH objects in one entry. Key is always the sorted pair so lookup order doesn't matter.
 
@@ -130,15 +130,15 @@ Runtime lookups during collisions and field ticks must be fast. At scene load, r
 
 When an object gains or loses a state, its pairwise cache entries are stale. Strategy: **always re-evaluate on state change.** The base entry is overwritten. When the state is later removed, re-evaluate again to restore base behavior.
 
-This is cheap because re-evaluation is **lazy** — only triggered on next collision or field tick. Most stale pairs never get re-evaluated because the objects aren't near each other. Cost per actual re-evaluation: 9 parallel 1-token calls (~145ms).
+This is cheap because re-evaluation is **lazy** — only triggered on next collision or field tick. Most stale pairs never get re-evaluated because the objects aren't near each other. Cost per actual re-evaluation: 6 parallel 1-token calls (~145ms).
 
 Re-evaluation prompts include active states in the object description:
 ```
 "[fire sword: 2kg, armor 80, hp 90, field 150cm] collides with
- [wooden shield [ON_FIRE]: 3kg, armor 20, hp 40, no field]."
+ [wooden shield [BURNING]: 3kg, armor 20, hp 40, no field]."
 ```
 
-Same 9-call format, same parallelism.
+Same 6-call format, same parallelism.
 
 ---
 

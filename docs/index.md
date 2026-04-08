@@ -7,7 +7,7 @@ V2 with fewer enums, LLM-generated physics, and auto-populated interaction rules
 | Doc | What it covers |
 |-----|----------------|
 | [Architecture](architecture.md) | Core system design: two interaction systems (passive vs intentional), pairwise cache, per-pair creature behavior, what's removed from V2 and why |
-| [Engine Primitives](engine-primitives.md) | Everything the engine can execute: physics, outcomes, 7 states, affordances, creature behavior, fields |
+| [Engine Primitives](engine-primitives.md) | Everything the engine can execute: physics, outcomes, 4 states, affordances, creature behavior, fields |
 | [Creation Pipeline](creation-pipeline.md) | Exact call sequence from player input to spawned object, batching, call budgets, scaling characteristics |
 | [LLM Design Patterns](llm-design-patterns.md) | Core patterns for decomposing problems into LLM calls: fan-out, sequential seeding, filter, decomposition principle. The foundation everything else is built on |
 | [Cache](cache.md) | Unified cache design: types, key normalization, separate DB, edge cases |
@@ -26,7 +26,7 @@ V2 with fewer enums, LLM-generated physics, and auto-populated interaction rules
 - 16 substances + profiles → LLM-generated physics numbers
 - 7 elements + traits → part of object description
 - 7 categories → affordances + autonomous flag
-- 31 tags (10 LLM-visible + 21 internal) → 7 interaction-only states
+- 31 tags (10 LLM-visible + 21 internal) → 4 interaction-only states
 - 56 hand-authored rules → LLM-populated pairwise cache
 - Tag derivation pipeline → not needed
 - Seek/avoid lists + semantic target matching → per-pair creature behavior (staged evaluation)
@@ -35,8 +35,8 @@ V2 with fewer enums, LLM-generated physics, and auto-populated interaction rules
 
 ## What V3 keeps from V2
 
-- Closed state vocabulary (smaller: 7 vs 31)
-- State contradiction table (smaller: 4 pairs vs 16)
+- Closed state vocabulary (smaller: 4 vs 31)
+- State contradiction table (smaller: 3 directed pairs vs 16)
 - Cascade control (depth 3, dedup, no recursive triggers)
 - Collision detection + Area2D fields
 - Image pipeline (sprite gen, bg removal, caching)

@@ -45,25 +45,26 @@ The engine has 6 primitives for what can happen when two objects meet. Numbered 
 | # | Outcome | Parameters | Examples |
 |---|---|---|---|
 | 0 | **Nothing** | — | Rock + rock. Sword + sword. |
-| 1 | **Damage** | amount (0-100), mode (0=instant, 1=continuous) | Fire burns wood. Acid corrodes metal. |
-| 2 | **Force** | strength (0-100), direction (0=push, 1=pull), mode (0=instant, 1=continuous) | Explosion pushes. Magnet pulls. Wind blows. |
-| 3 | **Add state** | state_id (1-7) | Fire sword adds on_fire to wood. |
-| 4 | **Remove state** | state_id (1-7) | Water removes on_fire. Grounding rod removes electrified. |
-| 5 | **Destroy** | which (0=A, 1=B) | Water poured on fire destroys the water. Key consumed by lock. |
+| 1 | **Damage** | amount (0-100), mode (0=instant, 1=continuous) | Fire burns wood. `amount=100` = instant destroy. |
+| 2 | **Force** | strength (-100 to 100, negative=pull), mode (0=instant, 1=continuous) | Explosion pushes (positive). Magnet pulls (negative). |
+| 3 | **Add state** | state_id (1-4) | Fire sword adds burning to wood. |
+| 4 | **Remove state** | state_id (1-4) | Water removes burning. Grounding rod removes electrified. |
+| 5 | **Destroy** | expressed as damage=100 | Key consumed by lock. Water poured on fire destroys the water. |
 
 ### Mapping to pairwise LLM calls
 
-Each pairwise evaluation asks 9 parallel 1-token questions that map onto these primitives:
+Each pairwise evaluation asks 6 parallel 1-token questions that map onto these primitives:
 
 | Call | Question | Primitives covered |
 |---|---|---|
-| 1-2 | Damage to A/B? 0-100 | Damage (#1) |
-| 3-4 | State change on A/B? 0-14 | Add state (#3) + Remove state (#4) |
-| 5-6 | Force on B? 0-100 / Push or pull? | Force (#2) |
-| 7-8 | A/B destroyed? 0/1 | Destroy (#5) |
-| 9 | Instant or continuous? 0/1 | Mode for damage + force |
+| 1-2 | Damage to A/B? 0-100 (100=destroyed) | Damage (#1) + Destroy (#5) |
+| 3-4 | State change on A/B? 0-8 | Add state (#3) + Remove state (#4) |
+| 5 | Force on B? -100 to 100 (negative=pull, positive=push) | Force (#2) |
+| 6 | Instant or continuous? 0/1 | Mode for damage + force |
 
-**State encoding 0-14:** `0`=none, `1`=add on_fire, `2`=add frozen, `3`=add wet, `4`=add electrified, `5`=add poisoned, `6`=add corroded, `7`=add molten, `8`=remove on_fire, `9`=remove frozen, `10`=remove wet, `11`=remove electrified, `12`=remove poisoned, `13`=remove corroded, `14`=remove molten. All single tokens. Limitation: one state change per object per interaction.
+**State encoding 0-8:** `0`=none, `1`=add burning, `2`=add frozen, `3`=add wet, `4`=add electrified, `5`=remove burning, `6`=remove frozen, `7`=remove wet, `8`=remove electrified. Limitation: one state change per object per interaction.
+
+**`damage=100` means instant destroy** — no separate destroy field. `force_b` is signed: negative=pull, positive=push — no separate direction field.
 
 **Force on A is engine-derived**, not LLM-evaluated. The engine applies Newton's 3rd law heuristic: `force_a = force_b × (mass_b / mass_a)`. This is more consistent than asking the LLM to reason about mass ratios. Bounce reflection is handled by the physics property, not pairwise force.
 
@@ -73,18 +74,15 @@ Carry/mount interactions are handled by the affordance system, not the pairwise 
 
 ## States (closed vocabulary)
 
-Interaction-only state modifiers. Never set at creation — objects are born stateless. Applied by interaction outcomes, removed by other interactions or decay timers. Each state has a clear game mechanic, not just a visual effect.
+Interaction-only state modifiers. Never set at creation — objects are born stateless. Applied by interaction outcomes, removed by other interactions or decay timers. Each state has a distinct gameplay mechanic.
 
-| # | State | Mechanic | Visual effect | Contradicts |
-|---|---|---|---|---|
-| 0 | none | — | — | — |
-| 1 | on_fire | DOT. Spreads to nearby objects via state interaction table | Fire particles + orange PointLight2D | frozen, wet |
-| 2 | frozen | Immobilized. Extra damage from impacts. Removed by on_fire | Blue tint + ice shader | on_fire, molten |
-| 3 | wet | Amplifies electrified damage. Resists on_fire | Drip particles | on_fire |
-| 4 | electrified | DOT. Chains to nearby wet objects via state interaction table | Spark particles + periodic flash | — |
-| 5 | poisoned | DOT. Doesn't spread | Green particles + green tint | — |
-| 6 | corroded | Armor reduced (incoming damage increased) | Brown tint + crumble particles | — |
-| 7 | molten | Contact damage to anything touching. Eventually destroys self | Orange glow + ripple shader | frozen |
+| # | State | Mechanic | Contradicts |
+|---|---|---|---|
+| 0 | none | — | — |
+| 1 | burning | DOT 5 dmg/s, 10s duration. Spreads via cascade | frozen, wet |
+| 2 | frozen | Immobilize (freeze=true) + brittle (2× incoming damage) | burning |
+| 3 | wet | Friction → 0.05. Amplifies electrified via re-eval | burning |
+| 4 | electrified | DOT 8 dmg/1.5s, 8s duration. Chains to wet objects | — |
 
 This set is extensible — add new states when they have clear mechanics. States without game effects don't belong here.
 
@@ -93,10 +91,10 @@ This set is extensible — add new states when they have clear mechanics. States
 Engine enforces on state add — adding a state automatically removes its contradictions:
 
 ```
-on_fire:  removes [frozen, wet]
-frozen:   removes [on_fire, molten]
-wet:      removes [on_fire]
-molten:   removes [frozen]
+burning:     removes [frozen, wet]
+frozen:      removes [burning]
+wet:         removes [burning]
+electrified: no contradictions
 ```
 
 ### Visual effects
@@ -109,7 +107,7 @@ States applied by interactions have a default decay timer (e.g., 10s). The state
 
 ### State stacking
 
-Objects can have multiple states simultaneously (on_fire AND poisoned AND corroded). Visual effects layer — particles from all active states render together. Contradictions prevent impossible combinations (can't be on_fire AND frozen).
+Objects can have multiple states simultaneously (e.g., burning AND electrified is impossible — BURNING removes WET which chains, but burning AND frozen is also blocked). Contradictions prevent impossible combinations (see contradiction table above).
 
 ---
 
@@ -183,8 +181,8 @@ For pairs where the creature approaches or orbits, the LLM decides what happens 
 | 0 | **nothing** | — | Cat orbits ball of yarn, just watches |
 | 1 | **damage** | amount (0-100) | Cop attacks criminal |
 | 2 | **heal** | amount (0-100) | Doctor heals injured person |
-| 3 | **add state** | state_id (1-7) | Wizard curses enemy (if cursed state existed) |
-| 4 | **remove state** | state_id (1-7) | Firefighter removes on_fire from tree |
+| 3 | **add state** | state_id (1-4) | Wizard sets enemy burning |
+| 4 | **remove state** | state_id (1-4) | Firefighter removes burning from tree |
 | 5 | **destroy** | — | Zombie destroys brain (instant kill) |
 | 6 | **take** | — | Thief takes gold (pickup holdable) |
 
@@ -232,7 +230,7 @@ Objects that affect nearby things without contact. Two creation-time questions:
 "If yes, range in cm? (candle=50, campfire=250, bonfire=500, volcano=1000)" → 250
 ```
 
-The engine creates an Area2D with that radius. Field interactions use the **same pairwise cache** as contact interactions — no separate system. A campfire's field interaction with a wooden wall: the cached result is "damage 20, add on_fire, continuous."
+The engine creates an Area2D with that radius. Field interactions use the **same pairwise cache** as contact interactions — no separate system. A campfire's field interaction with a wooden wall: the cached result is "damage 20, add burning, continuous."
 
 Fields tick every 2s (rate limit, part of cascade control). First tick is immediate via `call_deferred`.
 

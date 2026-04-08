@@ -30,9 +30,9 @@ When an autonomous creature dies, generate a "dead creature" sprite instead of j
 
 ## Object evolution
 
-Objects that accumulate states could fundamentally change identity. A wooden shield that's been on_fire → corroded → repeatedly damaged might become a "battered charred ruin" with different physics and interactions.
+Objects that accumulate states could fundamentally change identity. A wooden shield that's been burning → repeatedly damaged might become a "battered charred ruin" with different physics and interactions.
 
-**How:** After N state changes or at specific HP thresholds, ask: "A [wooden shield] has been burned and corroded. What is it now? 3-5 words." → new object identity → full creation graph + new sprite.
+**How:** After N state changes or at specific HP thresholds, ask: "A [wooden shield] has been burned repeatedly. What is it now? 3-5 words." → new object identity → full creation graph + new sprite.
 
 **Why deferred:** Requires defining triggers for identity change (how many state changes? which combinations?). The state interaction table handles state effects mechanically — evolution adds narrative emergence but needs design work to feel intentional rather than random.
 
@@ -40,7 +40,7 @@ Objects that accumulate states could fundamentally change identity. A wooden shi
 
 ## Additional states
 
-The core system ships with 7 states. Potential additions once mechanics are designed:
+The core system ships with 4 states. Potential additions once mechanics are designed:
 
 | State | Potential mechanic | Needs design work |
 |---|---|---|
