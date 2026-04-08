@@ -1,4 +1,4 @@
-.PHONY: dev gpu api stop gpu-restart gpu-logs godot play install test lint fix format typecheck check clear-sprites cli-create cli-image cli-sprite cli-status eval-run eval-compare eval-single help
+.PHONY: dev gpu api stop gpu-restart gpu-logs godot play install test lint fix format typecheck check clear-sprites cli-create cli-image cli-sprite cli-status eval eval-physics eval-pairwise eval-creature help
 
 GODOT ?= godot
 VERBOSE ?= 0
@@ -84,16 +84,17 @@ cli-status: ## Check health of configured services
 cli-animate: ## Test I2V animation (SPRITE=path.png PROMPT="walk cycle")
 	cd backend && uv run python -m experiments.i2v_animation_test $(if $(SPRITE),--sprite "$(SPRITE)") $(if $(PROMPT),--prompt "$(PROMPT)")
 
-PROMPT_A ?= baseline
+eval: ## Run all quality evals (LLM, costs money)
+	cd backend && uv run pytest evals/ -v -s
 
-eval-run: ## Run evals and save results (PROMPT_A=baseline)
-	cd backend && uv run python -m evals.run_eval --variant "$(PROMPT_A)" $(if $(CASES),--cases "$(CASES)")
+eval-physics: ## Physics quality eval (LLM, costs money)
+	cd backend && uv run pytest evals/test_physics_quality.py -v -s
 
-eval-compare: ## Compare two saved results (PROMPT_A=baseline PROMPT_B=v2)
-	cd backend && uv run python -m evals.run_comparison --a "$(PROMPT_A)" --b "$(PROMPT_B)"
+eval-pairwise: ## Pairwise quality eval (LLM, costs money)
+	cd backend && uv run pytest evals/test_pairwise_quality.py -v -s
 
-eval-single: ## Analyze a single saved result (PROMPT_A=baseline)
-	cd backend && uv run python -m evals.run_comparison --a "$(PROMPT_A)"
+eval-creature: ## Creature quality eval (LLM, costs money)
+	cd backend && uv run pytest evals/test_creature_quality.py -v -s
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'

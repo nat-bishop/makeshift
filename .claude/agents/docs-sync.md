@@ -15,12 +15,11 @@ This project has layered documentation:
 
 - **README.md** (project root): User-facing quick start — prerequisites, setup, commands, and links to detailed docs. Keep it short and actionable. No architecture or implementation details.
 - **CLAUDE.md** (project root): The authoritative quick-reference for developers/AI. Contains architecture overview, running instructions, code conventions, Godot client details, API endpoints, and gotchas. This is the primary source of truth for how things work.
-- **docs/ARCHITECTURE.md**: System architecture deep-dive — object creation pipeline, image generation, rule engine, collision/cascade system, physics composition, session persistence, WebSocket protocol. Covers the *how* of implementation.
-- **docs/GAME_DESIGN.md**: Game design document — tag system design rationale, rule system philosophy, object economy, equipment system, durability mechanics, and level design. Covers the *what* and *why* of design decisions.
+- **docs/**: V3 design docs (see `index.md` for table of contents) — architecture, engine primitives, creation pipeline, caching, LLM design patterns, future features. Plus level design, animation pipeline, and research references. Covers the *how* and *why* of the V3 design.
 
 ## Key Principles
 
-1. **Delete aggressively.** If information is redundant across files, keep it in the most appropriate single location and remove it elsewhere. A cross-reference ("See ARCHITECTURE.md for details") is better than duplication. Duplication creates contradictions — when one copy is updated and the other isn't, developers get wrong answers with high confidence.
+1. **Delete aggressively.** If information is redundant across files, keep it in the most appropriate single location and remove it elsewhere. A cross-reference ("See docs/architecture.md for details") is better than duplication. Duplication creates contradictions — when one copy is updated and the other isn't, developers get wrong answers with high confidence.
 
 2. **Density over completeness.** Every sentence should convey information that isn't obvious from the code itself. Remove filler, hedging language, obvious statements, and excessive examples. Verbose docs get skimmed or skipped entirely. Dense docs get read.
 
@@ -43,17 +42,11 @@ This project has layered documentation:
 - Keep entries terse — this is a reference card, not a tutorial
 - If you add detail here, check if docs/ files have redundant content to trim
 
-### docs/ARCHITECTURE.md
-- Covers implementation architecture, data flow, component relationships
-- Update when: pipeline changes, new systems added, collision/physics modified, WebSocket protocol changes, image generation modified
+### docs/ (V3 design docs)
+- See `docs/index.md` for the full list — architecture, engine primitives, creation pipeline, caching, LLM design patterns, future features/optimizations
+- Update when: architecture changes, engine primitives change, creation pipeline modified, caching strategy updated
 - Should go deeper than CLAUDE.md but not repeat it verbatim
-- Remove sections about planned architecture that was never built or was built differently
-
-### docs/GAME_DESIGN.md
-- Covers tag system design, rule philosophy, object economy, equipment, durability, levels
-- Update when: tags/rules change, budget/costs change, new levels added, equipment system changes, seed objects change
-- Remove mockups or designs for features that shipped differently than planned
-- Don't duplicate mechanical details already in CLAUDE.md — reference them
+- Remove sections about planned features that shipped differently than designed
 
 ## Workflow
 
@@ -90,15 +83,15 @@ AFTER:
 **Duplication → cross-reference:**
 
 ```
-BEFORE (in ARCHITECTURE.md):
+BEFORE (in architecture.md):
   Tags cost 1-5 points. The budget is 10 per object. There are 12
   contradiction pairs that can't coexist. FROZEN and HOT contradict,
   HEAVY and LIGHT contradict...
-  [repeats tag system explanation from GAME_DESIGN.md]
+  [repeats explanation from engine-primitives.md]
 
 AFTER:
   Validators enforce: budget ≤ 10, no contradictions, 2-6 tags.
-  See GAME_DESIGN.md for tag system design rationale.
+  See engine-primitives.md for design rationale.
 ```
 
 ## Definition of Done

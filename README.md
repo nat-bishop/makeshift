@@ -90,6 +90,5 @@ Add prompt variants in `backend/evals/prompts.py`. Test cases in `backend/evals/
 
 ## Documentation
 
-- [Architecture](docs/ARCHITECTURE.md) — system overview, object creation pipeline, image generation, rule engine, collision/cascade system, persistence, WebSocket protocol
-- [Game Design](docs/GAME_DESIGN.md) — tag system, rule philosophy, object economy, equipment, durability, levels
+- [V3 Design Docs](docs/index.md) — architecture, engine primitives, creation pipeline, caching, LLM design patterns
 - [CLAUDE.md](CLAUDE.md) — developer quick-reference (conventions, gotchas, API endpoints)

@@ -32,13 +32,11 @@ make cli-image PROMPT="a red sword"        # generate raw image (no bg removal)
 make cli-sprite PROMPT="fire sword"        # full pipeline: LLM → image → bg removal → crop
 make cli-status                            # check health of configured services
 
-# Evals — LLM output quality evaluation (costs money, not in `make test`):
-cd backend && uv run python -m evals.run_eval                    # run all 50 cases, save results
-cd backend && uv run python -m evals.run_eval --variant v2       # run with a different prompt variant
-cd backend && uv run python -m evals.run_eval --cases "rock,fire sword"  # filter cases
-cd backend && uv run python -m evals.run_comparison --a baseline --b v2  # compare two saved results
-cd backend && uv run python -m evals.run_comparison --a baseline         # single result analysis
-cd backend && uv run pytest evals/test_eval.py -v                # pytest runner (also saves results)
+# Evals — LLM quality gates (cost money, NOT in `make test`):
+make eval                      # run all quality gate evals
+make eval-physics              # physics property reasonableness (~15 objects)
+make eval-pairwise             # pairwise interaction quality (~27 pairs)
+make eval-creature             # creature behavior quality (~8 creatures)
 
 # For more granular control:
 uv run pytest backend/tests/test_tags.py  # single test file
@@ -49,9 +47,9 @@ uv run pytest -k "test_name"              # single test by name
 
 **Backend** (`backend/app/`): FastAPI application with these key subsystems:
 
-- **Object creation pipeline** (`creator/agent.py` → `routers/objects.py` → `images/pipeline.py` → `ws/handler.py`): Player text → PydanticAI agent (Gemini) → `CreatorOutputSpec` (tags + optional signature behavior) → tag-implied behaviors resolved → immediate JSON response (blueprint + `budget_remaining`) → background sprite generation → WebSocket `sprite_ready` delivery. See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for full pipeline flow.
+- **Object creation pipeline** (`creator/agent.py` → `routers/objects.py` → `images/pipeline.py` → `ws/handler.py`): Player text → PydanticAI agent (Gemini) → `CreatorOutputSpec` (tags + optional signature behavior) → tag-implied behaviors resolved → immediate JSON response (blueprint + `budget_remaining`) → background sprite generation → WebSocket `sprite_ready` delivery. See [creation-pipeline.md](docs/creation-pipeline.md) for full pipeline flow.
 
-- **Tag system** (`models/tags.py`): 31 `Tag` StrEnum values total (27 LLM-visible + 4 internal-only: HOT, GLOWING, BRITTLE, CORRODED). 7 categories, 16 contradiction pairs enforced via `ModelRetry`. `LLM_VISIBLE_TAGS` frozenset controls what the LLM can pick. `TAG_AUTO_CORRECTIONS` dict silently maps removed/renamed tags (HOT→HEAT_SOURCE, SOLID→RIGID, CORROSIVE→ACIDIC, CONDUCTING→METALLIC, BRITTLE→FROZEN, CORRODED→ACIDIC, etc.). `TAG_DESCRIPTIONS` dict provides one-line gameplay descriptions for hallucinated-tag retry messages. Tags define what objects *are* — physics, interactions, durability, and implied behaviors. Internal-only tags enable emergent behavior: BRITTLE (added by freeze rules, shatterable by HEAVY/SHARP), CORRODED (added by acid rules, vulnerable to physical force), GLOWING (smolder ignition + creature attraction), HOT (heat burn damage). Pruned: SOLID (0 rules, 82% filler), FLEXIBLE (1 rule), SLIPPERY (0% generated). Renamed: CORROSIVE→ACIDIC, CONDUCTING→METALLIC. See [GAME_DESIGN.md](docs/GAME_DESIGN.md) for design rationale.
+- **Tag system** (`models/tags.py`): 31 `Tag` StrEnum values total (27 LLM-visible + 4 internal-only: HOT, GLOWING, BRITTLE, CORRODED). 7 categories, 16 contradiction pairs enforced via `ModelRetry`. `LLM_VISIBLE_TAGS` frozenset controls what the LLM can pick. `TAG_AUTO_CORRECTIONS` dict silently maps removed/renamed tags (HOT→HEAT_SOURCE, SOLID→RIGID, CORROSIVE→ACIDIC, CONDUCTING→METALLIC, BRITTLE→FROZEN, CORRODED→ACIDIC, etc.). `TAG_DESCRIPTIONS` dict provides one-line gameplay descriptions for hallucinated-tag retry messages. Tags define what objects *are* — physics, interactions, durability, and implied behaviors. Internal-only tags enable emergent behavior: BRITTLE (added by freeze rules, shatterable by HEAVY/SHARP), CORRODED (added by acid rules, vulnerable to physical force), GLOWING (smolder ignition + creature attraction), HOT (heat burn damage). Pruned: SOLID (0 rules, 82% filler), FLEXIBLE (1 rule), SLIPPERY (0% generated). Renamed: CORROSIVE→ACIDIC, CONDUCTING→METALLIC. See [engine-primitives.md](docs/engine-primitives.md) for design rationale.
 
 - **Behavior system** (`models/behaviors.py`, `models/blueprint.py`, `models/tag_behaviors.py`): Two layers — tag-implied behaviors (automatic from tags: HOSTILE+LIVING→chase+flee, LIVING→wander, EXPLOSIVE→detonate) + optional LLM-authored signature behavior (1 max). `CreatorOutputSpec.signature: str | None` replaces the old `behaviors: list[str]`. LLM vocab: 7 triggers × 7 actions × 3 targets. Engine-internal actions (PATROL, APPLY_FORCE, ATTRACT, REMOVE_TAGS) and triggers (ON_CREATE, ON_DESTROY) exist for tag-implied behaviors but are not in the LLM vocabulary. Target auto-inference: ON_CONTACT/ON_DAMAGED→CONTACT_BODY, ON_PROXIMITY/ALWAYS→NEAREST_LIVING, ON_TIMER/ON_HEALTH_LOW/ON_TAG_ADDED→SELF. `resolve_implied_behaviors(tags, explicit)` merges with per-trigger override. Tag count: 2-5 per object (`min_length=2, max_length=5` on `CreatorOutput.tags`).
 
@@ -63,7 +61,7 @@ uv run pytest -k "test_name"              # single test by name
 
 - **WebSocket** (`ws/handler.py`): Per-session multi-client broadcast. Messages: sprite_ready, sprite_failed, error, ping/pong.
 
-- **Eval suite** (`backend/evals/`): pydantic-evals framework. 50 curated test cases × 7 metrics — 4 deterministic (Validity, Tag Recall, Interaction Surface, Has Signature) + 3 LLM-as-judge via Gemini (Faithfulness, Gameplay Quality, Sprite Prompt). `run_eval.py` runs evals and saves `EvalRunResult` JSON to `evals/results/`. `run_comparison.py` loads saved results for offline Wilcoxon comparison. `run_generate_cases.py` generates synthetic test cases. `run_temp_experiment.py` runs temperature sweeps. Retry count tracked per case via `set_eval_attribute`. Distribution analysis shows tag/behavior/size frequencies. Prompt variants defined in `evals/prompts.py`.
+- **Eval suite** (`backend/evals/`): Three LLM quality gate tests (real API calls, run via `make eval-*`, NOT in `make test`): `test_physics_quality.py` validates `create_object()` physics ranges against `fixtures/physics_reference.yaml`; `test_pairwise_quality.py` validates `evaluate_pair()` against `fixtures/interaction_pairs.yaml` (27 pairs); `test_creature_quality.py` validates `evaluate_creature_behaviors()` against `fixtures/creature_behaviors.yaml` (20 creature-target pairs). Plus `backend/tests/test_data_contract.py` (deterministic, in `make test`) testing fixture schemas, state mappings, model roundtrips, and cache operations.
 
 **Godot Client** (`godot/`): Godot 4.3, GDScript.
 
@@ -173,11 +171,8 @@ Requires `.env` file (see `.env.example`):
 
 ## Documentation
 
-- [Architecture](docs/ARCHITECTURE.md) — object creation pipeline, image generation, rule engine, behavior system, collision/cascade, physics, persistence, WebSocket protocol
-- [Game Design](docs/GAME_DESIGN.md) — tag system, behavior system design, rule philosophy, object economy, durability, levels
+- [V3 Design Index](docs/index.md) — table of contents for architecture, engine primitives, creation pipeline, caching, LLM design patterns, future features
 - [Level Design](docs/LEVEL_DESIGN.md) — Level creation patterns, environment bodies, BaseLevel API
 - [Animation Pipeline](docs/ANIMATION_PIPELINE.md) — sprite sheet animation generation reference (not yet in production)
-- [Action Plan](docs/action-plan.md) — unified roadmap from all design analyses
 - [Scribblenauts Deep Dive](docs/scribblenauts-deep-dive.md) — Objectnaut engine research
 - [LLM Behavior Systems](docs/llm-behavior-systems.md) — literature review of LLM behavior generation
-- Archived analyses in `docs/archive/` — historical design documents consolidated into action-plan.md
