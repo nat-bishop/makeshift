@@ -18,6 +18,7 @@ import structlog
 from app.cache.scene import CreatureBehavior, SceneCache
 from app.creator.llm import ask_int
 from app.models.blueprint import GameObjectBlueprint
+from app.models.state import STATE_LIST_PROMPT
 
 logger = structlog.get_logger()
 
@@ -50,7 +51,7 @@ STAGE3_AMOUNT = "{creature} will {action_verb} {target}. How much (0-100)?"
 
 STAGE3_STATE = (
     "{creature} will {action_verb} a state on {target}. Which?\n"
-    "1=on_fire 2=frozen 3=wet 4=electrified 5=poisoned 6=corroded 7=molten"
+    + STATE_LIST_PROMPT
 )
 
 

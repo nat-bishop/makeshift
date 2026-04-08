@@ -29,6 +29,7 @@ from app.cache.store import CacheStore, normalize_name, pair_key
 from app.config import settings
 from app.creator.llm import ask_bool, ask_int, ask_text
 from app.models.blueprint import GameObjectBlueprint
+from app.models.state import STATE_CHANGE_PROMPT
 
 logger = structlog.get_logger()
 
@@ -104,17 +105,11 @@ PAIR_QUESTIONS: list[tuple[str, str, str]] = [
     ),
     (
         "state_change_a", "state",
-        "{a_desc} collides with {b_desc}. State change on {a}? "
-        "0=none 1=catch fire 2=freeze 3=get wet 4=electrify 5=poison "
-        "6=corrode 7=melt 8=extinguish 9=thaw 10=dry 11=de-electrify "
-        "12=cure poison 13=de-corrode 14=solidify",
+        "{a_desc} collides with {b_desc}. State change on {a}? " + STATE_CHANGE_PROMPT,
     ),
     (
         "state_change_b", "state",
-        "{a_desc} collides with {b_desc}. State change on {b}? "
-        "0=none 1=catch fire 2=freeze 3=get wet 4=electrify 5=poison "
-        "6=corrode 7=melt 8=extinguish 9=thaw 10=dry 11=de-electrify "
-        "12=cure poison 13=de-corrode 14=solidify",
+        "{a_desc} collides with {b_desc}. State change on {b}? " + STATE_CHANGE_PROMPT,
     ),
     (
         "force_b", "int",
@@ -205,7 +200,8 @@ async def evaluate_pair(
     # Write through to both caches
     scene.put_pairwise(name_a, name_b, result)
     await cache.put_pairwise(
-        name_a, name_b, result.to_dict(), model_version=settings.llm_model
+        name_a, name_b, result.to_dict(), model_version=settings.llm_model,
+        commit=False,
     )
 
     logger.info(
@@ -251,4 +247,7 @@ async def spawn_integration(
             results[name] = result
         else:
             logger.warning("pairwise_eval_failed", target=name, error=str(result))
+
+    # Batch-commit all pairwise writes at once
+    await cache.flush()
     return results

@@ -21,7 +21,7 @@ func apply_from_blueprint(bp: Dictionary) -> void:
 	var bounce_100: int = phys.get("bounce", 10)
 	var gravity_100: int = phys.get("gravity", 50)
 
-	var size_cat: String = _size_from_height(height_cm)
+	var size_cat: String = PhysicsComposer.size_from_height(height_cm)
 	var size_mult: float = PhysicsComposer.get_size_mass_multiplier(size_cat)
 
 	# Mass (real-world kg * size multiplier)
@@ -55,14 +55,6 @@ func _gravity_to_scale(g: int) -> float:
 	if g <= 50:
 		return lerpf(-1.0, 1.0, float(g) / 50.0)
 	return lerpf(1.0, 2.0, float(g - 50) / 50.0)
-
-
-func _size_from_height(cm: int) -> String:
-	if cm < 10: return "tiny"
-	if cm < 50: return "small"
-	if cm < 150: return "medium"
-	if cm < 400: return "large"
-	return "huge"
 
 
 func update_shape_from_sprite(texture: Texture2D, world_size: float) -> void:

@@ -62,6 +62,7 @@ async def _test_client() -> AsyncIterator[tuple[AsyncClient, FastAPI]]:
     from app.cache.store import CacheStore
     cache = await CacheStore.open(":memory:")
     app.state.cache = cache
+    app.state.scenes = {}
 
     import app.images.pipeline as _pipeline
     orig_gen, orig_bg = _pipeline._generate_image, _pipeline._remove_bg

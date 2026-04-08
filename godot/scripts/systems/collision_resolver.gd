@@ -15,7 +15,7 @@ const STATE_NAMES: Array[String] = [
 ]
 
 
-func resolve_collision(body_a: Node, body_b: Node, cascade_depth: int = 0, _resolved: Dictionary = {}) -> void:
+func resolve_collision(body_a: Node, body_b: Node, cascade_depth: int = 0, _resolved: Dictionary = {}, from_field: bool = false) -> void:
 	if cascade_depth == 0:
 		_resolved = {}
 
@@ -37,6 +37,10 @@ func resolve_collision(body_a: Node, body_b: Node, cascade_depth: int = 0, _reso
 	var entry: Dictionary = InteractionCache.lookup_pairwise(name_a, name_b)
 	if entry.is_empty():
 		return  # Uncached = nothing happens
+
+	# Field ticks should only fire continuous interactions
+	if from_field and not entry.get("continuous", false):
+		return
 
 	# Map A/B to sorted order (cache key convention: lexicographic)
 	var sorted_a: String = name_a.to_lower() if name_a.to_lower() <= name_b.to_lower() else name_b.to_lower()

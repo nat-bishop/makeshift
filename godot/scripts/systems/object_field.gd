@@ -52,4 +52,4 @@ func _on_tick() -> void:
 	for body in _field_area.get_overlapping_bodies():
 		if body == _owner_body or not is_instance_valid(body):
 			continue
-		CollisionResolver.resolve_collision(_owner_body, body, 0)
+		CollisionResolver.resolve_collision(_owner_body, body, 0, {}, true)

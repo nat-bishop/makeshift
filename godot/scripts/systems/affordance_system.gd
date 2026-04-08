@@ -3,6 +3,8 @@ extends Node
 ## V3 Affordance system: carry, mount, climb.
 ## Attached to the player. Checks nearest object's affordance on interact input.
 
+const CL = preload("res://scripts/data/collision_layers.gd")
+
 enum Affordance { CARRY = 0, MOUNT = 1, CLIMB = 2, NONE = 3 }
 
 const INTERACT_RANGE: float = 64.0
@@ -111,7 +113,7 @@ func swing() -> void:
 	circle.radius = INTERACT_RANGE
 	query.shape = circle
 	query.transform = Transform2D(0, _hand_marker.global_position)
-	query.collision_mask = CollisionLayers.OBJECTS
+	query.collision_mask = CL.OBJECTS
 	for result in space_state.intersect_shape(query, 8):
 		var target: Node = result.get("collider", null)
 		if target == null or target == _held_object or target == _player:
@@ -129,8 +131,8 @@ func throw_held(direction: Vector2) -> void:
 	_player.get_parent().add_child(obj)
 	obj.global_position = global_pos
 	obj.freeze = false
-	obj.collision_layer = CollisionLayers.OBJECTS
-	obj.collision_mask = CollisionLayers.TERRAIN | CollisionLayers.PLAYER | CollisionLayers.OBJECTS
+	obj.collision_layer = CL.OBJECTS
+	obj.collision_mask = CL.TERRAIN | CL.PLAYER | CL.OBJECTS
 	obj.apply_central_impulse(direction * THROW_FORCE)
 	Log.info("AffordanceSystem: Threw '%s'" % obj.get_object_name())
 

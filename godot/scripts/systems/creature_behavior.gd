@@ -17,6 +17,7 @@ const MAX_ERRORS: int = 5
 var _owner: RigidBody2D
 var _owner_name: String
 var _pairs: Dictionary = {}  # target_name -> behavior dict
+var _target_nodes: Dictionary = {}  # target_name -> Node (cached refs)
 var _action_timer: float = 0.0
 var _error_count: int = 0
 
@@ -35,9 +36,21 @@ func _scan_existing() -> void:
 		_try_add_target(node)
 
 
-func _on_object_created(_blueprint: Dictionary) -> void:
-	# New objects may have creature behavior entries — rescan on next tick
-	call_deferred("_scan_existing")
+func _on_object_created(blueprint: Dictionary) -> void:
+	# Add the new object by scanning only newly entered nodes
+	# (the object enters the group after init_from_blueprint)
+	call_deferred("_scan_for_new", blueprint.get("name", ""))
+
+
+func _scan_for_new(target_name: String) -> void:
+	if target_name.is_empty() or target_name in _pairs:
+		return
+	for node in _owner.get_tree().get_nodes_in_group("game_objects"):
+		if node == _owner:
+			continue
+		if node.has_method("get_object_name") and node.get_object_name() == target_name:
+			_try_add_target(node)
+			break
 
 
 func _try_add_target(node: Node) -> void:
@@ -49,6 +62,7 @@ func _try_add_target(node: Node) -> void:
 	var entry: Dictionary = InteractionCache.lookup_creature(_owner_name, target_name)
 	if not entry.is_empty():
 		_pairs[target_name] = entry
+		_target_nodes[target_name] = node
 
 
 func _physics_process(delta: float) -> void:
@@ -56,18 +70,14 @@ func _physics_process(delta: float) -> void:
 		return
 	_action_timer = maxf(0.0, _action_timer - delta)
 
-	# Utility scoring: find highest-utility target
+	# Utility scoring using cached node refs (not group iteration)
 	var best_target: Node = null
 	var best_utility: float = -1.0
 	var best_entry: Dictionary = {}
 
-	for node in _owner.get_tree().get_nodes_in_group("game_objects"):
-		if node == _owner or not is_instance_valid(node):
-			continue
-		if not node.has_method("get_object_name"):
-			continue
-		var tname: String = node.get_object_name()
-		if tname not in _pairs:
+	for tname in _pairs:
+		var node: Node = _target_nodes.get(tname)
+		if node == null or not is_instance_valid(node):
 			continue
 		var entry: Dictionary = _pairs[tname]
 		var movement: int = entry.get("movement", 3)
@@ -113,26 +123,42 @@ func _physics_process(delta: float) -> void:
 
 
 func _execute_action(entry: Dictionary, target: Node) -> void:
+	if not is_instance_valid(target):
+		_error_count += 1
+		return
 	var action: int = entry.get("action", 0)
 	var param: int = entry.get("param", 0)
 	match action:
 		0:  # nothing
 			pass
 		1:  # damage
+			if not target.has_method("take_damage"):
+				_error_count += 1
+				return
 			WorldMutations.apply_damage(target, float(param) if param > 0 else 15.0)
 		2:  # heal
+			if not target.has_method("heal"):
+				_error_count += 1
+				return
 			WorldMutations.apply_heal(target, float(param) if param > 0 else 10.0)
 		3:  # add_state
-			if param >= 1 and param <= 7:
-				WorldMutations.apply_add_state(
-					target, CollisionResolver.STATE_NAMES[param], 10.0
-				)
+			if param < 1 or param > 7 or not target.has_method("add_state"):
+				_error_count += 1
+				return
+			WorldMutations.apply_add_state(
+				target, CollisionResolver.STATE_NAMES[param], 10.0
+			)
 		4:  # remove_state
-			if param >= 1 and param <= 7:
-				WorldMutations.apply_remove_state(
-					target, CollisionResolver.STATE_NAMES[param]
-				)
+			if param < 1 or param > 7 or not target.has_method("remove_state"):
+				_error_count += 1
+				return
+			WorldMutations.apply_remove_state(
+				target, CollisionResolver.STATE_NAMES[param]
+			)
 		5:  # destroy
+			if not target.has_method("take_damage"):
+				_error_count += 1
+				return
 			WorldMutations.apply_damage(target, 99999.0)
 		6:  # take
 			pass  # needs affordance system integration

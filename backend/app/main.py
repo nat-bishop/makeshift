@@ -93,6 +93,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     cache_path = str(DATA_DIR / "cache.db")
     cache = await CacheStore.open(cache_path)
     app.state.cache = cache
+    app.state.scenes: dict = {}  # session_id -> SceneCache (in-memory, per-session)
     logger.info("cache_db_initialized", path=cache_path)
 
     logger.info("server_ready")

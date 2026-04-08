@@ -24,6 +24,18 @@ STATE_REMOVES: dict[State, list[State]] = {
 
 STATE_NAMES: dict[int, str] = {s.value: s.name.lower() for s in State}
 
+# Human-readable labels for LLM prompts, generated from enum to prevent drift
+_ADD_LABELS = {s: s.name.lower().replace("_", " ") for s in State}
+_REMOVE_LABELS = {s: "remove " + s.name.lower().replace("_", " ") for s in State}
+
+STATE_CHANGE_PROMPT = " ".join(
+    [f"0=none"]
+    + [f"{s.value}={_ADD_LABELS[s]}" for s in State]
+    + [f"{s.value + 7}={_REMOVE_LABELS[s]}" for s in State]
+)
+
+STATE_LIST_PROMPT = " ".join(f"{s.value}={_ADD_LABELS[s]}" for s in State)
+
 
 def get_contradicted(adding: State, existing: set[State]) -> set[State]:
     """Return which existing states must be removed when adding `adding`."""

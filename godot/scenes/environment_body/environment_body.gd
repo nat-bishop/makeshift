@@ -13,10 +13,9 @@ var _initially_solid: bool = true
 var _visual: ColorRect
 var _initial_color: Color
 var _field_area: Area2D
-var _periodic_timer: Timer
+var _object_field: Node = null
 
 const FIELD_MARGIN: float = 32.0
-const PERIODIC_INTERVAL: float = 2.0
 
 
 func init_env(name: String, bp: Dictionary, size: Vector2, color: Color, solid: bool = true) -> void:
@@ -67,8 +66,12 @@ func init_env(name: String, bp: Dictionary, size: Vector2, color: Color, solid: 
 	# Group for interaction targeting
 	add_to_group("game_objects")
 
-	# Start periodic timer (env bodies always tick — they're fields by nature)
-	_start_periodic_timer()
+	# Use ObjectField for periodic tick (env bodies are always fields)
+	var field_script = preload("res://scripts/systems/object_field.gd")
+	_object_field = field_script.new()
+	_object_field.name = "ObjectField"
+	add_child(_object_field)
+	_object_field.init_field(self, FIELD_MARGIN)
 
 	Log.info("EnvironmentBody: Initialized '%s', solid=%s" % [env_name, solid])
 
@@ -129,22 +132,3 @@ func _update_visuals() -> void:
 		_visual.color = _initial_color
 
 
-func _start_periodic_timer() -> void:
-	_periodic_timer = Timer.new()
-	_periodic_timer.wait_time = PERIODIC_INTERVAL
-	_periodic_timer.one_shot = false
-	_periodic_timer.timeout.connect(_on_periodic_tick)
-	add_child(_periodic_timer)
-	call_deferred("_on_periodic_tick")
-	_periodic_timer.start()
-
-
-func _on_periodic_tick() -> void:
-	if _field_area == null:
-		return
-	for body in _field_area.get_overlapping_bodies():
-		if body == self or not is_instance_valid(body):
-			continue
-		if not body.has_method("get_object_name"):
-			continue
-		CollisionResolver.resolve_collision(self, body, 0)

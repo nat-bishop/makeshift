@@ -66,7 +66,8 @@ class CacheStore:
         return json.loads(row[0]) if row else None
 
     async def put(
-        self, cache_type: str, key: str, value: dict, model_version: str = ""
+        self, cache_type: str, key: str, value: dict, model_version: str = "",
+        *, commit: bool = True,
     ) -> None:
         await self._db.execute(
             "INSERT OR REPLACE INTO cache "
@@ -74,6 +75,11 @@ class CacheStore:
             "VALUES (?, ?, ?, ?, ?)",
             (cache_type, key, json.dumps(value), model_version, time.time()),
         )
+        if commit:
+            await self._db.commit()
+
+    async def flush(self) -> None:
+        """Commit pending writes. Call after batched put(..., commit=False) calls."""
         await self._db.commit()
 
     # --- Creation cache ---
@@ -92,9 +98,10 @@ class CacheStore:
         return await self.get("pairwise", pair_key(name_a, name_b))
 
     async def put_pairwise(
-        self, name_a: str, name_b: str, value: dict, model_version: str = ""
+        self, name_a: str, name_b: str, value: dict, model_version: str = "",
+        *, commit: bool = True,
     ) -> None:
-        await self.put("pairwise", pair_key(name_a, name_b), value, model_version)
+        await self.put("pairwise", pair_key(name_a, name_b), value, model_version, commit=commit)
 
     async def invalidate_pairwise(self, name: str) -> int:
         """Delete all pairwise entries involving this object name.

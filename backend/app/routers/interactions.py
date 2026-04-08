@@ -46,8 +46,7 @@ async def query_interaction(
     """Evaluate a pairwise interaction on demand (cache miss fallback)."""
     cache = request.app.state.cache
 
-    # Get or create scene cache
-    scenes: dict[str, SceneCache] = getattr(cache, "_scenes", {})
+    scenes: dict = request.app.state.scenes
     scene = scenes.get(session_id)
     if scene is None:
         nh = nothing_happens()

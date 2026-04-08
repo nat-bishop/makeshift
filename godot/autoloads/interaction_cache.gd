@@ -9,7 +9,9 @@ var _stale: Dictionary = {}      # "a::b" -> true
 
 
 func _normalize(name: String) -> String:
-	return name.strip_edges().to_lower()
+	# Must match backend's normalize_name: lowercase, strip, collapse internal whitespace
+	var parts: PackedStringArray = name.strip_edges().to_lower().split(" ", false)
+	return " ".join(parts)
 
 
 func pair_key(a: String, b: String) -> String:
