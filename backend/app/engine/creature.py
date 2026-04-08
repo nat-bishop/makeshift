@@ -44,7 +44,9 @@ STAGE1_STRENGTH = (
 
 STAGE2_ACTION = (
     "{creature} is {movement_verb} {target} and {motivation} it.\n"
-    "On arrival: 0=nothing 1=damage 2=heal 3=add state 4=remove state 5=destroy 6=take"
+    "What does {creature} do to {target}?\n"
+    "0=nothing 1=damage/attack 2=heal/repair/extinguish 3=add state "
+    "4=remove state 5=destroy 6=take/eat/consume"
 )
 
 STAGE3_AMOUNT = "{creature} will {action_verb} {target}. How much (0-100)?"
@@ -173,7 +175,7 @@ async def evaluate_creature_behaviors(
                 STAGE3_STATE.format(
                     creature=creature.name, action_verb=action_verb, target=name
                 ),
-                1, 7, 1,
+                1, 4, 1,
             )
             return (name, state_id)
         return (name, 0)

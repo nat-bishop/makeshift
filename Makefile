@@ -1,4 +1,4 @@
-.PHONY: dev gpu api stop gpu-restart gpu-logs godot play install test lint fix format typecheck check clear-sprites cli-create cli-image cli-sprite cli-status eval eval-physics eval-pairwise eval-creature help
+.PHONY: dev gpu api stop gpu-restart llm-restart gpu-logs godot play install test lint fix format typecheck check clear-sprites clear-cache cli-create cli-image cli-sprite cli-status eval eval-creation eval-pairwise eval-creature eval-judge help
 
 GODOT ?= godot
 VERBOSE ?= 0
@@ -26,6 +26,11 @@ api: ## Start FastAPI dev server (foreground, auto-reload)
 
 gpu-restart: ## Rebuild and restart GPU/LLM Docker containers
 	$(COMPOSE) up -d --build --force-recreate
+
+llm-restart: ## Restart just the LLM container (reads server config from model_profiles.toml)
+	$(eval LLM_NAME := $(shell grep -m1 '^LLM_MODEL=' .env 2>/dev/null | cut -d= -f2))
+	$(eval export $(shell python services/sglang/profile_env.py "$(LLM_NAME)" 2>/dev/null))
+	$(COMPOSE) up -d --no-build --force-recreate llm
 
 gpu-logs: ## Tail GPU/LLM container logs
 	$(COMPOSE) logs -f
@@ -66,6 +71,10 @@ check: lint typecheck test ## Run all checks
 clear-sprites: ## Delete all cached sprites
 	rm -f backend/static/sprites/*.png
 
+clear-cache: ## Delete LLM creation/pairwise cache (cache.db)
+	rm -f backend/data/cache.db
+	@echo "Cache cleared"
+
 PROMPT ?= fire sword
 OUT ?=
 
@@ -84,17 +93,20 @@ cli-status: ## Check health of configured services
 cli-animate: ## Test I2V animation (SPRITE=path.png PROMPT="walk cycle")
 	cd backend && uv run python -m experiments.i2v_animation_test $(if $(SPRITE),--sprite "$(SPRITE)") $(if $(PROMPT),--prompt "$(PROMPT)")
 
-eval: ## Run all quality evals (LLM, costs money)
-	cd backend && uv run pytest evals/ -v -s
+eval: ## Run all quality evals x5 (LLM, costs money)
+	cd backend && uv run python -m evals.run_creation && uv run python -m evals.run_pairwise && uv run python -m evals.run_creature
 
-eval-physics: ## Physics quality eval (LLM, costs money)
-	cd backend && uv run pytest evals/test_physics_quality.py -v -s
+eval-creation: ## Creation quality eval x5 (LLM, costs money)
+	cd backend && uv run python -m evals.run_creation
 
-eval-pairwise: ## Pairwise quality eval (LLM, costs money)
-	cd backend && uv run pytest evals/test_pairwise_quality.py -v -s
+eval-pairwise: ## Pairwise + screening eval x5 (LLM, costs money)
+	cd backend && uv run python -m evals.run_pairwise
 
-eval-creature: ## Creature quality eval (LLM, costs money)
-	cd backend && uv run pytest evals/test_creature_quality.py -v -s
+eval-creature: ## Creature eval x5 (LLM, costs money)
+	cd backend && uv run python -m evals.run_creature
+
+eval-judge: ## All evals x5 + LLM judge (LLM, costs more money)
+	cd backend && uv run python -m evals.run_creation --judge && uv run python -m evals.run_pairwise && uv run python -m evals.run_creature
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'

@@ -14,16 +14,17 @@ from app.cache.store import normalize_name, pair_key
 
 @dataclass
 class PairwiseResult:
-    """Outcome of two objects colliding. 9 fields from 9 parallel LLM calls."""
+    """Outcome of two objects colliding. 6 fields from 6 parallel LLM calls.
 
-    damage_a: int  # 0-100
-    damage_b: int  # 0-100
-    state_change_a: int  # 0=none, 1-7=add State(n), 8-14=remove State(n-7)
+    damage 100 = instant destroy. force_b is signed: negative = pull, positive = push.
+    State encoding: 0=none, 1-4=add State(n), 5-8=remove State(n-4).
+    """
+
+    damage_a: int  # 0-100, 100=destroyed
+    damage_b: int  # 0-100, 100=destroyed
+    state_change_a: int  # 0=none, 1-4=add, 5-8=remove
     state_change_b: int
-    force_b: int  # 0-100 magnitude
-    push_pull: int  # 0=push, 1=pull
-    destroy_a: bool
-    destroy_b: bool
+    force_b: int  # -100 to 100 (negative=pull, positive=push)
     continuous: bool  # False=instant, True=continuous (re-apply on field tick)
 
     def to_dict(self) -> dict:
@@ -33,9 +34,6 @@ class PairwiseResult:
             "state_change_a": self.state_change_a,
             "state_change_b": self.state_change_b,
             "force_b": self.force_b,
-            "push_pull": self.push_pull,
-            "destroy_a": self.destroy_a,
-            "destroy_b": self.destroy_b,
             "continuous": self.continuous,
         }
 
@@ -47,9 +45,6 @@ class PairwiseResult:
             state_change_a=d.get("state_change_a", 0),
             state_change_b=d.get("state_change_b", 0),
             force_b=d.get("force_b", 0),
-            push_pull=d.get("push_pull", 0),
-            destroy_a=d.get("destroy_a", False),
-            destroy_b=d.get("destroy_b", False),
             continuous=d.get("continuous", False),
         )
 
@@ -61,7 +56,7 @@ class CreatureBehavior:
     movement: int  # 0=approach, 1=flee, 2=orbit, 3=ignore
     strength: int  # 0-100
     action: int  # 0=nothing,1=damage,2=heal,3=add_state,4=remove_state,5=destroy,6=take
-    param: int  # damage/heal amount or state_id (1-7)
+    param: int  # damage/heal amount or state_id (1-4)
 
     def to_dict(self) -> dict:
         return {
@@ -83,7 +78,7 @@ class CreatureBehavior:
 
 def nothing_happens() -> PairwiseResult:
     """Safe default for uncached/unscreened collisions."""
-    return PairwiseResult(0, 0, 0, 0, 0, 0, False, False, False)
+    return PairwiseResult(0, 0, 0, 0, 0, False)
 
 
 class SceneCache:

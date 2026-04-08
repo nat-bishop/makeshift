@@ -2,19 +2,18 @@
 
 Two phases:
   1. Screening: 1 call per new object (~5-15 output tokens), identifies interesting pairs
-  2. Full eval: 9 parallel 1-token calls per interesting pair
+  2. Full eval: 6 parallel 1-token calls per interesting pair
 
-9 pairwise questions per pair:
-  damage_a (0-100), damage_b (0-100),
-  state_change_a (0-14), state_change_b (0-14),
-  force_b (0-100), push_pull (0=push/1=pull),
-  destroy_a (0/1), destroy_b (0/1),
+6 pairwise questions per pair:
+  damage_a (0-100, 100=destroyed), damage_b (0-100, 100=destroyed),
+  state_change_a (0-8), state_change_b (0-8),
+  force_b (-100 to 100, negative=pull),
   continuous (0=instant/1=continuous)
 
 State encoding:
   0 = none
-  1-7 = add State(1-7): on_fire, frozen, wet, electrified, poisoned, corroded, molten
-  8-14 = remove State(n-7)
+  1-4 = add State(1-4): burning, frozen, wet, electrified
+  5-8 = remove State(n-4)
 """
 
 from __future__ import annotations
@@ -24,8 +23,8 @@ import re
 
 import structlog
 
-from app.cache.scene import PairwiseResult, SceneCache, nothing_happens
-from app.cache.store import CacheStore, normalize_name, pair_key
+from app.cache.scene import PairwiseResult, SceneCache
+from app.cache.store import CacheStore, normalize_name
 from app.config import settings
 from app.creator.llm import ask_bool, ask_int, ask_text
 from app.models.blueprint import GameObjectBlueprint
@@ -36,7 +35,9 @@ logger = structlog.get_logger()
 
 def _obj_summary(bp: GameObjectBlueprint) -> str:
     """Compact object summary for LLM prompt context (input tokens are free)."""
-    parts = [f"{bp.physics.mass_kg}kg", f"armor {bp.destructibility.armor}"]
+    parts = [f"{bp.physics.mass_kg}kg", f"{bp.physics.height_cm}cm"]
+    if bp.destructibility.armor > 50:
+        parts.append(f"armor {bp.destructibility.armor}")
     if bp.has_field:
         parts.append(f"field {bp.field_range_cm}cm")
     if bp.autonomous:
@@ -93,15 +94,17 @@ async def screen_pairs(
 
 # ---- Full pairwise evaluation ----
 
-# 9 questions. Each produces 1 token.
+# 6 questions. Each produces 1 token.
 PAIR_QUESTIONS: list[tuple[str, str, str]] = [
     (
         "damage_a", "int",
-        "{a_desc} collides with {b_desc}. Damage to {a}? 0-100",
+        "{a_desc} collides with {b_desc}. Damage to {a}? "
+        "0=none 10=scratch 25=moderate 50=severe 75=critical 100=destroyed",
     ),
     (
         "damage_b", "int",
-        "{a_desc} collides with {b_desc}. Damage to {b}? 0-100",
+        "{a_desc} collides with {b_desc}. Damage to {b}? "
+        "0=none 10=scratch 25=moderate 50=severe 75=critical 100=destroyed",
     ),
     (
         "state_change_a", "state",
@@ -112,21 +115,9 @@ PAIR_QUESTIONS: list[tuple[str, str, str]] = [
         "{a_desc} collides with {b_desc}. State change on {b}? " + STATE_CHANGE_PROMPT,
     ),
     (
-        "force_b", "int",
-        "{a_desc} collides with {b_desc}. Force pushing {b}? 0-100",
-    ),
-    (
-        "push_pull", "int01",
+        "force_b", "signed",
         "{a_desc} collides with {b_desc}. "
-        "Force direction on {b}? 0=push 1=pull",
-    ),
-    (
-        "destroy_a", "bool",
-        "{a_desc} collides with {b_desc}. Is {a} destroyed? 0=no 1=yes",
-    ),
-    (
-        "destroy_b", "bool",
-        "{a_desc} collides with {b_desc}. Is {b} destroyed? 0=no 1=yes",
+        "Force on {b}? -100(pull) to 100(push), 0=none",
     ),
     (
         "continuous", "bool",
@@ -142,7 +133,7 @@ async def evaluate_pair(
     cache: CacheStore,
     scene: SceneCache,
 ) -> PairwiseResult:
-    """Full pairwise evaluation: 9 parallel 1-token calls.
+    """Full pairwise evaluation: 6 parallel 1-token calls.
 
     Checks scene cache -> persistent cache -> LLM eval.
     A/B always in lexicographic order by name.
@@ -156,16 +147,19 @@ async def evaluate_pair(
     # 1. Scene cache (hot path, O(1))
     cached = scene.get_pairwise(name_a, name_b)
     if cached is not None:
+        logger.debug("pairwise_scene_cache_hit", pair=f"{name_a}::{name_b}")
         return cached
 
     # 2. Persistent cache
-    db_cached = await cache.get_pairwise(name_a, name_b)
-    if db_cached is not None:
-        result = PairwiseResult.from_dict(db_cached)
-        scene.put_pairwise(name_a, name_b, result)
-        return result
+    if settings.creation_cache_enabled:
+        db_cached = await cache.get_pairwise(name_a, name_b)
+        if db_cached is not None:
+            logger.debug("pairwise_cache_hit", pair=f"{name_a}::{name_b}")
+            result = PairwiseResult.from_dict(db_cached)
+            scene.put_pairwise(name_a, name_b, result)
+            return result
 
-    # 3. LLM evaluation: 9 parallel calls
+    # 3. LLM evaluation: 6 parallel calls
     a_desc, b_desc = _obj_summary(bp_a), _obj_summary(bp_b)
     fmt = {"a": name_a, "b": name_b, "a_desc": a_desc, "b_desc": b_desc}
 
@@ -174,9 +168,9 @@ async def evaluate_pair(
         if qtype == "bool":
             return (field, await ask_bool(prompt))
         elif qtype == "state":
-            return (field, await ask_int(prompt, 0, 14, 0))
-        elif qtype == "int01":
-            return (field, await ask_int(prompt, 0, 1, 0))
+            return (field, await ask_int(prompt, 0, 8, 0))
+        elif qtype == "signed":
+            return (field, await ask_int(prompt, -100, 100, 0))
         else:
             return (field, await ask_int(prompt))
 
@@ -191,18 +185,16 @@ async def evaluate_pair(
         state_change_a=int(raw["state_change_a"]),
         state_change_b=int(raw["state_change_b"]),
         force_b=int(raw["force_b"]),
-        push_pull=int(raw["push_pull"]),
-        destroy_a=bool(raw["destroy_a"]),
-        destroy_b=bool(raw["destroy_b"]),
         continuous=bool(raw["continuous"]),
     )
 
     # Write through to both caches
     scene.put_pairwise(name_a, name_b, result)
-    await cache.put_pairwise(
-        name_a, name_b, result.to_dict(), model_version=settings.llm_model,
-        commit=False,
-    )
+    if settings.creation_cache_enabled:
+        await cache.put_pairwise(
+            name_a, name_b, result.to_dict(), model_version=settings.llm_model,
+            commit=False,
+        )
 
     logger.info(
         "pairwise_eval",
@@ -242,7 +234,7 @@ async def spawn_integration(
 
     evaluated = await asyncio.gather(*evals, return_exceptions=True)
     results: dict[str, PairwiseResult] = {}
-    for name, result in zip(names, evaluated):
+    for name, result in zip(names, evaluated, strict=True):
         if isinstance(result, PairwiseResult):
             results[name] = result
         else:

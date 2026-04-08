@@ -65,8 +65,8 @@ def _clear_connections() -> Iterator[None]:
 
 def test_ws_connect_invalid_session() -> None:
     app = _make_test_app()
-    with TestClient(app) as client, pytest.raises(WebSocketDisconnect):
-        with client.websocket_connect("/ws/nonexistent") as ws:
+    with TestClient(app) as client, pytest.raises(WebSocketDisconnect), \
+            client.websocket_connect("/ws/nonexistent") as ws:
             ws.receive_json()
 
 

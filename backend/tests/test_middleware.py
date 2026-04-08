@@ -1,4 +1,4 @@
-"""Tests for session context middleware: session ID extraction, contextvars, slow-request logging."""
+"""Tests for session context middleware: session ID extraction, contextvars, slow-request log."""
 
 from __future__ import annotations
 

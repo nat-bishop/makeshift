@@ -25,7 +25,8 @@ CREATION_QUESTIONS: list[Question] = [
     Question(
         "mass_kg",
         "How heavy is {name} in kg? "
-        "(ant=0.001, feather=0.01, apple=0.2, sword=1.5, human=70, car=1500)",
+        "(ant=0.001, feather=0.01, ball=0.2, torch=0.5, sword=1.5, chair=8, "
+        "human=70, boulder=100, horse=400, car=1500, mountain=50000)",
         "float", 0.001, 100000, 1.0,
     ),
     Question(
@@ -71,7 +72,8 @@ CREATION_QUESTIONS: list[Question] = [
     Question(
         "has_field",
         "Does {name} affect nearby things without touching "
-        "(heat, cold, magnetism, toxin)? 0=no 1=yes",
+        "(heat, cold, magnetism, toxin)? "
+        "(torch=1, campfire=1, magnet=1, sword=0, rock=0) 0=no 1=yes",
         "bool",
     ),
     Question(
@@ -82,14 +84,16 @@ CREATION_QUESTIONS: list[Question] = [
     ),
     Question(
         "autonomous",
-        "Is {name} a living creature or autonomous being? 0=no 1=yes",
+        "Does {name} move and act on its own? "
+        "(rock=0, sword=0, horse=1, zombie=1, cat=1, robot=1) 0=no 1=yes",
         "bool",
     ),
     # Affordance (1 question — single choice, 1 token)
     Question(
         "affordance",
         "When a player interacts with {name}: "
-        "0=carry it 1=ride it 2=climb it 3=nothing",
+        "0=pick up and carry 1=ride on top 2=climb it 3=can't interact "
+        "(sword=0, horse=1, ladder=2, zombie=3, boulder=3, fire=3)",
         "int", 0, 3, 3,
     ),
 ]

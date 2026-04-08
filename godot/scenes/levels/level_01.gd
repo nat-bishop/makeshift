@@ -35,9 +35,8 @@ func _ready() -> void:
 	InteractionCache.store_pairwise("acid pool", "wooden crate", {
 		"name_a": "acid pool", "name_b": "wooden crate",
 		"damage_a": 0, "damage_b": 15,
-		"state_change_a": 0, "state_change_b": 6,  # corrode
-		"force_b": 0, "push_pull": 0,
-		"destroy_a": false, "destroy_b": false,
+		"state_change_a": 0, "state_change_b": 0,
+		"force_b": 0,
 		"continuous": true,
 	})
 

@@ -8,6 +8,13 @@ top_p = 1.0
 presence_penalty = 0.0
 thinking_disabled = true
 
+# Qwen-recommended non-thinking params: temp=0.7, top_p=0.8, top_k=20, presence_penalty=1.5
+# Our 35B profile uses top_p=0.95 (tuned); new 4B/9B profiles use official top_p=0.8.
+#
+# Server config keys (mem_fraction_static, kv_cache_dtype, mamba_ssm_dtype, context_length)
+# are read by `make llm-restart` and passed to SGLang. They live here so switching models
+# is a single LLM_MODEL change in .env.
+
 ["Qwen/Qwen3.5-35B-A3B-FP8"]
 temperature = 0.7
 top_p = 0.95
@@ -16,6 +23,62 @@ min_p = 0.0
 presence_penalty = 1.5
 repetition_penalty = 1.0
 thinking_disabled = true
+mem_fraction_static = 0.65
+kv_cache_dtype = "fp8_e4m3"
+mamba_ssm_dtype = "bfloat16"
+context_length = 65536
+
+["Qwen/Qwen3.5-4B"]
+temperature = 0.7
+top_p = 0.8
+top_k = 20
+min_p = 0.0
+presence_penalty = 1.5
+repetition_penalty = 1.0
+thinking_disabled = true
+mem_fraction_static = 0.85
+kv_cache_dtype = "fp8_e4m3"
+mamba_ssm_dtype = "bfloat16"
+context_length = 65536
+
+["lovedheart/Qwen3.5-4B-FP8"]
+temperature = 0.7
+top_p = 0.8
+top_k = 20
+min_p = 0.0
+presence_penalty = 1.5
+repetition_penalty = 1.0
+thinking_disabled = true
+mem_fraction_static = 0.85
+kv_cache_dtype = "fp8_e4m3"
+mamba_ssm_dtype = "bfloat16"
+context_length = 65536
+
+["Qwen/Qwen3.5-9B"]
+temperature = 0.7
+top_p = 0.8
+top_k = 20
+min_p = 0.0
+presence_penalty = 1.5
+repetition_penalty = 1.0
+thinking_disabled = true
+mem_fraction_static = 0.75
+kv_cache_dtype = "fp8_e4m3"
+mamba_ssm_dtype = "bfloat16"
+context_length = 65536
+
+["lovedheart/Qwen3.5-9B-FP8"]
+temperature = 0.7
+top_p = 0.8
+top_k = 20
+min_p = 0.0
+presence_penalty = 1.5
+repetition_penalty = 1.0
+thinking_disabled = true
+mem_fraction_static = 0.75
+kv_cache_dtype = "fp8_e4m3"
+mamba_ssm_dtype = "bfloat16"
+context_length = 65536
 
 ["google-gla:gemini-3.1-flash-lite-preview"]
-temperature = 1.0
+temperature = 0.3

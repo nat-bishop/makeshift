@@ -68,12 +68,13 @@ async def create_object(description: str, cache: CacheStore) -> GameObjectBluepr
     t0 = time.monotonic()
 
     # 1. Check creation cache (keyed by description for exact-match reuse)
-    cached = await cache.get_creation(description)
-    if cached is not None:
-        logger.info("creation_cache_hit", description=description)
-        return GameObjectBlueprint(
-            id=str(uuid.uuid4()), description=description, **cached
-        )
+    if settings.creation_cache_enabled:
+        cached = await cache.get_creation(description)
+        if cached is not None:
+            logger.debug("creation_cache_hit", description=description)
+            return GameObjectBlueprint(
+                id=str(uuid.uuid4()), description=description, **cached
+            )
 
     # 2. Generate name (~3 tokens, must run first — other prompts reference it)
     raw_name = await ask_text(
@@ -87,9 +88,11 @@ async def create_object(description: str, cache: CacheStore) -> GameObjectBluepr
         name = description.split()[0].capitalize() if description.strip() else "Object"
 
     # 3. Fan-out: all questions + visual description in parallel
-    tasks: list = [_ask_question(q, name) for q in CREATION_QUESTIONS]
+    # Use player's description (not LLM-generated name) for physics/classification
+    # questions — name is display-only. Avoids drift: "boulder" → "Rock" → 10kg.
+    tasks: list = [_ask_question(q, description) for q in CREATION_QUESTIONS]
     tasks.append(_ask_visual(name, description))
-    tasks.append(_ask_destruction(name))
+    tasks.append(_ask_destruction(description))
 
     results_list = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -134,9 +137,10 @@ async def create_object(description: str, cache: CacheStore) -> GameObjectBluepr
     }
 
     # 5. Cache
-    await cache.put_creation(
-        description, blueprint_data, model_version=settings.llm_model
-    )
+    if settings.creation_cache_enabled:
+        await cache.put_creation(
+            description, blueprint_data, model_version=settings.llm_model
+        )
 
     # 6. Build blueprint
     blueprint = GameObjectBlueprint(

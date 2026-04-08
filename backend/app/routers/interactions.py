@@ -27,14 +27,11 @@ class InteractionRequest(BaseModel):
 
 
 class InteractionResponse(BaseModel):
-    damage_a: int
-    damage_b: int
-    state_change_a: int
+    damage_a: int  # 0-100, 100=destroyed
+    damage_b: int  # 0-100, 100=destroyed
+    state_change_a: int  # 0=none, 1-4=add, 5-8=remove
     state_change_b: int
-    force_b: int
-    push_pull: int
-    destroy_a: bool
-    destroy_b: bool
+    force_b: int  # -100 to 100 (negative=pull)
     continuous: bool
     cached: bool
 

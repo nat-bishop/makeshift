@@ -1,0 +1,535 @@
+# Unified eval fixture — single source of truth for all eval runners.
+#
+# "archetypes" = fixed physics for building blueprints in pairwise/creature/screening tests.
+# "creation_tests" = objects to run through create_object(), with expected output ranges.
+#
+# These are separate concerns: archetypes are known-good inputs,
+# creation_tests define what the LLM should produce.
+
+# ---------------------------------------------------------------------------
+# Archetypes — hand-built physics for pairwise, creature, and screening evals
+# ---------------------------------------------------------------------------
+
+archetypes:
+  # Weapons / Tools
+  iron sword: { mass_kg: 2.0, height_cm: 90, friction: 35, bounce: 15, gravity: 60 }
+  wooden shield: { mass_kg: 2.0, height_cm: 60, friction: 45, bounce: 15, gravity: 55, armor: 40 }
+  wooden sword: { mass_kg: 1.0, height_cm: 80, friction: 45, bounce: 15, gravity: 55 }
+  sword: { mass_kg: 2.0, height_cm: 90, friction: 35, bounce: 15, gravity: 60 }
+
+  # Fire / Heat
+  campfire: { mass_kg: 5.0, height_cm: 60, friction: 30, bounce: 5, gravity: 55, has_field: true, field_range_cm: 150 }
+  fire: { mass_kg: 0.1, height_cm: 40, friction: 5, bounce: 5, gravity: 10, has_field: true, field_range_cm: 100 }
+  lava: { mass_kg: 10.0, height_cm: 20, friction: 30, bounce: 5, gravity: 60, has_field: true, field_range_cm: 120 }
+
+  # Living
+  zombie: { mass_kg: 70.0, height_cm: 175, friction: 40, bounce: 10, gravity: 55, autonomous: true }
+  horse: { mass_kg: 400.0, height_cm: 200, friction: 40, bounce: 10, gravity: 55, autonomous: true }
+  person: { mass_kg: 70.0, height_cm: 175, friction: 40, bounce: 10, gravity: 55, autonomous: true }
+  rabbit: { mass_kg: 2.0, height_cm: 25, friction: 40, bounce: 15, gravity: 50, autonomous: true }
+
+  # Glass / Fragile
+  glass bottle: { mass_kg: 0.4, height_cm: 25, friction: 20, bounce: 10, gravity: 55, armor: 10 }
+  glass window: { mass_kg: 2.0, height_cm: 100, friction: 15, bounce: 10, gravity: 55, armor: 5 }
+  glass vase: { mass_kg: 0.5, height_cm: 30, friction: 20, bounce: 10, gravity: 55, armor: 8 }
+
+  # Rubber / Bouncy
+  bouncy ball: { mass_kg: 0.2, height_cm: 10, friction: 60, bounce: 80, gravity: 50 }
+
+  # Stone
+  mountain: { mass_kg: 50000.0, height_cm: 5000, friction: 50, bounce: 5, gravity: 70 }
+  boulder: { mass_kg: 100.0, height_cm: 80, friction: 40, bounce: 5, gravity: 70, armor: 70 }
+  rock: { mass_kg: 5.0, height_cm: 20, friction: 40, bounce: 10, gravity: 60, armor: 60 }
+  stone wall: { mass_kg: 200.0, height_cm: 300, friction: 50, bounce: 5, gravity: 70, armor: 80, indestructible: true }
+
+  # Ice / Cold
+  ice cube: { mass_kg: 0.3, height_cm: 8, friction: 5, bounce: 20, gravity: 50 }
+  ice: { mass_kg: 2.0, height_cm: 30, friction: 5, bounce: 20, gravity: 52 }
+
+  # Wood
+  wood: { mass_kg: 3.0, height_cm: 50, friction: 50, bounce: 15, gravity: 55 }
+  ladder: { mass_kg: 5.0, height_cm: 200, friction: 45, bounce: 10, gravity: 55 }
+
+  # Light / Airy
+  feather: { mass_kg: 0.005, height_cm: 15, friction: 20, bounce: 10, gravity: 15 }
+  smoke cloud: { mass_kg: 0.01, height_cm: 100, friction: 0, bounce: 0, gravity: 5 }
+  balloon: { mass_kg: 0.05, height_cm: 30, friction: 20, bounce: 40, gravity: 10 }
+
+  # Explosives
+  dynamite: { mass_kg: 0.5, height_cm: 20, friction: 40, bounce: 10, gravity: 55 }
+  bomb: { mass_kg: 3.0, height_cm: 25, friction: 35, bounce: 10, gravity: 60 }
+
+  # Electrical
+  lightning rod: { mass_kg: 3.0, height_cm: 150, friction: 30, bounce: 10, gravity: 60, has_field: true, field_range_cm: 80 }
+  live wire: { mass_kg: 0.5, height_cm: 200, friction: 20, bounce: 5, gravity: 55, has_field: true, field_range_cm: 50 }
+  lightning: { mass_kg: 0.01, height_cm: 500, friction: 0, bounce: 0, gravity: 5, has_field: true, field_range_cm: 200 }
+
+  # Liquids
+  water: { mass_kg: 2.0, height_cm: 10, friction: 5, bounce: 5, gravity: 50 }
+  water puddle: { mass_kg: 1.0, height_cm: 5, friction: 5, bounce: 5, gravity: 50 }
+
+  # Acid
+  acid: { mass_kg: 1.0, height_cm: 10, friction: 5, bounce: 5, gravity: 50, has_field: true, field_range_cm: 30 }
+
+  # Wind
+  fan: { mass_kg: 3.0, height_cm: 40, friction: 30, bounce: 10, gravity: 55, has_field: true, field_range_cm: 200 }
+  tornado: { mass_kg: 0.1, height_cm: 500, friction: 0, bounce: 0, gravity: 10, has_field: true, field_range_cm: 300 }
+
+  # Magnetic
+  magnet: { mass_kg: 1.0, height_cm: 10, friction: 30, bounce: 10, gravity: 55, has_field: true, field_range_cm: 100 }
+
+  # Toxic
+  poison mushroom: { mass_kg: 0.1, height_cm: 10, friction: 40, bounce: 10, gravity: 50, has_field: true, field_range_cm: 20 }
+
+  # Reflective
+  mirror shield: { mass_kg: 3.0, height_cm: 60, friction: 20, bounce: 30, gravity: 55, armor: 50 }
+
+  # Frozen
+  frozen statue: { mass_kg: 50.0, height_cm: 180, friction: 10, bounce: 5, gravity: 65, armor: 20 }
+
+  # Sticky
+  tar pit: { mass_kg: 100.0, height_cm: 30, friction: 90, bounce: 0, gravity: 60, has_field: true, field_range_cm: 100 }
+
+  # Creature eval targets
+  brain: { mass_kg: 1.4, height_cm: 15, friction: 30, bounce: 10, gravity: 50 }
+  burning tree: { mass_kg: 200.0, height_cm: 400, friction: 40, bounce: 5, gravity: 60, has_field: true, field_range_cm: 200 }
+  injured person: { mass_kg: 70.0, height_cm: 175, friction: 40, bounce: 10, gravity: 55, autonomous: true }
+  mouse: { mass_kg: 0.03, height_cm: 5, friction: 30, bounce: 15, gravity: 50, autonomous: true }
+  dog: { mass_kg: 25.0, height_cm: 60, friction: 40, bounce: 10, gravity: 55, autonomous: true }
+  ball of yarn: { mass_kg: 0.1, height_cm: 10, friction: 50, bounce: 30, gravity: 50 }
+  player: { mass_kg: 70.0, height_cm: 175, friction: 40, bounce: 10, gravity: 55, autonomous: true }
+  criminal: { mass_kg: 75.0, height_cm: 180, friction: 40, bounce: 10, gravity: 55, autonomous: true }
+  flower: { mass_kg: 0.05, height_cm: 30, friction: 30, bounce: 10, gravity: 50 }
+  bear: { mass_kg: 300.0, height_cm: 150, friction: 40, bounce: 5, gravity: 60, autonomous: true }
+  garlic: { mass_kg: 0.05, height_cm: 5, friction: 40, bounce: 10, gravity: 50 }
+  wolf: { mass_kg: 40.0, height_cm: 80, friction: 40, bounce: 10, gravity: 55, autonomous: true }
+  lava pool: { mass_kg: 10.0, height_cm: 20, friction: 30, bounce: 5, gravity: 60, has_field: true, field_range_cm: 120 }
+  sheep: { mass_kg: 60.0, height_cm: 100, friction: 40, bounce: 10, gravity: 55, autonomous: true }
+  grass: { mass_kg: 0.1, height_cm: 20, friction: 40, bounce: 5, gravity: 50 }
+
+
+# ---------------------------------------------------------------------------
+# Creation tests — objects to run through create_object() with expected ranges
+# ---------------------------------------------------------------------------
+# Ranges [lo, hi] are binary pass/fail. Exact values (bool, int) are exact match.
+
+creation_tests:
+  - name: iron sword
+    expected:
+      mass_kg: [1.0, 5.0]
+      height_cm: [60, 130]
+      friction: [20, 55]
+      bounce: [5, 30]
+      gravity: [50, 75]
+      autonomous: false
+      affordance: 0
+      indestructible: false
+
+  - name: wooden shield
+    expected:
+      mass_kg: [0.5, 6.0]
+      friction: [30, 65]
+      bounce: [5, 30]
+      gravity: [45, 65]
+      autonomous: false
+
+  - name: campfire
+    expected:
+      gravity: [20, 65]
+      has_field: true
+      autonomous: false
+
+  - name: zombie
+    expected:
+      mass_kg: [30, 120]
+      height_cm: [140, 200]
+      gravity: [40, 65]
+      autonomous: true
+      affordance: 3
+
+  - name: glass bottle
+    expected:
+      mass_kg: [0.1, 2.0]
+      friction: [5, 40]
+      bounce: [0, 25]
+      gravity: [45, 65]
+      autonomous: false
+
+  - name: bouncy ball
+    expected:
+      mass_kg: [0.05, 1.0]
+      bounce: [50, 99]
+      gravity: [40, 60]
+      autonomous: false
+
+  - name: mountain
+    expected:
+      mass_kg: [1000, 100000]
+      gravity: [50, 80]
+      indestructible: true
+      autonomous: false
+
+  - name: ice cube
+    expected:
+      mass_kg: [0.01, 2.0]
+      friction: [0, 20]
+      bounce: [5, 40]
+      gravity: [40, 60]
+
+  - name: horse
+    expected:
+      mass_kg: [100, 800]
+      height_cm: [150, 250]
+      autonomous: true
+      affordance: 1
+
+  - name: ladder
+    expected:
+      mass_kg: [1.0, 15.0]
+      height_cm: [100, 400]
+      autonomous: false
+      affordance: 2
+
+  - name: lava pool
+    expected:
+      mass_kg: [50, 5000]
+      gravity: [40, 75]
+      has_field: true
+      indestructible: true
+
+  - name: feather
+    expected:
+      mass_kg: [0.001, 0.1]
+      gravity: [0, 40]
+      autonomous: false
+
+  - name: boulder
+    expected:
+      mass_kg: [30, 300]
+      gravity: [50, 80]
+      autonomous: false
+
+  - name: smoke cloud
+    expected:
+      mass_kg: [0.001, 0.5]
+      gravity: [0, 30]
+      autonomous: false
+
+  - name: balloon
+    expected:
+      mass_kg: [0.001, 0.5]
+      gravity: [0, 25]
+      bounce: [10, 70]
+      autonomous: false
+
+  - name: dynamite
+    expected:
+      mass_kg: [0.1, 3.0]
+      height_cm: [10, 40]
+      autonomous: false
+      indestructible: false
+
+  - name: torch
+    expected:
+      mass_kg: [0.2, 3.0]
+      has_field: true
+      autonomous: false
+
+  - name: cat
+    expected:
+      mass_kg: [2, 8]
+      height_cm: [15, 50]
+      autonomous: true
+
+  - name: anvil
+    expected:
+      mass_kg: [30, 300]
+      gravity: [55, 85]
+      autonomous: false
+
+  - name: diamond
+    expected:
+      mass_kg: [0.0001, 0.1]
+      armor: [70, 99]
+      autonomous: false
+
+
+# ---------------------------------------------------------------------------
+# Pairwise interaction expectations
+# ---------------------------------------------------------------------------
+# damage ranges: [lo, hi]. State: string or list of acceptable strings.
+# A/B sides follow fixture order; orient_expected() handles eval_pair's sort.
+
+pairs:
+  # Fire / Heat
+  - pair: [fire, wood]
+    expected: { damage_b: [10, 75], state_b: [burning] }
+    note: "fire ignites wood"
+
+  - pair: [fire, ice]
+    expected: { state_b: [remove_frozen, wet] }
+    note: "fire melts ice"
+
+  - pair: [water, fire]
+    expected: { state_b: [remove_burning, wet] }
+    note: "water extinguishes fire"
+
+  - pair: [lava, wood]
+    expected: { damage_b: [50, 100], state_b: [burning] }
+    note: "lava ignites wood — wood burns, doesn't melt"
+
+  - pair: [lava, person]
+    expected: { damage_b: [50, 100] }
+    note: "lava contact is always devastating"
+
+  # Sharp / Impact
+  - pair: [sword, glass bottle]
+    expected: { damage_b: [25, 100] }
+    note: "sharp damages fragile — moderate to obliterated"
+
+  - pair: [boulder, glass bottle]
+    expected: { damage_b: [75, 100] }
+    note: "100kg boulder obliterates glass"
+
+  # Cold / Freeze
+  - pair: [ice cube, lava]
+    expected: { damage_a: [75, 100] }
+    note: "ice cube vaporizes on contact with lava"
+
+  # Explosive
+  - pair: [dynamite, campfire]
+    expected: { damage_a: [30, 100], damage_b: [20, 100] }
+    note: "heat detonates explosive"
+
+  - pair: [bomb, glass window]
+    expected: { damage_b: [40, 100] }
+    note: "explosion destroys fragile"
+
+  # Electricity
+  - pair: [lightning rod, iron sword]
+    expected: { state_b: [electrified] }
+    note: "electric + metallic = electrify"
+
+  - pair: [live wire, water puddle]
+    expected: { state_b: [electrified] }
+    note: "electric + liquid = electrify"
+
+  - pair: [lightning, person]
+    expected: { damage_b: [50, 100] }
+    note: "lightning strike is always severe+"
+
+  # Acid
+  - pair: [acid, glass bottle]
+    expected: { damage_b: [0, 25] }
+    note: "glass is acid-resistant — low or no damage expected"
+
+  - pair: [acid, stone wall]
+    expected: { damage_b: [0, 50] }
+    note: "acid may damage rigid — 0 acceptable for indestructible"
+
+  - pair: [acid, person]
+    expected: { damage_b: [10, 75] }
+    note: "acid burns living"
+
+  # Wind
+  - pair: [fan, feather]
+    expected: { force_b: [25, 100] }
+    note: "wind pushes light"
+
+  - pair: [smoke cloud, tornado]
+    expected: { force_b: [10, 100] }
+    note: "wind disperses gas"
+
+  # Magnetic
+  - pair: [magnet, iron sword]
+    expected: { force_b: [-100, -10] }
+    note: "magnet pulls metal (negative = pull)"
+
+  # Toxic
+  - pair: [poison mushroom, rabbit]
+    expected: { damage_b: [3, 30] }
+    note: "poison damages living"
+
+  # Frozen + fragile
+  - pair: [frozen statue, glass vase]
+    expected: { damage_b: [50, 100] }
+    note: "50kg frozen object shatters thin glass"
+
+  # Sticky
+  - pair: [tar pit, person]
+    expected: { continuous: true }
+    note: "tar slows movement"
+
+  # Boring pairs
+  - pair: [rock, rock]
+    expected: { damage_a: [0, 10], damage_b: [0, 10] }
+    note: "inert pair, minimal"
+
+  - pair: [wooden sword, wooden shield]
+    expected: { damage_b: [0, 20] }
+    note: "wood on wood, minor"
+
+  # Complex unambiguous interactions
+  - pair: [bomb, person]
+    expected: { damage_b: [50, 100] }
+    note: "bomb explosion is always devastating"
+
+  - pair: [tornado, balloon]
+    expected: { force_b: [50, 100] }
+    note: "tornado easily launches a balloon"
+
+  - pair: [fire, balloon]
+    expected: { damage_b: [50, 100] }
+    note: "heat pops balloon"
+
+  - pair: [boulder, wooden sword]
+    expected: { damage_b: [50, 100] }
+    note: "heavy crushes light wood"
+
+  - pair: [lightning, water]
+    expected: { state_b: [electrified] }
+    note: "electricity conducts through water"
+
+  # Obvious damage — sanity checks
+  - pair: [fire, person]
+    expected: { damage_b: [25, 100] }
+    note: "fire burns people"
+
+  - pair: [sword, person]
+    expected: { damage_b: [25, 100] }
+    note: "weapon wounds people"
+
+
+# ---------------------------------------------------------------------------
+# Screening expectations
+# ---------------------------------------------------------------------------
+
+screening:
+  - new_object: fire
+    scene: [wood, rock, water, iron sword]
+    should_include: [wood, water]
+    should_exclude: [rock]
+    note: "fire finds flammable/liquid interesting"
+
+  - new_object: magnet
+    scene: [iron sword, wooden shield, feather, rock]
+    should_include: [iron sword]
+    should_exclude: [feather]
+    note: "magnet finds metallic interesting"
+
+  - new_object: acid
+    scene: [glass bottle, stone wall, boulder, feather]
+    should_include: [glass bottle]
+    note: "acid interacts with breakable/rigid"
+
+  - new_object: tornado
+    scene: [feather, smoke cloud, boulder, rock]
+    should_include: [feather, smoke cloud]
+    note: "wind affects light/gas objects"
+
+  - new_object: zombie
+    scene: [person, rock, wooden sword, campfire]
+    should_include: [person]
+    should_exclude: [rock]
+    note: "zombie is interested in living things"
+
+  - new_object: water
+    scene: [fire, rock, lightning, wood]
+    should_include: [fire, lightning]
+    should_exclude: [rock]
+    note: "water extinguishes fire and conducts electricity"
+
+  - new_object: bomb
+    scene: [glass window, boulder, person, feather]
+    should_include: [glass window, person]
+    note: "explosion destroys fragile and damages living"
+
+
+# ---------------------------------------------------------------------------
+# Creature behavior expectations
+# ---------------------------------------------------------------------------
+# movement: 0=approach, 1=flee, 2=orbit, 3=ignore
+# action: 0=nothing, 1=damage, 2=heal, 3=add_state, 4=remove_state, 5=destroy, 6=take
+# Lists mean any of these values is acceptable.
+
+creatures:
+  - creature: zombie
+    targets:
+      - name: brain
+        expected: { movement: 0, action: [1, 5, 6], strength: { min: 50, max: 100 } }
+        note: "zombie eats brains"
+      - name: fire
+        expected: { movement: 1, strength: { min: 40, max: 100 } }
+        note: "zombie avoids fire"
+
+  - creature: firefighter
+    targets:
+      - name: burning tree
+        expected: { movement: 0 }
+        note: "firefighter approaches fire — action ambiguous, just test movement"
+      - name: injured person
+        expected: { movement: 0, action: 2 }
+        note: "firefighter heals injured"
+
+  - creature: cat
+    targets:
+      - name: mouse
+        expected: { movement: 0, action: [1, 5, 6] }
+        note: "cat hunts mice"
+      - name: dog
+        expected: { movement: 1, strength: { min: 20, max: 100 } }
+        note: "cat runs from dogs"
+      - name: ball of yarn
+        expected: { movement: [0, 2] }
+        note: "cat plays with yarn — approach or orbit"
+
+  - creature: guard dog
+    targets:
+      - name: player
+        expected: { movement: [0, 2] }
+        note: "guard dog patrols near player"
+      - name: criminal
+        expected: { movement: 0, action: 1 }
+        note: "guard dog attacks threats"
+
+  - creature: doctor
+    targets:
+      - name: injured person
+        expected: { movement: 0, action: 2 }
+        note: "doctor heals injured"
+
+  - creature: bee
+    targets:
+      - name: flower
+        expected: { movement: 0 }
+        note: "bee approaches flowers"
+      - name: bear
+        expected: { movement: [0, 1], action: [0, 1] }
+        note: "bee may attack or flee — both reasonable for a lone bee vs bear"
+
+  - creature: vampire
+    targets:
+      - name: garlic
+        expected: { movement: 1 }
+        note: "vampire avoids garlic"
+
+  - creature: chicken
+    targets:
+      - name: wolf
+        expected: { movement: 1, strength: { min: 50, max: 100 } }
+        note: "chicken runs from predators"
+
+  - creature: wolf
+    targets:
+      - name: sheep
+        expected: { movement: 0, action: 1 }
+        note: "wolf hunts sheep — textbook predator-prey"
+
+  - creature: sheep
+    targets:
+      - name: wolf
+        expected: { movement: 1, strength: { min: 50, max: 100 } }
+        note: "sheep flees predators"
+      - name: grass
+        expected: { movement: 0 }
+        note: "sheep approaches food — action ambiguous, just test movement"

@@ -2,6 +2,7 @@ extends Node
 
 ## V3 Collision Resolver: pairwise cache lookup replaces rule engine.
 ## Effects are applied inline — no separate EffectExecutor.
+## 6 fields per pair: damage_a, damage_b, state_change_a/b, force_b (signed), continuous.
 
 const CL = preload("res://scripts/data/collision_layers.gd")
 
@@ -10,9 +11,11 @@ const CASCADE_RADIUS: float = 96.0
 const DEFAULT_STATE_DURATION: float = 10.0
 const FORCE_SCALE: float = 5.0  # Multiply 0-100 LLM force to impulse magnitude
 
+# State encoding: 0=none, 1-4=add, 5-8=remove
 const STATE_NAMES: Array[String] = [
-	"", "on_fire", "frozen", "wet", "electrified", "poisoned", "corroded", "molten"
+	"", "burning", "frozen", "wet", "electrified"
 ]
+const NUM_STATES: int = 4
 
 
 func resolve_collision(body_a: Node, body_b: Node, cascade_depth: int = 0, _resolved: Dictionary = {}, from_field: bool = false) -> void:
@@ -53,37 +56,41 @@ func resolve_collision(body_a: Node, body_b: Node, cascade_depth: int = 0, _reso
 
 	# --- Apply effects inline ---
 
-	# Damage
 	var dmg_a: int = entry.get("damage_a", 0)
 	var dmg_b: int = entry.get("damage_b", 0)
-	if dmg_a > 0:
+	var destroyed_a: bool = dmg_a >= 100
+	var destroyed_b: bool = dmg_b >= 100
+
+	# Damage (apply non-lethal damage first, defer destruction to end)
+	if not destroyed_a and dmg_a > 0:
 		WorldMutations.apply_damage(target_a, float(dmg_a))
-	if dmg_b > 0:
+	if not destroyed_b and dmg_b > 0:
 		WorldMutations.apply_damage(target_b, float(dmg_b))
 
-	# State changes (0=none, 1-7=add, 8-14=remove)
-	_apply_state_change(target_a, entry.get("state_change_a", 0))
-	_apply_state_change(target_b, entry.get("state_change_b", 0))
+	# State changes — skip destroyed objects
+	if not destroyed_a:
+		_apply_state_change(target_a, entry.get("state_change_a", 0))
+	if not destroyed_b:
+		_apply_state_change(target_b, entry.get("state_change_b", 0))
 
-	# Force
+	# Force — skip destroyed objects
 	var force_b: int = entry.get("force_b", 0)
-	if force_b > 0:
-		var push_pull: int = entry.get("push_pull", 0)
+	if force_b != 0 and not destroyed_b:
 		var from_pos: Vector2 = target_a.global_position if target_a is Node2D else Vector2.ZERO
 		var to_pos: Vector2 = target_b.global_position if target_b is Node2D else Vector2.ZERO
 		var force_dir: Vector2 = (to_pos - from_pos).normalized()
-		if push_pull == 1:  # pull
+		var magnitude: float = absf(float(force_b))
+		if force_b < 0:  # pull = toward A
 			force_dir = -force_dir
-		WorldMutations.apply_impulse(target_b, force_dir, float(force_b) * FORCE_SCALE)
-		# Newton's 3rd law: force_a = force_b * mass_b / mass_a
-		if target_a is RigidBody2D and target_b is RigidBody2D:
+		WorldMutations.apply_impulse(target_b, force_dir, magnitude * FORCE_SCALE)
+		if not destroyed_a and target_a is RigidBody2D and target_b is RigidBody2D:
 			var ratio: float = target_b.mass / maxf(target_a.mass, 0.001)
-			WorldMutations.apply_impulse(target_a, -force_dir, float(force_b) * FORCE_SCALE * ratio)
+			WorldMutations.apply_impulse(target_a, -force_dir, magnitude * FORCE_SCALE * ratio)
 
-	# Destruction
-	if entry.get("destroy_a", false):
+	# Destruction last — after all other effects
+	if destroyed_a:
 		_destroy(target_a)
-	if entry.get("destroy_b", false):
+	if destroyed_b:
 		_destroy(target_b)
 
 	# Cascade on state changes
@@ -99,10 +106,10 @@ func resolve_collision(body_a: Node, body_b: Node, cascade_depth: int = 0, _reso
 func _apply_state_change(target: Node, change: int) -> void:
 	if change == 0:
 		return
-	if change >= 1 and change <= 7:
+	if change >= 1 and change <= NUM_STATES:
 		WorldMutations.apply_add_state(target, STATE_NAMES[change], DEFAULT_STATE_DURATION)
-	elif change >= 8 and change <= 14:
-		WorldMutations.apply_remove_state(target, STATE_NAMES[change - 7])
+	elif change >= NUM_STATES + 1 and change <= NUM_STATES * 2:
+		WorldMutations.apply_remove_state(target, STATE_NAMES[change - NUM_STATES])
 
 
 func _destroy(target: Node) -> void:

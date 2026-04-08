@@ -117,29 +117,29 @@ async def test_pairwise_invalidation(cache):
 class TestSceneCache:
     def test_pairwise_put_get(self):
         sc = SceneCache()
-        pr = PairwiseResult(10, 20, 1, 0, 30, 0, False, False, False)
+        pr = PairwiseResult(10, 20, 1, 0, 30, False)
         sc.put_pairwise("fire sword", "wood", pr)
         assert sc.get_pairwise("fire sword", "wood") is pr
 
     def test_pairwise_order_invariant(self):
         sc = SceneCache()
-        pr = PairwiseResult(0, 0, 0, 0, 0, 0, False, False, False)
+        pr = PairwiseResult(0, 0, 0, 0, 0, False)
         sc.put_pairwise("b", "a", pr)
         assert sc.get_pairwise("a", "b") is pr
 
     def test_stale_returns_none(self):
         sc = SceneCache()
-        pr = PairwiseResult(5, 5, 0, 0, 0, 0, False, False, False)
+        pr = PairwiseResult(5, 5, 0, 0, 0, False)
         sc.put_pairwise("x", "y", pr)
         sc.mark_stale("x")
         assert sc.get_pairwise("x", "y") is None
 
     def test_put_clears_stale(self):
         sc = SceneCache()
-        pr = PairwiseResult(5, 5, 0, 0, 0, 0, False, False, False)
+        pr = PairwiseResult(5, 5, 0, 0, 0, False)
         sc.put_pairwise("x", "y", pr)
         sc.mark_stale("x")
-        pr2 = PairwiseResult(10, 10, 0, 0, 0, 0, False, False, False)
+        pr2 = PairwiseResult(10, 10, 0, 0, 0, False)
         sc.put_pairwise("x", "y", pr2)
         assert sc.get_pairwise("x", "y") is pr2
 
@@ -155,7 +155,7 @@ class TestSceneCache:
         assert pr.damage_a == 0
         assert pr.damage_b == 0
         assert not pr.continuous
-        assert not pr.destroy_a
+        assert pr.force_b == 0
 
     def test_mark_creature_stale_for_target(self):
         sc = SceneCache()
@@ -184,9 +184,9 @@ class TestSceneCache:
     def test_all_pairwise_for(self):
         sc = SceneCache()
         sc.put_pairwise(
-            "fire sword", "wood", PairwiseResult(10, 20, 0, 0, 0, 0, False, False, False),
+            "fire sword", "wood", PairwiseResult(10, 20, 0, 0, 0, False),
         )
-        sc.put_pairwise("fire sword", "rock", PairwiseResult(0, 5, 0, 0, 0, 0, False, False, False))
-        sc.put_pairwise("rock", "wood", PairwiseResult(0, 0, 0, 0, 0, 0, False, False, False))
+        sc.put_pairwise("fire sword", "rock", PairwiseResult(0, 5, 0, 0, 0, False))
+        sc.put_pairwise("rock", "wood", PairwiseResult(0, 0, 0, 0, 0, False))
         results = sc.all_pairwise_for("fire sword")
         assert len(results) == 2

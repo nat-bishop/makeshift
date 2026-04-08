@@ -15,6 +15,7 @@ var _state_manager: StateManager = null
 var _object_field: Node = null
 var _creature_behavior: Node = null
 var _state_change_debounce: float = 0.0
+var _base_friction: float = 0.5  # stored at init for WET state restore
 const STATE_CHANGE_DEBOUNCE_TIME: float = 0.5
 
 @onready var physics_applicator: Node = $PhysicsApplicator
@@ -59,6 +60,8 @@ func init_from_blueprint(bp: Dictionary) -> void:
 
 	# Physics from LLM-generated values
 	physics_applicator.apply_from_blueprint(bp)
+	if physics_material_override:
+		_base_friction = physics_material_override.friction
 
 	# Visual
 	object_visual.set_object_id(object_id)
@@ -116,11 +119,12 @@ func get_object_id() -> String:
 
 
 func take_damage(amount: float, _element_color: Color = Color.WHITE) -> void:
-	# Armor reduces incoming damage. Corroded state halves armor effectiveness.
-	var effective_armor: int = armor
-	if _state_manager != null and _state_manager.has_state("corroded"):
-		effective_armor = int(armor * 0.5)
-	var effective: float = amount * (1.0 - effective_armor / 100.0)
+	# Frozen = brittle: 2x incoming damage before armor
+	var incoming: float = amount
+	if _state_manager != null and _state_manager.has_state("frozen"):
+		incoming *= StateVisuals.FROZEN_DAMAGE_MULT
+	# Armor reduces incoming damage
+	var effective: float = incoming * (1.0 - armor / 100.0)
 	current_hp -= int(maxf(effective, 1.0))  # Minimum 1 damage
 
 	object_visual.flash_hit(_element_color)
@@ -154,17 +158,37 @@ func _on_state_added(state: String) -> void:
 		object_visual.spawn_particles(StateVisuals.COLORS[state])
 	# Mark pairwise cache stale
 	InteractionCache.mark_stale(object_name)
-	# Frozen → immobilize
-	if state == "frozen":
-		freeze = true
+	# State-specific mechanics
+	match state:
+		"burning":
+			WorldMutations.apply_dot(self, StateVisuals.BURNING_DOT, StateVisuals.BURNING_TICK,
+				StateVisuals.BURNING_DURATION, StateVisuals.COLORS.get("burning", Color.WHITE), "_dot_burning")
+		"frozen":
+			freeze = true
+		"wet":
+			if physics_material_override:
+				physics_material_override.friction = StateVisuals.WET_FRICTION
+		"electrified":
+			WorldMutations.apply_dot(self, StateVisuals.ELECTRIFIED_DOT, StateVisuals.ELECTRIFIED_TICK,
+				StateVisuals.ELECTRIFIED_DURATION, StateVisuals.COLORS.get("electrified", Color.WHITE), "_dot_electrified")
 
 
 func _on_states_changed(_updated_states: Array) -> void:
 	# Refresh visuals
 	object_visual.refresh_state_visuals(get_states())
+	if _state_manager == null:
+		return
 	# Unfreeze if no longer frozen
-	if _state_manager != null and not _state_manager.has_state("frozen"):
+	if not _state_manager.has_state("frozen"):
 		freeze = false
+	# Stop DOT if state removed
+	if not _state_manager.has_state("burning"):
+		WorldMutations.stop_dot(self, "_dot_burning")
+	if not _state_manager.has_state("electrified"):
+		WorldMutations.stop_dot(self, "_dot_electrified")
+	# Restore friction if no longer wet
+	if not _state_manager.has_state("wet") and physics_material_override:
+		physics_material_override.friction = _base_friction
 	# Debounced backend notification for creature re-evaluation
 	_state_change_debounce = STATE_CHANGE_DEBOUNCE_TIME
 	set_process(true)

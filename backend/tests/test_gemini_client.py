@@ -88,9 +88,11 @@ async def test_generate_image_blocked_response() -> None:
     mock_client = MagicMock()
     mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
 
-    with patch.object(gemini_client, "_get_client", return_value=mock_client):
-        with pytest.raises(ValueError, match="blocked.*SAFETY"):
-            await generate_image("something blocked")
+    with (
+        patch.object(gemini_client, "_get_client", return_value=mock_client),
+        pytest.raises(ValueError, match=r"blocked.*SAFETY"),
+    ):
+        await generate_image("something blocked")
 
 
 async def test_generate_image_no_image_data() -> None:
@@ -104,9 +106,11 @@ async def test_generate_image_no_image_data() -> None:
     mock_client = MagicMock()
     mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
 
-    with patch.object(gemini_client, "_get_client", return_value=mock_client):
-        with pytest.raises(ValueError, match="No image data"):
-            await generate_image("test prompt")
+    with (
+        patch.object(gemini_client, "_get_client", return_value=mock_client),
+        pytest.raises(ValueError, match="No image data"),
+    ):
+        await generate_image("test prompt")
 
 
 async def test_generate_image_api_error() -> None:
@@ -121,6 +125,8 @@ async def test_generate_image_api_error() -> None:
     mock_client = MagicMock()
     mock_client.aio.models.generate_content = AsyncMock(side_effect=api_error)
 
-    with patch.object(gemini_client, "_get_client", return_value=mock_client):
-        with pytest.raises(RuntimeError, match="Gemini API 429"):
-            await generate_image("test prompt")
+    with (
+        patch.object(gemini_client, "_get_client", return_value=mock_client),
+        pytest.raises(RuntimeError, match="Gemini API 429"),
+    ):
+        await generate_image("test prompt")

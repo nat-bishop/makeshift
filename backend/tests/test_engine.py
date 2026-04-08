@@ -1,6 +1,6 @@
 """Tests for V3 pairwise and creature engine."""
 
-from app.cache.scene import CreatureBehavior, PairwiseResult, SceneCache
+from app.cache.scene import CreatureBehavior, PairwiseResult
 from app.engine.creature import compute_utility
 
 
@@ -42,14 +42,13 @@ class TestComputeUtility:
 
 class TestPairwiseResult:
     def test_to_dict_roundtrip(self):
-        pr = PairwiseResult(10, 20, 1, 0, 30, 0, False, True, True)
+        pr = PairwiseResult(10, 20, 1, 0, 30, True)
         d = pr.to_dict()
         pr2 = PairwiseResult.from_dict(d)
         assert pr2.damage_a == 10
         assert pr2.damage_b == 20
         assert pr2.state_change_a == 1
         assert pr2.force_b == 30
-        assert pr2.destroy_b is True
         assert pr2.continuous is True
 
 

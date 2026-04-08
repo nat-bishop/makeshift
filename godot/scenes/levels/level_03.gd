@@ -49,9 +49,8 @@ func _ready() -> void:
 	InteractionCache.store_pairwise("campfire", "wooden box", {
 		"name_a": "campfire", "name_b": "wooden box",
 		"damage_a": 0, "damage_b": 10,
-		"state_change_a": 0, "state_change_b": 1,
-		"force_b": 0, "push_pull": 0,
-		"destroy_a": false, "destroy_b": false,
+		"state_change_a": 0, "state_change_b": 1,  # burning
+		"force_b": 0,
 		"continuous": true,
 	})
 

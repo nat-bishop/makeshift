@@ -1,13 +1,12 @@
 """Tests for V3 blueprint models."""
 
 import pytest
-from pydantic import ValidationError
-
 from app.models.blueprint import (
     Destructibility,
     GameObjectBlueprint,
     PhysicsProperties,
 )
+from pydantic import ValidationError
 
 
 class TestPhysicsProperties:
@@ -80,7 +79,9 @@ class TestGameObjectBlueprint:
             GameObjectBlueprint(
                 id="t", name="", description="x",
                 visual_description="x",
-                physics=PhysicsProperties(mass_kg=1, height_cm=30, friction=50, bounce=10, gravity=50),
+                physics=PhysicsProperties(
+                    mass_kg=1, height_cm=30, friction=50, bounce=10, gravity=50,
+                ),
                 destructibility=Destructibility(),
             )
 
@@ -89,7 +90,9 @@ class TestGameObjectBlueprint:
             GameObjectBlueprint(
                 id="t", name="a very long name indeed", description="x",
                 visual_description="x",
-                physics=PhysicsProperties(mass_kg=1, height_cm=30, friction=50, bounce=10, gravity=50),
+                physics=PhysicsProperties(
+                    mass_kg=1, height_cm=30, friction=50, bounce=10, gravity=50,
+                ),
                 destructibility=Destructibility(),
             )
 
@@ -97,7 +100,9 @@ class TestGameObjectBlueprint:
         with pytest.raises(ValidationError):
             GameObjectBlueprint(
                 id="t", name="x", description="x", visual_description="x",
-                physics=PhysicsProperties(mass_kg=1, height_cm=30, friction=50, bounce=10, gravity=50),
+                physics=PhysicsProperties(
+                    mass_kg=1, height_cm=30, friction=50, bounce=10, gravity=50,
+                ),
                 destructibility=Destructibility(),
                 affordance=5,
             )

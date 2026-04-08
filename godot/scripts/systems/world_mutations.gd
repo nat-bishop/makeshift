@@ -81,35 +81,38 @@ static func _clamp_velocity(body: RigidBody2D) -> void:
 		body.linear_velocity = vel.normalized() * MAX_VELOCITY
 
 
-static func apply_dot(target: Node, damage_per_tick: float, tick_interval: float, duration: float, element_color: Color = Color.WHITE) -> void:
+static func apply_dot(target: Node, damage_per_tick: float, tick_interval: float, duration: float, element_color: Color = Color.WHITE, timer_name: String = "_dot_timer") -> void:
 	if not target.has_method("take_damage"):
 		return
 	if tick_interval <= 0.0 or duration <= 0.0:
 		return
 
-	var existing := target.get_node_or_null("_dot_timer")
-	if existing != null:
-		existing.stop()
-		target.remove_child(existing)
-		existing.queue_free()
+	stop_dot(target, timer_name)
 
 	var timer := Timer.new()
-	timer.name = "_dot_timer"
+	timer.name = timer_name
 	timer.wait_time = tick_interval
 	timer.one_shot = false
 	target.add_child(timer)
 
-	var state := [int(duration / tick_interval)]
+	var ticks_left := [int(duration / tick_interval)]
 	timer.timeout.connect(func():
-		if not is_instance_valid(timer):
+		if not is_instance_valid(timer) or not is_instance_valid(target):
 			return
-		if not is_instance_valid(target):
+		if ticks_left[0] <= 0:
+			timer.stop()
+			target.remove_child(timer)
 			timer.queue_free()
 			return
-		if state[0] <= 0:
-			timer.queue_free()
-			return
-		state[0] -= 1
+		ticks_left[0] -= 1
 		WorldMutations.apply_damage(target, damage_per_tick, element_color)
 	)
 	timer.start()
+
+
+static func stop_dot(target: Node, timer_name: String = "_dot_timer") -> void:
+	var existing := target.get_node_or_null(timer_name)
+	if existing != null:
+		existing.stop()
+		target.remove_child(existing)
+		existing.queue_free()

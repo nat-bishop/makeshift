@@ -2,14 +2,14 @@ class_name StateContradictions
 extends RefCounted
 
 ## Directed state contradictions: adding the key removes all values.
-## e.g. adding "on_fire" removes both "frozen" and "wet",
-## but adding "wet" only removes "on_fire".
+## e.g. adding "burning" removes both "frozen" and "wet",
+## but adding "wet" only removes "burning".
+## "electrified" has no contradictions — can stack with anything.
 
 const REMOVES: Dictionary = {
-	"on_fire": ["frozen", "wet"],
-	"frozen": ["on_fire", "molten"],
-	"wet": ["on_fire"],
-	"molten": ["frozen"],
+	"burning": ["frozen", "wet"],
+	"frozen": ["burning"],
+	"wet": ["burning"],
 }
 
 

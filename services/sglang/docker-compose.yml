@@ -78,13 +78,13 @@ services:
       - --port
       - "5200"
       - --mem-fraction-static
-      - "0.65"
+      - ${LLM_MEM_FRACTION:-0.65}
       - --kv-cache-dtype
-      - fp8_e4m3
+      - ${LLM_KV_CACHE_DTYPE:-fp8_e4m3}
       - --mamba-ssm-dtype
-      - bfloat16
+      - ${LLM_MAMBA_DTYPE:-bfloat16}
       - --context-length
-      - "65536"
+      - ${LLM_CONTEXT_LENGTH:-65536}
       - --tool-call-parser
       - qwen3_coder
       - --reasoning-parser

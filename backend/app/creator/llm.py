@@ -1,20 +1,26 @@
 """Thin LLM call wrappers for V3. All LLM calls go through here.
 
-Uses PydanticAI agents with temperature=0 for deterministic 1-token answers.
-Each ask_* function handles parsing, clamping, and error fallback.
+Uses PydanticAI agents with typed output:
+  - int/float/bool: tool-based structured output (model calls a tool)
+  - str: plain text mode (model responds directly, no tool call)
+Each ask_* function handles clamping and error fallback.
 """
 
 from __future__ import annotations
 
 import structlog
 from pydantic_ai import Agent
-from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.providers.openai import OpenAIProvider
 
 from app.config import settings as _settings
 
 logger = structlog.get_logger()
 
+# One agent per output type — pydantic-ai routes int/float/bool through tool calls,
+# str through plain text. Lazy singletons, cleared via reset_agents().
 _int_agent: Agent[None, int] | None = None
+_float_agent: Agent[None, float] | None = None
 _str_agent: Agent[None, str] | None = None
 
 
@@ -22,11 +28,23 @@ def _build_model():
     """Route to local SGLang (OpenAI-compatible) or cloud API."""
     s = _settings
     if s.local_llm_url:
-        return OpenAIModel(
-            model_name=s.llm_model,
-            base_url=s.local_llm_url,
+        return OpenAIChatModel(
+            s.llm_model,
+            provider=OpenAIProvider(base_url=s.local_llm_url, api_key="unused"),
         )
     return s.llm_model
+
+
+def _base_model_settings() -> dict:
+    """Build model settings with thinking-mode control for local LLMs."""
+    settings: dict = {"temperature": 0.0}
+    if _settings.local_llm_url:
+        settings["extra_body"] = {
+            "chat_template_kwargs": {
+                "enable_thinking": not _settings.local_llm_thinking_disabled,
+            },
+        }
+    return settings
 
 
 def _get_int_agent() -> Agent[None, int]:
@@ -36,9 +54,21 @@ def _get_int_agent() -> Agent[None, int]:
             _build_model(),
             output_type=int,
             retries=2,
-            model_settings={"temperature": 0.0},
+            model_settings=_base_model_settings(),
         )
     return _int_agent
+
+
+def _get_float_agent() -> Agent[None, float]:
+    global _float_agent
+    if _float_agent is None:
+        _float_agent = Agent(
+            _build_model(),
+            output_type=float,
+            retries=2,
+            model_settings=_base_model_settings(),
+        )
+    return _float_agent
 
 
 def _get_str_agent() -> Agent[None, str]:
@@ -48,7 +78,7 @@ def _get_str_agent() -> Agent[None, str]:
             _build_model(),
             output_type=str,
             retries=2,
-            model_settings={"temperature": 0.0},
+            model_settings=_base_model_settings(),
         )
     return _str_agent
 
@@ -66,12 +96,10 @@ async def ask_int(prompt: str, lo: int = 0, hi: int = 100, default: int = 50) ->
 async def ask_float(
     prompt: str, lo: float = 0.001, hi: float = 100000.0, default: float = 1.0
 ) -> float:
-    """Ask a numeric question that may return a decimal (mass in kg). 2-4 tokens."""
+    """Ask a numeric question (e.g. mass in kg). Tool-based structured output."""
     try:
-        result = await _get_str_agent().run(prompt)
-        cleaned = "".join(c for c in result.output.strip() if c in "0123456789.-")
-        val = float(cleaned) if cleaned else default
-        return max(lo, min(hi, val))
+        result = await _get_float_agent().run(prompt)
+        return max(lo, min(hi, result.output))
     except Exception:
         logger.warning("ask_float_failed", prompt=prompt[:80], default=default)
         return default
@@ -89,11 +117,11 @@ async def ask_bool(prompt: str, default: bool = False) -> bool:
 async def ask_text(
     prompt: str, max_tokens: int = 40, default: str = ""
 ) -> str:
-    """Ask a freeform text question. Multi-token output."""
+    """Ask a freeform text question. Plain text mode (no tool call)."""
     try:
-        result = await _get_str_agent().run(
-            prompt, model_settings={"max_tokens": max_tokens}
-        )
+        settings = _base_model_settings()
+        settings["max_tokens"] = max_tokens
+        result = await _get_str_agent().run(prompt, model_settings=settings)
         return result.output.strip() or default
     except Exception:
         logger.warning("ask_text_failed", prompt=prompt[:80])
@@ -102,6 +130,7 @@ async def ask_text(
 
 def reset_agents() -> None:
     """Clear cached agents (for testing or model swap)."""
-    global _int_agent, _str_agent
+    global _int_agent, _float_agent, _str_agent
     _int_agent = None
+    _float_agent = None
     _str_agent = None

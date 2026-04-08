@@ -142,7 +142,7 @@ class TestFalHelpers:
             "app.images.fal_helpers.fal_client.submit_async", new_callable=AsyncMock
         ) as mock_submit:
             mock_submit.return_value = mock_handler
-            with pytest.raises(ValueError, match="No 'images' in fal.ai response"):
+            with pytest.raises(ValueError, match=r"No 'images' in fal\.ai response"):
                 await fal_helpers.submit_and_download(
                     "fal-ai/flux-pro/v1.1",
                     arguments={"prompt": "test"},
@@ -157,7 +157,7 @@ class TestFalHelpers:
             "app.images.fal_helpers.fal_client.submit_async", new_callable=AsyncMock
         ) as mock_submit:
             mock_submit.return_value = mock_handler
-            with pytest.raises(ValueError, match="No 'image' in fal.ai response"):
+            with pytest.raises(ValueError, match=r"No 'image' in fal\.ai response"):
                 await fal_helpers.submit_and_download(
                     "fal-ai/birefnet",
                     arguments={"image_url": "data:image/png;base64,abc"},

@@ -35,12 +35,21 @@ var _speed_modifier: float = 1.0
 var _slow_count: int = 0
 var _pre_slide_velocity: Vector2 = Vector2.ZERO
 var _prev_contacts: Dictionary = {}  # instance_id -> true
+var _game_state_manager: StateManager = null
+var _frozen_input: bool = false  # frozen state disables movement
 @onready var _anim_sprite: AnimatedSprite2D = $AnimatedSprite2D
 
 
 func _ready() -> void:
 	add_to_group("player")
 	add_to_group("living")
+
+	_game_state_manager = StateManager.new()
+	_game_state_manager.name = "GameStateManager"
+	add_child(_game_state_manager)
+	_game_state_manager.init_states("player")
+	_game_state_manager.state_added.connect(_on_game_state_added)
+	_game_state_manager.state_removed.connect(_on_game_state_removed)
 
 	var kick_shape := RectangleShape2D.new()
 	kick_shape.size = Vector2(KICK_RANGE, KICK_HEIGHT)
@@ -76,6 +85,11 @@ func _physics_process(delta: float) -> void:
 func _process_normal_movement(gravity: float, speed: float, delta: float) -> void:
 	if not is_on_floor():
 		velocity.y += gravity * delta
+
+	# Frozen state disables all movement input
+	if _frozen_input:
+		_input_direction = 0.0
+		return
 
 	if Input.is_action_just_pressed("jump") and is_on_floor():
 		velocity.y = JUMP_VELOCITY
@@ -252,7 +266,7 @@ func get_object_name() -> String:
 
 
 func get_states() -> Array:
-	return []
+	return _game_state_manager.get_states() if _game_state_manager != null else []
 
 
 func get_tags() -> Array[String]:
@@ -263,9 +277,37 @@ func get_facing() -> int:
 	return _facing
 
 
-func add_state(_state: String, _duration: float = 0.0) -> void:
-	pass  # Player state effects handled by player-specific logic
+func add_state(state_name: String, duration: float = 0.0) -> void:
+	if _game_state_manager != null:
+		_game_state_manager.add_state(state_name, duration)
 
 
-func remove_state(_state: String) -> void:
-	pass
+func remove_state(state_name: String) -> void:
+	if _game_state_manager != null:
+		_game_state_manager.remove_state(state_name)
+
+
+func _on_game_state_added(state_name: String) -> void:
+	match state_name:
+		"burning":
+			WorldMutations.apply_dot(self, StateVisuals.BURNING_DOT, StateVisuals.BURNING_TICK,
+				StateVisuals.BURNING_DURATION, StateVisuals.COLORS.get("burning", Color.WHITE), "_dot_burning")
+		"frozen":
+			_frozen_input = true
+		"wet":
+			apply_speed_modifier(StateVisuals.WET_SPEED_MULT)
+		"electrified":
+			WorldMutations.apply_dot(self, StateVisuals.ELECTRIFIED_DOT, StateVisuals.ELECTRIFIED_TICK,
+				StateVisuals.ELECTRIFIED_DURATION, StateVisuals.COLORS.get("electrified", Color.WHITE), "_dot_electrified")
+
+
+func _on_game_state_removed(state_name: String) -> void:
+	match state_name:
+		"burning":
+			WorldMutations.stop_dot(self, "_dot_burning")
+		"frozen":
+			_frozen_input = false
+		"wet":
+			clear_speed_modifier()
+		"electrified":
+			WorldMutations.stop_dot(self, "_dot_electrified")

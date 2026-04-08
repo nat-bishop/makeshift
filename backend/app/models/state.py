@@ -1,25 +1,28 @@
-"""V3 interaction states — closed vocabulary of 7 states applied at runtime."""
+"""V3 interaction states — closed vocabulary of 4 states applied at runtime.
+
+Each state has a distinct gameplay mechanic:
+  BURNING: DOT damage, spreads via cascade
+  FROZEN: immobilize + brittle (2x incoming damage)
+  WET: reduces friction, amplifies ELECTRIFIED via re-eval
+  ELECTRIFIED: DOT damage, chains to WET objects via cascade
+"""
 
 from enum import IntEnum
 
 
 class State(IntEnum):
-    ON_FIRE = 1
+    BURNING = 1
     FROZEN = 2
     WET = 3
     ELECTRIFIED = 4
-    POISONED = 5
-    CORRODED = 6
-    MOLTEN = 7
 
 
 # Directed: adding the key state removes all states in its value list.
-# e.g. adding ON_FIRE removes FROZEN and WET, but adding WET only removes ON_FIRE.
+# e.g. adding BURNING removes FROZEN and WET, but adding WET only removes BURNING.
 STATE_REMOVES: dict[State, list[State]] = {
-    State.ON_FIRE: [State.FROZEN, State.WET],
-    State.FROZEN: [State.ON_FIRE, State.MOLTEN],
-    State.WET: [State.ON_FIRE],
-    State.MOLTEN: [State.FROZEN],
+    State.BURNING: [State.FROZEN, State.WET],
+    State.FROZEN: [State.BURNING],
+    State.WET: [State.BURNING],
 }
 
 STATE_NAMES: dict[int, str] = {s.value: s.name.lower() for s in State}
@@ -29,9 +32,9 @@ _ADD_LABELS = {s: s.name.lower().replace("_", " ") for s in State}
 _REMOVE_LABELS = {s: "remove " + s.name.lower().replace("_", " ") for s in State}
 
 STATE_CHANGE_PROMPT = " ".join(
-    [f"0=none"]
+    ["0=none"]
     + [f"{s.value}={_ADD_LABELS[s]}" for s in State]
-    + [f"{s.value + 7}={_REMOVE_LABELS[s]}" for s in State]
+    + [f"{s.value + len(State)}={_REMOVE_LABELS[s]}" for s in State]
 )
 
 STATE_LIST_PROMPT = " ".join(f"{s.value}={_ADD_LABELS[s]}" for s in State)
@@ -43,12 +46,13 @@ def get_contradicted(adding: State, existing: set[State]) -> set[State]:
 
 
 def decode_state_change(code: int) -> tuple[str, State] | None:
-    """Decode a 0-14 state change code.
+    """Decode a 0-8 state change code.
 
-    Returns ("add", State) for 1-7, ("remove", State) for 8-14, None for 0 or invalid.
+    Returns ("add", State) for 1-4, ("remove", State) for 5-8, None for 0 or invalid.
     """
-    if code <= 0 or code > 14:
+    n = len(State)
+    if code <= 0 or code > 2 * n:
         return None
-    if code <= 7:
+    if code <= n:
         return ("add", State(code))
-    return ("remove", State(code - 7))
+    return ("remove", State(code - n))
