@@ -10,9 +10,12 @@ var current_hp: int = 50
 var armor: int = 30
 var affordance: int = 3  # 0=carry 1=mount 2=climb 3=nothing
 var autonomous: bool = false
+var destruction_result_name: String = ""
 var _state_manager: StateManager = null
 var _object_field: Node = null
 var _creature_behavior: Node = null
+var _state_change_debounce: float = 0.0
+const STATE_CHANGE_DEBOUNCE_TIME: float = 0.5
 
 @onready var physics_applicator: Node = $PhysicsApplicator
 @onready var object_visual: Node = $ObjectVisual
@@ -25,6 +28,7 @@ func _ready() -> void:
 	body_entered.connect(_on_body_entered)
 	contact_monitor = true
 	max_contacts_reported = 4
+	set_process(false)
 
 
 func init_from_blueprint(bp: Dictionary) -> void:
@@ -43,6 +47,7 @@ func init_from_blueprint(bp: Dictionary) -> void:
 	# Classification
 	affordance = bp.get("affordance", 3)
 	autonomous = bp.get("autonomous", false)
+	destruction_result_name = bp.get("destruction_result_name", "")
 
 	# State manager (objects are born stateless)
 	_state_manager = StateManager.new()
@@ -122,6 +127,8 @@ func take_damage(amount: float, _element_color: Color = Color.WHITE) -> void:
 
 	if current_hp <= 0:
 		Log.info("GameObject: '%s' destroyed" % object_name)
+		if destruction_result_name != "":
+			Backend.request_destruction_spawn(destruction_result_name, global_position)
 		queue_free()
 
 
@@ -158,8 +165,18 @@ func _on_states_changed(_updated_states: Array) -> void:
 	# Unfreeze if no longer frozen
 	if _state_manager != null and not _state_manager.has_state("frozen"):
 		freeze = false
-	# Notify backend for lazy re-evaluation
-	# Backend.send_state_changed(object_name, get_states())  # wired in Phase 8a
+	# Debounced backend notification for creature re-evaluation
+	_state_change_debounce = STATE_CHANGE_DEBOUNCE_TIME
+	set_process(true)
+
+
+func _process(delta: float) -> void:
+	if _state_change_debounce > 0.0:
+		_state_change_debounce -= delta
+		if _state_change_debounce <= 0.0:
+			_state_change_debounce = 0.0
+			set_process(false)
+			Backend.send_state_changed(object_name, get_states())
 
 
 func get_cascade_neighbors() -> Array:

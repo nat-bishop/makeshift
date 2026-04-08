@@ -118,6 +118,18 @@ class SceneCache:
     ) -> None:
         self._creature[pair_key(creature, target)] = behavior
 
+    def mark_creature_stale_for_target(self, target_name: str) -> list[str]:
+        """Remove all creature behavior entries where target matches.
+
+        Since pair_key sorts lexicographically, the target can be on either side.
+        Returns keys of removed entries.
+        """
+        n = normalize_name(target_name)
+        stale_keys = [k for k in self._creature if n in k.split("::")]
+        for k in stale_keys:
+            del self._creature[k]
+        return stale_keys
+
     def clear_creature(self) -> None:
         self._creature.clear()
 

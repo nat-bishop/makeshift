@@ -66,6 +66,41 @@ async def test_pairwise_cache_order_invariant(cache):
     assert result == value
 
 
+async def test_exists_creation(cache):
+    assert not await cache.exists_creation("fire sword")
+    await cache.put_creation("fire sword", {"mass_kg": 1.5})
+    assert await cache.exists_creation("fire sword")
+    assert await cache.exists_creation("  FIRE  SWORD  ")
+    assert not await cache.exists_creation("ice sword")
+
+
+async def test_exists_pairwise(cache):
+    assert not await cache.exists_pairwise("fire sword", "wood")
+    await cache.put_pairwise("fire sword", "wood", {"damage_b": 10})
+    assert await cache.exists_pairwise("fire sword", "wood")
+    assert await cache.exists_pairwise("wood", "fire sword")
+
+
+async def test_get_all_for_names_empty(cache):
+    result = await cache.get_all_for_names("pairwise", [])
+    assert result == {}
+
+
+async def test_get_all_for_names_full(cache):
+    await cache.put_pairwise("sword", "shield", {"d": 1})
+    await cache.put_pairwise("sword", "rock", {"d": 2})
+    await cache.put_pairwise("shield", "rock", {"d": 3})
+    result = await cache.get_all_for_names("pairwise", ["sword", "shield", "rock"])
+    assert len(result) == 3
+    assert result[pair_key("sword", "shield")] == {"d": 1}
+
+
+async def test_get_all_for_names_partial(cache):
+    await cache.put_pairwise("sword", "shield", {"d": 1})
+    result = await cache.get_all_for_names("pairwise", ["sword", "shield", "rock"])
+    assert len(result) == 1
+
+
 async def test_pairwise_invalidation(cache):
     await cache.put_pairwise("fire sword", "wooden shield", {"d": 1})
     await cache.put_pairwise("fire sword", "rock", {"d": 2})
@@ -123,6 +158,18 @@ class TestSceneCache:
         assert pr.damage_b == 0
         assert not pr.continuous
         assert not pr.destroy_a
+
+    def test_mark_creature_stale_for_target(self):
+        sc = SceneCache()
+        sc.put_creature("zombie", "sword", CreatureBehavior(0, 90, 1, 20))
+        sc.put_creature("zombie", "rock", CreatureBehavior(2, 50, 0, 0))
+        sc.put_creature("cat", "sword", CreatureBehavior(1, 80, 0, 0))
+        # Mark sword stale — zombie->sword and cat->sword should be removed
+        removed = sc.mark_creature_stale_for_target("sword")
+        assert len(removed) == 2
+        assert sc.get_creature("zombie", "sword") is None
+        assert sc.get_creature("cat", "sword") is None
+        assert sc.get_creature("zombie", "rock") is not None
 
     def test_all_pairwise_for(self):
         sc = SceneCache()

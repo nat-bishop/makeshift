@@ -28,6 +28,7 @@ async def _init_db() -> aiosqlite.Connection:
         session_id TEXT NOT NULL, object_id TEXT NOT NULL,
         blueprint_json TEXT NOT NULL, x REAL NOT NULL DEFAULT 0.0,
         y REAL NOT NULL DEFAULT 0.0, durability REAL NOT NULL DEFAULT 0.0,
+        states_json TEXT NOT NULL DEFAULT '[]',
         PRIMARY KEY (session_id, object_id),
         FOREIGN KEY (session_id) REFERENCES sessions(id)
     )""")

@@ -87,6 +87,20 @@ func create_object(description: String) -> Dictionary:
 	return result
 
 
+func request_destruction_spawn(debris_name: String, pos: Vector2) -> void:
+	## Fire-and-forget: create the debris object and spawn it at the death position.
+	## The source object may already be freed by the time this completes.
+	var result: Dictionary = await create_object(debris_name)
+	if result.get("error", false):
+		Log.warn("Backend: Failed to create destruction debris '%s'" % debris_name)
+		return
+	var bp: Dictionary = result.get("blueprint", result)
+	var world_node: Node = get_tree().get_first_node_in_group("world")
+	if world_node and world_node.has_method("spawn_object"):
+		world_node.spawn_object(bp, pos)
+		Log.info("Backend: Spawned destruction debris '%s'" % debris_name)
+
+
 func send_state_changed(object_name: String, active_states: Array) -> void:
 	## Notify backend that an object's states changed (triggers lazy re-eval).
 	if _ws == null or not _ws_connected:

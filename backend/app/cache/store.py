@@ -65,6 +65,14 @@ class CacheStore:
         row = await cur.fetchone()
         return json.loads(row[0]) if row else None
 
+    async def exists(self, cache_type: str, key: str) -> bool:
+        """Lightweight existence check without deserializing value."""
+        cur = await self._db.execute(
+            "SELECT 1 FROM cache WHERE cache_type=? AND cache_key=? LIMIT 1",
+            (cache_type, key),
+        )
+        return (await cur.fetchone()) is not None
+
     async def put(
         self, cache_type: str, key: str, value: dict, model_version: str = "",
         *, commit: bool = True,
@@ -87,6 +95,9 @@ class CacheStore:
     async def get_creation(self, name: str) -> dict | None:
         return await self.get("creation", normalize_name(name))
 
+    async def exists_creation(self, name: str) -> bool:
+        return await self.exists("creation", normalize_name(name))
+
     async def put_creation(
         self, name: str, value: dict, model_version: str = ""
     ) -> None:
@@ -97,11 +108,38 @@ class CacheStore:
     async def get_pairwise(self, name_a: str, name_b: str) -> dict | None:
         return await self.get("pairwise", pair_key(name_a, name_b))
 
+    async def exists_pairwise(self, name_a: str, name_b: str) -> bool:
+        return await self.exists("pairwise", pair_key(name_a, name_b))
+
     async def put_pairwise(
         self, name_a: str, name_b: str, value: dict, model_version: str = "",
         *, commit: bool = True,
     ) -> None:
         await self.put("pairwise", pair_key(name_a, name_b), value, model_version, commit=commit)
+
+    async def get_all_for_names(
+        self, cache_type: str, names: list[str]
+    ) -> dict[str, dict]:
+        """Fetch all cache entries for all N*(N-1)/2 pairs from a list of names."""
+        normalized = sorted({normalize_name(n) for n in names})
+        keys = []
+        for i, a in enumerate(normalized):
+            for b in normalized[i + 1 :]:
+                keys.append(f"{a}::{b}")
+
+        if not keys:
+            return {}
+
+        placeholders = ",".join("?" for _ in keys)
+        cur = await self._db.execute(
+            f"SELECT cache_key, value_json FROM cache "
+            f"WHERE cache_type=? AND cache_key IN ({placeholders})",
+            (cache_type, *keys),
+        )
+        results = {}
+        async for row in cur:
+            results[row[0]] = json.loads(row[1])
+        return results
 
     async def invalidate_pairwise(self, name: str) -> int:
         """Delete all pairwise entries involving this object name.

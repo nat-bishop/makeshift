@@ -52,6 +52,7 @@ class GameObjectBlueprint(BaseModel):
     autonomous: bool = False
     has_field: bool = False
     field_range_cm: int = Field(default=0, ge=0, le=1000)
+    destruction_result_name: str = ""
 
     @field_validator("name")
     @classmethod

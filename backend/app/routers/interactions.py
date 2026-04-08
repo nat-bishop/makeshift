@@ -10,7 +10,7 @@ import structlog
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
-from app.cache.scene import SceneCache, nothing_happens
+from app.cache.scene import nothing_happens
 from app.engine.pairwise import evaluate_pair
 from app.sessions.manager import SessionManager
 
@@ -37,6 +37,23 @@ class InteractionResponse(BaseModel):
     destroy_b: bool
     continuous: bool
     cached: bool
+
+
+@router.get("/scene")
+async def get_scene_pairwise(
+    session_id: str, request: Request
+) -> dict:
+    """Bulk-load all cached pairwise entries for all objects in a session."""
+    cache = request.app.state.cache
+    db = request.app.state.db
+    manager = SessionManager(db)
+    session = await manager.get_session(session_id)
+    if session is None:
+        return {"pairs": {}}
+
+    names = [obj.blueprint.name for obj in session.objects]
+    pairs = await cache.get_all_for_names("pairwise", names)
+    return {"pairs": pairs}
 
 
 @router.post("", response_model=InteractionResponse)

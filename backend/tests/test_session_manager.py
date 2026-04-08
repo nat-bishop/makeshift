@@ -32,6 +32,7 @@ async def _setup_db() -> aiosqlite.Connection:
             x REAL NOT NULL DEFAULT 0.0,
             y REAL NOT NULL DEFAULT 0.0,
             durability REAL NOT NULL DEFAULT 0.0,
+            states_json TEXT NOT NULL DEFAULT '[]',
             PRIMARY KEY (session_id, object_id),
             FOREIGN KEY (session_id) REFERENCES sessions(id)
         )

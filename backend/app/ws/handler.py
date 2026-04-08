@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 import structlog
 from fastapi import WebSocket, WebSocketDisconnect
 
@@ -10,6 +12,9 @@ logger = structlog.get_logger()
 
 # Active connections: session_id → set of WebSocket
 _connections: dict[str, set[WebSocket]] = {}
+
+# Background tasks must be held to prevent GC before completion
+_background_tasks: set[asyncio.Task[None]] = set()
 
 
 async def websocket_handler(websocket: WebSocket, session_id: str) -> None:
@@ -58,8 +63,11 @@ async def websocket_handler(websocket: WebSocket, session_id: str) -> None:
                         object_name=object_name,
                         states=active_states,
                     )
-                    # Re-evaluation is triggered by the backend when it
-                    # processes state changes. Results pushed via cache_updated.
+                    task = asyncio.create_task(
+                        _handle_state_changed(websocket, session_id, object_name)
+                    )
+                    _background_tasks.add(task)
+                    task.add_done_callback(_background_tasks.discard)
             else:
                 logger.warning("ws_unknown_message_type", msg_type=msg_type)
                 await websocket.send_json(
@@ -108,6 +116,61 @@ async def _handle_request_sprite(
         "object_id": object_id,
         "sprite_url": sprite_url,
     })
+
+
+async def _handle_state_changed(
+    websocket: WebSocket, session_id: str, object_name: str
+) -> None:
+    """Re-evaluate creature behaviors toward a changed object."""
+    from app.cache.scene import SceneCache
+    from app.engine.creature import evaluate_creature_behaviors
+
+    scenes: dict = websocket.app.state.scenes
+    if session_id not in scenes:
+        scenes[session_id] = SceneCache()
+    scene = scenes[session_id]
+
+    # Invalidate stale creature behaviors for this target
+    scene.mark_creature_stale_for_target(object_name)
+
+    db = websocket.app.state.db
+    manager = SessionManager(db)
+    session = await manager.get_session(session_id)
+    if session is None:
+        return
+
+    # Find all autonomous creatures and the changed object's blueprint
+    from app.cache.store import normalize_name
+
+    target_norm = normalize_name(object_name)
+    creatures = []
+    changed_bp = None
+    for obj in session.objects:
+        if normalize_name(obj.blueprint.name) == target_norm:
+            changed_bp = obj.blueprint
+        if obj.blueprint.autonomous:
+            creatures.append(obj.blueprint)
+
+    if changed_bp is None or not creatures:
+        return
+
+    # Re-evaluate each creature's behavior toward the changed object only
+    scene_names = [obj.blueprint.name for obj in session.objects]
+
+    async def _eval_one(creature_bp):
+        behaviors = await evaluate_creature_behaviors(
+            creature_bp, [changed_bp], scene_names, scene
+        )
+        if behaviors:
+            from app.routers.objects import _format_behaviors
+
+            await send_behaviors_ready(
+                session_id, creature_bp.name, _format_behaviors(behaviors)
+            )
+
+    await asyncio.gather(
+        *[_eval_one(c) for c in creatures], return_exceptions=True
+    )
 
 
 async def _broadcast(session_id: str, message: dict[str, object]) -> None:

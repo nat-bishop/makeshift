@@ -1,3 +1,4 @@
+import json
 import uuid
 from collections.abc import Sequence
 from datetime import UTC, datetime
@@ -81,17 +82,22 @@ class SessionManager:
 
         # Load objects
         obj_cursor = await self._db.execute(
-            "SELECT object_id, blueprint_json, x, y, durability FROM objects WHERE session_id = ?",
+            "SELECT object_id, blueprint_json, x, y, durability,"
+            " COALESCE(states_json, '[]') FROM objects WHERE session_id = ?",
             (session_id,),
         )
         objects = []
         async for obj_row in obj_cursor:
-            object_id, blueprint_json, x, y, durability = obj_row
+            object_id, blueprint_json, x, y, durability, states_json = obj_row
             try:
                 blueprint = GameObjectBlueprint.model_validate_json(blueprint_json)
             except Exception:
                 logger.warning("object_json_corrupt", object_id=object_id, session_id=session_id)
                 continue
+            try:
+                states = json.loads(states_json)
+            except Exception:
+                states = []
             objects.append(
                 WorldObject(
                     object_id=object_id,
@@ -99,6 +105,7 @@ class SessionManager:
                     x=x,
                     y=y,
                     hp=durability,
+                    active_states=states,
                 )
             )
 
@@ -144,8 +151,9 @@ class SessionManager:
 
         await self._db.execute(
             """
-            INSERT OR REPLACE INTO objects (session_id, object_id, blueprint_json, x, y, durability)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT OR REPLACE INTO objects
+                (session_id, object_id, blueprint_json, x, y, durability, states_json)
+            VALUES (?, ?, ?, ?, ?, ?, '[]')
             """,
             (session_id, blueprint.id, blueprint_json, x, y, durability),
         )
@@ -163,8 +171,8 @@ class SessionManager:
         await self._db.executemany(
             """
             INSERT OR REPLACE INTO objects
-                (session_id, object_id, blueprint_json, x, y, durability)
-            VALUES (?, ?, ?, ?, ?, ?)
+                (session_id, object_id, blueprint_json, x, y, durability, states_json)
+            VALUES (?, ?, ?, ?, ?, ?, '[]')
             """,
             [
                 (
@@ -206,8 +214,8 @@ class SessionManager:
         await self._db.executemany(
             """
             INSERT OR REPLACE INTO objects
-                (session_id, object_id, blueprint_json, x, y, durability)
-            VALUES (?, ?, ?, ?, ?, ?)
+                (session_id, object_id, blueprint_json, x, y, durability, states_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
             [
                 (
@@ -217,6 +225,7 @@ class SessionManager:
                     obj.x,
                     obj.y,
                     obj.hp,
+                    json.dumps(obj.active_states),
                 )
                 for obj in objects
             ],

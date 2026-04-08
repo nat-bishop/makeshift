@@ -22,6 +22,7 @@ from app.config import settings
 from app.creator.llm import ask_bool, ask_float, ask_int, ask_text
 from app.creator.questions import (
     CREATION_QUESTIONS,
+    DESTRUCTION_PROMPT,
     NAME_PROMPT,
     VISUAL_PROMPT,
     Question,
@@ -50,6 +51,12 @@ async def _ask_visual(name: str, description: str) -> tuple[str, str]:
     prompt = VISUAL_PROMPT.format(name=name, description=description)
     text = await ask_text(prompt, max_tokens=40, default=f"a {description}")
     return ("visual_description", text)
+
+
+async def _ask_destruction(name: str) -> tuple[str, str]:
+    prompt = DESTRUCTION_PROMPT.format(name=name)
+    text = await ask_text(prompt, max_tokens=8, default="nothing")
+    return ("destruction_result_name", text.strip().lower())
 
 
 async def create_object(description: str, cache: CacheStore) -> GameObjectBlueprint:
@@ -82,6 +89,7 @@ async def create_object(description: str, cache: CacheStore) -> GameObjectBluepr
     # 3. Fan-out: all questions + visual description in parallel
     tasks: list = [_ask_question(q, name) for q in CREATION_QUESTIONS]
     tasks.append(_ask_visual(name, description))
+    tasks.append(_ask_destruction(name))
 
     results_list = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -110,6 +118,9 @@ async def create_object(description: str, cache: CacheStore) -> GameObjectBluepr
         indestructible=bool(answers.get("indestructible", False)),
     )
 
+    destruction_raw = str(answers.get("destruction_result_name", "nothing"))
+    destruction_name = "" if destruction_raw in ("nothing", "none", "") else destruction_raw
+
     blueprint_data = {
         "name": name,
         "visual_description": str(answers.get("visual_description", f"a {description}")),
@@ -119,6 +130,7 @@ async def create_object(description: str, cache: CacheStore) -> GameObjectBluepr
         "autonomous": bool(answers.get("autonomous", False)),
         "has_field": has_field,
         "field_range_cm": field_range,
+        "destruction_result_name": destruction_name,
     }
 
     # 5. Cache

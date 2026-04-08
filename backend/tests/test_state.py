@@ -1,6 +1,6 @@
 """Tests for V3 state system."""
 
-from app.models.state import State, STATE_REMOVES, STATE_NAMES, get_contradicted
+from app.models.state import State, STATE_REMOVES, STATE_NAMES, decode_state_change, get_contradicted
 
 
 def test_state_enum_has_7_values():
@@ -58,3 +58,38 @@ def test_state_removes_keys():
     assert set(STATE_REMOVES.keys()) == {
         State.ON_FIRE, State.FROZEN, State.WET, State.MOLTEN,
     }
+
+
+# --- decode_state_change ---
+
+
+def test_decode_zero():
+    assert decode_state_change(0) is None
+
+
+def test_decode_add_all():
+    for s in State:
+        result = decode_state_change(s.value)
+        assert result == ("add", s)
+
+
+def test_decode_remove_all():
+    for s in State:
+        result = decode_state_change(s.value + 7)
+        assert result == ("remove", s)
+
+
+def test_decode_invalid():
+    assert decode_state_change(-1) is None
+    assert decode_state_change(15) is None
+    assert decode_state_change(100) is None
+
+
+def test_decode_contradiction_integration():
+    """Decode ON_FIRE (code 1) then check contradictions."""
+    result = decode_state_change(1)
+    assert result is not None
+    action, state = result
+    assert action == "add"
+    contradicted = get_contradicted(state, {State.FROZEN, State.WET, State.POISONED})
+    assert contradicted == {State.FROZEN, State.WET}

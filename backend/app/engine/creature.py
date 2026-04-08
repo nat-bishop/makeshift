@@ -55,6 +55,21 @@ STAGE3_STATE = (
 )
 
 
+def _collect_gather_results(
+    raw: list[tuple[str, int] | BaseException],
+    event_name: str,
+    creature_name: str,
+) -> dict[str, int]:
+    """Filter gather results, logging exceptions and collecting successful tuples."""
+    results: dict[str, int] = {}
+    for r in raw:
+        if isinstance(r, BaseException):
+            logger.warning(event_name, creature=creature_name, error=str(r))
+        elif isinstance(r, tuple):
+            results[r[0]] = r[1]
+    return results
+
+
 async def evaluate_creature_behaviors(
     creature: GameObjectBlueprint,
     targets: list[GameObjectBlueprint],
@@ -95,7 +110,21 @@ async def evaluate_creature_behaviors(
         )
         return (target.name, movement, strength)
 
-    stage1_results = await asyncio.gather(*[_stage1(t) for t in targets])
+    stage1_raw = await asyncio.gather(
+        *[_stage1(t) for t in targets], return_exceptions=True
+    )
+    stage1_results: list[tuple[str, int, int]] = []
+    for i, r in enumerate(stage1_raw):
+        if isinstance(r, BaseException):
+            logger.warning(
+                "creature_stage1_failed",
+                creature=creature.name,
+                target=targets[i].name,
+                error=str(r),
+            )
+            stage1_results.append((targets[i].name, 3, 0))  # ignore, no strength
+        else:
+            stage1_results.append(r)
 
     # Filter: only approach (0) and orbit (2) continue to stage 2
     approach_orbit = [
@@ -120,10 +149,11 @@ async def evaluate_creature_behaviors(
 
     stage2: dict[str, int] = {}
     if approach_orbit:
-        s2_results = await asyncio.gather(
-            *[_stage2(name, mv) for name, mv, _ in approach_orbit]
+        s2_raw = await asyncio.gather(
+            *[_stage2(name, mv) for name, mv, _ in approach_orbit],
+            return_exceptions=True,
         )
-        stage2 = dict(s2_results)
+        stage2 = _collect_gather_results(s2_raw, "creature_stage2_failed", creature.name)
 
     # --- Stage 3: params (parallel, actions needing them) ---
 
@@ -153,10 +183,11 @@ async def evaluate_creature_behaviors(
     ]
     stage3: dict[str, int] = {}
     if needs_params:
-        s3_results = await asyncio.gather(
-            *[_stage3(n, a) for n, a in needs_params]
+        s3_raw = await asyncio.gather(
+            *[_stage3(n, a) for n, a in needs_params],
+            return_exceptions=True,
         )
-        stage3 = dict(s3_results)
+        stage3 = _collect_gather_results(s3_raw, "creature_stage3_failed", creature.name)
 
     # --- Assemble all behaviors ---
     for name, movement, strength in stage1_results:

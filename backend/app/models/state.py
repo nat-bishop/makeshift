@@ -40,3 +40,15 @@ STATE_LIST_PROMPT = " ".join(f"{s.value}={_ADD_LABELS[s]}" for s in State)
 def get_contradicted(adding: State, existing: set[State]) -> set[State]:
     """Return which existing states must be removed when adding `adding`."""
     return existing & set(STATE_REMOVES.get(adding, []))
+
+
+def decode_state_change(code: int) -> tuple[str, State] | None:
+    """Decode a 0-14 state change code.
+
+    Returns ("add", State) for 1-7, ("remove", State) for 8-14, None for 0 or invalid.
+    """
+    if code <= 0 or code > 14:
+        return None
+    if code <= 7:
+        return ("add", State(code))
+    return ("remove", State(code - 7))

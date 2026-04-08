@@ -85,6 +85,18 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         """
     )
     await db.commit()
+
+    # Migration: add states_json column if not present
+    import sqlite3
+
+    try:
+        await db.execute(
+            "ALTER TABLE objects ADD COLUMN states_json TEXT NOT NULL DEFAULT '[]'"
+        )
+        await db.commit()
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
     app.state.db = db
 
     # Initialize cache.db (creation + pairwise caches, separate from game.db)

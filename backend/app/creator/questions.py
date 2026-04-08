@@ -104,3 +104,10 @@ VISUAL_PROMPT = (
     "Shape, material, colors, distinctive features. "
     "Max 2 sentences. Reply with ONLY the description."
 )
+
+DESTRUCTION_PROMPT = (
+    "When {name} is destroyed, what remains? "
+    "Reply with a 1-3 word name for the debris/remains, or 'nothing' if it vanishes completely. "
+    "Examples: wooden sword -> splinters, glass bottle -> glass shards, balloon -> nothing, "
+    "ice block -> puddle, robot -> scrap metal"
+)
