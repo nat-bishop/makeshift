@@ -30,6 +30,7 @@ func add_state(state: String, duration: float = 0.0) -> void:
 	var is_new: bool = state not in _states
 	if is_new:
 		_states.append(state)
+		Log.debug("StateManager: +%s on '%s' (duration=%.1fs)" % [state, _owner_name, duration])
 		state_added.emit(state)
 		states_changed.emit(_states)
 	if duration > 0.0:
@@ -41,6 +42,7 @@ func remove_state(state: String) -> void:
 	if state not in _states:
 		return
 	_states.erase(state)
+	Log.debug("StateManager: -%s on '%s'" % [state, _owner_name])
 	state_removed.emit(state)
 	states_changed.emit(_states)
 
