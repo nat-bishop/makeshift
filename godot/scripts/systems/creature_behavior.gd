@@ -77,6 +77,12 @@ func _physics_process(delta: float) -> void:
 		return
 	_action_timer = maxf(0.0, _action_timer - delta)
 
+	# Clear debug state (overwritten below if a target is found)
+	current_target_name = ""
+	current_movement = 3
+	current_action = 0
+	current_action_amount = 0
+
 	# Utility scoring using cached node refs (not group iteration)
 	var best_target: Node = null
 	var best_utility: float = -1.0
@@ -105,6 +111,12 @@ func _physics_process(delta: float) -> void:
 
 	if best_target == null:
 		return
+
+	# Expose for debug overlay
+	current_target_name = best_target.get_object_name() if best_target.has_method("get_object_name") else "?"
+	current_movement = best_entry.get("movement", 3)
+	current_action = best_entry.get("action", 0)
+	current_action_amount = best_entry.get("amount", 0)
 
 	var movement: int = best_entry.get("movement", 3)
 	var dir: Vector2 = (best_target.global_position - _owner.global_position).normalized()
