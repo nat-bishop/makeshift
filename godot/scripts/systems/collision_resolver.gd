@@ -25,6 +25,7 @@ func resolve_collision(body_a: Node, body_b: Node, cascade_depth: int = 0, _reso
 		_resolved = {}
 
 	if cascade_depth > MAX_CASCADE_DEPTH:
+		Log.debug("CollisionResolver: Cascade depth exceeded for %s vs %s" % [_get_name(body_a), _get_name(body_b)])
 		return
 
 	var name_a: String = _get_name(body_a)

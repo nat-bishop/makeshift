@@ -96,11 +96,17 @@ async def _background_spawn(
     scenes: dict,
 ) -> None:
     """Background: sprite gen + pairwise screening/eval + creature behavior."""
-    await asyncio.gather(
+    logger.info("background_spawn_start", name=blueprint.name)
+    results = await asyncio.gather(
         _generate_and_deliver_sprite(session_id, blueprint),
         _run_spawn_integration(session_id, blueprint, manager, cache, scenes),
         return_exceptions=True,
     )
+    errors = [r for r in results if isinstance(r, BaseException)]
+    if errors:
+        logger.error("background_spawn_failed", name=blueprint.name, errors=errors)
+    else:
+        logger.info("background_spawn_complete", name=blueprint.name)
 
 
 async def _precache_destruction_debris(debris_name: str, cache: Any) -> None:
