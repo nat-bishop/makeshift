@@ -94,10 +94,10 @@ For every autonomous creature in the scene, evaluate its relationship with each 
 
 ```
 Stage 1 + 1b (parallel, all creature×object pairs, 1 token each):
-  Movement: "Zombie cop sees [fire sword]. 0=approach 1=flee 2=orbit 3=ignore" → 1
+  Movement: "Zombie cop sees [fire sword]. 0=approach 1=flee 2=ignore" → 1
   Strength: "How strongly? 0-100" → 70
 
-Stage 2 (parallel, approaching/orbiting pairs only, 1 token each):
+Stage 2 (parallel, approaching pairs only, 1 token each):
   Action: "Zombie cop is approaching [donut]. On arrival? 0=nothing 1=damage 
            2=heal 3=add state 4=remove state 5=destroy 6=take" → 5 (destroy)
 

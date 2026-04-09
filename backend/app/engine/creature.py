@@ -1,8 +1,8 @@
 """Creature behavior: per-pair staged evaluation.
 
 Three sequential stages, each parallel internally via run_questions():
-  Stage 1: movement (0-3) + priority (0-3) — all creature x object pairs
-  Stage 2: action (0-6) — approach/orbit pairs only (filtered)
+  Stage 1: movement (0-2) + priority (0-3) — all creature x object pairs
+  Stage 2: action (0-6) — approach pairs only (filtered)
   Stage 3: params — actions needing them (filtered)
 
 Scene-local, not persisted to cache.db (prompts include scene inventory
@@ -28,8 +28,8 @@ logger = structlog.get_logger()
 # Actions that need a follow-up parameter call
 ACTIONS_NEEDING_PARAMS = {1, 2, 3, 4}  # damage, heal, add_state, remove_state
 
-# Movement motivation templates for seeding stage 2
-MOVEMENT_MOTIVATION = {0: "wants to interact with", 2: "is cautious about"}
+# Movement motivation template for seeding stage 2
+APPROACH_MOTIVATION = "wants to interact with"
 
 # ---- Question definitions per stage ----
 
@@ -41,10 +41,10 @@ STAGE1_QUESTIONS: list[Question] = [
         "movement",
         "Scene: [{scene_list}].\n"
         "{creature} sees {target}. How does it react?\n"
-        "0=approach 1=flee 2=orbit 3=ignore",
+        "0=approach 1=flee 2=ignore",
         "int",
         0,
-        3,
+        2,
         3,
     ),
     Question(
@@ -144,30 +144,30 @@ async def evaluate_creature_behaviors(
     for t in targets:
         if t.name in stage1:
             r = stage1[t.name]
-            stage1_results.append((t.name, int(r.get("movement", 3)), int(r.get("priority", 0))))
+            stage1_results.append((t.name, int(r.get("movement", 2)), int(r.get("priority", 0))))
         else:
-            stage1_results.append((t.name, 3, 0))  # ignore, no priority
+            stage1_results.append((t.name, 2, 0))  # ignore, no priority
 
-    # Filter: only approach (0) and orbit (2) continue to stage 2
-    approach_orbit = [(name, mv, st) for name, mv, st in stage1_results if mv in (0, 2)]
+    # Filter: only approach (0) continues to stage 2
+    approaching = [(name, mv, st) for name, mv, st in stage1_results if mv == 0]
 
     # --- Stage 2: action (parallel, filtered pairs only) ---
 
     stage2: dict[str, int] = {}
-    if approach_orbit:
-        target_names_s2 = [name for name, _, _ in approach_orbit]
+    if approaching:
+        target_names_s2 = [name for name, _, _ in approaching]
         stage2_raw = await asyncio.gather(
             *[
                 run_questions(
                     [STAGE2_QUESTION],
                     {
                         "creature": creature.name,
-                        "movement_verb": "APPROACHING" if mv == 0 else "ORBITING",
+                        "movement_verb": "APPROACHING",
                         "target": name,
-                        "motivation": MOVEMENT_MOTIVATION[mv],
+                        "motivation": APPROACH_MOTIVATION,
                     },
                 )
-                for name, mv, _ in approach_orbit
+                for name, _, _ in approaching
             ],
             return_exceptions=True,
         )
@@ -222,7 +222,7 @@ async def evaluate_creature_behaviors(
         "creature_eval",
         creature=creature.name,
         pairs=len(stage1_results),
-        approach_orbit=len(approach_orbit),
+        approaching=len(approaching),
         needs_params=len(needs_params),
     )
     return behaviors

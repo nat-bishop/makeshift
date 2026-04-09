@@ -123,12 +123,12 @@ All creature behavior prompts include the scene inventory for context (input is 
 
 ```
 "Scene: [burning tree, bucket of water, trapped person, fire hydrant].
- Firefighter sees [burning tree]. 0=approach 1=flee 2=orbit 3=ignore"
+ Firefighter sees [burning tree]. 0=approach 1=flee 2=ignore"
 → 0 (approach)
 
 "Scene: [burning tree, bucket of water, trapped person, fire hydrant].
- Firefighter sees [stone wall]. 0=approach 1=flee 2=orbit 3=ignore"
-→ 3 (ignore)
+ Firefighter sees [stone wall]. 0=approach 1=flee 2=ignore"
+→ 2 (ignore)
 ```
 
 **Stage 1b — Strength (parallel with stage 1, 1 token each):**
@@ -142,10 +142,10 @@ Same scene context as stage 1 — strength should reflect scene-aware priority, 
 → 90
 ```
 
-**Filter:** only pairs that returned approach (0) or orbit (2) continue. Flee and ignore pairs are complete — the creature never reaches the target so no outcome is needed.
+**Filter:** only pairs that returned approach (0) continue. Flee and ignore pairs are complete — the creature never reaches the target so no outcome is needed.
 
-**Stage 2 — Action (parallel, approaching/orbiting pairs only, 1 token each):**
-Seeded with the movement decision from stage 1. Motivation is templated from the movement type (approach="wants to interact with", orbit="is cautious about") — no extra LLM call needed:
+**Stage 2 — Action (parallel, approaching pairs only, 1 token each):**
+Seeded with the movement decision from stage 1:
 ```
 "Firefighter is APPROACHING [burning tree] and wants to interact with it.
  On arrival: 0=nothing 1=damage 2=heal 3=add state 4=remove state 5=destroy 6=take"
@@ -181,12 +181,12 @@ The sequential filtering also saves work. With 3 creatures × 14 objects = 42 pa
 Zombie cop + donut → approach 90, destroy + heal (eats it)
 Zombie cop + criminal → approach 80, damage
 Zombie cop + fire → flee 70
-Zombie cop + citizen → orbit 40, nothing (patrols)
+Zombie cop + citizen → ignore 40
 Firefighter + burning tree → approach 90, remove burning
 Firefighter + trapped person → approach 80, heal
 Doctor + injured person → approach 90, heal
 Cat + mouse → approach 70, destroy
-Cat + ball of yarn → orbit 50, nothing
+Cat + ball of yarn → approach 50, nothing
 Cat + dog → flee 80
 ```
 

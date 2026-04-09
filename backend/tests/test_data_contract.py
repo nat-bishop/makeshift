@@ -111,7 +111,7 @@ class TestStateMapping:
                     mv = exp["movement"]
                     vals = mv if isinstance(mv, list) else [mv]
                     for v in vals:
-                        assert 0 <= v <= 3, (
+                        assert 0 <= v <= 2, (
                             f"invalid movement {v} for {entry['creature']} vs {t['name']}"
                         )
                 if "action" in exp:
@@ -215,7 +215,7 @@ class TestModelRoundtrips:
 
     def test_creature_behavior_defaults(self) -> None:
         cb = CreatureBehavior.from_dict({})
-        assert cb.movement == 3  # ignore
+        assert cb.movement == 2  # ignore
         assert cb.priority == 0
         assert cb.action == 0
         assert cb.amount == 0
