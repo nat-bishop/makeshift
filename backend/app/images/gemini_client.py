@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import io
+import time
 from typing import Any
 
 import structlog
@@ -47,6 +48,7 @@ async def generate_image(prompt: str) -> bytes:
     from google.genai import errors as genai_errors
     from google.genai import types
 
+    t0 = time.monotonic()
     logger.info("gemini_generate_start", prompt_len=len(prompt))
     client = _get_client()
 
@@ -80,7 +82,11 @@ async def generate_image(prompt: str) -> bytes:
     for part in response.parts:
         if part.inline_data is not None:
             result = _ensure_png(part.inline_data.data)
-            logger.info("gemini_generate_complete", size_bytes=len(result))
+            logger.info(
+                "gemini_generate_complete",
+                size_bytes=len(result),
+                elapsed=f"{time.monotonic() - t0:.2f}s",
+            )
             return result
 
     raise ValueError("No image data in Gemini response")
