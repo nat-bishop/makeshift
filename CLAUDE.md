@@ -136,7 +136,8 @@ Requires `.env` file (see `.env.example`):
 ## Code Conventions
 
 - Python 3.11+, type annotations throughout
-- Ruff line-length: 100. Rule set: E, F, I, W, UP, B, SIM, RUF, PIE, C4, T20
+- Ruff line-length: 100. Rule set: E, F, I, W, UP, B, SIM, RUF, PIE, C4, T20, PERF, TC, FURB, LOG
+- `make check` enforces `ruff format --check` before lint/typecheck/test — run `make format` to fix
 - `creator/agent.py` is exempt from E501 (long system prompt)
 - MyPy with Pydantic plugin; strict on untyped defs and implicit optionals
 - Models use Pydantic v2 with `StrEnum` for enums

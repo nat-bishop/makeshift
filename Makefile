@@ -1,4 +1,4 @@
-.PHONY: dev gpu api stop gpu-restart llm-restart gpu-logs godot play install test lint fix format typecheck check clear-sprites clear-cache cli-create cli-image cli-sprite cli-status eval eval-creation eval-pairwise eval-creature eval-judge bench-tokens help
+.PHONY: dev gpu api stop gpu-restart llm-restart gpu-logs godot play install test lint fix format format-check typecheck check clear-sprites clear-cache cli-create cli-image cli-sprite cli-status eval eval-creation eval-pairwise eval-creature eval-judge bench-tokens help
 
 GODOT ?= godot
 VERBOSE ?= 0
