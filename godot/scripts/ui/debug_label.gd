@@ -12,6 +12,7 @@ const DUR_NAMES: Array[String] = [
 ]
 const AFF_NAMES: Array[String] = ["carry", "mount", "climb", "none"]
 const SURFACE_NAMES: Array[String] = ["slip", "norm", "grip"]
+const SPEED_NAMES: Array[String] = ["slug", "slow", "norm", "fast", "rapid"]
 const MOVE_NAMES: Array[String] = ["approach", "flee", "orbit", "idle"]
 const ACT_NAMES: Array[String] = ["idle", "dmg", "heal", "+state", "-state", "destroy", "take"]
 
@@ -137,7 +138,12 @@ func _refresh() -> void:
 	var aff_str: String = AFF_NAMES[aff] if aff >= 0 and aff < AFF_NAMES.size() else "?"
 	var max_hp: int = _game_object.max_hp if "max_hp" in _game_object else _last_hp
 
-	_stats_label.text = "[%d/%d] %s  %s" % [_last_hp, max_hp, dur_str, aff_str]
+	var stats_text: String = "[%d/%d] %s  %s" % [_last_hp, max_hp, dur_str, aff_str]
+	if _is_creature:
+		var spd: int = _game_object.speed_tier if "speed_tier" in _game_object else 2
+		var spd_str: String = SPEED_NAMES[spd] if spd >= 0 and spd < SPEED_NAMES.size() else "?"
+		stats_text += "  %s" % spd_str
+	_stats_label.text = stats_text
 
 	# State badges
 	for child in _state_container.get_children():

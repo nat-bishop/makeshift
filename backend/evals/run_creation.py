@@ -49,6 +49,7 @@ FIELD_TO_ATTR: dict[str, str] = {
     "bounce": "physics.bounce",
     "gravity": "physics.gravity",
     "durability": "durability",
+    "speed": "speed",
 }
 
 

@@ -13,6 +13,7 @@ from app.creator.question_graph import Gate, Question
 # ---- Reusable gate conditions ----
 
 GATE_HAS_FIELD = Gate("has_field", lambda v: bool(v))
+GATE_AUTONOMOUS = Gate("autonomous", lambda v: bool(v))
 GATE_DESTRUCTIBLE = Gate("durability", lambda v: int(v) < 6)  # type: ignore[call-overload]
 
 # ---- Creation questions ----
@@ -104,6 +105,19 @@ CREATION_QUESTIONS: list[Question] = [
         "Does {name} move and act on its own? "
         "(rock=0, sword=0, horse=1, zombie=1, cat=1, robot=1) 0=no 1=yes",
         "bool",
+    ),
+    # Gated on autonomous=true
+    Question(
+        "speed",
+        "How fast does {name} move? "
+        "0=sluggish(snail, slime, golem) 1=slow(zombie, crab, turtle) "
+        "2=normal(human, dog, horse) 3=fast(wolf, cheetah, hawk) "
+        "4=rapid(hummingbird, dragon)",
+        "int",
+        0,
+        4,
+        2,
+        gates=(GATE_AUTONOMOUS,),
     ),
     Question(
         "affordance",

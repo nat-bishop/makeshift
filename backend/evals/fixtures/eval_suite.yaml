@@ -18,10 +18,10 @@ archetypes:
   campfire: { mass_kg: 5.0, height_cm: 60, bounce: 5, gravity: 55, has_field: true, field_range_cm: 150, surface: 1 }
   fire: { mass_kg: 0.1, height_cm: 40, bounce: 5, gravity: 10, has_field: true, field_range_cm: 100, surface: 0 }
   lava: { mass_kg: 10.0, height_cm: 20, bounce: 5, gravity: 60, has_field: true, field_range_cm: 120, surface: 1 }
-  zombie: { mass_kg: 70.0, height_cm: 175, bounce: 10, gravity: 55, autonomous: true, surface: 1 }
-  horse: { mass_kg: 400.0, height_cm: 200, bounce: 10, gravity: 55, autonomous: true, surface: 1 }
-  person: { mass_kg: 70.0, height_cm: 175, bounce: 10, gravity: 55, autonomous: true, surface: 1 }
-  rabbit: { mass_kg: 2.0, height_cm: 25, bounce: 15, gravity: 50, autonomous: true, surface: 1 }
+  zombie: { mass_kg: 70.0, height_cm: 175, bounce: 10, gravity: 55, autonomous: true, speed: 1, surface: 1 }
+  horse: { mass_kg: 400.0, height_cm: 200, bounce: 10, gravity: 55, autonomous: true, speed: 3, surface: 1 }
+  person: { mass_kg: 70.0, height_cm: 175, bounce: 10, gravity: 55, autonomous: true, speed: 2, surface: 1 }
+  rabbit: { mass_kg: 2.0, height_cm: 25, bounce: 15, gravity: 50, autonomous: true, speed: 3, surface: 1 }
   glass bottle: { mass_kg: 0.4, height_cm: 25, bounce: 10, gravity: 55, surface: 1, durability: 1 }
   glass window: { mass_kg: 2.0, height_cm: 100, bounce: 10, gravity: 55, surface: 0, durability: 1 }
   glass vase: { mass_kg: 0.5, height_cm: 30, bounce: 10, gravity: 55, surface: 1, durability: 1 }
@@ -54,27 +54,27 @@ archetypes:
   tar pit: { mass_kg: 100.0, height_cm: 30, bounce: 0, gravity: 60, has_field: true, field_range_cm: 100, surface: 2 }
   brain: { mass_kg: 1.4, height_cm: 15, bounce: 10, gravity: 50, surface: 1 }
   burning tree: { mass_kg: 200.0, height_cm: 400, bounce: 5, gravity: 60, has_field: true, field_range_cm: 200, surface: 1 }
-  injured person: { mass_kg: 70.0, height_cm: 175, bounce: 10, gravity: 55, autonomous: true, surface: 1 }
-  mouse: { mass_kg: 0.03, height_cm: 5, bounce: 15, gravity: 50, autonomous: true, surface: 1 }
-  dog: { mass_kg: 25.0, height_cm: 60, bounce: 10, gravity: 55, autonomous: true, surface: 1 }
+  injured person: { mass_kg: 70.0, height_cm: 175, bounce: 10, gravity: 55, autonomous: true, speed: 1, surface: 1 }
+  mouse: { mass_kg: 0.03, height_cm: 5, bounce: 15, gravity: 50, autonomous: true, speed: 2, surface: 1 }
+  dog: { mass_kg: 25.0, height_cm: 60, bounce: 10, gravity: 55, autonomous: true, speed: 3, surface: 1 }
   ball of yarn: { mass_kg: 0.1, height_cm: 10, bounce: 30, gravity: 50, surface: 1 }
-  player: { mass_kg: 70.0, height_cm: 175, bounce: 10, gravity: 55, autonomous: true, surface: 1 }
-  criminal: { mass_kg: 75.0, height_cm: 180, bounce: 10, gravity: 55, autonomous: true, surface: 1 }
+  player: { mass_kg: 70.0, height_cm: 175, bounce: 10, gravity: 55, autonomous: true, speed: 2, surface: 1 }
+  criminal: { mass_kg: 75.0, height_cm: 180, bounce: 10, gravity: 55, autonomous: true, speed: 2, surface: 1 }
   flower: { mass_kg: 0.05, height_cm: 30, bounce: 10, gravity: 50, surface: 1 }
-  bear: { mass_kg: 300.0, height_cm: 150, bounce: 5, gravity: 60, autonomous: true, surface: 1 }
+  bear: { mass_kg: 300.0, height_cm: 150, bounce: 5, gravity: 60, autonomous: true, speed: 2, surface: 1 }
   garlic: { mass_kg: 0.05, height_cm: 5, bounce: 10, gravity: 50, surface: 1 }
-  wolf: { mass_kg: 40.0, height_cm: 80, bounce: 10, gravity: 55, autonomous: true, surface: 1 }
+  wolf: { mass_kg: 40.0, height_cm: 80, bounce: 10, gravity: 55, autonomous: true, speed: 3, surface: 1 }
   lava pool: { mass_kg: 10.0, height_cm: 20, bounce: 5, gravity: 60, has_field: true, field_range_cm: 120, surface: 1 }
-  sheep: { mass_kg: 60.0, height_cm: 100, bounce: 10, gravity: 55, autonomous: true, surface: 1 }
+  sheep: { mass_kg: 60.0, height_cm: 100, bounce: 10, gravity: 55, autonomous: true, speed: 1, surface: 1 }
   grass: { mass_kg: 0.1, height_cm: 20, bounce: 5, gravity: 50, surface: 1 }
   car: { mass_kg: 1500.0, height_cm: 150, bounce: 10, gravity: 60, surface: 1, durability: 3 }
   apple: { mass_kg: 0.2, height_cm: 8, bounce: 15, gravity: 50, surface: 1, durability: 0 }
   wooden chair: { mass_kg: 8.0, height_cm: 90, bounce: 10, gravity: 55, surface: 1, durability: 2 }
   tree: { mass_kg: 500.0, height_cm: 800, bounce: 5, gravity: 60, surface: 1, durability: 3 }
-  robot: { mass_kg: 80.0, height_cm: 150, bounce: 10, gravity: 55, autonomous: true, surface: 1, durability: 4 }
+  robot: { mass_kg: 80.0, height_cm: 150, bounce: 10, gravity: 55, autonomous: true, speed: 2, surface: 1, durability: 4 }
   oil puddle: { mass_kg: 1.0, height_cm: 5, bounce: 5, gravity: 50, has_field: true, field_range_cm: 50, surface: 0 }
   pillow: { mass_kg: 0.5, height_cm: 40, bounce: 40, gravity: 50, surface: 1, durability: 0 }
-  dragon: { mass_kg: 2000.0, height_cm: 500, bounce: 5, gravity: 55, autonomous: true, has_field: true, field_range_cm: 300, surface: 1, durability: 4 }
+  dragon: { mass_kg: 2000.0, height_cm: 500, bounce: 5, gravity: 55, autonomous: true, speed: 3, has_field: true, field_range_cm: 300, surface: 1, durability: 4 }
   steak: { mass_kg: 0.3, height_cm: 5, bounce: 10, gravity: 50, surface: 1, durability: 0 }
 
 
@@ -116,6 +116,7 @@ creation_tests:
       height_cm: [140, 200]
       gravity: [40, 65]
       autonomous: true
+      speed: [0, 2]
       affordance: 3
 
   - name: glass bottle
@@ -158,6 +159,7 @@ creation_tests:
       height_cm: [120, 200]
       bounce: [0, 25]
       autonomous: true
+      speed: [2, 4]
       affordance: 1
 
   - name: ladder
@@ -226,6 +228,7 @@ creation_tests:
       height_cm: [15, 40]
       bounce: [0, 25]
       autonomous: true
+      speed: [2, 4]
       affordance: 0
       durability: [1, 2]
 
@@ -292,6 +295,7 @@ creation_tests:
       mass_kg: [10, 500]
       height_cm: [30, 200]
       autonomous: true
+      speed: [1, 3]
       durability: [3, 5]
 
   - name: oil puddle
@@ -312,6 +316,7 @@ creation_tests:
       mass_kg: [200, 10000]
       height_cm: [200, 3000]
       autonomous: true
+      speed: [2, 4]
       has_field: true
       field_range_cm: [50, 500]
       durability: [3, 5]

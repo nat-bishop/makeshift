@@ -121,6 +121,7 @@ def make_blueprint(
         durability=int(data.get("durability", 2)),
         affordance=int(data.get("affordance", 3)),
         autonomous=bool(data.get("autonomous", False)),
+        speed=int(data.get("speed", 2)),
         has_field=bool(data.get("has_field", False)),
         field_range_cm=int(data.get("field_range_cm", 0)),
     )
