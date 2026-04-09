@@ -69,9 +69,10 @@ func init(game_obj: Node) -> void:
 	# Row 3: physics (static)
 	var surf: int = phys.get("surface", 1)
 	var surf_str: String = SURFACE_NAMES[surf] if surf >= 0 and surf < SURFACE_NAMES.size() else "?"
+	var px_size: float = PhysicsComposer.world_sprite_size(height_cm)
 	var phys_label := _make_label(9, COL_DIM)
-	phys_label.text = "%skg %scm  g:%s b:%s  %s" % [
-		phys.get("mass_kg", 1), phys.get("height_cm", 30),
+	phys_label.text = "%skg %dcm(%dpx)  g:%s b:%s  %s" % [
+		phys.get("mass_kg", 1), height_cm, int(px_size),
 		phys.get("gravity", 50), phys.get("bounce", 10), surf_str
 	]
 	vbox.add_child(phys_label)

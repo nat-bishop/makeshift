@@ -25,6 +25,22 @@ if TYPE_CHECKING:
 
 logger = structlog.get_logger()
 
+_AFFORDANCE_LABELS: dict[int, str] = {0: "carryable", 1: "mountable", 2: "climbable"}
+
+
+def _target_context(bp: GameObjectBlueprint) -> str:
+    """Compact target description for creature prompts."""
+    labels: list[str] = []
+    if bp.autonomous:
+        labels.append("creature")
+    aff_label = _AFFORDANCE_LABELS.get(bp.affordance)
+    if aff_label:
+        labels.append(aff_label)
+    if labels:
+        return f"{bp.name} ({', '.join(labels)})"
+    return bp.name
+
+
 # Actions that need a follow-up parameter call
 ACTIONS_NEEDING_PARAMS = {1, 2, 3, 4}  # damage, heal, add_state, remove_state
 
@@ -123,6 +139,7 @@ async def evaluate_creature_behaviors(
 
     scene_list = ", ".join(scene_inventory)
     behaviors: dict[str, CreatureBehavior] = {}
+    bp_by_name: dict[str, GameObjectBlueprint] = {t.name: t for t in targets}
 
     # --- Stage 1: movement + strength (parallel, all pairs) ---
 
@@ -131,7 +148,7 @@ async def evaluate_creature_behaviors(
         *[
             run_questions(
                 STAGE1_QUESTIONS,
-                {"scene_list": scene_list, "creature": creature.name, "target": t.name},
+                {"scene_list": scene_list, "creature": creature.name, "target": _target_context(t)},
             )
             for t in targets
         ],
@@ -163,7 +180,7 @@ async def evaluate_creature_behaviors(
                     {
                         "creature": creature.name,
                         "movement_verb": "APPROACHING" if mv == 0 else "ORBITING",
-                        "target": name,
+                        "target": _target_context(bp_by_name[name]),
                         "motivation": MOVEMENT_MOTIVATION[mv],
                     },
                 )
