@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import time
 
 import httpx
 import structlog
@@ -35,6 +36,7 @@ async def close_http_client() -> None:
 
 async def generate_image(prompt: str) -> bytes:
     """Generate an image via local SGLang FLUX server. Returns raw PNG bytes."""
+    t0 = time.monotonic()
     logger.info("local_generate_start", prompt_len=len(prompt))
     client = _get_http_client()
     resp = await asyncio.wait_for(
@@ -55,5 +57,9 @@ async def generate_image(prompt: str) -> bytes:
     resp.raise_for_status()
     b64_data = resp.json()["data"][0]["b64_json"]
     result = base64.b64decode(b64_data)
-    logger.info("local_generate_complete", size_bytes=len(result))
+    logger.info(
+        "local_generate_complete",
+        size_bytes=len(result),
+        elapsed=f"{time.monotonic() - t0:.2f}s",
+    )
     return result
