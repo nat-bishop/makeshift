@@ -113,6 +113,7 @@ async def ask_bool(prompt: str, default: bool = False) -> bool:
         result = await _get_int_agent().run(prompt)
         return result.output == 1
     except Exception:
+        logger.warning("ask_bool_failed", prompt=prompt[:80], default=default)
         return default
 
 
