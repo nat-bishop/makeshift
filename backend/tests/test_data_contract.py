@@ -237,6 +237,7 @@ class TestModelRoundtrips:
             durability=3,
             affordance=0,
             autonomous=False,
+            speed=2,
             has_field=True,
             field_range_cm=100,
             destruction_result_name="broken sword",
@@ -246,8 +247,26 @@ class TestModelRoundtrips:
         assert bp2.name == bp.name
         assert bp2.physics.mass_kg == bp.physics.mass_kg
         assert bp2.durability == bp.durability
+        assert bp2.speed == bp.speed
         assert bp2.has_field == bp.has_field
         assert bp2.field_range_cm == bp.field_range_cm
+
+    def test_blueprint_missing_speed_defaults(self) -> None:
+        """Old cached blueprints without speed field should default to 2 (normal)."""
+        d = {
+            "id": "test-2",
+            "name": "rock",
+            "description": "a rock",
+            "visual_description": "a grey rock",
+            "physics": {"mass_kg": 5.0, "height_cm": 20, "surface": 1, "bounce": 10, "gravity": 60},
+            "durability": 4,
+            "affordance": 3,
+            "autonomous": False,
+            "has_field": False,
+            "field_range_cm": 0,
+        }
+        bp = GameObjectBlueprint.model_validate(d)
+        assert bp.speed == 2
 
 
 # ---------------------------------------------------------------------------

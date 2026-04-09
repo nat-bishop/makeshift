@@ -11,6 +11,7 @@ var max_hp: int = 50
 var durability: int = 2  # 0=fragile .. 6=indestructible
 var affordance: int = 3  # 0=carry 1=mount 2=climb 3=nothing
 var autonomous: bool = false
+var speed_tier: int = 2  # 0=sluggish .. 4=rapid
 var destruction_result_name: String = ""
 var _state_manager: StateManager = null
 var _object_field: Node = null
@@ -57,6 +58,7 @@ func init_from_blueprint(bp: Dictionary) -> void:
 	# Classification
 	affordance = bp.get("affordance", 3)
 	autonomous = bp.get("autonomous", false)
+	speed_tier = bp.get("speed", 2)
 	destruction_result_name = bp.get("destruction_result_name", "")
 
 	# Surface type for WET restore
@@ -224,7 +226,7 @@ func _create_creature_behavior() -> void:
 	_creature_behavior = cb_script.new()
 	_creature_behavior.name = "CreatureBehavior"
 	add_child(_creature_behavior)
-	_creature_behavior.init_creature(self, object_name)
+	_creature_behavior.init_creature(self, object_name, speed_tier)
 
 
 func _create_object_field(range_cm: int) -> void:

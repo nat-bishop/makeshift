@@ -25,6 +25,24 @@ DURABILITY_NAMES: dict[int, str] = {
     6: "indestructible",
 }
 
+# Speed tier → name mapping (autonomous creatures only).
+SPEED_NAMES: dict[int, str] = {
+    0: "sluggish",
+    1: "slow",
+    2: "normal",
+    3: "fast",
+    4: "rapid",
+}
+
+# Speed tier → movement multiplier applied to base speeds in creature_behavior.gd.
+SPEED_MULTIPLIER: dict[int, float] = {
+    0: 0.3,
+    1: 0.6,
+    2: 1.0,
+    3: 1.5,
+    4: 2.0,
+}
+
 # Surface type → friction coefficient mapping.
 SURFACE_FRICTION: dict[int, float] = {
     0: 0.05,  # slippery (ice, oil)
@@ -84,6 +102,7 @@ class GameObjectBlueprint(BaseModel):
     durability: int = Field(ge=0, le=6, default=2)  # 0=fragile .. 6=indestructible
     affordance: int = Field(ge=0, le=3, default=3)  # 0=carry 1=mount 2=climb 3=nothing
     autonomous: bool = False
+    speed: int = Field(ge=0, le=4, default=2)  # 0=sluggish .. 4=rapid (autonomous only)
     has_field: bool = False
     field_range_cm: int = Field(default=0, ge=0, le=1000)
     destruction_result_name: str = ""

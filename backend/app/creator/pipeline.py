@@ -6,6 +6,7 @@ Flow:
   3. Fan-out: gated parallel calls via run_questions()
      - Unconditional: mass, height, surface, bounce, gravity, has_field,
        durability, autonomous, affordance, visual_description
+     - Gated on autonomous: speed
      - Gated on has_field: field_range_cm
      - Gated on durability<6: destruction_result_name
   4. Parse and assemble GameObjectBlueprint
@@ -90,6 +91,7 @@ async def create_object(description: str, cache: CacheStore) -> GameObjectBluepr
         "durability": int(answers.get("durability", 2)),
         "affordance": int(answers.get("affordance", 3)),
         "autonomous": bool(answers.get("autonomous", False)),
+        "speed": int(answers.get("speed", 2)),
         "has_field": has_field,
         "field_range_cm": field_range,
         "destruction_result_name": destruction_name,

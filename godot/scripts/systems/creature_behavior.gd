@@ -8,9 +8,12 @@ const PERCEPTION_RANGE: float = 500.0
 const CONTACT_RANGE: float = 48.0
 const FLEE_MULTIPLIER: float = 1.5
 const ACTION_COOLDOWN: float = 1.0
-const MOVE_SPEED: float = 200.0
-const FLEE_SPEED: float = 250.0
+const BASE_MOVE_SPEED: float = 200.0
+const BASE_FLEE_SPEED: float = 250.0
 const MAX_ERRORS: int = 5
+
+# Speed tier (0-4) → multiplier (mirrors backend SPEED_MULTIPLIER)
+const SPEED_MULTIPLIERS: Dictionary = {0: 0.3, 1: 0.6, 2: 1.0, 3: 1.5, 4: 2.0}
 
 # Priority level (0-3) → utility weight (mirrors backend PRIORITY_WEIGHTS)
 const PRIORITY_WEIGHTS: Dictionary = {0: 0.0, 1: 25.0, 2: 60.0, 3: 100.0}
@@ -26,10 +29,17 @@ var current_movement: int = 2      # 2=no target
 var current_action: int = 0        # 0=nothing
 var current_action_amount: int = 0
 
+# Per-instance speeds computed from speed tier
+var _move_speed: float = BASE_MOVE_SPEED
+var _flee_speed: float = BASE_FLEE_SPEED
 
-func init_creature(owner: RigidBody2D, creature_name: String) -> void:
+
+func init_creature(owner: RigidBody2D, creature_name: String, speed_tier: int = 2) -> void:
 	_owner = owner
 	_owner_name = creature_name
+	var mult: float = SPEED_MULTIPLIERS.get(speed_tier, 1.0)
+	_move_speed = BASE_MOVE_SPEED * mult
+	_flee_speed = BASE_FLEE_SPEED * mult
 	EventBus.object_created.connect(_on_object_created)
 	call_deferred("_scan_existing")
 
@@ -122,12 +132,12 @@ func _physics_process(delta: float) -> void:
 
 	match movement:
 		0:  # approach
-			WorldMutations.apply_movement_force(_owner, dir, MOVE_SPEED, MOVE_SPEED)
+			WorldMutations.apply_movement_force(_owner, dir, _move_speed, _move_speed)
 			if dist <= CONTACT_RANGE and _action_timer <= 0.0:
 				_execute_action(best_entry, best_target)
 				_action_timer = ACTION_COOLDOWN
 		1:  # flee
-			WorldMutations.apply_movement_force(_owner, -dir, FLEE_SPEED, FLEE_SPEED)
+			WorldMutations.apply_movement_force(_owner, -dir, _flee_speed, _flee_speed)
 
 
 func _execute_action(entry: Dictionary, target: Node) -> void:
