@@ -95,6 +95,7 @@ class SessionManager:
             try:
                 states = json.loads(states_json)
             except Exception:
+                logger.warning("states_json_corrupt", object_id=object_id)
                 states = []
             objects.append(
                 WorldObject(
