@@ -29,7 +29,7 @@ gpu-restart: ## Rebuild and restart GPU/LLM Docker containers
 
 llm-restart: ## Restart just the LLM container (reads server config from model_profiles.toml)
 	$(eval LLM_NAME := $(shell grep -m1 '^LLM_MODEL=' .env 2>/dev/null | cut -d= -f2))
-	$(eval export $(shell python services/sglang/profile_env.py "$(LLM_NAME)" 2>/dev/null))
+	$(foreach v,$(shell python services/sglang/profile_env.py "$(LLM_NAME)" 2>/dev/null),$(eval export $(v)))
 	$(COMPOSE) up -d --no-build --force-recreate llm
 
 gpu-logs: ## Tail GPU/LLM container logs

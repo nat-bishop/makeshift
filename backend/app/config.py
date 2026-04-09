@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     image_model: str = "gemini-3.1-flash-image-preview"
     image_backend: Literal["gemini", "local", "fal"] = "gemini"
     local_image_url: str = "http://127.0.0.1:5100"
-    local_image_model: str = "black-forest-labs/FLUX.2-klein-9B"
+    local_image_model: str = "black-forest-labs/FLUX.2-klein-4B"
     local_image_steps: int = 4
     local_image_guidance_scale: float = 1.0
     fal_image_model: str = "fal-ai/flux/schnell"
