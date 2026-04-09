@@ -49,7 +49,7 @@ uv run pytest -k "test_name"              # single test by name
 
 **Backend** (`backend/app/`): FastAPI application with these key subsystems:
 
-- **Object creation pipeline** (`creator/agent.py` → `routers/objects.py` → `images/pipeline.py` → `ws/handler.py`): Player text → PydanticAI agent (Gemini) → `CreatorOutputSpec` (tags + optional signature behavior) → tag-implied behaviors resolved → immediate JSON response (blueprint + `budget_remaining`) → background sprite generation → WebSocket `sprite_ready` delivery. See [creation-pipeline.md](docs/creation-pipeline.md) for full pipeline flow.
+- **Object creation pipeline** (`creator/agent.py` → `routers/objects.py` → `images/pipeline.py` → `ws/handler.py`): Player text → PydanticAI agent (Gemini) → `CreatorOutputSpec` (tags + optional signature behavior) → tag-implied behaviors resolved → immediate JSON response (blueprint + `budget_remaining`) → background sprite generation → WebSocket `sprite_ready` delivery. 10 parallel LLM calls via `run_questions()` after name resolves; `GATE_DESTRUCTIBLE` gates `destruction_result_name` on `durability < 6`. See [creation-pipeline.md](docs/creation-pipeline.md) for full pipeline flow.
 
 - **Tag system** (`models/tags.py`): 31 `Tag` StrEnum values total (27 LLM-visible + 4 internal-only: HOT, GLOWING, BRITTLE, CORRODED). 7 categories, 16 contradiction pairs enforced via `ModelRetry`. `LLM_VISIBLE_TAGS` frozenset controls what the LLM can pick. `TAG_AUTO_CORRECTIONS` dict silently maps removed/renamed tags (HOT→HEAT_SOURCE, SOLID→RIGID, CORROSIVE→ACIDIC, CONDUCTING→METALLIC, BRITTLE→FROZEN, CORRODED→ACIDIC, etc.). `TAG_DESCRIPTIONS` dict provides one-line gameplay descriptions for hallucinated-tag retry messages. Tags define what objects *are* — physics, interactions, durability, and implied behaviors. Internal-only tags enable emergent behavior: BRITTLE (added by freeze rules, shatterable by HEAVY/SHARP), CORRODED (added by acid rules, vulnerable to physical force), GLOWING (smolder ignition + creature attraction), HOT (heat burn damage). Pruned: SOLID (0 rules, 82% filler), FLEXIBLE (1 rule), SLIPPERY (0% generated). Renamed: CORROSIVE→ACIDIC, CONDUCTING→METALLIC. See [engine-primitives.md](docs/engine-primitives.md) for design rationale.
 
@@ -81,7 +81,7 @@ uv run pytest -k "test_name"              # single test by name
 | `WorldMutations` | `scripts/systems/world_mutations.gd` | Static class — all game-state mutations route through here |
 | `EffectExecutor` | `scripts/systems/effect_executor.gd` | 5 effects: DAMAGE, HEAL, ADD_TAG, REMOVE_TAG, APPLY_FORCE. DAMAGE + tick params = DOT |
 | `PhysicsApplicator` | `scenes/game_object/physics_applicator.gd` | Tag→physics mapping. Mass = `tag_mass × size_mass_multiplier` |
-| `PhysicsComposer` | `scripts/systems/physics_composer.gd` | Size multipliers (tiny 0.25×…huge 10×), `DEFAULT_DAMPING=0.5`, resolves mass/friction/bounce/damping by tag priority |
+| `PhysicsComposer` | `scripts/systems/physics_composer.gd` | Continuous log2 height scaling via `scale_from_height(height_cm)`. Helpers: `world_sprite_size()`, `world_collision_size()`, `size_from_height()` (category label), `get_size_mass_multiplier(height_cm)`. `DEFAULT_DAMPING=0.5`. Resolves mass/surface/bounce/damping by tag priority. `surface: int` (0=slippery, 1=normal, 2=sticky) → `friction` via `SURFACE_FRICTION` computed property |
 | `BehaviorExecutor` | `scripts/systems/behavior_executor.gd` | Per-object autonomous behavior runtime. Disables after 5 consecutive errors |
 | `BehaviorMaps` | `scripts/data/behavior_maps.gd` | Categorical→numeric value mappings for behavior params. `DYNAMIC_TAG_DURATION=10s` (unified duration for cascade/behavior-added tags) |
 | `TagField` | `scripts/systems/tag_field.gd` | Per-object Area2D field: continuous per-frame forces + periodic 2s rule eval |
@@ -109,7 +109,7 @@ uv run pytest -k "test_name"              # single test by name
 
 ## Data Model Flow
 
-`CreatorOutputSpec` (LLM output: name, tags, optional signature behavior, `visual_descriptor`) → tag-implied behaviors resolved via `resolve_implied_behaviors()` → `GameObjectBlueprint` (adds id, computed `starting_durability`, merged behaviors list) → `WorldObject` (adds position, session context) → persisted as `objects` table row. `VisualDescriptor` has 2 fields: `visual_description: str` (free text, used only for sprite prompt) and `size_category: Literal["tiny","small","medium","large","huge"]` (used client-side for world display size). Behaviors stored in existing `blueprint_json` column — no schema changes.
+`CreatorOutputSpec` (LLM output: name, tags, optional signature behavior, `visual_descriptor`) → tag-implied behaviors resolved via `resolve_implied_behaviors()` → `GameObjectBlueprint` (adds id, `durability: int` 0-6 → HP via `DURABILITY_HP`, merged behaviors list) → `WorldObject` (adds position, session context) → persisted as `objects` table row. `VisualDescriptor` has 2 fields: `visual_description: str` (free text, used only for sprite prompt) and `size_category: Literal["tiny","small","medium","large","huge"]` (used client-side for world display size). Behaviors stored in existing `blueprint_json` column — no schema changes.
 
 ## Environment
 
@@ -144,6 +144,9 @@ Requires `.env` file (see `.env.example`):
 
 ## Gotchas
 
+- `durability: int` (0-6) on `GameObjectBlueprint` replaces the old `Destructibility(armor, hp, indestructible)` class. Levels: 0=fragile(5HP), 1=weak(15HP), 2=normal(40HP), 3=tough(80HP), 4=hardy(150HP), 5=fortified(300HP), 6=indestructible(999999HP). No armor/damage-reduction mechanic. HP resolved at runtime via `DURABILITY_HP` dict in `models/blueprint.py`.
+- `PhysicsProperties.surface: int` (0-2) replaces the old `friction: int` (0-100). `friction` is now a computed property: `SURFACE_FRICTION[surface]` → 0.05/0.5/1.0 + adhesion. `surface` is what the LLM and pipeline set; `friction` is what physics reads.
+- `CreatureBehavior.priority` (0-3) replaces the old `strength` (0-100). Levels: 0=ignore, 1=mild(25), 2=moderate(60), 3=driven(100). `PRIORITY_WEIGHTS` dict in `creature.py`; `compute_utility()` maps priority to weight before distance falloff.
 - `pytest-asyncio` is configured with `asyncio_mode = "auto"` — `async def` tests run without extra markers
 - Background `asyncio.Task`s must be held in a module-level `set` to prevent GC before completion (see `routers/objects.py`)
 - Pydantic-AI validators raise `ModelRetry` (not `ValidationError`) to trigger agent retries with feedback

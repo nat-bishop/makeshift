@@ -6,7 +6,6 @@ Run: make eval-creation
 
 from __future__ import annotations
 
-import argparse
 import asyncio
 import io
 import sys
@@ -26,7 +25,15 @@ from app.models.blueprint import GameObjectBlueprint
 from pydantic_evals import Case, Dataset
 from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorContext, LLMJudge
 
-from evals.helpers import SummaryEvaluator, in_range, load_suite, save_report
+from evals.helpers import (
+    SummaryEvaluator,
+    generate_summary,
+    get_run_dir,
+    in_range,
+    load_suite,
+    parse_eval_args,
+    save_report,
+)
 
 logger = structlog.get_logger()
 
@@ -38,12 +45,10 @@ logger = structlog.get_logger()
 FIELD_TO_ATTR: dict[str, str] = {
     "mass_kg": "physics.mass_kg",
     "height_cm": "physics.height_cm",
-    "friction": "physics.friction",
+    "surface": "physics.surface",
     "bounce": "physics.bounce",
     "gravity": "physics.gravity",
-    "armor": "destructibility.armor",
-    "hp": "destructibility.hp",
-    "indestructible": "destructibility.indestructible",
+    "durability": "durability",
 }
 
 
@@ -149,11 +154,8 @@ def build_dataset(use_judge: bool = False) -> Dataset[str, GameObjectBlueprint, 
 
 
 async def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--judge", action="store_true", help="Enable LLM judge",
-    )
-    args = parser.parse_args()
+    args = parse_eval_args(support_judge=True)
+    run_dir = get_run_dir()
 
     reset_agents()
 
@@ -173,10 +175,12 @@ async def main() -> None:
         return await create_object(inputs, cache)
 
     dataset = build_dataset(use_judge=args.judge)
-    report = await dataset.evaluate(task, name="creation", repeat=5)
+    report = await dataset.evaluate(task, name="creation", repeat=args.repeat)
     report.print(include_reasons=True)
-    path = save_report(report)
+    path = save_report(report, run_dir)
+    summary = generate_summary(run_dir)
     print(f"\nResults saved to {path}")
+    print(f"Summary: {summary}")
 
     await cache.close()
 

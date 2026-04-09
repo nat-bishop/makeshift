@@ -8,8 +8,8 @@ const WOODEN_BOX_BLUEPRINT := {
 	"name": "wooden box",
 	"description": "wooden box",
 	"visual_description": "a sturdy wooden storage box, medium sized",
-	"physics": {"mass_kg": 8.0, "height_cm": 60, "friction": 55, "bounce": 10, "gravity": 55},
-	"destructibility": {"armor": 25, "hp": 50, "indestructible": false},
+	"physics": {"mass_kg": 8.0, "height_cm": 60, "surface": 1, "bounce": 10, "gravity": 55},
+	"durability": 2,
 	"affordance": 0,
 	"autonomous": false,
 	"has_field": false,
@@ -21,8 +21,8 @@ const CAMPFIRE_BLUEPRINT := {
 	"name": "campfire",
 	"description": "campfire",
 	"visual_description": "a small campfire with logs and orange flames",
-	"physics": {"mass_kg": 3.0, "height_cm": 40, "friction": 70, "bounce": 5, "gravity": 55},
-	"destructibility": {"armor": 10, "hp": 30, "indestructible": false},
+	"physics": {"mass_kg": 3.0, "height_cm": 40, "surface": 1, "bounce": 5, "gravity": 55},
+	"durability": 1,
 	"affordance": 3,
 	"autonomous": false,
 	"has_field": true,
@@ -31,8 +31,8 @@ const CAMPFIRE_BLUEPRINT := {
 
 const FIRE_PIT_BP := {
 	"name": "fire pit",
-	"physics": {"mass_kg": 50.0, "height_cm": 10, "friction": 50, "bounce": 0, "gravity": 50},
-	"destructibility": {"armor": 99, "hp": 99, "indestructible": true},
+	"physics": {"mass_kg": 50.0, "height_cm": 10, "surface": 1, "bounce": 0, "gravity": 50},
+	"durability": 6,
 }
 
 

@@ -1,7 +1,7 @@
 """Creature behavior: per-pair staged evaluation.
 
 Three sequential stages, each parallel internally via run_questions():
-  Stage 1: movement (0-3) + strength (0-100) — all creature x object pairs
+  Stage 1: movement (0-3) + priority (0-3) — all creature x object pairs
   Stage 2: action (0-6) — approach/orbit pairs only (filtered)
   Stage 3: params — actions needing them (filtered)
 
@@ -30,20 +30,29 @@ MOVEMENT_MOTIVATION = {0: "wants to interact with", 2: "is cautious about"}
 
 # ---- Question definitions per stage ----
 
+# Priority level → utility weight mapping
+PRIORITY_WEIGHTS: dict[int, float] = {0: 0.0, 1: 25.0, 2: 60.0, 3: 100.0}
+
 STAGE1_QUESTIONS: list[Question] = [
     Question(
         "movement",
         "Scene: [{scene_list}].\n"
         "{creature} sees {target}. How does it react?\n"
         "0=approach 1=flee 2=orbit 3=ignore",
-        "int", 0, 3, 3,
+        "int",
+        0,
+        3,
+        3,
     ),
     Question(
-        "strength",
+        "priority",
         "Scene: [{scene_list}].\n"
         "How strongly does {creature} react to {target}?\n"
-        "0=ignores 25=mild interest 50=moderate 75=strong drive 100=absolute priority",
-        "int", 0, 100, 0,
+        "0=ignore 1=mild interest 2=moderate drive 3=high priority",
+        "int",
+        0,
+        3,
+        0,
     ),
 ]
 
@@ -53,20 +62,29 @@ STAGE2_QUESTION = Question(
     "What does {creature} do to {target}?\n"
     "0=nothing 1=damage/attack 2=heal/repair/extinguish 3=add state "
     "4=remove state 5=destroy 6=take/eat/consume",
-    "int", 0, 6, 0,
+    "int",
+    0,
+    6,
+    0,
 )
 
 STAGE3_AMOUNT = Question(
     "amount",
     "{creature} will {action_verb} {target}. How much (0-100)?\n"
     "5=scratch 15=light 30=moderate 50=serious 75=devastating 100=lethal",
-    "int", 0, 100, 20,
+    "int",
+    0,
+    100,
+    20,
 )
 
 STAGE3_STATE = Question(
     "state_id",
     "{creature} will {action_verb} a state on {target}. Which?\n" + STATE_LIST_PROMPT,
-    "int", 1, 4, 1,
+    "int",
+    1,
+    4,
+    1,
 )
 
 
@@ -123,14 +141,12 @@ async def evaluate_creature_behaviors(
     for t in targets:
         if t.name in stage1:
             r = stage1[t.name]
-            stage1_results.append((t.name, int(r.get("movement", 3)), int(r.get("strength", 0))))
+            stage1_results.append((t.name, int(r.get("movement", 3)), int(r.get("priority", 0))))
         else:
-            stage1_results.append((t.name, 3, 0))  # ignore, no strength
+            stage1_results.append((t.name, 3, 0))  # ignore, no priority
 
     # Filter: only approach (0) and orbit (2) continue to stage 2
-    approach_orbit = [
-        (name, mv, st) for name, mv, st in stage1_results if mv in (0, 2)
-    ]
+    approach_orbit = [(name, mv, st) for name, mv, st in stage1_results if mv in (0, 2)]
 
     # --- Stage 2: action (parallel, filtered pairs only) ---
 
@@ -159,9 +175,7 @@ async def evaluate_creature_behaviors(
 
     # --- Stage 3: params (parallel, actions needing them) ---
 
-    needs_params = [
-        (n, a) for n, a in stage2.items() if a in ACTIONS_NEEDING_PARAMS
-    ]
+    needs_params = [(n, a) for n, a in stage2.items() if a in ACTIONS_NEEDING_PARAMS]
     stage3: dict[str, int] = {}
     if needs_params:
         target_names_s3 = [n for n, _ in needs_params]
@@ -179,10 +193,7 @@ async def evaluate_creature_behaviors(
             return {"creature": creature.name, "action_verb": action_verb, "target": name}
 
         stage3_raw = await asyncio.gather(
-            *[
-                run_questions([_s3_question(a)], _s3_context(n, a))
-                for n, a in needs_params
-            ],
+            *[run_questions([_s3_question(a)], _s3_context(n, a)) for n, a in needs_params],
             return_exceptions=True,
         )
         s3_results = _collect_results(
@@ -191,12 +202,12 @@ async def evaluate_creature_behaviors(
         stage3 = {name: dict(r) for name, r in s3_results.items()}
 
     # --- Assemble all behaviors ---
-    for name, movement, strength in stage1_results:
+    for name, movement, priority in stage1_results:
         action = stage2.get(name, 0)
         s3 = stage3.get(name, {})
         behavior = CreatureBehavior(
             movement=movement,
-            strength=strength,
+            priority=priority,
             action=action,
             amount=int(s3.get("amount", 0)),
             state_id=int(s3.get("state_id", 0)),
@@ -215,12 +226,14 @@ async def evaluate_creature_behaviors(
 
 
 def compute_utility(
-    strength: int, distance: float, perception_range: float, is_flee: bool
+    priority: int, distance: float, perception_range: float, is_flee: bool
 ) -> float:
     """Priority resolution: highest utility wins per frame.
 
-    utility = strength / (1 + distance / perception_range)
+    Maps priority (0-3) to weight via PRIORITY_WEIGHTS, then applies
+    distance falloff: utility = weight / (1 + distance / perception_range).
     Flee gets 1.5x multiplier (survival bias).
     """
-    base = strength / (1.0 + distance / max(perception_range, 1.0))
+    weight = PRIORITY_WEIGHTS.get(priority, 0.0)
+    base = weight / (1.0 + distance / max(perception_range, 1.0))
     return base * 1.5 if is_flee else base

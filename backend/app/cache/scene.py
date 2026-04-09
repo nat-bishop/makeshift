@@ -54,7 +54,7 @@ class CreatureBehavior:
     """Per creature x target pair behavior. Scene-local, not persisted."""
 
     movement: int  # 0=approach, 1=flee, 2=orbit, 3=ignore
-    strength: int  # 0-100
+    priority: int  # 0-3 (0=ignore, 1=mild, 2=moderate, 3=driven)
     action: int  # 0=nothing,1=damage,2=heal,3=add_state,4=remove_state,5=destroy,6=take
     amount: int  # 0-100 damage/heal intensity (action 1,2)
     state_id: int  # 1-4 State enum value (action 3,4)
@@ -62,7 +62,7 @@ class CreatureBehavior:
     def to_dict(self) -> dict:
         return {
             "movement": self.movement,
-            "strength": self.strength,
+            "priority": self.priority,
             "action": self.action,
             "amount": self.amount,
             "state_id": self.state_id,
@@ -72,7 +72,7 @@ class CreatureBehavior:
     def from_dict(cls, d: dict) -> CreatureBehavior:
         return cls(
             movement=d.get("movement", 3),
-            strength=d.get("strength", 0),
+            priority=d.get("priority", 0),
             action=d.get("action", 0),
             amount=d.get("amount", 0),
             state_id=d.get("state_id", 0),
@@ -111,9 +111,7 @@ class SceneCache:
     def get_creature(self, creature: str, target: str) -> CreatureBehavior | None:
         return self._creature.get(pair_key(creature, target))
 
-    def put_creature(
-        self, creature: str, target: str, behavior: CreatureBehavior
-    ) -> None:
+    def put_creature(self, creature: str, target: str, behavior: CreatureBehavior) -> None:
         self._creature[pair_key(creature, target)] = behavior
 
     def mark_creature_stale_for_target(self, target_name: str) -> list[str]:

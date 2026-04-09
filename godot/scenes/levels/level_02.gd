@@ -8,8 +8,8 @@ const GUARD_DOG_BLUEPRINT := {
 	"name": "guard dog",
 	"description": "guard dog",
 	"visual_description": "a fierce black guard dog with a spiked collar, crouching stance",
-	"physics": {"mass_kg": 30.0, "height_cm": 80, "friction": 50, "bounce": 15, "gravity": 50},
-	"destructibility": {"armor": 40, "hp": 70, "indestructible": false},
+	"physics": {"mass_kg": 30.0, "height_cm": 80, "surface": 1, "bounce": 15, "gravity": 50},
+	"durability": 3,
 	"affordance": 3,
 	"autonomous": true,
 	"has_field": false,
@@ -21,8 +21,8 @@ const BONE_BLUEPRINT := {
 	"name": "bone",
 	"description": "bone",
 	"visual_description": "a white dog bone, cartoon style",
-	"physics": {"mass_kg": 0.3, "height_cm": 20, "friction": 40, "bounce": 20, "gravity": 50},
-	"destructibility": {"armor": 30, "hp": 40, "indestructible": false},
+	"physics": {"mass_kg": 0.3, "height_cm": 20, "surface": 1, "bounce": 20, "gravity": 50},
+	"durability": 2,
 	"affordance": 0,
 	"autonomous": false,
 	"has_field": false,
@@ -41,11 +41,11 @@ func _ready() -> void:
 
 	# Pre-populate creature behavior: dog approaches player aggressively
 	InteractionCache.store_creature("guard dog", "player", {
-		"movement": 0, "strength": 80, "action": 1, "param": 20,
+		"movement": 0, "priority": 2, "action": 1, "amount": 20, "state_id": 0,
 	})
 	# Dog approaches bone (distraction)
 	InteractionCache.store_creature("guard dog", "bone", {
-		"movement": 0, "strength": 90, "action": 6, "param": 0,
+		"movement": 0, "priority": 3, "action": 6, "amount": 0, "state_id": 0,
 	})
 
 

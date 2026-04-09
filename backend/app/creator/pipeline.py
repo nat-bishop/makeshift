@@ -4,10 +4,10 @@ Flow:
   1. Check creation cache (description -> cached blueprint)
   2. Generate name (~3 tokens, sequential — other prompts use it)
   3. Fan-out: gated parallel calls via run_questions()
-     - Unconditional: mass, height, friction, bounce, gravity, has_field,
-       indestructible, autonomous, affordance, visual_description
+     - Unconditional: mass, height, surface, bounce, gravity, has_field,
+       durability, autonomous, affordance, visual_description
      - Gated on has_field: field_range_cm
-     - Gated on indestructible=false: armor, hp, destruction_result_name
+     - Gated on durability<6: destruction_result_name
   4. Parse and assemble GameObjectBlueprint
   5. Cache creation result
   6. Return blueprint
@@ -26,7 +26,6 @@ from app.creator.llm import ask_text
 from app.creator.question_graph import run_questions
 from app.creator.questions import ALL_CREATION_QUESTIONS, NAME_QUESTION
 from app.models.blueprint import (
-    Destructibility,
     GameObjectBlueprint,
     PhysicsProperties,
 )
@@ -47,9 +46,7 @@ async def create_object(description: str, cache: CacheStore) -> GameObjectBluepr
         cached = await cache.get_creation(description)
         if cached is not None:
             logger.debug("creation_cache_hit", description=description)
-            return GameObjectBlueprint(
-                id=str(uuid.uuid4()), description=description, **cached
-            )
+            return GameObjectBlueprint(id=str(uuid.uuid4()), description=description, **cached)
 
     # 2. Generate name (~3 tokens, must run first — other prompts reference it)
     raw_name = await ask_text(
@@ -75,14 +72,9 @@ async def create_object(description: str, cache: CacheStore) -> GameObjectBluepr
     physics = PhysicsProperties(
         mass_kg=float(answers.get("mass_kg", 1.0)),
         height_cm=int(answers.get("height_cm", 30)),
-        friction=int(answers.get("friction", 50)),
+        surface=int(answers.get("surface", 1)),
         bounce=int(answers.get("bounce", 10)),
         gravity=int(answers.get("gravity", 50)),
-    )
-    destructibility = Destructibility(
-        armor=int(answers.get("armor", 30)),
-        hp=int(answers.get("hp", 50)),
-        indestructible=bool(answers.get("indestructible", False)),
     )
 
     destruction_raw = str(answers.get("destruction_result_name", "nothing"))
@@ -90,11 +82,9 @@ async def create_object(description: str, cache: CacheStore) -> GameObjectBluepr
 
     blueprint_data = {
         "name": name,
-        "visual_description": str(
-            answers.get("visual_description", f"a {description}")
-        ),
+        "visual_description": str(answers.get("visual_description", f"a {description}")),
         "physics": physics.model_dump(),
-        "destructibility": destructibility.model_dump(),
+        "durability": int(answers.get("durability", 2)),
         "affordance": int(answers.get("affordance", 3)),
         "autonomous": bool(answers.get("autonomous", False)),
         "has_field": has_field,
@@ -104,14 +94,10 @@ async def create_object(description: str, cache: CacheStore) -> GameObjectBluepr
 
     # 5. Cache
     if settings.creation_cache_enabled:
-        await cache.put_creation(
-            description, blueprint_data, model_version=settings.llm_model
-        )
+        await cache.put_creation(description, blueprint_data, model_version=settings.llm_model)
 
     # 6. Build blueprint
-    blueprint = GameObjectBlueprint(
-        id=str(uuid.uuid4()), description=description, **blueprint_data
-    )
+    blueprint = GameObjectBlueprint(id=str(uuid.uuid4()), description=description, **blueprint_data)
 
     elapsed = time.monotonic() - t0
     logger.info("v3_create", name=name, elapsed=f"{elapsed:.2f}s")

@@ -14,7 +14,6 @@ import yaml
 from app.cache.scene import CreatureBehavior, PairwiseResult
 from app.cache.store import CacheStore, normalize_name, pair_key
 from app.models.blueprint import (
-    Destructibility,
     GameObjectBlueprint,
     PhysicsProperties,
 )
@@ -209,7 +208,7 @@ class TestModelRoundtrips:
         assert pr.damage_a == 50
 
     def test_creature_behavior_roundtrip(self) -> None:
-        cb = CreatureBehavior(movement=0, strength=90, action=5, amount=0, state_id=0)
+        cb = CreatureBehavior(movement=0, priority=3, action=5, amount=0, state_id=0)
         d = cb.to_dict()
         cb2 = CreatureBehavior.from_dict(d)
         assert cb == cb2
@@ -217,7 +216,7 @@ class TestModelRoundtrips:
     def test_creature_behavior_defaults(self) -> None:
         cb = CreatureBehavior.from_dict({})
         assert cb.movement == 3  # ignore
-        assert cb.strength == 0
+        assert cb.priority == 0
         assert cb.action == 0
         assert cb.amount == 0
         assert cb.state_id == 0
@@ -229,9 +228,13 @@ class TestModelRoundtrips:
             description="a burning sword",
             visual_description="a flaming blade",
             physics=PhysicsProperties(
-                mass_kg=2.0, height_cm=90, friction=35, bounce=15, gravity=60,
+                mass_kg=2.0,
+                height_cm=90,
+                surface=1,
+                bounce=15,
+                gravity=60,
             ),
-            destructibility=Destructibility(armor=40, hp=60, indestructible=False),
+            durability=3,
             affordance=0,
             autonomous=False,
             has_field=True,
@@ -242,7 +245,7 @@ class TestModelRoundtrips:
         bp2 = GameObjectBlueprint.model_validate(d)
         assert bp2.name == bp.name
         assert bp2.physics.mass_kg == bp.physics.mass_kg
-        assert bp2.destructibility.armor == bp.destructibility.armor
+        assert bp2.durability == bp.durability
         assert bp2.has_field == bp.has_field
         assert bp2.field_range_cm == bp.field_range_cm
 

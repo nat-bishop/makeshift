@@ -7,7 +7,8 @@ var object_id: String = ""
 var blueprint: Dictionary = {}
 var object_name: String = ""
 var current_hp: int = 50
-var armor: int = 30
+var max_hp: int = 50
+var durability: int = 2  # 0=fragile .. 6=indestructible
 var affordance: int = 3  # 0=carry 1=mount 2=climb 3=nothing
 var autonomous: bool = false
 var destruction_result_name: String = ""
@@ -15,8 +16,14 @@ var _state_manager: StateManager = null
 var _object_field: Node = null
 var _creature_behavior: Node = null
 var _state_change_debounce: float = 0.0
-var _base_friction: float = 0.5  # stored at init for WET state restore
+var _base_surface: int = 1  # stored at init for WET state restore (0=slippery 1=normal 2=sticky)
 const STATE_CHANGE_DEBOUNCE_TIME: float = 0.5
+
+# Durability tier → HP lookup (mirrors backend DURABILITY_HP)
+const DURABILITY_HP: Dictionary = {
+	0: 5, 1: 15, 2: 40, 3: 80, 4: 150, 5: 300,
+}
+
 
 @onready var physics_applicator: Node = $PhysicsApplicator
 @onready var object_visual: Node = $ObjectVisual
@@ -37,18 +44,24 @@ func init_from_blueprint(bp: Dictionary) -> void:
 	object_id = bp.get("id", "")
 	object_name = bp.get("name", "")
 
-	# Destructibility
-	var dest: Dictionary = bp.get("destructibility", {})
-	current_hp = dest.get("hp", 50)
-	armor = dest.get("armor", 30)
-	var indestructible: bool = dest.get("indestructible", false)
-	if indestructible:
+	# Durability → HP
+	durability = bp.get("durability", 2)
+	if durability >= 6:
 		current_hp = 999999
+		max_hp = 999999
+	else:
+		var hp_val: int = DURABILITY_HP.get(durability, 40)
+		current_hp = hp_val
+		max_hp = hp_val
 
 	# Classification
 	affordance = bp.get("affordance", 3)
 	autonomous = bp.get("autonomous", false)
 	destruction_result_name = bp.get("destruction_result_name", "")
+
+	# Surface type for WET restore
+	var phys: Dictionary = bp.get("physics", {})
+	_base_surface = phys.get("surface", 1)
 
 	# State manager (objects are born stateless)
 	_state_manager = StateManager.new()
@@ -60,8 +73,6 @@ func init_from_blueprint(bp: Dictionary) -> void:
 
 	# Physics from LLM-generated values
 	physics_applicator.apply_from_blueprint(bp)
-	if physics_material_override:
-		_base_friction = physics_material_override.friction
 
 	# Visual
 	object_visual.set_object_id(object_id)
@@ -89,8 +100,8 @@ func init_from_blueprint(bp: Dictionary) -> void:
 	add_child(debug_label)
 	debug_label.init(self)
 
-	Log.info("GameObject: Initialized '%s' (id=%s) hp=%d armor=%d affordance=%d" % [
-		object_name, object_id, current_hp, armor, affordance
+	Log.info("GameObject: Initialized '%s' (id=%s) hp=%d durability=%d affordance=%d" % [
+		object_name, object_id, current_hp, durability, affordance
 	])
 
 
@@ -119,13 +130,11 @@ func get_object_id() -> String:
 
 
 func take_damage(amount: float, _element_color: Color = Color.WHITE) -> void:
-	# Frozen = brittle: 2x incoming damage before armor
+	# Frozen = brittle: 2x incoming damage
 	var incoming: float = amount
 	if _state_manager != null and _state_manager.has_state("frozen"):
 		incoming *= StateVisuals.FROZEN_DAMAGE_MULT
-	# Armor reduces incoming damage
-	var effective: float = incoming * (1.0 - armor / 100.0)
-	current_hp -= int(maxf(effective, 1.0))  # Minimum 1 damage
+	current_hp -= int(maxf(incoming, 1.0))  # Minimum 1 damage
 
 	object_visual.flash_hit(_element_color)
 
@@ -137,7 +146,6 @@ func take_damage(amount: float, _element_color: Color = Color.WHITE) -> void:
 
 
 func heal(amount: float) -> void:
-	var max_hp: int = blueprint.get("destructibility", {}).get("hp", 50)
 	current_hp = mini(current_hp + int(amount), max_hp)
 	object_visual.flash_hit(StateVisuals.HEAL_COLOR)
 
@@ -167,7 +175,7 @@ func _on_state_added(state: String) -> void:
 			freeze = true
 		"wet":
 			if physics_material_override:
-				physics_material_override.friction = StateVisuals.WET_FRICTION
+				physics_material_override.friction = PhysicsComposer.SURFACE_FRICTION[0]  # slippery
 		"electrified":
 			WorldMutations.apply_dot(self, StateVisuals.ELECTRIFIED_DOT, StateVisuals.ELECTRIFIED_TICK,
 				StateVisuals.ELECTRIFIED_DURATION, StateVisuals.COLORS.get("electrified", Color.WHITE), "_dot_electrified")
@@ -188,7 +196,7 @@ func _on_states_changed(_updated_states: Array) -> void:
 		WorldMutations.stop_dot(self, "_dot_electrified")
 	# Restore friction if no longer wet
 	if not _state_manager.has_state("wet") and physics_material_override:
-		physics_material_override.friction = _base_friction
+		physics_material_override.friction = PhysicsComposer.SURFACE_FRICTION.get(_base_surface, 0.5)
 	# Debounced backend notification for creature re-evaluation
 	_state_change_debounce = STATE_CHANGE_DEBOUNCE_TIME
 	set_process(true)

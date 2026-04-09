@@ -67,7 +67,6 @@ const BURNING_DURATION: float = 10.0
 const ELECTRIFIED_DOT: float = 8.0
 const ELECTRIFIED_TICK: float = 1.5
 const ELECTRIFIED_DURATION: float = 8.0
-const WET_FRICTION: float = 0.05
 const WET_SPEED_MULT: float = 0.5
 const FROZEN_DAMAGE_MULT: float = 2.0
 

@@ -64,12 +64,16 @@ select = [
     "PIE",
     "C4",
     "T20",
+    "PERF",
+    "TC",
+    "FURB",
+    "LOG",
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "backend/app/creator/agent.py" = ["E501"]
 "backend/app/cli.py" = ["T20"]
-"backend/evals/test_*.py" = ["T20"]
+"backend/evals/*.py" = ["T20"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

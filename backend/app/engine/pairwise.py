@@ -28,7 +28,7 @@ from app.cache.store import CacheStore, normalize_name
 from app.config import settings
 from app.creator.llm import ask_text
 from app.creator.question_graph import Question, run_questions
-from app.models.blueprint import GameObjectBlueprint
+from app.models.blueprint import DURABILITY_NAMES, GameObjectBlueprint
 from app.models.state import STATE_CHANGE_PROMPT
 
 logger = structlog.get_logger()
@@ -37,14 +37,12 @@ logger = structlog.get_logger()
 def _obj_summary(bp: GameObjectBlueprint) -> str:
     """Compact object summary for LLM prompt context (input tokens are free)."""
     parts = [f"{bp.physics.mass_kg}kg", f"{bp.physics.height_cm}cm"]
-    if bp.destructibility.armor > 50:
-        parts.append(f"armor {bp.destructibility.armor}")
+    durability_name = DURABILITY_NAMES.get(bp.durability, "normal")
+    parts.append(durability_name)
     if bp.has_field:
         parts.append(f"field {bp.field_range_cm}cm")
     if bp.autonomous:
         parts.append("creature")
-    if bp.destructibility.indestructible:
-        parts.append("indestructible")
     return f"{bp.name} ({', '.join(parts)})"
 
 
@@ -66,18 +64,26 @@ PAIR_QUESTIONS: list[Question] = [
     Question(
         "state_change_a",
         "{a_desc} collides with {b_desc}. State change on {a}? " + STATE_CHANGE_PROMPT,
-        "int", 0, 8, 0,
+        "int",
+        0,
+        8,
+        0,
     ),
     Question(
         "state_change_b",
         "{a_desc} collides with {b_desc}. State change on {b}? " + STATE_CHANGE_PROMPT,
-        "int", 0, 8, 0,
+        "int",
+        0,
+        8,
+        0,
     ),
     Question(
         "force_b",
-        "{a_desc} collides with {b_desc}. "
-        "Force on {b}? -100(pull) to 100(push), 0=none",
-        "int", -100, 100, 0,
+        "{a_desc} collides with {b_desc}. Force on {b}? -100(pull) to 100(push), 0=none",
+        "int",
+        -100,
+        100,
+        0,
     ),
     Question(
         "continuous",
@@ -103,9 +109,7 @@ async def screen_pairs(
     if not scene_objects:
         return []
 
-    numbered = "\n".join(
-        f"{i + 1}. {_obj_summary(o)}" for i, o in enumerate(scene_objects)
-    )
+    numbered = "\n".join(f"{i + 1}. {_obj_summary(o)}" for i, o in enumerate(scene_objects))
     prompt = (
         f"New object: {_obj_summary(new_obj)}.\n"
         f"Scene objects:\n{numbered}\n"
@@ -119,11 +123,7 @@ async def screen_pairs(
             return []
 
         nums = [int(x) for x in re.findall(r"\d+", raw)]
-        valid = [
-            scene_objects[n - 1].name
-            for n in nums
-            if 1 <= n <= len(scene_objects)
-        ]
+        valid = [scene_objects[n - 1].name for n in nums if 1 <= n <= len(scene_objects)]
         if not valid:
             logger.warning("screen_no_valid_indices", raw=raw)
             return [o.name for o in scene_objects]
@@ -188,7 +188,10 @@ async def evaluate_pair(
     scene.put_pairwise(name_a, name_b, result)
     if settings.creation_cache_enabled:
         await cache.put_pairwise(
-            name_a, name_b, result.to_dict(), model_version=settings.llm_model,
+            name_a,
+            name_b,
+            result.to_dict(),
+            model_version=settings.llm_model,
             commit=False,
         )
 

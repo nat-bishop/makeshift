@@ -1,7 +1,7 @@
 extends Node
 
 ## V3 creature behavior runtime: per-pair utility-based targeting.
-## Each creature x object pair has: movement(0-3), strength(0-100), action(0-6), param.
+## Each creature x object pair has: movement(0-3), priority(0-3), action(0-6), param.
 ## Loaded from InteractionCache at spawn time and on scene changes.
 
 const PERCEPTION_RANGE: float = 500.0
@@ -13,6 +13,9 @@ const MOVE_SPEED: float = 200.0
 const FLEE_SPEED: float = 250.0
 const ORBIT_SPEED: float = 150.0
 const MAX_ERRORS: int = 5
+
+# Priority level (0-3) → utility weight (mirrors backend PRIORITY_WEIGHTS)
+const PRIORITY_WEIGHTS: Dictionary = {0: 0.0, 1: 25.0, 2: 60.0, 3: 100.0}
 
 var _owner: RigidBody2D
 var _owner_name: String
@@ -83,11 +86,12 @@ func _physics_process(delta: float) -> void:
 		var movement: int = entry.get("movement", 3)
 		if movement == 3:  # ignore
 			continue
-		var strength: float = float(entry.get("strength", 0))
+		var priority: int = entry.get("priority", 0)
+		var weight: float = PRIORITY_WEIGHTS.get(priority, 0.0)
 		var dist: float = _owner.global_position.distance_to(node.global_position)
 		if dist > PERCEPTION_RANGE:
 			continue
-		var utility: float = strength / (1.0 + dist / PERCEPTION_RANGE)
+		var utility: float = weight / (1.0 + dist / PERCEPTION_RANGE)
 		if movement == 1:  # flee
 			utility *= FLEE_MULTIPLIER
 		if utility > best_utility:

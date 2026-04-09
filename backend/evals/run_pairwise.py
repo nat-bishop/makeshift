@@ -30,10 +30,13 @@ from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorCont
 from evals.helpers import (
     STATE_STRING_TO_CODE,
     SummaryEvaluator,
+    generate_summary,
+    get_run_dir,
     in_range,
     load_suite,
     make_blueprint,
     orient_expected,
+    parse_eval_args,
     save_report,
 )
 
@@ -84,7 +87,9 @@ class PairwiseEvaluator(Evaluator[PairwiseInput, dict[str, Any], PairwiseExpecte
                 actual = result[field]
                 if isinstance(val, list):
                     lo, hi = float(val[0]), float(val[1])
-                    checks[field] = _reason(in_range(float(actual), lo, hi), actual, f"[{lo}, {hi}]")
+                    checks[field] = _reason(
+                        in_range(float(actual), lo, hi), actual, f"[{lo}, {hi}]"
+                    )
                 else:
                     checks[field] = _reason(actual == val, actual, val)
 
@@ -116,7 +121,9 @@ class PairwiseEvaluator(Evaluator[PairwiseInput, dict[str, Any], PairwiseExpecte
         # Continuous
         if "continuous" in expected:
             actual = result["continuous"]
-            checks["continuous"] = _reason(actual == expected["continuous"], actual, expected["continuous"])
+            checks["continuous"] = _reason(
+                actual == expected["continuous"], actual, expected["continuous"]
+            )
 
         return checks
 
@@ -223,6 +230,9 @@ def build_screening_dataset() -> Dataset[ScreeningInput, list[str], ScreeningExp
 
 
 async def main() -> None:
+    args = parse_eval_args()
+    run_dir = get_run_dir()
+
     reset_agents()
 
     # Health check
@@ -247,11 +257,12 @@ async def main() -> None:
 
     pairwise_ds = build_pairwise_dataset()
     pairwise_report = await pairwise_ds.evaluate(
-        pairwise_task, name="pairwise", repeat=5,
+        pairwise_task,
+        name="pairwise",
+        repeat=args.repeat,
     )
     pairwise_report.print(include_reasons=True)
-    path = save_report(pairwise_report)
-    print(f"\nResults saved to {path}")
+    save_report(pairwise_report, run_dir)
 
     # --- Screening eval ---
     async def screening_task(inputs: ScreeningInput) -> list[str]:
@@ -261,11 +272,15 @@ async def main() -> None:
 
     screening_ds = build_screening_dataset()
     screening_report = await screening_ds.evaluate(
-        screening_task, name="screening", repeat=5,
+        screening_task,
+        name="screening",
+        repeat=args.repeat,
     )
     screening_report.print(include_reasons=True)
-    path = save_report(screening_report)
-    print(f"\nResults saved to {path}")
+    save_report(screening_report, run_dir)
+    summary = generate_summary(run_dir)
+    print(f"\nResults saved to {run_dir}")
+    print(f"Summary: {summary}")
 
     await cache.close()
 

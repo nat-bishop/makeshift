@@ -1,7 +1,7 @@
 """Thin LLM call wrappers for V3. All LLM calls go through here.
 
 Uses PydanticAI agents with typed output:
-  - int/float/bool: tool-based structured output (model calls a tool)
+  - int/float/bool: NativeOutput (response_format json_schema, no tool calls)
   - str: plain text mode (model responds directly, no tool call)
 Each ask_* function handles clamping and error fallback.
 """
@@ -9,16 +9,17 @@ Each ask_* function handles clamping and error fallback.
 from __future__ import annotations
 
 import structlog
-from pydantic_ai import Agent
+from pydantic_ai import Agent, NativeOutput
 from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.profiles.openai import OpenAIModelProfile
 from pydantic_ai.providers.openai import OpenAIProvider
 
 from app.config import settings as _settings
 
 logger = structlog.get_logger()
 
-# One agent per output type — pydantic-ai routes int/float/bool through tool calls,
-# str through plain text. Lazy singletons, cleared via reset_agents().
+# One agent per output type — int/float use NativeOutput (json_schema constrained),
+# str uses plain text. Lazy singletons, cleared via reset_agents().
 _int_agent: Agent[None, int] | None = None
 _float_agent: Agent[None, float] | None = None
 _str_agent: Agent[None, str] | None = None
@@ -31,6 +32,7 @@ def _build_model():
         return OpenAIChatModel(
             s.llm_model,
             provider=OpenAIProvider(base_url=s.local_llm_url, api_key="unused"),
+            profile=OpenAIModelProfile(supports_json_schema_output=True),
         )
     return s.llm_model
 
@@ -52,7 +54,7 @@ def _get_int_agent() -> Agent[None, int]:
     if _int_agent is None:
         _int_agent = Agent(
             _build_model(),
-            output_type=int,
+            output_type=NativeOutput(int),
             retries=2,
             model_settings=_base_model_settings(),
         )
@@ -64,7 +66,7 @@ def _get_float_agent() -> Agent[None, float]:
     if _float_agent is None:
         _float_agent = Agent(
             _build_model(),
-            output_type=float,
+            output_type=NativeOutput(float),
             retries=2,
             model_settings=_base_model_settings(),
         )
@@ -114,9 +116,7 @@ async def ask_bool(prompt: str, default: bool = False) -> bool:
         return default
 
 
-async def ask_text(
-    prompt: str, max_tokens: int = 40, default: str = ""
-) -> str:
+async def ask_text(prompt: str, max_tokens: int = 40, default: str = "") -> str:
     """Ask a freeform text question. Plain text mode (no tool call)."""
     try:
         settings = _base_model_settings()

@@ -17,15 +17,15 @@ func apply_from_blueprint(bp: Dictionary) -> void:
 	var phys: Dictionary = bp.get("physics", {})
 	var mass_kg: float = phys.get("mass_kg", 1.0)
 	var height_cm: int = phys.get("height_cm", 30)
-	var friction_100: int = phys.get("friction", 50)
+	var surface: int = phys.get("surface", 1)
 	var bounce_100: int = phys.get("bounce", 10)
 	var gravity_100: int = phys.get("gravity", 50)
 
+	var scale: float = PhysicsComposer.scale_from_height(height_cm)
 	var size_cat: String = PhysicsComposer.size_from_height(height_cm)
-	var size_mult: float = PhysicsComposer.get_size_mass_multiplier(size_cat)
 
-	# Mass (real-world kg * size multiplier)
-	_body.mass = mass_kg * size_mult
+	# Mass (real-world kg * continuous scale)
+	_body.mass = mass_kg * scale
 
 	# Gravity: piecewise linear mapping
 	#   0-50 -> -1.0 to 1.0 (floating up to normal)
@@ -37,17 +37,18 @@ func apply_from_blueprint(bp: Dictionary) -> void:
 
 	# Physics material
 	var mat := PhysicsMaterial.new()
-	mat.friction = friction_100 / 100.0
+	var friction_val: float = PhysicsComposer.SURFACE_FRICTION.get(surface, 0.5)
+	mat.friction = friction_val
 	mat.bounce = bounce_100 / 100.0
 	_body.physics_material_override = mat
 
-	# Fallback collision shape from size category
+	# Fallback collision shape from continuous scale
 	if not _has_sprite_shape:
-		_configure_shape(size_cat)
+		_configure_shape(height_cm)
 
-	Log.debug("PhysicsApplicator: '%s' mass=%.2f gravity=%.2f friction=%.2f bounce=%.2f damp=%.2f size=%s" % [
+	Log.debug("PhysicsApplicator: '%s' mass=%.2f gravity=%.2f friction=%.2f bounce=%.2f damp=%.2f size=%s scale=%.2f" % [
 		bp.get("name", "?"), _body.mass, _body.gravity_scale,
-		mat.friction, mat.bounce, _body.linear_damp, size_cat
+		mat.friction, mat.bounce, _body.linear_damp, size_cat, scale
 	])
 
 
@@ -79,9 +80,8 @@ func update_shape_from_sprite(texture: Texture2D, world_size: float) -> void:
 	_has_sprite_shape = true
 
 
-func _configure_shape(size_category: String) -> void:
-	var size_data: Dictionary = PhysicsComposer.get_size_data(size_category)
-	var collision_size: int = size_data["collision"]
+func _configure_shape(height_cm: int) -> void:
+	var collision_size: float = PhysicsComposer.world_collision_size(height_cm)
 	var rect := RectangleShape2D.new()
 	rect.size = Vector2(collision_size, collision_size)
 	_collision_shape.shape = rect

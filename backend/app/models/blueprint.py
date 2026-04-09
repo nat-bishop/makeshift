@@ -4,13 +4,48 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field, field_validator
 
+# Durability tier → HP mapping. No armor/damage-reduction mechanic.
+DURABILITY_HP: dict[int, int] = {
+    0: 5,  # fragile (paper, balloon)
+    1: 15,  # weak (glass, web)
+    2: 40,  # normal (wood, flesh)
+    3: 80,  # tough (stone, bone)
+    4: 150,  # hardy (steel, diamond)
+    5: 300,  # fortified (castle wall)
+    # 6 = indestructible (999999 HP)
+}
+
+DURABILITY_NAMES: dict[int, str] = {
+    0: "fragile",
+    1: "weak",
+    2: "normal",
+    3: "tough",
+    4: "hardy",
+    5: "fortified",
+    6: "indestructible",
+}
+
+# Surface type → friction coefficient mapping.
+SURFACE_FRICTION: dict[int, float] = {
+    0: 0.05,  # slippery (ice, oil)
+    1: 0.5,  # normal (wood, metal, stone)
+    2: 1.0,  # sticky (glue, tar, tape)
+}
+
+
+def durability_to_hp(durability: int) -> int:
+    """Map durability tier (0-6) to starting HP."""
+    if durability >= 6:
+        return 999999
+    return DURABILITY_HP.get(durability, 40)
+
 
 class PhysicsProperties(BaseModel):
     """All physics values set at creation time by parallel 1-token LLM calls."""
 
     mass_kg: float = Field(ge=0.001, le=100000)
     height_cm: int = Field(ge=1, le=5000)
-    friction: int = Field(ge=0, le=100)
+    surface: int = Field(ge=0, le=2, default=1)  # 0=slippery 1=normal 2=sticky
     bounce: int = Field(ge=0, le=100)
     gravity: int = Field(ge=0, le=100)
 
@@ -19,6 +54,11 @@ class PhysicsProperties(BaseModel):
         """Derived: light large things (feather) have high damping,
         heavy small things (bullet) have low damping."""
         return self.height_cm / (self.mass_kg * 100.0 + 10.0)
+
+    @property
+    def friction(self) -> float:
+        """Friction coefficient derived from surface type."""
+        return SURFACE_FRICTION.get(self.surface, 0.5)
 
     @property
     def size_category(self) -> str:
@@ -33,12 +73,6 @@ class PhysicsProperties(BaseModel):
         return "huge"
 
 
-class Destructibility(BaseModel):
-    armor: int = Field(ge=0, le=100, default=30)
-    hp: int = Field(ge=0, le=100, default=50)
-    indestructible: bool = False
-
-
 class GameObjectBlueprint(BaseModel):
     """Complete V3 object definition. Serialized as JSON in the objects DB table."""
 
@@ -47,7 +81,7 @@ class GameObjectBlueprint(BaseModel):
     description: str  # original player input
     visual_description: str
     physics: PhysicsProperties
-    destructibility: Destructibility
+    durability: int = Field(ge=0, le=6, default=2)  # 0=fragile .. 6=indestructible
     affordance: int = Field(ge=0, le=3, default=3)  # 0=carry 1=mount 2=climb 3=nothing
     autonomous: bool = False
     has_field: bool = False
@@ -63,3 +97,12 @@ class GameObjectBlueprint(BaseModel):
         if len(name.split()) > 3:
             raise ValueError(f'Name "{name}" exceeds 3 words')
         return name
+
+    @property
+    def starting_hp(self) -> int:
+        """HP derived from durability tier."""
+        return durability_to_hp(self.durability)
+
+    @property
+    def is_indestructible(self) -> bool:
+        return self.durability >= 6

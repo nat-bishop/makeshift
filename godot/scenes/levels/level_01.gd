@@ -8,8 +8,8 @@ const CRATE_BLUEPRINT := {
 	"name": "wooden crate",
 	"description": "wooden crate",
 	"visual_description": "a small wooden shipping crate with planks and nails",
-	"physics": {"mass_kg": 5.0, "height_cm": 40, "friction": 60, "bounce": 10, "gravity": 55},
-	"destructibility": {"armor": 20, "hp": 40, "indestructible": false},
+	"physics": {"mass_kg": 5.0, "height_cm": 40, "surface": 1, "bounce": 10, "gravity": 55},
+	"durability": 2,
 	"affordance": 0,
 	"autonomous": false,
 	"has_field": false,
@@ -18,8 +18,8 @@ const CRATE_BLUEPRINT := {
 
 const ACID_POOL_BP := {
 	"name": "acid pool",
-	"physics": {"mass_kg": 100.0, "height_cm": 10, "friction": 5, "bounce": 0, "gravity": 50},
-	"destructibility": {"armor": 99, "hp": 99, "indestructible": true},
+	"physics": {"mass_kg": 100.0, "height_cm": 10, "surface": 0, "bounce": 0, "gravity": 50},
+	"durability": 6,
 }
 
 

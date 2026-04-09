@@ -8,7 +8,6 @@ import aiosqlite
 import pytest
 from app.middleware import session_context_middleware
 from app.models.blueprint import (
-    Destructibility,
     GameObjectBlueprint,
     PhysicsProperties,
 )
@@ -49,8 +48,8 @@ def _make_blueprint(obj_id: str = "test-obj-1", name: str = "test rock") -> Game
         name=name,
         description="a simple test rock",
         visual_description="a small gray stone rock",
-        physics=PhysicsProperties(mass_kg=5.0, height_cm=30, friction=60, bounce=5, gravity=60),
-        destructibility=Destructibility(armor=70, hp=80),
+        physics=PhysicsProperties(mass_kg=5.0, height_cm=30, surface=1, bounce=5, gravity=60),
+        durability=3,
         affordance=3,
         autonomous=False,
     )
@@ -61,9 +60,7 @@ async def client() -> AsyncIterator[AsyncClient]:
     db = await _init_db()
     app = _make_test_app()
     app.state.db = db
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as c:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c
     await db.close()
 

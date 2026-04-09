@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import argparse
+import os
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
@@ -11,7 +13,6 @@ from typing import Any
 import yaml
 from app.cache.store import normalize_name
 from app.models.blueprint import (
-    Destructibility,
     GameObjectBlueprint,
     PhysicsProperties,
 )
@@ -31,7 +32,35 @@ RESULTS_DIR = Path(__file__).parent / "results"
 STATE_STRING_TO_CODE: dict[str, int] = {}
 for _s in State:
     STATE_STRING_TO_CODE[_s.name.lower()] = _s.value  # "burning" -> 1
-    STATE_STRING_TO_CODE[f"remove_{_s.name.lower()}"] = _s.value + len(State)  # "remove_burning" -> 5
+    STATE_STRING_TO_CODE[f"remove_{_s.name.lower()}"] = _s.value + len(
+        State
+    )  # "remove_burning" -> 5
+
+
+def parse_eval_args(*, support_judge: bool = False) -> argparse.Namespace:
+    """Shared CLI argument parser for eval runners."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--repeat", type=int, default=3, help="Repeats per case (default: 3)")
+    if support_judge:
+        parser.add_argument("--judge", action="store_true", help="Enable LLM judge")
+    return parser.parse_args()
+
+
+def get_run_dir() -> Path:
+    """Return the run directory for this eval invocation.
+
+    If EVAL_RUN_DIR env var is set (a folder name), use RESULTS_DIR / that name.
+    Otherwise create a new timestamped directory.
+    """
+    env_dir = os.environ.get("EVAL_RUN_DIR")
+    if env_dir:
+        run_dir = RESULTS_DIR / env_dir
+    else:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        run_dir = RESULTS_DIR / timestamp
+    run_dir.mkdir(parents=True, exist_ok=True)
+    return run_dir
+
 
 def in_range(actual: float, lo: float, hi: float) -> bool:
     """Binary range check: True if lo <= actual <= hi."""
@@ -60,7 +89,9 @@ def load_suite() -> dict:
 
 
 def make_blueprint(
-    name: str, archetype: dict[str, Any] | None = None, **overrides: Any,
+    name: str,
+    archetype: dict[str, Any] | None = None,
+    **overrides: Any,
 ) -> GameObjectBlueprint:
     """Build a minimal GameObjectBlueprint from archetype data.
 
@@ -83,15 +114,11 @@ def make_blueprint(
         physics=PhysicsProperties(
             mass_kg=float(data.get("mass_kg", 1.0)),
             height_cm=int(data.get("height_cm", 30)),
-            friction=int(data.get("friction", 50)),
+            surface=int(data.get("surface", 1)),
             bounce=int(data.get("bounce", 10)),
             gravity=int(data.get("gravity", 50)),
         ),
-        destructibility=Destructibility(
-            armor=int(data.get("armor", 30)),
-            hp=int(data.get("hp", 50)),
-            indestructible=bool(data.get("indestructible", False)),
-        ),
+        durability=int(data.get("durability", 2)),
         affordance=int(data.get("affordance", 3)),
         autonomous=bool(data.get("autonomous", False)),
         has_field=bool(data.get("has_field", False)),
@@ -184,10 +211,49 @@ class SummaryEvaluator(ReportEvaluator):
 _report_adapter = TypeAdapter(EvaluationReport)
 
 
-def save_report(report: EvaluationReport) -> Path:
-    """Serialize report to JSON in backend/evals/results/."""
-    RESULTS_DIR.mkdir(exist_ok=True)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    path = RESULTS_DIR / f"{timestamp}_{report.name}.json"
+def save_report(report: EvaluationReport, run_dir: Path) -> Path:
+    """Serialize report to JSON in the given run directory."""
+    run_dir.mkdir(parents=True, exist_ok=True)
+    path = run_dir / f"{report.name}.json"
     path.write_bytes(_report_adapter.dump_json(report, indent=2))
     return path
+
+
+def generate_summary(run_dir: Path) -> Path:
+    """Generate summary.md from all report JSONs in run_dir. Idempotent."""
+    reports: list[EvaluationReport] = []
+    for json_path in sorted(run_dir.glob("*.json")):
+        report = _report_adapter.validate_json(json_path.read_bytes())
+        reports.append(report)
+
+    lines: list[str] = [f"# Eval Run {run_dir.name}\n"]
+
+    if reports:
+        # Overview table
+        lines.append("| Report | Pass Rate | Cases |")
+        lines.append("|--------|-----------|-------|")
+        for report in reports:
+            pass_rate = "N/A"
+            for a in report.analyses:
+                if isinstance(a, ScalarResult) and "pass rate" in a.title.lower():
+                    pass_rate = f"{a.value}{a.unit}"
+                    break
+            lines.append(f"| {report.name} | {pass_rate} | {len(report.cases)} |")
+
+        # Per-report detail
+        for report in reports:
+            lines.append(f"\n## {report.name}\n")
+            for analysis in report.analyses:
+                if isinstance(analysis, ScalarResult):
+                    lines.append(f"**{analysis.title}: {analysis.value}{analysis.unit}**\n")
+                elif isinstance(analysis, TableResult):
+                    lines.append(f"### {analysis.title}\n")
+                    lines.append("| " + " | ".join(str(c) for c in analysis.columns) + " |")
+                    lines.append("|" + "|".join("---" for _ in analysis.columns) + "|")
+                    for row in analysis.rows:
+                        lines.append("| " + " | ".join(str(v) for v in row) + " |")
+                    lines.append("")
+
+    summary_path = run_dir / "summary.md"
+    summary_path.write_text("\n".join(lines), encoding="utf-8")
+    return summary_path

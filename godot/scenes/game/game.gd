@@ -113,8 +113,7 @@ func _on_sprite_ready(id: String, _texture: Texture2D) -> void:
 		var sprite: Sprite2D = _placement_ghost.get_node("Sprite2D")
 		sprite.texture = _texture
 		var p: Dictionary = _pending_blueprint.get("physics", {})
-		var sc: String = PhysicsComposer.size_from_height(p.get("height_cm", 30))
-		var world_size: float = PhysicsComposer.get_size_data(sc)["sprite"]
+		var world_size: float = PhysicsComposer.world_sprite_size(p.get("height_cm", 30))
 		sprite.scale = Vector2.ONE * (world_size / _texture.get_width())
 	else:
 		_begin_placement()
@@ -162,15 +161,12 @@ func _create_placement_ghost() -> Node2D:
 	if cached:
 		sprite.texture = cached
 		var p2: Dictionary = _pending_blueprint.get("physics", {})
-		var sc2: String = PhysicsComposer.size_from_height(p2.get("height_cm", 30))
-		var world_size: float = PhysicsComposer.get_size_data(sc2)["sprite"]
+		var world_size: float = PhysicsComposer.world_sprite_size(p2.get("height_cm", 30))
 		sprite.scale = Vector2.ONE * (world_size / cached.get_width())
 	else:
 		var phys: Dictionary = _pending_blueprint.get("physics", {})
 		var height_cm: int = phys.get("height_cm", 30)
-		var size_category: String = PhysicsComposer.size_from_height(height_cm)
-		var size_data: Dictionary = PhysicsComposer.get_size_data(size_category)
-		var sprite_size: int = size_data["sprite"]
+		var sprite_size: int = int(PhysicsComposer.world_sprite_size(height_cm))
 		var color := Color(0.6, 0.7, 0.8, 0.8)  # Neutral placeholder
 		var image := Image.create(sprite_size, sprite_size, false, Image.FORMAT_RGBA8)
 		image.fill(color)

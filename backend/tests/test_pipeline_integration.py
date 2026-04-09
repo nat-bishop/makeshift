@@ -15,7 +15,7 @@ from app.images.pipeline import (
     generate_static_sprite,
     get_cached_sprite_path,
 )
-from app.models.blueprint import Destructibility, GameObjectBlueprint, PhysicsProperties
+from app.models.blueprint import GameObjectBlueprint, PhysicsProperties
 from PIL import Image
 
 
@@ -43,8 +43,8 @@ def _make_blueprint(id: str = "test-id", name: str = "test object") -> GameObjec
         name=name,
         description="test",
         visual_description="a gray cube",
-        physics=PhysicsProperties(mass_kg=5.0, height_cm=30, friction=50, bounce=10, gravity=50),
-        destructibility=Destructibility(armor=50, hp=50),
+        physics=PhysicsProperties(mass_kg=5.0, height_cm=30, surface=1, bounce=10, gravity=50),
+        durability=2,
     )
 
 

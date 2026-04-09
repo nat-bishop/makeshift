@@ -6,6 +6,7 @@ from app.cache.store import CacheStore, normalize_name, pair_key
 
 # --- Key normalization ---
 
+
 class TestKeyNormalization:
     def test_normalize_name(self):
         assert normalize_name("  FIRE  SWORD ") == "fire sword"
@@ -23,6 +24,7 @@ class TestKeyNormalization:
 
 
 # --- CacheStore ---
+
 
 @pytest.fixture
 async def cache(tmp_path):
@@ -114,6 +116,7 @@ async def test_pairwise_invalidation(cache):
 
 # --- SceneCache ---
 
+
 class TestSceneCache:
     def test_pairwise_put_get(self):
         sc = SceneCache()
@@ -145,7 +148,7 @@ class TestSceneCache:
 
     def test_creature_behavior(self):
         sc = SceneCache()
-        cb = CreatureBehavior(movement=0, strength=90, action=5, amount=0, state_id=0)
+        cb = CreatureBehavior(movement=0, priority=3, action=5, amount=0, state_id=0)
         sc.put_creature("zombie", "brain", cb)
         assert sc.get_creature("zombie", "brain") is cb
         assert sc.get_creature("zombie", "rock") is None
@@ -159,9 +162,9 @@ class TestSceneCache:
 
     def test_mark_creature_stale_for_target(self):
         sc = SceneCache()
-        sc.put_creature("zombie", "sword", CreatureBehavior(0, 90, 1, 20, 0))
-        sc.put_creature("zombie", "rock", CreatureBehavior(2, 50, 0, 0, 0))
-        sc.put_creature("cat", "sword", CreatureBehavior(1, 80, 0, 0, 0))
+        sc.put_creature("zombie", "sword", CreatureBehavior(0, 3, 1, 20, 0))
+        sc.put_creature("zombie", "rock", CreatureBehavior(2, 2, 0, 0, 0))
+        sc.put_creature("cat", "sword", CreatureBehavior(1, 3, 0, 0, 0))
         # Mark sword stale — zombie->sword and cat->sword should be removed
         removed = sc.mark_creature_stale_for_target("sword")
         assert len(removed) == 2
@@ -171,9 +174,9 @@ class TestSceneCache:
 
     def test_mark_creature_stale_for_creature(self):
         sc = SceneCache()
-        sc.put_creature("zombie", "sword", CreatureBehavior(0, 90, 1, 20, 0))
-        sc.put_creature("zombie", "rock", CreatureBehavior(2, 50, 0, 0, 0))
-        sc.put_creature("cat", "sword", CreatureBehavior(1, 80, 0, 0, 0))
+        sc.put_creature("zombie", "sword", CreatureBehavior(0, 3, 1, 20, 0))
+        sc.put_creature("zombie", "rock", CreatureBehavior(2, 2, 0, 0, 0))
+        sc.put_creature("cat", "sword", CreatureBehavior(1, 3, 0, 0, 0))
         # Mark zombie stale — zombie->sword and zombie->rock should be removed
         removed = sc.mark_creature_stale_for_creature("zombie")
         assert len(removed) == 2
@@ -184,7 +187,9 @@ class TestSceneCache:
     def test_all_pairwise_for(self):
         sc = SceneCache()
         sc.put_pairwise(
-            "fire sword", "wood", PairwiseResult(10, 20, 0, 0, 0, False),
+            "fire sword",
+            "wood",
+            PairwiseResult(10, 20, 0, 0, 0, False),
         )
         sc.put_pairwise("fire sword", "rock", PairwiseResult(0, 5, 0, 0, 0, False))
         sc.put_pairwise("rock", "wood", PairwiseResult(0, 0, 0, 0, 0, False))

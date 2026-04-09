@@ -5,7 +5,7 @@ from collections.abc import AsyncIterator
 
 import aiosqlite
 import pytest
-from app.models.blueprint import Destructibility, GameObjectBlueprint, PhysicsProperties
+from app.models.blueprint import GameObjectBlueprint, PhysicsProperties
 from app.models.session import Session, WorldObject
 from app.sessions.manager import SessionManager
 
@@ -48,8 +48,8 @@ def _make_blueprint(name: str = "test object") -> GameObjectBlueprint:
         name=name,
         description="test",
         visual_description="a gray stone cube",
-        physics=PhysicsProperties(mass_kg=5.0, height_cm=30, friction=50, bounce=10, gravity=50),
-        destructibility=Destructibility(armor=50, hp=50),
+        physics=PhysicsProperties(mass_kg=5.0, height_cm=30, surface=1, bounce=10, gravity=50),
+        durability=2,
     )
 
 
@@ -200,7 +200,7 @@ async def test_save_state_sync_objects(manager: SessionManager) -> None:
         blueprint=bps[0],
         x=1.0,
         y=2.0,
-        hp=float(bps[0].destructibility.hp),
+        hp=float(bps[0].starting_hp),
     )
     await manager.save_state(session.id, objects=[keep])
 

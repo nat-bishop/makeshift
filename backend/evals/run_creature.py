@@ -25,7 +25,15 @@ from pydantic import BaseModel
 from pydantic_evals import Case, Dataset
 from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorContext
 
-from evals.helpers import SummaryEvaluator, load_suite, make_blueprint, save_report
+from evals.helpers import (
+    SummaryEvaluator,
+    generate_summary,
+    get_run_dir,
+    load_suite,
+    make_blueprint,
+    parse_eval_args,
+    save_report,
+)
 
 logger = structlog.get_logger()
 
@@ -144,6 +152,9 @@ def build_dataset() -> Dataset[CreatureInput, dict[str, Any], None]:
 
 
 async def main() -> None:
+    args = parse_eval_args()
+    run_dir = get_run_dir()
+
     reset_agents()
 
     # Health check
@@ -170,10 +181,12 @@ async def main() -> None:
         return {name: behavior.to_dict() for name, behavior in results.items()}
 
     dataset = build_dataset()
-    report = await dataset.evaluate(task, name="creature", repeat=5)
+    report = await dataset.evaluate(task, name="creature", repeat=args.repeat)
     report.print(include_reasons=True)
-    path = save_report(report)
+    path = save_report(report, run_dir)
+    summary = generate_summary(run_dir)
     print(f"\nResults saved to {path}")
+    print(f"Summary: {summary}")
 
 
 if __name__ == "__main__":

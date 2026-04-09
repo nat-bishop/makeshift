@@ -40,9 +40,7 @@ class SessionManager:
             return None
         budget_limit, budget_used = row
         remaining = budget_limit - budget_used
-        logger.debug(
-            "budget_info", session_id=session_id, remaining=remaining, limit=budget_limit
-        )
+        logger.debug("budget_info", session_id=session_id, remaining=remaining, limit=budget_limit)
         return remaining, budget_limit
 
     async def create_session(self) -> Session:
@@ -147,7 +145,7 @@ class SessionManager:
     ) -> None:
         """Save or update a world object in the session."""
         blueprint_json = blueprint.model_dump_json()
-        durability = float(blueprint.destructibility.hp)
+        durability = float(blueprint.starting_hp)
 
         await self._db.execute(
             """
@@ -181,7 +179,7 @@ class SessionManager:
                     bp.model_dump_json(),
                     0.0,
                     0.0,
-                    float(bp.destructibility.hp),
+                    float(bp.starting_hp),
                 )
                 for bp in blueprints
             ],

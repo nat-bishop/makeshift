@@ -20,9 +20,7 @@ func init(game_obj: Node) -> void:
 	# Position above sprite
 	var phys: Dictionary = game_obj.blueprint.get("physics", {})
 	var height_cm: int = phys.get("height_cm", 30)
-	var size_cat: String = PhysicsComposer.size_from_height(height_cm)
-	var size_data: Dictionary = PhysicsComposer.get_size_data(size_cat)
-	_above_offset = size_data["sprite"] / 2.0 + 4
+	_above_offset = PhysicsComposer.world_sprite_size(height_cm) / 2.0 + 4
 
 	resized.connect(_reposition)
 
@@ -64,14 +62,15 @@ func _refresh() -> void:
 	_last_states = _game_object.get_states().duplicate() if _game_object.has_method("get_states") else []
 
 	var bp: Dictionary = _game_object.blueprint
-	var phys: Dictionary = bp.get("physics", {})
-	var dest: Dictionary = bp.get("destructibility", {})
 	var aff_names := ["carry", "mount", "climb", "none"]
 	var aff: int = bp.get("affordance", 3)
 	var aff_str: String = aff_names[aff] if aff >= 0 and aff < aff_names.size() else "?"
+	var dur: int = bp.get("durability", 2)
+	var dur_names := ["fragile", "weak", "normal", "tough", "hardy", "fortified", "indestructible"]
+	var dur_str: String = dur_names[dur] if dur >= 0 and dur < dur_names.size() else "?"
 
-	_name_label.text = "%s [%d/%d] arm=%d %s" % [
-		bp.get("name", "?"), _last_hp, dest.get("hp", 50), dest.get("armor", 0), aff_str
+	_name_label.text = "%s [%d] %s %s" % [
+		bp.get("name", "?"), _last_hp, dur_str, aff_str
 	]
 
 	for child in _state_container.get_children():
