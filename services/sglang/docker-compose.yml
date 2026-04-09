@@ -64,7 +64,6 @@ services:
       - "5200:5200"
     volumes:
       - ${HF_CACHE:-C:/Users/Nat/.cache/huggingface}:/root/.cache/huggingface
-      - ../../backend/data/qwen3_nonthinking.jinja:/app/qwen3_nonthinking.jinja:ro
     environment:
       - HF_TOKEN=${HF_TOKEN:-}
       - SGLANG_ENABLE_JIT_DEEPGEMM=0
@@ -88,8 +87,6 @@ services:
       - ${LLM_CONTEXT_LENGTH:-65536}
       - --tool-call-parser
       - qwen3_coder
-      - --chat-template
-      - /app/qwen3_nonthinking.jinja
     ipc: host
     pid: host
     shm_size: "32g"

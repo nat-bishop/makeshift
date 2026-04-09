@@ -1,18 +1,14 @@
 """Thin LLM call wrappers for V3. All LLM calls go through here.
 
 Uses PydanticAI agents with typed output:
-  - int/float: NativeOutput with bounded types (json_schema with min/max,
-    prevents xgrammar from generating unbounded digit sequences)
+  - int/float/bool: NativeOutput (response_format json_schema, no tool calls)
   - str: plain text mode (model responds directly, no tool call)
 Each ask_* function handles clamping and error fallback.
 """
 
 from __future__ import annotations
 
-from typing import Annotated
-
 import structlog
-from annotated_types import Ge, Le
 from pydantic_ai import Agent, NativeOutput
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.profiles.openai import OpenAIModelProfile
@@ -22,15 +18,10 @@ from app.config import settings as _settings
 
 logger = structlog.get_logger()
 
-# Bounded types — xgrammar uses schema min/max to limit digit generation.
-# Without bounds, the model can generate numbers with thousands of digits
-# (each digit = one forward pass), causing apparent hangs.
-BoundedInt = Annotated[int, Ge(-1_000_000), Le(1_000_000)]
-BoundedFloat = Annotated[float, Ge(-1_000_000), Le(1_000_000)]
-
-# One agent per output type. Lazy singletons, cleared via reset_agents().
-_int_agent: Agent[None, BoundedInt] | None = None
-_float_agent: Agent[None, BoundedFloat] | None = None
+# One agent per output type — int/float use NativeOutput (json_schema constrained),
+# str uses plain text. Lazy singletons, cleared via reset_agents().
+_int_agent: Agent[None, int] | None = None
+_float_agent: Agent[None, float] | None = None
 _str_agent: Agent[None, str] | None = None
 
 
@@ -46,26 +37,56 @@ def _build_model():
     return s.llm_model
 
 
-def _get_int_agent() -> Agent[None, BoundedInt]:
+def _base_model_settings() -> dict:
+    """Build model settings from config profile + thinking control."""
+    s = _settings
+    settings: dict = {
+        "temperature": s.llm_temperature,
+        "top_p": s.llm_top_p,
+        "presence_penalty": s.llm_presence_penalty,
+    }
+    if s.local_llm_url:
+        settings["extra_body"] = {
+            "top_k": s.llm_top_k,
+            "min_p": s.llm_min_p,
+            "repetition_penalty": s.llm_repetition_penalty,
+            "chat_template_kwargs": {
+                "enable_thinking": not s.local_llm_thinking_disabled,
+            },
+        }
+    return settings
+
+
+# Max tokens for structured output — caps xgrammar generation to prevent
+# infinite whitespace loops (known SGLang/xgrammar bug). JSON like
+# {"response": 50000} needs ~15 tokens; 30 gives comfortable headroom.
+_STRUCTURED_MAX_TOKENS = 30
+
+
+def _get_int_agent() -> Agent[None, int]:
     global _int_agent
     if _int_agent is None:
+        settings = _base_model_settings()
+        settings["max_tokens"] = _STRUCTURED_MAX_TOKENS
         _int_agent = Agent(  # type: ignore[call-overload]
             _build_model(),
-            output_type=NativeOutput(BoundedInt),
+            output_type=NativeOutput(int),
             retries=2,
-            model_settings={"temperature": 0.0},
+            model_settings=settings,
         )
     return _int_agent
 
 
-def _get_float_agent() -> Agent[None, BoundedFloat]:
+def _get_float_agent() -> Agent[None, float]:
     global _float_agent
     if _float_agent is None:
+        settings = _base_model_settings()
+        settings["max_tokens"] = _STRUCTURED_MAX_TOKENS
         _float_agent = Agent(  # type: ignore[call-overload]
             _build_model(),
-            output_type=NativeOutput(BoundedFloat),
+            output_type=NativeOutput(float),
             retries=2,
-            model_settings={"temperature": 0.0},
+            model_settings=settings,
         )
     return _float_agent
 
@@ -77,7 +98,7 @@ def _get_str_agent() -> Agent[None, str]:
             _build_model(),
             output_type=str,
             retries=2,
-            model_settings={"temperature": 0.0},
+            model_settings=_base_model_settings(),
         )
     return _str_agent
 
@@ -116,9 +137,10 @@ async def ask_bool(prompt: str, default: bool = False) -> bool:
 async def ask_text(prompt: str, max_tokens: int = 40, default: str = "") -> str:
     """Ask a freeform text question. Plain text mode (no tool call)."""
     try:
-        result = await _get_str_agent().run(
-            prompt, model_settings={"temperature": 0.0, "max_tokens": max_tokens}
-        )  # type: ignore[call-overload]
+        settings = _base_model_settings()
+        settings["temperature"] = 0.7
+        settings["max_tokens"] = max_tokens
+        result = await _get_str_agent().run(prompt, model_settings=settings)  # type: ignore[call-overload]
         return result.output.strip() or default
     except Exception:
         logger.warning("ask_text_failed", prompt=prompt[:80])
