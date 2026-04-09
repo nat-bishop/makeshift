@@ -37,6 +37,7 @@ class InteractionResponse(BaseModel):
 @router.get("/scene")
 async def get_scene_pairwise(session_id: str, request: Request) -> dict:
     """Bulk-load all cached pairwise entries for all objects in a session."""
+    logger.debug("scene_pairwise_request", session_id=session_id)
     cache = request.app.state.cache
     db = request.app.state.db
     manager = SessionManager(db)
@@ -46,6 +47,7 @@ async def get_scene_pairwise(session_id: str, request: Request) -> dict:
 
     names = [obj.blueprint.name for obj in session.objects]
     pairs = await cache.get_all_for_names("pairwise", names)
+    logger.debug("scene_pairwise_loaded", pair_count=len(pairs))
     return {"pairs": pairs}
 
 
@@ -54,11 +56,13 @@ async def query_interaction(
     session_id: str, body: InteractionRequest, request: Request
 ) -> InteractionResponse:
     """Evaluate a pairwise interaction on demand (cache miss fallback)."""
+    logger.debug("query_interaction_request", name_a=body.name_a, name_b=body.name_b)
     cache = request.app.state.cache
 
     scenes: dict = request.app.state.scenes
     scene = scenes.get(session_id)
     if scene is None:
+        logger.warning("query_interaction_no_scene", session_id=session_id)
         nh = nothing_happens()
         return InteractionResponse(**nh.to_dict(), cached=False)
 
@@ -67,6 +71,7 @@ async def query_interaction(
     manager = SessionManager(db)
     session = await manager.get_session(session_id)
     if session is None:
+        logger.warning("query_interaction_no_session", session_id=session_id)
         nh = nothing_happens()
         return InteractionResponse(**nh.to_dict(), cached=False)
 
@@ -83,4 +88,5 @@ async def query_interaction(
         return InteractionResponse(**nh.to_dict(), cached=False)
 
     result = await evaluate_pair(bp_a, bp_b, cache, scene)
+    logger.info("query_interaction_complete", name_a=body.name_a, name_b=body.name_b)
     return InteractionResponse(**result.to_dict(), cached=True)
