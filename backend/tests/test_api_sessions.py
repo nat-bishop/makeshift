@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from typing import TYPE_CHECKING
 
 import aiosqlite
 import pytest
@@ -15,6 +15,9 @@ from app.models.session import WorldObject
 from app.routers import sessions
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 async def _init_db() -> aiosqlite.Connection:

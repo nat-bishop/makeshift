@@ -52,7 +52,7 @@ def _base_model_settings() -> dict:
 def _get_int_agent() -> Agent[None, int]:
     global _int_agent
     if _int_agent is None:
-        _int_agent = Agent(
+        _int_agent = Agent(  # type: ignore[call-overload]
             _build_model(),
             output_type=NativeOutput(int),
             retries=2,
@@ -64,7 +64,7 @@ def _get_int_agent() -> Agent[None, int]:
 def _get_float_agent() -> Agent[None, float]:
     global _float_agent
     if _float_agent is None:
-        _float_agent = Agent(
+        _float_agent = Agent(  # type: ignore[call-overload]
             _build_model(),
             output_type=NativeOutput(float),
             retries=2,
@@ -76,7 +76,7 @@ def _get_float_agent() -> Agent[None, float]:
 def _get_str_agent() -> Agent[None, str]:
     global _str_agent
     if _str_agent is None:
-        _str_agent = Agent(
+        _str_agent = Agent(  # type: ignore[call-overload]
             _build_model(),
             output_type=str,
             retries=2,
@@ -121,7 +121,7 @@ async def ask_text(prompt: str, max_tokens: int = 40, default: str = "") -> str:
     try:
         settings = _base_model_settings()
         settings["max_tokens"] = max_tokens
-        result = await _get_str_agent().run(prompt, model_settings=settings)
+        result = await _get_str_agent().run(prompt, model_settings=settings)  # type: ignore[call-overload]
         return result.output.strip() or default
     except Exception:
         logger.warning("ask_text_failed", prompt=prompt[:80])

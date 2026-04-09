@@ -6,12 +6,13 @@ import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TypeAlias
+from typing import TYPE_CHECKING, TypeAlias
 
 import structlog
 from PIL import Image
 
-from app.models.blueprint import GameObjectBlueprint
+if TYPE_CHECKING:
+    from app.models.blueprint import GameObjectBlueprint
 
 logger = structlog.get_logger()
 
@@ -58,6 +59,7 @@ def get_remove_bg() -> RemoveBg:
     logger.info("bg_removal_initialized", backend=settings.bg_removal_backend)
     return _remove_bg
 
+
 STATIC_DIR = Path(__file__).resolve().parent.parent.parent / "static"
 
 # Sprite textures are saved at this resolution.  World size is determined
@@ -95,7 +97,6 @@ def get_cached_sprite_path(prompt: str) -> Path:
     """Return the expected cache path for a given prompt."""
     h = _prompt_hash(prompt)
     return STATIC_DIR / "sprites" / f"{h}.png"
-
 
 
 def _crop_and_fit(

@@ -52,13 +52,13 @@ PAIR_QUESTIONS: list[Question] = [
     Question(
         "damage_a",
         "{a_desc} collides with {b_desc}. Damage to {a}? "
-        "0=none 10=scratch 25=moderate 50=severe 75=critical 100=destroyed",
+        "0=none 10=scratch 15=light 25=moderate 50=severe 75=critical 100=destroyed",
         "int",
     ),
     Question(
         "damage_b",
         "{a_desc} collides with {b_desc}. Damage to {b}? "
-        "0=none 10=scratch 25=moderate 50=severe 75=critical 100=destroyed",
+        "0=none 10=scratch 15=light 25=moderate 50=severe 75=critical 100=destroyed",
         "int",
     ),
     Question(

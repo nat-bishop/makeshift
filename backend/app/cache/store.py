@@ -74,8 +74,13 @@ class CacheStore:
         return (await cur.fetchone()) is not None
 
     async def put(
-        self, cache_type: str, key: str, value: dict, model_version: str = "",
-        *, commit: bool = True,
+        self,
+        cache_type: str,
+        key: str,
+        value: dict,
+        model_version: str = "",
+        *,
+        commit: bool = True,
     ) -> None:
         await self._db.execute(
             "INSERT OR REPLACE INTO cache "
@@ -98,9 +103,7 @@ class CacheStore:
     async def exists_creation(self, name: str) -> bool:
         return await self.exists("creation", normalize_name(name))
 
-    async def put_creation(
-        self, name: str, value: dict, model_version: str = ""
-    ) -> None:
+    async def put_creation(self, name: str, value: dict, model_version: str = "") -> None:
         await self.put("creation", normalize_name(name), value, model_version)
 
     # --- Pairwise cache ---
@@ -112,20 +115,20 @@ class CacheStore:
         return await self.exists("pairwise", pair_key(name_a, name_b))
 
     async def put_pairwise(
-        self, name_a: str, name_b: str, value: dict, model_version: str = "",
-        *, commit: bool = True,
+        self,
+        name_a: str,
+        name_b: str,
+        value: dict,
+        model_version: str = "",
+        *,
+        commit: bool = True,
     ) -> None:
         await self.put("pairwise", pair_key(name_a, name_b), value, model_version, commit=commit)
 
-    async def get_all_for_names(
-        self, cache_type: str, names: list[str]
-    ) -> dict[str, dict]:
+    async def get_all_for_names(self, cache_type: str, names: list[str]) -> dict[str, dict]:
         """Fetch all cache entries for all N*(N-1)/2 pairs from a list of names."""
         normalized = sorted({normalize_name(n) for n in names})
-        keys = []
-        for i, a in enumerate(normalized):
-            for b in normalized[i + 1 :]:
-                keys.append(f"{a}::{b}")
+        keys = [f"{a}::{b}" for i, a in enumerate(normalized) for b in normalized[i + 1 :]]
 
         if not keys:
             return {}

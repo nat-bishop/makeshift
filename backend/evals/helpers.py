@@ -250,8 +250,9 @@ def generate_summary(run_dir: Path) -> Path:
                     lines.append(f"### {analysis.title}\n")
                     lines.append("| " + " | ".join(str(c) for c in analysis.columns) + " |")
                     lines.append("|" + "|".join("---" for _ in analysis.columns) + "|")
-                    for row in analysis.rows:
-                        lines.append("| " + " | ".join(str(v) for v in row) + " |")
+                    lines.extend(
+                        "| " + " | ".join(str(v) for v in row) + " |" for row in analysis.rows
+                    )
                     lines.append("")
 
     summary_path = run_dir / "summary.md"

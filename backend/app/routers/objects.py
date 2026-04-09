@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import structlog
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from app.models.blueprint import GameObjectBlueprint
 from app.sessions.manager import SessionManager
 from app.ws.handler import (
     send_behaviors_ready,
@@ -17,6 +16,9 @@ from app.ws.handler import (
     send_sprite_failed,
     send_sprite_ready,
 )
+
+if TYPE_CHECKING:
+    from app.models.blueprint import GameObjectBlueprint
 
 logger = structlog.get_logger()
 
@@ -50,9 +52,7 @@ async def create_object_endpoint(
     cache = request.app.state.cache
 
     # Atomically reserve budget
-    success, budget_remaining = await manager.reserve_budget(
-        session_id, OBJECT_CREATION_COST
-    )
+    success, budget_remaining = await manager.reserve_budget(session_id, OBJECT_CREATION_COST)
     if not success:
         if budget_remaining < 0:
             raise HTTPException(status_code=404, detail="Session not found")
@@ -70,9 +70,7 @@ async def create_object_endpoint(
 
     # Schedule background tasks: sprite gen + pairwise integration
     scenes = request.app.state.scenes
-    task = asyncio.create_task(
-        _background_spawn(session_id, blueprint, manager, cache, scenes)
-    )
+    task = asyncio.create_task(_background_spawn(session_id, blueprint, manager, cache, scenes))
     _background_tasks.add(task)
     task.add_done_callback(_background_tasks.discard)
 
@@ -158,6 +156,7 @@ async def _run_spawn_integration(
     from app.cache.scene import SceneCache
     from app.engine.creature import evaluate_creature_behaviors
     from app.engine.pairwise import spawn_integration
+
     scene = scenes.setdefault(session_id, SceneCache())
 
     # Load all session objects for pairwise context
@@ -165,11 +164,7 @@ async def _run_spawn_integration(
     if session is None:
         return
 
-    scene_objects = [
-        obj.blueprint
-        for obj in session.objects
-        if obj.blueprint.id != blueprint.id
-    ]
+    scene_objects = [obj.blueprint for obj in session.objects if obj.blueprint.id != blueprint.id]
 
     # Pairwise integration
     try:
@@ -200,22 +195,16 @@ async def _run_spawn_integration(
                 blueprint, scene_objects, scene_names, scene
             )
             if behaviors:
-                await send_behaviors_ready(
-                    session_id, blueprint.name, _format_behaviors(behaviors)
-                )
+                await send_behaviors_ready(session_id, blueprint.name, _format_behaviors(behaviors))
 
         # Evaluate existing creatures against new object (parallel)
         async def _eval_creature(obj: GameObjectBlueprint) -> None:
             snames = [o.name for o in scene_objects if o.id != obj.id] + [blueprint.name]
             behaviors = await evaluate_creature_behaviors(obj, [blueprint], snames, scene)
             if behaviors:
-                await send_behaviors_ready(
-                    session_id, obj.name, _format_behaviors(behaviors)
-                )
+                await send_behaviors_ready(session_id, obj.name, _format_behaviors(behaviors))
 
-        creature_tasks = [
-            _eval_creature(obj) for obj in scene_objects if obj.autonomous
-        ]
+        creature_tasks = [_eval_creature(obj) for obj in scene_objects if obj.autonomous]
         if creature_tasks:
             await asyncio.gather(*creature_tasks, return_exceptions=True)
     except Exception:

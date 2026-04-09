@@ -71,6 +71,7 @@ async def _dispatch(args: argparse.Namespace) -> None:
 # Timing helpers
 # ---------------------------------------------------------------------------
 
+
 class Timer:
     """Accumulates named steps for a final summary."""
 
@@ -249,9 +250,7 @@ async def cmd_status() -> None:
             checks["services"]["birefnet"] = "in-process (GPU)"
         if settings.local_llm_url:
             base = settings.local_llm_url.rstrip("/").removesuffix("/v1")
-            checks["services"]["local_llm"] = await _check_health(
-                client, f"{base}/health"
-            )
+            checks["services"]["local_llm"] = await _check_health(client, f"{base}/health")
 
     checks["services"]["google_api_key"] = "set" if settings.google_api_key else "missing"
     checks["services"]["fal_key"] = "set" if settings.fal_key else "missing"

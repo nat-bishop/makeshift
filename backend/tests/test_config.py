@@ -9,8 +9,14 @@ from app.config import Settings, _apply_profile, _load_model_profile
 
 # Env vars that load_dotenv() may have injected into the process
 _LLM_ENV_VARS = [
-    "LLM_MODEL", "LLM_TEMPERATURE", "LLM_TOP_P", "LLM_TOP_K", "LLM_MIN_P",
-    "LLM_PRESENCE_PENALTY", "LLM_REPETITION_PENALTY", "LOCAL_LLM_URL",
+    "LLM_MODEL",
+    "LLM_TEMPERATURE",
+    "LLM_TOP_P",
+    "LLM_TOP_K",
+    "LLM_MIN_P",
+    "LLM_PRESENCE_PENALTY",
+    "LLM_REPETITION_PENALTY",
+    "LOCAL_LLM_URL",
     "LOCAL_LLM_THINKING_DISABLED",
 ]
 

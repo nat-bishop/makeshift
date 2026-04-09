@@ -10,12 +10,15 @@ Used by: creation pipeline, pairwise evaluation, creature behavior.
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 import structlog
 
 from app.creator.llm import ask_bool, ask_float, ask_int, ask_text
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Sequence
 
 logger = structlog.get_logger()
 
@@ -71,9 +74,7 @@ async def run_questions(
         prompt = q.prompt.format_map(context)
         try:
             if q.qtype == "float":
-                results[q.key] = await ask_float(
-                    prompt, float(q.lo), float(q.hi), float(q.default)
-                )
+                results[q.key] = await ask_float(prompt, float(q.lo), float(q.hi), float(q.default))
             elif q.qtype == "bool":
                 results[q.key] = await ask_bool(prompt)
             elif q.qtype == "text":
@@ -81,9 +82,7 @@ async def run_questions(
                     prompt, max_tokens=q.max_tokens, default=str(q.default)
                 )
             else:
-                results[q.key] = await ask_int(
-                    prompt, int(q.lo), int(q.hi), int(q.default)
-                )
+                results[q.key] = await ask_int(prompt, int(q.lo), int(q.hi), int(q.default))
         except Exception:
             logger.warning("question_failed", key=q.key, prompt=prompt[:80])
 

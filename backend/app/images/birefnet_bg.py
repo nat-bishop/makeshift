@@ -5,13 +5,15 @@ from __future__ import annotations
 import asyncio
 import io
 import threading
-from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import structlog
 import torch
 from PIL import Image
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
 
 logger = structlog.get_logger()
 
@@ -45,11 +47,13 @@ def _get_model() -> tuple[Any, Any, str]:
         _model.to(_device)
         _model.eval()
 
-        _transform = transforms.Compose([
-            transforms.Resize((1024, 1024)),
-            transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
-        ])
+        _transform = transforms.Compose(
+            [
+                transforms.Resize((1024, 1024)),
+                transforms.ToTensor(),
+                transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+            ]
+        )
 
         logger.info("birefnet_loaded", device=_device)
         return _model, _transform, _device

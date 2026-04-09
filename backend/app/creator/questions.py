@@ -13,7 +13,7 @@ from app.creator.question_graph import Gate, Question
 # ---- Reusable gate conditions ----
 
 GATE_HAS_FIELD = Gate("has_field", lambda v: bool(v))
-GATE_DESTRUCTIBLE = Gate("durability", lambda v: int(v) < 6)
+GATE_DESTRUCTIBLE = Gate("durability", lambda v: int(v) < 6)  # type: ignore[call-overload]
 
 # ---- Creation questions ----
 # All fired via run_questions() after name generation resolves.

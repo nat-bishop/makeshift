@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import io
-from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, patch
 
 import app.images.pipeline as pipeline
@@ -17,6 +17,9 @@ from app.images.pipeline import (
 )
 from app.models.blueprint import GameObjectBlueprint, PhysicsProperties
 from PIL import Image
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @pytest.fixture(autouse=True)

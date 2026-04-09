@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from app.config import settings
-from app.models.session import WorldObject
+from app.models.session import WorldObject  # noqa: TC001 (Pydantic needs at runtime)
 from app.sessions.manager import SessionManager
 
 logger = structlog.get_logger()

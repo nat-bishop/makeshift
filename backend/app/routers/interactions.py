@@ -16,9 +16,7 @@ from app.sessions.manager import SessionManager
 
 logger = structlog.get_logger()
 
-router = APIRouter(
-    prefix="/api/sessions/{session_id}/interactions", tags=["interactions"]
-)
+router = APIRouter(prefix="/api/sessions/{session_id}/interactions", tags=["interactions"])
 
 
 class InteractionRequest(BaseModel):
@@ -37,9 +35,7 @@ class InteractionResponse(BaseModel):
 
 
 @router.get("/scene")
-async def get_scene_pairwise(
-    session_id: str, request: Request
-) -> dict:
+async def get_scene_pairwise(session_id: str, request: Request) -> dict:
     """Bulk-load all cached pairwise entries for all objects in a session."""
     cache = request.app.state.cache
     db = request.app.state.db

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock
 
 import aiosqlite
@@ -17,6 +17,9 @@ from app.ws.handler import (
 from fastapi import FastAPI, WebSocket
 from starlette.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator, Iterator
 
 
 @asynccontextmanager
@@ -65,9 +68,12 @@ def _clear_connections() -> Iterator[None]:
 
 def test_ws_connect_invalid_session() -> None:
     app = _make_test_app()
-    with TestClient(app) as client, pytest.raises(WebSocketDisconnect), \
-            client.websocket_connect("/ws/nonexistent") as ws:
-            ws.receive_json()
+    with (
+        TestClient(app) as client,
+        pytest.raises(WebSocketDisconnect),
+        client.websocket_connect("/ws/nonexistent") as ws,
+    ):
+        ws.receive_json()
 
 
 def test_ws_ping_pong() -> None:

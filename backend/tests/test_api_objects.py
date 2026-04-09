@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import uuid
-from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, patch
 
 import aiosqlite
@@ -16,6 +16,9 @@ from app.models.blueprint import (
 from app.routers import objects, sessions
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 def _make_app() -> FastAPI:

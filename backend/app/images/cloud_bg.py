@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import asyncio
 import base64
-from collections.abc import Awaitable, Callable
+from typing import TYPE_CHECKING
 
 import structlog
 
 from app.config import settings
 from app.images.fal_helpers import fal_semaphore, submit_and_download
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
 
 logger = structlog.get_logger()
 

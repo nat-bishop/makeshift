@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import re
 import time
-from collections.abc import Awaitable, Callable
+from typing import TYPE_CHECKING
 
 import structlog
-from starlette.requests import Request
-from starlette.responses import Response
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
+    from starlette.requests import Request
+    from starlette.responses import Response
 
 _SESSION_RE = re.compile(r"(?:/api/sessions/|/ws/)([^/]+)")
 

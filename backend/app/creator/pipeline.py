@@ -17,10 +17,10 @@ from __future__ import annotations
 
 import time
 import uuid
+from typing import TYPE_CHECKING
 
 import structlog
 
-from app.cache.store import CacheStore
 from app.config import settings
 from app.creator.llm import ask_text
 from app.creator.question_graph import run_questions
@@ -29,6 +29,9 @@ from app.models.blueprint import (
     GameObjectBlueprint,
     PhysicsProperties,
 )
+
+if TYPE_CHECKING:
+    from app.cache.store import CacheStore
 
 logger = structlog.get_logger()
 
@@ -97,7 +100,7 @@ async def create_object(description: str, cache: CacheStore) -> GameObjectBluepr
         await cache.put_creation(description, blueprint_data, model_version=settings.llm_model)
 
     # 6. Build blueprint
-    blueprint = GameObjectBlueprint(id=str(uuid.uuid4()), description=description, **blueprint_data)
+    blueprint = GameObjectBlueprint(id=str(uuid.uuid4()), description=description, **blueprint_data)  # type: ignore[arg-type]
 
     elapsed = time.monotonic() - t0
     logger.info("v3_create", name=name, elapsed=f"{elapsed:.2f}s")

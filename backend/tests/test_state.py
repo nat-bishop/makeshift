@@ -55,7 +55,9 @@ def test_no_contradictions_when_none_present():
 def test_state_removes_keys():
     """Only 3 states have contradiction entries."""
     assert set(STATE_REMOVES.keys()) == {
-        State.BURNING, State.FROZEN, State.WET,
+        State.BURNING,
+        State.FROZEN,
+        State.WET,
     }
 
 

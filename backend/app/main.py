@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import structlog
 from fastapi import FastAPI, WebSocket
@@ -16,6 +16,9 @@ from app.logging_setup import setup_logging
 from app.middleware import session_context_middleware
 from app.routers import interactions, objects, sessions
 from app.ws.handler import websocket_handler
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 logger = structlog.get_logger()
 
@@ -90,9 +93,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     import sqlite3
 
     try:
-        await db.execute(
-            "ALTER TABLE objects ADD COLUMN states_json TEXT NOT NULL DEFAULT '[]'"
-        )
+        await db.execute("ALTER TABLE objects ADD COLUMN states_json TEXT NOT NULL DEFAULT '[]'")
         await db.commit()
     except sqlite3.OperationalError:
         pass  # Column already exists
@@ -105,7 +106,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     cache_path = str(DATA_DIR / "cache.db")
     cache = await CacheStore.open(cache_path)
     app.state.cache = cache
-    app.state.scenes: dict = {}  # session_id -> SceneCache (in-memory, per-session)
+    app.state.scenes = {}  # session_id -> SceneCache (in-memory, per-session)
     logger.info("cache_db_initialized", path=cache_path)
 
     logger.info("server_ready")

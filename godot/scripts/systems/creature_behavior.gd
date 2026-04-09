@@ -23,6 +23,10 @@ var _pairs: Dictionary = {}  # target_name -> behavior dict
 var _target_nodes: Dictionary = {}  # target_name -> Node (cached refs)
 var _action_timer: float = 0.0
 var _error_count: int = 0
+var current_target_name: String = ""
+var current_movement: int = 3      # 3=no target
+var current_action: int = 0        # 0=nothing
+var current_action_amount: int = 0
 
 
 func init_creature(owner: RigidBody2D, creature_name: String) -> void:

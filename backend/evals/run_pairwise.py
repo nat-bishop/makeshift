@@ -201,23 +201,21 @@ def build_pairwise_dataset() -> Dataset[PairwiseInput, dict[str, Any], PairwiseE
 
 def build_screening_dataset() -> Dataset[ScreeningInput, list[str], ScreeningExpected]:
     suite = load_suite()
-    cases = []
-
-    for entry in suite["screening"]:
-        cases.append(
-            Case(
-                name=f"screen: {entry['new_object']}",
-                inputs=ScreeningInput(
-                    new_object=entry["new_object"],
-                    scene=entry["scene"],
-                ),
-                metadata=ScreeningExpected(
-                    should_include=entry["should_include"],
-                    should_exclude=entry.get("should_exclude", []),
-                    note=entry.get("note", ""),
-                ),
-            )
+    cases = [
+        Case(
+            name=f"screen: {entry['new_object']}",
+            inputs=ScreeningInput(
+                new_object=entry["new_object"],
+                scene=entry["scene"],
+            ),
+            metadata=ScreeningExpected(
+                should_include=entry["should_include"],
+                should_exclude=entry.get("should_exclude", []),
+                note=entry.get("note", ""),
+            ),
         )
+        for entry in suite["screening"]
+    ]
 
     return Dataset(
         cases=cases, evaluators=[ScreeningEvaluator()], report_evaluators=[SummaryEvaluator()]

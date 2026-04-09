@@ -30,9 +30,7 @@ def _reset_singletons():
     fal_helpers._http_client = None
 
 
-def _make_fal_mocks(
-    fal_result: dict, download_content: bytes
-) -> tuple[AsyncMock, MagicMock]:
+def _make_fal_mocks(fal_result: dict, download_content: bytes) -> tuple[AsyncMock, MagicMock]:
     """Build a mock fal handler and a mock HTTP client for submit_and_download tests."""
     mock_handler = AsyncMock()
     mock_handler.get.return_value = fal_result
@@ -97,8 +95,9 @@ class TestFalHelpers:
         )
 
         with (
-            patch("app.images.fal_helpers.fal_client.submit_async", new_callable=AsyncMock)
-            as mock_submit,
+            patch(
+                "app.images.fal_helpers.fal_client.submit_async", new_callable=AsyncMock
+            ) as mock_submit,
             patch.object(fal_helpers, "_get_http_client", return_value=mock_client),
         ):
             mock_submit.return_value = mock_handler
@@ -109,9 +108,7 @@ class TestFalHelpers:
             )
 
         assert result == b"image_bytes"
-        mock_submit.assert_awaited_once_with(
-            "fal-ai/flux-pro/v1.1", arguments={"prompt": "test"}
-        )
+        mock_submit.assert_awaited_once_with("fal-ai/flux-pro/v1.1", arguments={"prompt": "test"})
         mock_client.get.assert_awaited_once_with("https://example.com/img.png")
 
     async def test_submit_and_download_image_key(self) -> None:
@@ -120,8 +117,9 @@ class TestFalHelpers:
         )
 
         with (
-            patch("app.images.fal_helpers.fal_client.submit_async", new_callable=AsyncMock)
-            as mock_submit,
+            patch(
+                "app.images.fal_helpers.fal_client.submit_async", new_callable=AsyncMock
+            ) as mock_submit,
             patch.object(fal_helpers, "_get_http_client", return_value=mock_client),
         ):
             mock_submit.return_value = mock_handler

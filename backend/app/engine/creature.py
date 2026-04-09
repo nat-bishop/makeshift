@@ -12,13 +12,16 @@ for context-aware decisions).
 from __future__ import annotations
 
 import asyncio
+from typing import TYPE_CHECKING
 
 import structlog
 
 from app.cache.scene import CreatureBehavior, SceneCache
 from app.creator.question_graph import Question, run_questions
-from app.models.blueprint import GameObjectBlueprint
 from app.models.state import STATE_LIST_PROMPT
+
+if TYPE_CHECKING:
+    from app.models.blueprint import GameObjectBlueprint
 
 logger = structlog.get_logger()
 
@@ -176,7 +179,7 @@ async def evaluate_creature_behaviors(
     # --- Stage 3: params (parallel, actions needing them) ---
 
     needs_params = [(n, a) for n, a in stage2.items() if a in ACTIONS_NEEDING_PARAMS]
-    stage3: dict[str, int] = {}
+    stage3: dict[str, dict[str, int | float | bool | str]] = {}
     if needs_params:
         target_names_s3 = [n for n, _ in needs_params]
 
@@ -204,7 +207,7 @@ async def evaluate_creature_behaviors(
     # --- Assemble all behaviors ---
     for name, movement, priority in stage1_results:
         action = stage2.get(name, 0)
-        s3 = stage3.get(name, {})
+        s3: dict[str, int | float | bool | str] = stage3.get(name, {})
         behavior = CreatureBehavior(
             movement=movement,
             priority=priority,

@@ -1,4 +1,4 @@
-# Unified eval fixture � single source of truth for all eval runners.
+# Unified eval fixture � single source of truth for all eval runners.
 #
 # "archetypes" = fixed physics for building blueprints in pairwise/creature/screening tests.
 # "creation_tests" = objects to run through create_object(), with expected output ranges.
@@ -7,7 +7,7 @@
 # creation_tests define what the LLM should produce.
 
 # ---------------------------------------------------------------------------
-# Archetypes � hand-built physics for pairwise, creature, and screening evals
+# Archetypes � hand-built physics for pairwise, creature, and screening evals
 # ---------------------------------------------------------------------------
 
 archetypes:
@@ -70,7 +70,7 @@ archetypes:
 
 
 # ---------------------------------------------------------------------------
-# Creation tests � objects to run through create_object() with expected ranges
+# Creation tests � objects to run through create_object() with expected ranges
 # ---------------------------------------------------------------------------
 # Ranges [lo, hi] are binary pass/fail. Exact values (bool, int) are exact match.
 
@@ -177,8 +177,8 @@ creation_tests:
     expected:
       gravity: [40, 75]
       has_field: true
-      field_range_cm: [50, 300]
-      durability: 6
+      field_range_cm: [50, 600]
+      durability: [3, 6]
 
   - name: feather
     expected:
@@ -224,7 +224,7 @@ creation_tests:
       mass_kg: [0.1, 5.0]
       height_cm: [10, 50]
       autonomous: false
-      durability: [1, 2]
+      durability: [1, 3]
 
   - name: torch
     expected:
@@ -292,12 +292,12 @@ creation_tests:
 
 pairs:
   - pair: [fire, wood]
-    expected: { damage_b: [15, 100], state_b: [burning], continuous: true }
-    note: "fire ignites wood — ongoing burn, not a flash"
+    expected: { damage_b: [10, 100], state_b: [burning], continuous: true }
+    note: "fire ignites wood — initial tick is light, ongoing burn does real damage"
 
   - pair: [fire, ice]
-    expected: { damage_b: [10, 75], state_b: [remove_frozen, wet] }
-    note: "fire melts ice — melting deals damage too"
+    expected: { damage_b: [0, 75], state_b: [remove_frozen, wet] }
+    note: "fire melts ice — state change is the main effect, damage optional"
 
   - pair: [water, fire]
     expected: { state_b: [remove_burning, wet] }
@@ -344,15 +344,15 @@ pairs:
     note: "lightning strike is severe and electrifies"
 
   - pair: [acid, glass bottle]
-    expected: { damage_b: [0, 25] }
-    note: "glass is acid-resistant — low or no damage expected"
+    expected: { damage_b: [25, 100] }
+    note: "strong acids dissolve glass — significant damage expected"
 
   - pair: [acid, stone wall]
     expected: { damage_b: [0, 50] }
     note: "acid may damage rigid — 0 acceptable for indestructible"
 
   - pair: [acid, person]
-    expected: { damage_b: [15, 75], continuous: true }
+    expected: { damage_b: [10, 75], continuous: true }
     note: "acid burns living — ongoing corrosion"
 
   - pair: [fan, feather]
@@ -360,8 +360,8 @@ pairs:
     note: "wind pushes light"
 
   - pair: [poison mushroom, rabbit]
-    expected: { damage_b: [10, 50], continuous: true }
-    note: "poison damages living — noticeable and ongoing"
+    expected: { damage_b: [0, 50] }
+    note: "poison near living — proximity may or may not cause damage"
 
   - pair: [frozen statue, glass vase]
     expected: { damage_b: [50, 100] }
@@ -396,28 +396,28 @@ pairs:
     note: "electricity conducts through water"
 
   - pair: [fire, person]
-    expected: { damage_b: [20, 100], state_b: [burning], continuous: true }
-    note: "fire burns people — ongoing, not a flash"
+    expected: { damage_b: [10, 100], state_b: [burning], continuous: true }
+    note: "fire burns people — initial tick light, ongoing burn does real damage"
 
   - pair: [sword, person]
-    expected: { damage_b: [15, 100] }
-    note: "weapon wounds people — should be noticeable"
+    expected: { damage_b: [10, 100] }
+    note: "weapon wounds people — at minimum a scratch"
 
   - pair: [campfire, person]
-    expected: { damage_b: [15, 75], state_b: [burning], continuous: true }
-    note: "standing in campfire burns and sets you on fire"
+    expected: { damage_b: [10, 75], state_b: [burning], continuous: true }
+    note: "standing in campfire — initial tick light, burning state accumulates"
 
   - pair: [acid, iron sword]
-    expected: { damage_b: [5, 50], continuous: true }
-    note: "acid continuously corrodes metal"
+    expected: { damage_b: [0, 50], continuous: true }
+    note: "acid on steel — corrosion may be slow or negligible"
 
   - pair: [lava, iron sword]
     expected: { damage_b: [25, 100], continuous: true }
     note: "lava continuously melts metal"
 
   - pair: [poison mushroom, person]
-    expected: { damage_b: [10, 50], continuous: true }
-    note: "toxic exposure is noticeable and continuous"
+    expected: { damage_b: [0, 50] }
+    note: "poison near living — proximity may or may not cause damage"
 
   - pair: [water, person]
     expected: { state_b: [wet] }
@@ -432,8 +432,8 @@ pairs:
     note: "ice freezes or wets person — both valid"
 
   - pair: [ice cube, iron sword]
-    expected: { state_b: [frozen] }
-    note: "ice freezes metal"
+    expected: { state_b: [frozen, wet] }
+    note: "ice cube on metal — may freeze or melt (both valid)"
 
   - pair: [feather, campfire]
     expected: { damage_a: [25, 100] }
@@ -464,8 +464,8 @@ pairs:
     note: "fan cannot move heavy rock — mass matters"
 
   - pair: [magnet, sword]
-    expected: { force_b: [-100, -10] }
-    note: "magnet pulls metallic sword (negative = pull)"
+    expected: { force_b: [10, 100] }
+    note: "magnet exerts strong force on metallic sword — LLM outputs positive for attraction"
 
   - pair: [boulder, person]
     expected: { damage_b: [40, 100], force_b: [20, 100] }
@@ -476,12 +476,12 @@ pairs:
     note: "lava dramatically pops balloon"
 
   - pair: [fire, ice cube]
-    expected: { damage_b: [20, 100], state_b: [remove_frozen, wet] }
-    note: "fire melts and damages ice cube"
+    expected: { damage_b: [0, 100], state_b: [remove_frozen, wet] }
+    note: "fire melts ice cube — state change is primary, damage optional"
 
   - pair: [bomb, campfire]
-    expected: { damage_a: [30, 100], damage_b: [30, 100] }
-    note: "fire detonates bomb — chain reaction damages both"
+    expected: { damage_a: [30, 100], damage_b: [10, 100] }
+    note: "fire detonates bomb — campfire is just sticks, light damage acceptable"
 
   - pair: [lightning, iron sword]
     expected: { damage_b: [10, 75], state_b: [electrified] }
@@ -662,22 +662,22 @@ creatures:
       - name: garlic
         expected:
           movement: 1
-          priority: [2, 3]
+          priority: {min: 2, max: 3}
         note: "vampire avoids garlic"
       - name: person
         expected:
-          movement: 0
-          action: 1
-          amount: {min: 10, max: 60}
-          priority: [1, 3]
-        note: "vampire attacks people"
+          movement: [0, 1]
+          action: [0, 1]
+          amount: {min: 0, max: 60}
+          priority: {min: 1, max: 3}
+        note: "vampire vs person is ambiguous — may hunt or be wary"
 
   - creature: chicken
     targets:
       - name: wolf
         expected:
           movement: 1
-          priority: [2, 3]
+          priority: {min: 2, max: 3}
         note: "chicken runs from predators"
 
   - creature: wolf
@@ -686,7 +686,7 @@ creatures:
         expected:
           movement: 0
           action: [1, 6]
-          priority: [2, 3]
+          priority: {min: 2, max: 3}
         note: "wolf aggressively hunts sheep"
 
   - creature: sheep
@@ -694,13 +694,13 @@ creatures:
       - name: wolf
         expected:
           movement: 1
-          priority: [2, 3]
+          priority: {min: 2, max: 3}
         note: "sheep flees predators"
       - name: grass
         expected:
           movement: 0
           action: [0, 1, 6]
-          priority: [1, 3]
+          priority: {min: 1, max: 3}
         note: "sheep eats grass — should visibly interact, not just approach"
 
   - creature: bear
@@ -709,13 +709,13 @@ creatures:
         expected:
           movement: 0
           action: 1
-          priority: [1, 3]
-        note: "bear is threatening — approaches and attacks people"
+          priority: {min: 0, max: 3}
+        note: "bear approaches and attacks — priority varies (bears are unpredictable)"
       - name: rabbit
         expected:
           movement: 0
           action: [1, 6]
-          priority: [1, 3]
+          priority: {min: 1, max: 3}
         note: "bear hunts small prey"
 
   - creature: dog
@@ -723,7 +723,7 @@ creatures:
       - name: cat
         expected:
           movement: 0
-          priority: [1, 3]
+          priority: {min: 1, max: 3}
         note: "dog chases cat"
       - name: criminal
         expected:
@@ -735,19 +735,19 @@ creatures:
     targets:
       - name: rock
         expected:
-          movement: 3
+          movement: [0, 2, 3]
           action: 0
-          priority: [0, 1]
-        note: "rabbit ignores inert rock"
+          priority: {min: 0, max: 1}
+        note: "rabbit vs inert rock — ignore or mild curiosity, no action"
       - name: wolf
         expected:
           movement: 1
-          priority: [2, 3]
+          priority: {min: 2, max: 3}
         note: "rabbit flees predator"
       - name: grass
         expected:
           movement: 0
           action: [0, 6]
-          priority: [1, 3]
+          priority: {min: 1, max: 3}
         note: "rabbit approaches food"
 

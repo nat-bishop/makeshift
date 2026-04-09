@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
-import pytest
 from app.cli import Timer, _check_health
+
+if TYPE_CHECKING:
+    import pytest
 
 
 class TestTimer:
@@ -24,9 +27,7 @@ class TestTimer:
             timer = Timer()
             assert timer.total == 5.0
 
-    def test_print_summary_outputs_to_stderr(
-        self, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_print_summary_outputs_to_stderr(self, capsys: pytest.CaptureFixture[str]) -> None:
         with patch("app.cli.time.monotonic", side_effect=[100.0, 110.0, 110.0]):
             timer = Timer()
             timer.add("llm", 4.0, "gemini")
