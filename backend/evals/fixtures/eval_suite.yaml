@@ -654,7 +654,7 @@ creatures:
         note: "firefighter heals injured"
       - name: rock
         expected:
-          movement: 3
+          movement: 2
           action: 0
           priority: {min: 0, max: 1}
         note: "firefighter ignores non-emergency"
@@ -674,7 +674,7 @@ creatures:
         note: "cat is genuinely afraid of dogs — not mild"
       - name: ball of yarn
         expected:
-          movement: [0, 2]
+          movement: 0
           priority: {min: 1, max: 3}
         note: "cat plays with yarn — should be visibly interested"
 
@@ -682,7 +682,7 @@ creatures:
     targets:
       - name: player
         expected:
-          movement: [0, 2]
+          movement: 0
           priority: {min: 1, max: 3}
         note: "guard dog patrols near player — should be attentive"
       - name: criminal
@@ -778,7 +778,7 @@ creatures:
         note: "bear hunts small prey"
       - name: rock
         expected:
-          movement: 3
+          movement: 2
           action: 0
           priority: {min: 0, max: 1}
         note: "bear ignores inert rock"
@@ -806,7 +806,7 @@ creatures:
     targets:
       - name: rock
         expected:
-          movement: [0, 2, 3]
+          movement: [0, 2]
           action: 0
           priority: {min: 0, max: 1}
         note: "rabbit vs inert rock — ignore or mild curiosity, no action"
@@ -839,7 +839,7 @@ creatures:
         note: "dragon hunts livestock"
       - name: fire
         expected:
-          movement: 3
+          movement: 2
           priority: {min: 0, max: 1}
         note: "dragon ignores fire — immune/unbothered"
 

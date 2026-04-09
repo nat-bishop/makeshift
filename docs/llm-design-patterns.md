@@ -132,7 +132,7 @@ All parallel (~60ms wall):
 Later questions use answers from earlier questions as input context. Each stage is trivially simple because prior answers are given.
 
 ```
-Stage 1: "Firefighter sees burning tree. 0=approach 1=flee 2=orbit 3=ignore"
+Stage 1: "Firefighter sees burning tree. 0=approach 1=flee 2=ignore"
   → 0 (approach)
 
 Stage 2: "Firefighter is APPROACHING burning tree because it wants to help.
@@ -156,12 +156,12 @@ Fan out to many parallel calls. Filter results. Fan in to a smaller set of follo
 
 ```
 Stage 1 — Fan out (42 parallel calls, 1 token each):
-  "Creature A sees object 1 → approach/flee/orbit/ignore?"  → approach
-  "Creature A sees object 2 → approach/flee/orbit/ignore?"  → ignore
-  "Creature A sees object 3 → approach/flee/orbit/ignore?"  → ignore
+  "Creature A sees object 1 → approach/flee/ignore?"  → approach
+  "Creature A sees object 2 → approach/flee/ignore?"  → ignore
+  "Creature A sees object 3 → approach/flee/ignore?"  → ignore
   ...
 
-Filter: keep only approach/orbit pairs (~12 out of 42 survive)
+Filter: keep only approach pairs (~12 out of 42 survive)
 
 Stage 2 — Fan in (12 parallel calls, 1 token each):
   "Creature A is approaching object 1. On arrival?"  → remove state
@@ -172,7 +172,7 @@ The filter eliminates ~70% of follow-up work. Stage 2 only runs for pairs that m
 
 **When to use:** A cheap first question (binary or categorical) can determine whether expensive follow-up is needed. Always ask the cheap question first.
 
-**Used in:** Creature behavior — movement reaction (all pairs) filters to on-arrival action (approaching/orbiting pairs only) filters to parameters (actions that need them).
+**Used in:** Creature behavior — movement reaction (all pairs) filters to on-arrival action (approaching pairs only) filters to parameters (actions that need them).
 
 ### 4. Combined: parallel fan-out + conditional sequential
 

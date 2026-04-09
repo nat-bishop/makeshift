@@ -167,18 +167,17 @@ Autonomous creatures don't have fixed behavior verbs. Instead, each creature×ob
 |---|---|---|
 | 0 | **approach** | Move toward target, stop at contact |
 | 1 | **flee** | Move away from target |
-| 2 | **orbit** | Circle target at range |
-| 3 | **ignore** | No movement reaction |
+| 2 | **ignore** | No movement reaction |
 
-Each creature×object pair gets a movement (0-3) and a strength (0-100) at spawn time.
+Each creature×object pair gets a movement (0-2) and a strength (0-100) at spawn time.
 
 ### On-arrival actions
 
-For pairs where the creature approaches or orbits, the LLM decides what happens on arrival:
+For pairs where the creature approaches, the LLM decides what happens on arrival:
 
 | # | Action | Parameters | Examples |
 |---|---|---|---|
-| 0 | **nothing** | — | Cat orbits ball of yarn, just watches |
+| 0 | **nothing** | — | Cat approaches ball of yarn, just watches |
 | 1 | **damage** | amount (0-100) | Cop attacks criminal |
 | 2 | **heal** | amount (0-100) | Doctor heals injured person |
 | 3 | **add state** | state_id (1-4) | Wizard sets enemy burning |
@@ -205,7 +204,6 @@ For each (creature, object) pair with movement ≠ ignore:
 Pick highest utility pair.
   flee → move away from that object
   approach → move toward that object
-  orbit → circle that object at range
 ```
 
 Distance is normalized by perception range so falloff is relative to how far the creature can see, not absolute meters. A creature with 20m perception treats 10m as "half range" (utility halved), not "10 units away." The 1.5× flee multiplier ensures survival slightly overrides desire at equal strength and distance.
@@ -215,7 +213,7 @@ Distance is normalized by perception range so falloff is relative to how far the
 - Vampire, garlic 15m (flee 90), human 2m (approach 85): garlic utility = 90×1.5/1.75 = 77, human utility = 85/1.1 = 77 → tie, slight edge to flee → flees but barely
 - Vampire, garlic 20m (flee 90), human 2m (approach 85): garlic utility = 90×1.5/2 = 67.5, human utility = 85/1.1 = 77 → approaches human
 
-When the creature reaches contact range of an approach/orbit target, execute the on-arrival action from the pairwise cache.
+When the creature reaches contact range of an approach target, execute the on-arrival action from the pairwise cache.
 
 If creatures need obstacle avoidance (curve around garlic to reach human), that's a pathfinding layer on top — not priority resolution. Defer until playtesting shows it's needed.
 

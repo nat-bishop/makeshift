@@ -1,17 +1,15 @@
 extends Node
 
 ## V3 creature behavior runtime: per-pair utility-based targeting.
-## Each creature x object pair has: movement(0-3), priority(0-3), action(0-5), param.
+## Each creature x object pair has: movement(0-2), priority(0-3), action(0-5), param.
 ## Loaded from InteractionCache at spawn time and on scene changes.
 
 const PERCEPTION_RANGE: float = 500.0
 const CONTACT_RANGE: float = 48.0
-const ORBIT_RANGE: float = 128.0
 const FLEE_MULTIPLIER: float = 1.5
 const ACTION_COOLDOWN: float = 1.0
 const MOVE_SPEED: float = 200.0
 const FLEE_SPEED: float = 250.0
-const ORBIT_SPEED: float = 150.0
 const MAX_ERRORS: int = 5
 
 # Priority level (0-3) → utility weight (mirrors backend PRIORITY_WEIGHTS)
@@ -24,7 +22,7 @@ var _target_nodes: Dictionary = {}  # target_name -> Node (cached refs)
 var _action_timer: float = 0.0
 var _error_count: int = 0
 var current_target_name: String = ""
-var current_movement: int = 3      # 3=no target
+var current_movement: int = 2      # 2=no target
 var current_action: int = 0        # 0=nothing
 var current_action_amount: int = 0
 
@@ -79,7 +77,7 @@ func _physics_process(delta: float) -> void:
 
 	# Clear debug state (overwritten below if a target is found)
 	current_target_name = ""
-	current_movement = 3
+	current_movement = 2
 	current_action = 0
 	current_action_amount = 0
 
@@ -93,8 +91,8 @@ func _physics_process(delta: float) -> void:
 		if node == null or not is_instance_valid(node):
 			continue
 		var entry: Dictionary = _pairs[tname]
-		var movement: int = entry.get("movement", 3)
-		if movement == 3:  # ignore
+		var movement: int = entry.get("movement", 2)
+		if movement == 2:  # ignore
 			continue
 		var priority: int = entry.get("priority", 0)
 		var weight: float = PRIORITY_WEIGHTS.get(priority, 0.0)
@@ -130,16 +128,6 @@ func _physics_process(delta: float) -> void:
 				_action_timer = ACTION_COOLDOWN
 		1:  # flee
 			WorldMutations.apply_movement_force(_owner, -dir, FLEE_SPEED, FLEE_SPEED)
-		2:  # orbit
-			var tangent: Vector2 = dir.rotated(PI / 2.0)
-			if dist < ORBIT_RANGE:
-				tangent = (tangent - dir * 0.3).normalized()
-			elif dist > ORBIT_RANGE * 1.5:
-				tangent = (tangent + dir * 0.3).normalized()
-			WorldMutations.apply_movement_force(_owner, tangent, ORBIT_SPEED, ORBIT_SPEED)
-			if dist <= ORBIT_RANGE * 1.2 and dist >= ORBIT_RANGE * 0.5 and _action_timer <= 0.0:
-				_execute_action(best_entry, best_target)
-				_action_timer = ACTION_COOLDOWN
 
 
 func _execute_action(entry: Dictionary, target: Node) -> void:

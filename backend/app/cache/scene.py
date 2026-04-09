@@ -53,7 +53,7 @@ class PairwiseResult:
 class CreatureBehavior:
     """Per creature x target pair behavior. Scene-local, not persisted."""
 
-    movement: int  # 0=approach, 1=flee, 2=orbit, 3=ignore
+    movement: int  # 0=approach, 1=flee, 2=ignore
     priority: int  # 0-3 (0=ignore, 1=mild, 2=moderate, 3=driven)
     action: int  # 0=nothing,1=damage,2=heal,3=add_state,4=remove_state,5=take/consume
     amount: int  # 0-100 damage/heal intensity (action 1,2)
@@ -71,7 +71,7 @@ class CreatureBehavior:
     @classmethod
     def from_dict(cls, d: dict) -> CreatureBehavior:
         return cls(
-            movement=d.get("movement", 3),
+            movement=d.get("movement", 2),
             priority=d.get("priority", 0),
             action=d.get("action", 0),
             amount=d.get("amount", 0),

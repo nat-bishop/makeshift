@@ -12,7 +12,7 @@ const DUR_NAMES: Array[String] = [
 ]
 const AFF_NAMES: Array[String] = ["carry", "mount", "climb", "none"]
 const SURFACE_NAMES: Array[String] = ["slip", "norm", "grip"]
-const MOVE_NAMES: Array[String] = ["approach", "flee", "orbit", "idle"]
+const MOVE_NAMES: Array[String] = ["approach", "flee", "idle"]
 const ACT_NAMES: Array[String] = ["idle", "dmg", "heal", "+state", "-state", "destroy", "take"]
 
 var _game_object: Node
@@ -26,7 +26,7 @@ var _is_creature: bool = false
 var _last_hp: int = -1
 var _last_states: Array = []
 var _last_target: String = ""
-var _last_movement: int = 3
+var _last_movement: int = 2
 var _last_action: int = 0
 
 
