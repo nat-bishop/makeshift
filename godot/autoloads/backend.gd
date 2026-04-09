@@ -129,6 +129,7 @@ func get_cached_sprite(object_id: String) -> Texture2D:
 
 func _connect_websocket() -> void:
 	if session_id.is_empty():
+		Log.warn("Backend: _connect_websocket called with empty session_id")
 		return
 
 	_ws = WebSocketPeer.new()
@@ -239,6 +240,7 @@ func _handle_sprite_ready(data: Dictionary) -> void:
 func _handle_sprite_failed(data: Dictionary) -> void:
 	var object_id: String = data.get("object_id", "")
 	if object_id.is_empty():
+		Log.warn("Backend: sprite_failed message missing object_id")
 		return
 	var reason: String = data.get("reason", "unknown")
 	_pending_sprites.erase(object_id)

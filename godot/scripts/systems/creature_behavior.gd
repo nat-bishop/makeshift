@@ -24,6 +24,7 @@ var _pairs: Dictionary = {}  # target_name -> behavior dict
 var _target_nodes: Dictionary = {}  # target_name -> Node (cached refs)
 var _action_timer: float = 0.0
 var _error_count: int = 0
+var _disabled_logged: bool = false
 var current_target_name: String = ""
 var current_movement: int = 2      # 2=no target
 var current_action: int = 0        # 0=nothing
@@ -81,7 +82,12 @@ func _try_add_target(node: Node) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if _error_count >= MAX_ERRORS or not is_instance_valid(_owner):
+	if _error_count >= MAX_ERRORS:
+		if not _disabled_logged:
+			Log.warn("CreatureBehavior: Disabled after %d errors for '%s'" % [MAX_ERRORS, _owner_name])
+			_disabled_logged = true
+		return
+	if not is_instance_valid(_owner):
 		return
 	_action_timer = maxf(0.0, _action_timer - delta)
 
@@ -140,9 +146,14 @@ func _physics_process(delta: float) -> void:
 			WorldMutations.apply_movement_force(_owner, -dir, _flee_speed, _flee_speed)
 
 
+func _record_error(reason: String) -> void:
+	_error_count += 1
+	Log.debug("CreatureBehavior: Action error for '%s' - %s (%d/%d)" % [_owner_name, reason, _error_count, MAX_ERRORS])
+
+
 func _execute_action(entry: Dictionary, target: Node) -> void:
 	if not is_instance_valid(target):
-		_error_count += 1
+		_record_error("invalid target")
 		return
 	var action: int = entry.get("action", 0)
 	var amount: int = entry.get("amount", 0)
@@ -152,31 +163,31 @@ func _execute_action(entry: Dictionary, target: Node) -> void:
 			pass
 		1:  # damage
 			if not target.has_method("take_damage"):
-				_error_count += 1
+				_record_error("target missing take_damage")
 				return
 			var effective: float = CollisionResolver.INSTANT_KILL_DAMAGE if amount >= CollisionResolver.LETHAL_THRESHOLD else (float(amount) if amount > 0 else 15.0)
 			WorldMutations.apply_damage(target, effective)
 		2:  # heal
 			if not target.has_method("heal"):
-				_error_count += 1
+				_record_error("target missing heal")
 				return
 			WorldMutations.apply_heal(target, float(amount) if amount > 0 else 10.0)
 		3:  # add_state
 			if state_id < 1 or state_id > 7 or not target.has_method("add_state"):
-				_error_count += 1
+				_record_error("invalid state_id or target missing add_state")
 				return
 			WorldMutations.apply_add_state(
 				target, CollisionResolver.STATE_NAMES[state_id], 10.0
 			)
 		4:  # remove_state
 			if state_id < 1 or state_id > 7 or not target.has_method("remove_state"):
-				_error_count += 1
+				_record_error("invalid state_id or target missing remove_state")
 				return
 			WorldMutations.apply_remove_state(
 				target, CollisionResolver.STATE_NAMES[state_id]
 			)
 		5:  # take/consume
 			if not target.has_method("take_damage"):
-				_error_count += 1
+				_record_error("target missing take_damage for destroy")
 				return
 			WorldMutations.apply_damage(target, CollisionResolver.INSTANT_KILL_DAMAGE)
