@@ -117,7 +117,7 @@ class TestStateMapping:
                 if "action" in exp:
                     vals = exp["action"] if isinstance(exp["action"], list) else [exp["action"]]
                     for v in vals:
-                        assert 0 <= v <= 6, (
+                        assert 0 <= v <= 5, (
                             f"invalid action {v} for {entry['creature']} vs {t['name']}"
                         )
 

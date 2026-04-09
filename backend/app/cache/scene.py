@@ -55,7 +55,7 @@ class CreatureBehavior:
 
     movement: int  # 0=approach, 1=flee, 2=orbit, 3=ignore
     priority: int  # 0-3 (0=ignore, 1=mild, 2=moderate, 3=driven)
-    action: int  # 0=nothing,1=damage,2=heal,3=add_state,4=remove_state,5=destroy,6=take
+    action: int  # 0=nothing,1=damage,2=heal,3=add_state,4=remove_state,5=take/consume
     amount: int  # 0-100 damage/heal intensity (action 1,2)
     state_id: int  # 1-4 State enum value (action 3,4)
 

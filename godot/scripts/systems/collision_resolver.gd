@@ -10,6 +10,8 @@ const MAX_CASCADE_DEPTH: int = 3
 const CASCADE_RADIUS: float = 96.0
 const DEFAULT_STATE_DURATION: float = 10.0
 const FORCE_SCALE: float = 5.0  # Multiply 0-100 LLM force to impulse magnitude
+const LETHAL_THRESHOLD: int = 100
+const INSTANT_KILL_DAMAGE: float = 99999.0
 
 # State encoding: 0=none, 1-4=add, 5-8=remove
 const STATE_NAMES: Array[String] = [
@@ -58,8 +60,8 @@ func resolve_collision(body_a: Node, body_b: Node, cascade_depth: int = 0, _reso
 
 	var dmg_a: int = entry.get("damage_a", 0)
 	var dmg_b: int = entry.get("damage_b", 0)
-	var destroyed_a: bool = dmg_a >= 100
-	var destroyed_b: bool = dmg_b >= 100
+	var destroyed_a: bool = dmg_a >= LETHAL_THRESHOLD
+	var destroyed_b: bool = dmg_b >= LETHAL_THRESHOLD
 
 	# Damage (apply non-lethal damage first, defer destruction to end)
 	if not destroyed_a and dmg_a > 0:
@@ -114,7 +116,7 @@ func _apply_state_change(target: Node, change: int) -> void:
 
 func _destroy(target: Node) -> void:
 	if target.has_method("take_damage"):
-		target.take_damage(99999.0)
+		target.take_damage(INSTANT_KILL_DAMAGE)
 	elif is_instance_valid(target):
 		target.queue_free()
 

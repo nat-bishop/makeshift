@@ -2,7 +2,7 @@
 
 Three sequential stages, each parallel internally via run_questions():
   Stage 1: movement (0-3) + priority (0-3) — all creature x object pairs
-  Stage 2: action (0-6) — approach/orbit pairs only (filtered)
+  Stage 2: action (0-5) — approach/orbit pairs only (filtered)
   Stage 3: params — actions needing them (filtered)
 
 Scene-local, not persisted to cache.db (prompts include scene inventory
@@ -64,10 +64,10 @@ STAGE2_QUESTION = Question(
     "{creature} is {movement_verb} {target} and {motivation} it.\n"
     "What does {creature} do to {target}?\n"
     "0=nothing 1=damage/attack 2=heal/repair/extinguish 3=add state "
-    "4=remove state 5=destroy 6=take/eat/consume",
+    "4=remove state 5=take/eat/consume",
     "int",
     0,
-    6,
+    5,
     0,
 )
 

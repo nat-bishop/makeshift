@@ -1,7 +1,7 @@
 extends Node
 
 ## V3 creature behavior runtime: per-pair utility-based targeting.
-## Each creature x object pair has: movement(0-3), priority(0-3), action(0-6), param.
+## Each creature x object pair has: movement(0-3), priority(0-3), action(0-5), param.
 ## Loaded from InteractionCache at spawn time and on scene changes.
 
 const PERCEPTION_RANGE: float = 500.0
@@ -156,7 +156,8 @@ func _execute_action(entry: Dictionary, target: Node) -> void:
 			if not target.has_method("take_damage"):
 				_error_count += 1
 				return
-			WorldMutations.apply_damage(target, float(amount) if amount > 0 else 15.0)
+			var effective: float = CollisionResolver.INSTANT_KILL_DAMAGE if amount >= CollisionResolver.LETHAL_THRESHOLD else (float(amount) if amount > 0 else 15.0)
+			WorldMutations.apply_damage(target, effective)
 		2:  # heal
 			if not target.has_method("heal"):
 				_error_count += 1
@@ -176,10 +177,8 @@ func _execute_action(entry: Dictionary, target: Node) -> void:
 			WorldMutations.apply_remove_state(
 				target, CollisionResolver.STATE_NAMES[state_id]
 			)
-		5:  # destroy
+		5:  # take/consume
 			if not target.has_method("take_damage"):
 				_error_count += 1
 				return
-			WorldMutations.apply_damage(target, 99999.0)
-		6:  # take
-			pass  # needs affordance system integration
+			WorldMutations.apply_damage(target, CollisionResolver.INSTANT_KILL_DAMAGE)
