@@ -16,6 +16,8 @@ var _range_px: float = 0.0
 func init_field(owner: Node2D, range_cm: float) -> void:
 	_owner_body = owner
 	_range_px = range_cm  # 1cm = 1px (world scale)
+	var owner_name: String = owner.get_object_name() if owner.has_method("get_object_name") else "unknown"
+	Log.debug("ObjectField: Init field for '%s' (range=%.0fpx)" % [owner_name, _range_px])
 	_create_area(_range_px)
 	_start_periodic_timer()
 
