@@ -6,7 +6,7 @@ V2 with fewer enums, LLM-generated physics, and auto-populated interaction rules
 
 The pitch isn't "delete everything and just ask the LLM." It's: **automate the most tedious part (rule authoring) while keeping the engine infrastructure that makes the game work.**
 
-The architecture keeps: a state system (smaller), behavior verbs (same), affordances (simpler), contradiction resolution, and cascade control. What it replaces: substance profiles with LLM-generated numbers, hand-authored rules with an LLM-populated cache, tag derivation with interaction-only states, and the single complex creator call with a graph of tiny parallel calls.
+The architecture keeps: a state system (smaller), affordances (simpler), and contradiction resolution. What it replaces: substance profiles with LLM-generated numbers, hand-authored rules with an LLM-populated cache, tag derivation with interaction-only states, cascade + ObjectField with tick-based StatePropagator, and the single complex creator call with a graph of tiny parallel calls.
 
 See [llm-design-patterns.md](llm-design-patterns.md) for inference constraints. Key numbers:
 - ~55ms base cost per call, input tokens are free
@@ -50,50 +50,43 @@ Same pair, different outcome. Intent is the difference. The engine distinguishes
 
 ---
 
-## Pairwise interaction cache
+## Collision cache
 
-The core data structure. A lookup table mapping object pairs to interaction outcomes, populated by LLM calls at spawn time.
+A lookup table mapping object pairs to force-only collision rules, populated by LLM calls at spawn time.
 
 ### Cache population
 
-When a new object enters the scene, a single screening call identifies which existing objects it would interact with interestingly. Only those pairs get fully evaluated.
+When a new object enters the scene, a single screening call identifies which existing objects it would have interesting force interactions with. Only those pairs get evaluated.
 
-**Screening (1 call per new object, ~5-15 output tokens):**
+**Screening (1 call per new object, pre-warming only — not a gate):**
 ```
-"New object: fire sword (2kg, armor 80, hot, sharp, metal).
+"New object: fire sword (2kg, normal, durability normal).
  Scene objects:
- 1. wooden shield (3kg, armor 20, flammable, wood)
- 2. rock (5kg, armor 70, stone)
- 3. glass bottle (0.3kg, armor 5, fragile)
- Which would interact interestingly? List numbers."
- → "1,3"
+ 1. wooden shield (3kg, normal, durability normal)
+ 2. rock (5kg, normal, durability tough)
+ 3. glass bottle (0.3kg, normal, durability soft)
+ Which would have interesting physical force interactions
+ (pushing, pulling, magnetism, wind, repulsion) with fire sword? → "none"
 ```
 
-The LLM sees all objects at once and makes relative judgments. Missed pairs default to "nothing happens" — low stakes, lazily evaluated on actual contact if needed.
+Missed pairs are lazily evaluated on actual collision via `request_collision` WS message.
 
-**Full evaluation (interesting pairs only, 6 parallel calls each, 1 token, ~145ms):**
+**Force evaluation (1 call per interesting pair):**
 ```
-1. Damage to A? 0-100  (100=destroyed)
-2. Damage to B? 0-100  (100=destroyed)
-3. State change on A? 0-8  (0=none, 1-4=add state, 5-8=remove state)
-4. State change on B? 0-8
-5. Force on B? -100 to 100  (negative=pull, positive=push)
-6. Instant or continuous? 0=instant 1=continuous
-```
-
-Include both objects' physics properties and active states in the prompt (input is free):
-```
-"[fire sword: 2kg, armor 80, hp 90, emits heat] hits 
- [wooden shield: 3kg, armor 20, hp 40]. Damage to B? 0-100"
+"fire sword (2kg, 120cm, normal, normal-surface) contacts
+ magnet (0.5kg, 10cm, normal, normal-surface).
+ Does the first push or pull the second?
+ none / pull / drag / push / throw"
+→ "pull"
 ```
 
-The physics properties act as calibration anchors — the LLM sees armor 20 and produces consistent damage across similar targets. Force on A is engine-derived via Newton's 3rd law heuristic, not LLM-evaluated.
+Force categories map to signed values: none=0, pull=-30, drag=-80, push=30, throw=80.
 
-**A and B always refer to the first and second name in lexicographic sort order.** The engine maps collision participants to cache A/B by sorting their names. See [cache.md](cache.md) for key normalization.
+**A and B always refer to the first and second name in lexicographic sort order.** See [cache.md](cache.md) for key normalization.
 
-### State changes and cache invalidation
+### State changes and collision rules
 
-When an object gains or loses a state, its cached interactions are stale — "wooden shield [BURNING]" interacts differently than "wooden shield." The engine marks affected cache entries as stale and re-evaluates them lazily: only when the pair next collides or enters field range. Most stale pairs are objects that aren't near each other and don't need re-evaluation until they actually meet.
+Collision rules are permanent — gaining or losing a state does NOT re-evaluate `CollisionRule` entries. Force between objects is a material property, not state-dependent. State-based interactions (fire spreading to wood) are handled by `initial_states`/`susceptible_states` on each object and tick-based propagation, not by pairwise cache lookup.
 
 ---
 
@@ -117,54 +110,41 @@ A firefighter doesn't have one behavior. It extinguishes fire, rescues people, a
 
 Follows the graph thesis: simple questions, 1 token each, sequential stages that seed context forward.
 
-**Stage 1 — Movement (parallel, all creature×object pairs, 1 token each):**
+**Stage 1 — Movement + Priority (parallel, all creature×object pairs, 2 calls per pair):**
 
-All creature behavior prompts include the scene inventory for context (input is free). This lets the LLM make contextually-aware decisions — a firefighter cares about water more when fire exists.
-
-```
-"Scene: [burning tree, bucket of water, trapped person, fire hydrant].
- Firefighter sees [burning tree]. 0=approach 1=flee 2=ignore"
-→ 0 (approach)
-
-"Scene: [burning tree, bucket of water, trapped person, fire hydrant].
- Firefighter sees [stone wall]. 0=approach 1=flee 2=ignore"
-→ 2 (ignore)
-```
-
-**Stage 1b — Strength (parallel with stage 1, 1 token each):**
-
-Same scene context as stage 1 — strength should reflect scene-aware priority, not just the pair in isolation.
+All creature behavior prompts include the scene inventory for context (input is free). This lets the LLM make contextually-aware decisions — a firefighter cares about water more when fire exists. State context included for re-eval after `state_changed`.
 
 ```
 "Scene: [burning tree, bucket of water, trapped person, fire hydrant].
- How strongly does firefighter react to [burning tree]?
- 0=ignores, 25=mild interest, 50=moderate, 75=strong drive, 100=absolute priority"
-→ 90
+ Firefighter sees [burning tree].
+ → approach / flee / ignore"
+→ approach
+
+"Scene: [burning tree, bucket of water, trapped person, fire hydrant].
+ How strongly does Firefighter react to [burning tree]?
+ → ignore / mild / moderate / driven"
+→ driven
 ```
 
-**Filter:** only pairs that returned approach (0) continue. Flee and ignore pairs are complete — the creature never reaches the target so no outcome is needed.
+**Filter:** only pairs that returned approach (0) continue to stage 2. Flee and ignore pairs are complete.
 
-**Stage 2 — Action (parallel, approaching pairs only, 1 token each):**
-Seeded with the movement decision from stage 1:
+**Stage 2 — Action (parallel, approaching pairs only, 1 call per pair):**
 ```
-"Firefighter is APPROACHING [burning tree] and wants to interact with it.
- On arrival: 0=nothing 1=damage 2=heal 3=add state 4=remove state 5=destroy 6=take"
-→ 4 (remove state)
+"Firefighter is approaching [burning tree] and wants to interact with it.
+ → nothing / attack / heal / ignite / cleanse / consume"
+→ cleanse
 ```
 
-**Stage 3 — Parameters (parallel, actions that need them, 1 token each):**
-Seeded with the action from stage 2:
+**Stage 3 — Parameters (parallel, actions needing them: attack/heal/ignite/cleanse):**
 ```
-"Firefighter will remove a state from [burning tree]. Which?
- 1=burning 2=frozen 3=wet 4=electrified"
-→ 1 (burning)
+"Firefighter will cleanse a state on [burning tree].
+ → burn / freeze / wet / zap"
+→ burn
 ```
 
 ### Why staged
 
-Each question is trivially simple because prior answers provide context. "Firefighter removes a state from a burning tree — which state?" is a question a 1.5B model can answer. "What does a firefighter do when it encounters a burning tree? Describe the movement pattern, action type, and parameters" is much harder.
-
-The sequential filtering also saves work. With 3 creatures × 14 objects = 42 pairs in stage 1, maybe 12 survive to stage 2, and 8 need parameters in stage 3. Total: ~104 calls, all 1 token, across 3 sequential batches (~180ms).
+Each question is trivially simple because prior answers provide context. The sequential filtering saves work: with 3 creatures × 14 objects = 42 pairs in stage 1, maybe 12 survive to stage 2, and 8 need parameters in stage 3. All 1-token choices, 3 sequential batches.
 
 ### What this replaces
 
@@ -194,30 +174,32 @@ Cat + dog → flee 80
 
 When a new object spawns, run stages 1-3 for all existing creatures against it. When a new creature spawns, run stages 1-3 for it against all existing objects.
 
-**Re-evaluation triggers** — re-evaluate affected creature×object pairs when:
-- **Object changes state** (gains burning, frozen, etc.) — re-evaluate pairs involving that object, since creature reactions change (firefighter doesn't need to approach a tree that's no longer burning)
-- **Creature picks up or drops an object** — re-evaluate that creature's pairs with updated context ("Firefighter [holding: bucket of water] sees burning tree" → approach with higher strength)
-- **Scene inventory changes** — since creature behavior prompts include the scene list, new objects or destroyed objects change the context for all creatures
+**Re-evaluation on state change:** when `state_changed` WS message arrives, `_handle_state_changed()` in `ws/handler.py`:
+1. Invalidates all behavior entries involving the changed object (`BehaviorCache.invalidate_behavior()`)
+2. Re-evaluates all creatures toward the changed object (with `target_states` dict in prompts)
+3. If the changed object is itself a creature, re-evaluates its outgoing behaviors
 
-Re-evaluation is lazy: fires on the creature's next behavior tick (~1s), not immediately on state change. Only nearby creatures (within perception range) are re-evaluated.
+Results delivered via `behavior_updated` WS message. Client updates `InteractionCache._behavior` dict in place.
 
 ---
 
-## Cascade control
+## State propagation (replaces cascade + ObjectField)
 
-State changes from interactions can cascade (fire spreads to nearby wood). Same controls as V2:
+State spreading is handled by `StatePropagator` — a tick-based (2s) area component on every game object. When an object has active states, it periodically checks nearby bodies and spreads states to `susceptible_states` neighbors.
 
-- **Depth limit:** max 3 levels of cascade
-- **Dedup:** pair key `(id_a, id_b)` can't fire twice in one cascade chain
-- **No recursive triggers:** state changes from cascaded interactions don't trigger further cascades
-- **Field rate limit:** field effects tick every 2s, not every frame
-- **State contradictions:** adding burning removes frozen and wet automatically (engine-enforced, see [engine-primitives.md](engine-primitives.md))
+- **Tick interval:** 2s. First tick is immediate on state added.
+- **Radius:** `BASE_RADIUS × scale_from_height(height_cm)` — larger objects spread further.
+- **Susceptibility:** only spreads if target has the state ID in its `susceptible_states` list.
+- **State contradictions:** enforced by `StateManager.add_state()` — adding burning removes frozen and wet automatically.
+- **No cascade depth limit:** propagation doesn't chain recursively — each tick is independent.
+
+**Essential-state destruction** replaces the old "LLM decides destroy." If an object's `initial_states` are all removed via contradiction (e.g., fire [burning] is hit by water → burning removed), `take_damage(99999)` is called immediately. No LLM call, no `damage=100` pairwise field.
 
 ---
 
 ## What's genuinely new vs V2
 
-1. **LLM-populated interaction cache** — replaces 56 hand-authored rules with unlimited auto-generated pairs. Cop+donut, vampire+garlic, mongoose+cobra all work without anyone coding them.
+1. **LLM-populated collision + behavior cache** — replaces 56 hand-authored rules. Cop+donut, vampire+garlic, mongoose+cobra all work without anyone coding them.
 
 2. **LLM-generated physics** — a "fiery ice sword" gets reasonable mass/bounce/friction without substance mixing. A "thought bubble" gets mass 0.001 and floats.
 
@@ -225,7 +207,9 @@ State changes from interactions can cascade (fire spreads to nearby wood). Same 
 
 4. **Per-pair creature behavior** — firefighter extinguishes fire, rescues people, chases arsonists. Each creature×object relationship gets its own movement + outcome via staged LLM evaluation. Replaces fixed verb classification.
 
-5. **No creator-assigned tags** — objects are born stateless. All states come from interactions.
+5. **State properties replace ObjectField** — `initial_states`/`susceptible_states` on blueprint replace `has_field`/`field_range_cm`. Fire spawns with burning state; wood is susceptible to burning. `StatePropagator` ticks every 2s and spreads states to susceptible neighbors.
+
+6. **Essential-state destruction** — objects with `initial_states` are destroyed when all their initial states are removed. No pairwise "damage=100" for fire/ice destruction — it's structural.
 
 ---
 
@@ -276,7 +260,7 @@ See [future-optimizations.md](future-optimizations.md) for a potential raw httpx
 
 ### Interaction resolver — cache-backed
 
-`RuleResolver` (V2's static rule matching) is replaced by cache lookups. Same interface shape — `resolve(obj_a, obj_b) -> list[Effect]` — but reads from the pairwise cache instead of hand-authored rules. See [cache.md](cache.md) for the cache design.
+The static `RuleResolver` is replaced by `InteractionCache` (Godot autoload) and `BehaviorCache` (backend in-memory). `CollisionResolver` calls `InteractionCache.lookup_collision(a, b)` and applies force; on miss, it calls `request_collision_eval()` to trigger lazy LLM eval. See [cache.md](cache.md) for the cache design.
 
 ### Library decisions
 

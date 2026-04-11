@@ -38,51 +38,35 @@ Armor reduces incoming damage (percentage). HP is the total pool. A slime has lo
 
 ---
 
-## Interaction outcomes
+## Collision outcomes (pairwise)
 
-The engine has 6 primitives for what can happen when two objects meet. Numbered for LLM output:
+The pairwise cache stores only one outcome: **force**. State interactions are handled by per-object properties + propagation (see States section below).
 
-| # | Outcome | Parameters | Examples |
-|---|---|---|---|
-| 0 | **Nothing** | — | Rock + rock. Sword + sword. |
-| 1 | **Damage** | amount (0-100), mode (0=instant, 1=continuous) | Fire burns wood. `amount=100` = instant destroy. |
-| 2 | **Force** | strength (-100 to 100, negative=pull), mode (0=instant, 1=continuous) | Explosion pushes (positive). Magnet pulls (negative). |
-| 3 | **Add state** | state_id (1-4) | Fire sword adds burning to wood. |
-| 4 | **Remove state** | state_id (1-4) | Water removes burning. Grounding rod removes electrified. |
-| 5 | **Destroy** | expressed as damage=100 | Key consumed by lock. Water poured on fire destroys the water. |
-
-### Mapping to pairwise LLM calls
-
-Each pairwise evaluation asks 6 parallel 1-token questions that map onto these primitives:
-
-| Call | Question | Primitives covered |
+| LLM choice | `force_on_b` value | Examples |
 |---|---|---|
-| 1-2 | Damage to A/B? 0-100 (100=destroyed) | Damage (#1) + Destroy (#5) |
-| 3-4 | State change on A/B? 0-8 | Add state (#3) + Remove state (#4) |
-| 5 | Force on B? -100 to 100 (negative=pull, positive=push) | Force (#2) |
-| 6 | Instant or continuous? 0/1 | Mode for damage + force |
+| none | 0 | Rock + rock, sword + wood |
+| pull | -30 | Weak magnetic attraction |
+| drag | -80 | Strong magnetic pull |
+| push | 30 | Explosion knock, repulsion |
+| throw | 80 | Strong repulsion, blast |
 
-**State encoding 0-8:** `0`=none, `1`=add burning, `2`=add frozen, `3`=add wet, `4`=add electrified, `5`=remove burning, `6`=remove frozen, `7`=remove wet, `8`=remove electrified. Limitation: one state change per object per interaction.
+1 LLM call per pair. Force on A is engine-derived: `force_a = force_b × (mass_b / mass_a)`.
 
-**`damage=100` means instant destroy** — no separate destroy field. `force_b` is signed: negative=pull, positive=push — no separate direction field.
-
-**Force on A is engine-derived**, not LLM-evaluated. The engine applies Newton's 3rd law heuristic: `force_a = force_b × (mass_b / mass_a)`. This is more consistent than asking the LLM to reason about mass ratios. Bounce reflection is handled by the physics property, not pairwise force.
-
-Carry/mount interactions are handled by the affordance system, not the pairwise cache.
+Carry/mount interactions are handled by the affordance system, not the collision cache.
 
 ---
 
 ## States (closed vocabulary)
 
-Interaction-only state modifiers. Never set at creation — objects are born stateless. Applied by interaction outcomes, removed by other interactions or decay timers. Each state has a distinct gameplay mechanic.
+State modifiers. Set at creation via `initial_states` (e.g., fire spawns burning) or spread at runtime via `StatePropagator` to susceptible neighbors. Each state has a distinct gameplay mechanic.
 
 | # | State | Mechanic | Contradicts |
 |---|---|---|---|
 | 0 | none | — | — |
-| 1 | burning | DOT 5 dmg/s, 10s duration. Spreads via cascade | frozen, wet |
+| 1 | burning | DOT 5 dmg/s, 10s duration. Spreads to `susceptible_states=[1]` neighbors | frozen, wet |
 | 2 | frozen | Immobilize (freeze=true) + brittle (2× incoming damage) | burning |
-| 3 | wet | Friction → 0.05. Amplifies electrified via re-eval | burning |
-| 4 | electrified | DOT 8 dmg/1.5s, 8s duration. Chains to wet objects | — |
+| 3 | wet | Friction → 0.05. Spreads to `susceptible_states=[3]` neighbors | burning |
+| 4 | electrified | DOT 8 dmg/1.5s, 8s duration. Spreads to `susceptible_states=[4]` neighbors | — |
 
 This set is extensible — add new states when they have clear mechanics. States without game effects don't belong here.
 
@@ -103,7 +87,11 @@ Each state maps to a known engine-side visual effect. No LLM involved — purely
 
 ### State decay
 
-States applied by interactions have a default decay timer (e.g., 10s). The state is removed automatically after the timer expires unless re-applied. Continuous interactions (mode=1) re-apply the state each tick, keeping it active.
+States applied by interactions have a default decay timer (e.g., 10s). The state is removed automatically after the timer expires unless re-applied by the next `StatePropagator` tick. `initial_states` are applied with duration 0 (infinite — they persist until contradicted).
+
+### Essential-state destruction
+
+If an object has `initial_states` and all of them are removed (e.g., fire [burning=1] hit by water → burning removed by contradiction), the object is destroyed immediately. This is how fire is extinguished — no LLM destroy call needed.
 
 ### State stacking
 
@@ -219,18 +207,23 @@ If creatures need obstacle avoidance (curve around garlic to reach human), that'
 
 ---
 
-## Fields
+## State properties (replaces Fields)
 
-Objects that affect nearby things without contact. Two creation-time questions:
+Instead of `has_field`/`field_range_cm`, objects declare what states they spawn with and what states can spread to them. Eight boolean creation questions:
 
-```
-"Does this affect nearby things without touching? 0=no 1=yes" → 1
-"If yes, range in cm? (candle=50, campfire=250, bonfire=500, volcano=1000)" → 250
-```
+**Initial states** (does this object spawn with this state?):
+- `initially_burning` — fire, campfire, lava
+- `initially_frozen` — ice, frozen lake
+- `initially_wet` — water, rain, puddle
+- `initially_electrified` — lightning bolt, electric eel
 
-The engine creates an Area2D with that radius. Field interactions use the **same pairwise cache** as contact interactions — no separate system. A campfire's field interaction with a wooden wall: the cached result is "damage 20, add burning, continuous."
+**Susceptible states** (can this state spread to this object?):
+- `catches_fire` — wood, paper, cloth
+- `can_freeze` — water, wet objects
+- `gets_wet` — dry materials near water
+- `conducts_electricity` — metal, water
 
-Fields tick every 2s (rate limit, part of cascade control). First tick is immediate via `call_deferred`.
+The `StatePropagator` component (attached to every game object) ticks every 2s when the owner has active states. It spreads each active state to any overlapping body that has that state ID in `susceptible_states`. Radius = `BASE_RADIUS × scale_from_height(height_cm)` — a bonfire spreads further than a candle.
 
 ---
 

@@ -11,29 +11,35 @@ Player types a description. The backend asks questions in parallel batches:
 ```
 "fire sword"
 
-=== Batch 1: Properties (parallel, ~60ms) ===
-Most are 1-token integer outputs. Mass is the exception (real-world kg, may be 2-4 tokens for decimals — grounding in real units matters for answer quality). All fired simultaneously:
-1. Mass in kg                    → 1.5  (real-world unit, decimal OK)
-2. Height in cm                  → 120  (integer, real-world grounded)
-3. Friction 0-100                → 30
-4. Bounce 0-100                  → 10
-5. Gravity 0-100                 → 50
-6. Armor 0-100                   → 80
-7. HP 0-100                      → 90
-8. Indestructible? 0/1           → 1 (yes, destructible)
-9. Has field? 0/1                → 1
-10. Field range in cm            → 150  (integer, real-world grounded)
-11. Autonomous? 0/1              → 0
+=== Batch 1: Properties (parallel) ===
+All fired simultaneously after name resolves:
+1.  Mass in kg                   → 1.5
+2.  Height in cm                 → 120
+3.  Surface (slick/normal/sticky)→ normal
+4.  Bounce 0-100                 → 10
+5.  Gravity 0-100                → 50
+6.  Durability (soft→permanent)  → normal
+7.  Autonomous? yes/no           → no
+8.  Affordance (carry/ride/scale/none) → carry
+9.  Initially burning? yes/no    → yes   ← NEW state property
+10. Initially frozen? yes/no     → no
+11. Initially wet? yes/no        → no
+12. Initially electrified? yes/no → no
+13. Catches fire? yes/no         → no
+14. Can freeze? yes/no           → no
+15. Gets wet? yes/no             → no
+16. Conducts electricity? yes/no → no
 
-=== Batch 1b: Concurrent with batch 1 (~200ms) ===
-These take more output tokens but run simultaneously:
-12. Visual description            → "flaming longsword with orange 
+Gated on autonomous=true:
+17. Speed (crawl→rapid)          → (skipped)
+
+=== Batch 1b: Concurrent with batch 1 ===
+18. Visual description            → "flaming longsword with orange 
                                      blade and ember particles" (~20-30 tokens)
-13. Affordance 0-3               → 0 (carry)
+19. Destruction result name       → "splinters" (gated: durability < 6)
 
-Total creation calls: 13
-Total output tokens: ~15 for properties + ~25 for visual = ~40
-Wall time: ~200ms (batches 1+1b in parallel)
+Total creation calls: ~19 (17 properties + visual + destruction)
+Wall time: ~200ms
 
 Note: no behavior classification at creation time. Creature behavior is
 evaluated per-pair at spawn time (see below).
@@ -45,48 +51,32 @@ evaluated per-pair at spawn time (see below).
 
 Runs AFTER creation, DURING sprite generation (2-5s). Player doesn't wait for this.
 
-### Passive pairwise interactions
+### Collision force rules
 
-Two phases: a single screening call identifies interesting pairs, then only those get fully evaluated.
+Two phases: a single screening call identifies pairs with interesting force interactions, then only those get evaluated. Screening is pre-warming — missed pairs are lazily evaluated on actual collision.
 
-**Phase 1 — Screening (1 call, ~5-15 output tokens, ~100-160ms):**
+**Phase 1 — Screening (1 call, ~5-15 output tokens):**
 
 ```
-"New object: fire sword (2kg, armor 80, hp 90, hot, sharp, metal).
+"New object: fire sword (1.5kg, 120cm, normal, normal-surface).
  Scene objects:
- 1. wooden shield (3kg, armor 20, hp 40, flammable, wood)
- 2. rock (5kg, armor 70, hp 80, stone)
- 3. glass bottle (0.3kg, armor 5, hp 10, fragile, glass)
- 4. rope (0.5kg, armor 10, hp 20, fiber)
- 5. campfire (hot, fire, field)
- Which would interact interestingly with fire sword? List numbers."
- → "1,3"
+ 1. wooden shield (3kg, 100cm, normal, normal-surface)
+ 2. magnet (0.5kg, 10cm, normal, normal-surface)
+ Which would have interesting force interactions (push, pull, magnetism)?
+ Reply with numbers or 'none'."
+ → "2"
 ```
 
-The LLM sees all objects at once and makes relative judgments — fire sword + campfire is redundant (both hot), fire sword + rock is boring (nothing happens), but fire sword + wooden shield and fire sword + glass bottle are interesting. A missed pair defaults to "nothing happens" — low stakes since pairs can be lazily evaluated on actual contact.
-
-**Phase 2 — Full eval (K interesting pairs × 6 parallel calls, ~145ms per batch):**
-
-Only pairs from the screening list get evaluated. 6 calls per pair, all 1 token, all parallel:
+**Phase 2 — Force eval (1 call per interesting pair):**
 
 ```
-Context prefix (shared across all 6 calls, input is free):
-"[fire sword: 2kg, armor 80, hp 90, emits heat] collides with
- [wooden shield: 3kg, armor 20, hp 40]."
-
-1. "Damage to fire sword? 0-100"                       → 0
-2. "Damage to wooden shield? 0-100"                     → 40   (100=destroyed)
-3. "State change on fire sword? 0-8"                    → 0    (none)
-4. "State change on wooden shield? 0-8"                 → 1    (add burning)
-5. "Force on wooden shield? -100(pull) to 100(push)"   → 20
-6. "Instant or continuous? 0=instant 1=continuous"      → 0
+"fire sword (1.5kg, 120cm, normal, normal-surface) contacts
+ magnet (0.5kg, 10cm, normal, normal-surface).
+ none / pull / drag / push / throw"
+→ "pull"
 ```
 
-State encoding 0-8: `0`=none, `1-4`=add state (burning, frozen, wet, electrified), `5-8`=remove same states. `damage=100` means instant destroy — no separate destroy field. `force_b` is signed: negative=pull, positive=push — no separate direction field.
-
-A and B refer to the first and second name in lexicographic sort order. See [cache.md](cache.md) for key convention.
-
-Force on A is engine-derived (Newton's 3rd law heuristic), not LLM-evaluated. See [engine-primitives.md](engine-primitives.md) for the full mapping.
+Result: `CollisionRule(force_on_b=-30)`. State interactions (fire spreading to wood) are NOT in the pairwise cache — they're handled by `initial_states`/`susceptible_states` + `StatePropagator`.
 
 ### Creature behavior (staged, autonomous creatures only)
 
@@ -113,59 +103,45 @@ If the NEW object is autonomous, run stages 1-3 for it against all existing obje
 
 ### 7-object scene, 1 creature
 
-| Phase | Calls | Tokens | Wall time |
-|---|---|---|---|
-| Creation (new object) | 13 | ~40 | ~200ms |
-| Pairwise screening (1 call) | 1 | ~5 | ~90ms |
-| Pairwise full eval (~2 interesting pairs × 6 calls) | 12 | 12 | ~145ms |
-| Creature behavior stage 1+1b (1 creature × 1 object × 2) | 2 | 2 | ~60ms |
-| Creature behavior stage 2 (~1 approaching pair) | 1 | 1 | ~60ms |
-| Creature behavior stage 3 (~1 needing params) | 1 | 1 | ~60ms |
-| **Total** | **30** | **~61** | **~615ms** |
+| Phase | Calls | Wall time |
+|---|---|---|
+| Creation (new object) | ~19 | ~200ms |
+| Collision screening (1 call) | 1 | ~90ms |
+| Collision force eval (~2 interesting pairs × 1 call) | 2 | ~90ms |
+| Creature behavior stage 1 (1 creature × 1 object, movement + priority) | 2 | ~60ms |
+| Creature behavior stage 2 (~1 approaching pair) | 1 | ~60ms |
+| Creature behavior stage 3 (~1 needing params) | 1 | ~60ms |
+| **Total** | **~26** | **~560ms** |
 
 ### 15-object scene, 3 creatures
 
-| Phase | Calls | Tokens | Wall time |
-|---|---|---|---|
-| Creation (new object) | 13 | ~40 | ~200ms |
-| Pairwise screening (1 call) | 1 | ~10 | ~125ms |
-| Pairwise full eval (~4 interesting pairs × 6 calls) | 24 | 24 | ~145ms |
-| Creature behavior stage 1+1b (3 creatures × 1 object × 2) | 6 | 6 | ~60ms |
-| Creature behavior stage 2 (~2 approaching) | 2 | 2 | ~60ms |
-| Creature behavior stage 3 (~1 needing params) | 1 | 1 | ~60ms |
-| **Total (new non-creature)** | **47** | **~83** | **~650ms** |
+| Phase | Calls | Wall time |
+|---|---|---|
+| Creation (new object) | ~19 | ~200ms |
+| Collision screening (1 call) | 1 | ~125ms |
+| Collision force eval (~4 interesting pairs × 1 call) | 4 | ~90ms |
+| Creature behavior stage 1 (3 creatures × 1 object × 2 questions) | 6 | ~60ms |
+| Creature behavior stage 2 (~2 approaching) | 2 | ~60ms |
+| Creature behavior stage 3 (~1 needing params) | 1 | ~60ms |
+| **Total (new non-creature)** | **~33** | **~595ms** |
 
-If new object is autonomous, add: stage 1+1b (14 objects × 2 = 28), stage 2 (~5), stage 3 (~3) = **~95 calls, ~830ms**.
+If new object is autonomous, add: stage 1 (14 objects × 2 questions = 28 calls), stage 2 (~5), stage 3 (~3) = **~69 calls, ~770ms**.
 
 All spawn integration runs during the 2-5s sprite gen window. Player sees no interaction latency.
-
-### Full scene initialization (15 objects from scratch)
-
-| Phase | Calls | Tokens |
-|---|---|---|
-| Creation (15 objects × 13) | 195 | ~600 |
-| Pairwise screening (15 calls, 1 per object as it enters) | 15 | ~100 |
-| Pairwise full eval (~25 interesting pairs × 6) | 150 | 150 |
-| Creature behavior stage 1+1b (3 creatures × 14 objects × 2) | 84 | 84 |
-| Creature behavior stage 2 (~12 approaching pairs) | 12 | 12 |
-| Creature behavior stage 3 (~8 needing params) | 8 | 8 |
-| **Total** | **464** | **~954** |
-
-Fire all calls via `asyncio.gather()` — SGLang's continuous batching handles scheduling. At effective concurrency of ~32, 60ms per batch: ~17 batches × 65ms = **~1.1 seconds**. This is scene load time, not per-object. Runs once when the level starts.
 
 ---
 
 ## Scaling characteristics
 
-Pairwise evaluation is O(N²) in theory, but screened pairwise reduces this significantly — most pairs are uninteresting (rock+rock, sword+sword). The screening call identifies ~25% of pairs as worth evaluating:
+Collision evaluation is O(N²) in theory, but screening reduces this significantly — most pairs have no interesting force interaction (rock+rock, sword+wood). Screening identifies ~10-15% of pairs as worth evaluating:
 
-| Objects | Pairs | Screening calls | Interesting pairs (~25%) | Full eval calls (6 per pair) |
+| Objects | Pairs | Screening calls | Interesting pairs (~10%) | Full eval calls (1 per pair) |
 |---|---|---|---|---|
-| 7 | 21 | 7 | ~5 | ~30 |
-| 15 | 105 | 15 | ~25 | ~150 |
-| 30 | 435 | 30 | ~60 | ~360 |
+| 7 | 21 | 7 | ~2 | ~2 |
+| 15 | 105 | 15 | ~10 | ~10 |
+| 30 | 435 | 30 | ~25 | ~25 |
 
-Screening adds 1 call per new object (~100-160ms). Missed pairs default to "nothing happens" and can be lazily evaluated on actual contact.
+Screening adds 1 call per new object. Missed pairs are lazily evaluated on actual collision via `request_collision` WS message (1 call, ~100ms).
 
 Scribblenauts on DS managed 10-15 simultaneous objects. Reasonable starting target.
 

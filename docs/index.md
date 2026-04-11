@@ -1,43 +1,22 @@
-# V3 Design: Question-Based Object System
+# Design Documentation
 
-V2 with fewer enums, LLM-generated physics, and auto-populated interaction rules. The LLM replaces substance profiles, tag derivation, and 56 hand-authored rules with a graph of tiny cached questions. The engine keeps affordances, per-pair creature behavior, closed states, and cascade control — each earns its place by saving LLM calls or providing mechanical guarantees.
+Architecture and design docs for the Makeshift game engine.
 
 ## Documents
 
 | Doc | What it covers |
 |-----|----------------|
-| [Architecture](architecture.md) | Core system design: two interaction systems (passive vs intentional), pairwise cache, per-pair creature behavior, what's removed from V2 and why |
-| [Engine Primitives](engine-primitives.md) | Everything the engine can execute: physics, outcomes, 4 states, affordances, creature behavior, fields |
-| [Creation Pipeline](creation-pipeline.md) | Exact call sequence from player input to spawned object, batching, call budgets, scaling characteristics |
-| [LLM Design Patterns](llm-design-patterns.md) | Core patterns for decomposing problems into LLM calls: fan-out, sequential seeding, filter, decomposition principle. The foundation everything else is built on |
-| [Cache](cache.md) | Unified cache design: types, key normalization, separate DB, edge cases |
-| [Future Features](future-features.md) | Ideas deferred from core: compound object sprites, creature death remains, object evolution, additional states and affordances |
-| [Future Optimizations](future-optimizations.md) | Implementation optimizations evaluated but deferred: raw httpx + constrained decoding, stamina retry |
+| [Architecture](architecture.md) | Core system design: collision rules (force), state propagation, creature behavior, caching strategy |
+| [Engine Primitives](engine-primitives.md) | Everything the engine can execute: physics, force, 4 states, state propagation, essential-state destruction, affordances, creature behavior |
+| [Creation Pipeline](creation-pipeline.md) | Call sequence from player input to spawned object: name gen, parallel questions, state properties, batching, call budgets |
+| [LLM Design Patterns](llm-design-patterns.md) | Core patterns for decomposing problems into LLM calls: fan-out, sequential seeding, filter, constrained decoding |
+| [Cache](cache.md) | Cache design: collision rules (persistent), behavior (session-local), lazy evaluation on miss |
+| [Future Features](future-features.md) | Deferred ideas: compound sprites, object evolution, additional states/affordances |
+| [Future Optimizations](future-optimizations.md) | Deferred optimizations: raw httpx + constrained decoding, stamina retry |
 
 ## Reading order
 
-1. **LLM Design Patterns** — understand the constraints and decomposition patterns (the foundation)
-2. **Architecture** — understand the design (two interaction systems, pairwise cache)
-3. **Engine Primitives** — understand the building blocks (what numbers the LLM outputs, what the engine does with them)
-4. **Creation Pipeline** — understand the flow (batching, timing, hardware)
-
-## What V3 removes from V2
-
-- 16 substances + profiles → LLM-generated physics numbers
-- 7 elements + traits → part of object description
-- 7 categories → affordances + autonomous flag
-- 31 tags (10 LLM-visible + 21 internal) → 4 interaction-only states
-- 56 hand-authored rules → LLM-populated pairwise cache
-- Tag derivation pipeline → not needed
-- Seek/avoid lists + semantic target matching → per-pair creature behavior (staged evaluation)
-- 6 behavior verbs → per-pair on-arrival actions (more expressive, per-relationship)
-- Combat profiles → pairwise cache damage values
-
-## What V3 keeps from V2
-
-- Closed state vocabulary (smaller: 4 vs 31)
-- State contradiction table (smaller: 3 directed pairs vs 16)
-- Cascade control (depth 3, dedup, no recursive triggers)
-- Collision detection + Area2D fields
-- Image pipeline (sprite gen, bg removal, caching)
-- WebSocket delivery, session persistence
+1. **LLM Design Patterns** — decomposition patterns and constraints
+2. **Architecture** — system design (collision, propagation, behavior)
+3. **Engine Primitives** — building blocks (what numbers the LLM outputs, what the engine does)
+4. **Creation Pipeline** — end-to-end flow (batching, timing, budgets)
