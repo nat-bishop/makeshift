@@ -40,6 +40,27 @@ func _ready() -> void:
 	_build_damage_flash()
 
 
+func _input(event: InputEvent) -> void:
+	if event.is_action_pressed("create_object"):
+		if _game_over_panel.visible or _pause_menu.visible:
+			get_viewport().set_input_as_handled()
+			return
+		if _placement_active:
+			get_viewport().set_input_as_handled()
+			return
+		if object_creation_panel.visible and object_creation_panel.is_busy():
+			get_viewport().set_input_as_handled()
+			return
+		object_creation_panel.visible = !object_creation_panel.visible
+		Log.debug("HUD: Creation panel %s" % ("opened" if object_creation_panel.visible else "closed"))
+		if object_creation_panel.visible:
+			object_creation_panel.focus_input()
+			GameManager.pause_game()
+		else:
+			GameManager.resume_game()
+		get_viewport().set_input_as_handled()
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		if _placement_active:
@@ -59,21 +80,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		_show_pause_menu()
 		get_viewport().set_input_as_handled()
 		return
-
-	if event.is_action_pressed("create_object"):
-		if _game_over_panel.visible or _pause_menu.visible:
-			get_viewport().set_input_as_handled()
-			return
-		if _placement_active:
-			return
-		object_creation_panel.visible = !object_creation_panel.visible
-		Log.debug("HUD: Creation panel %s" % ("opened" if object_creation_panel.visible else "closed"))
-		if object_creation_panel.visible:
-			object_creation_panel.focus_input()
-			GameManager.pause_game()
-		else:
-			GameManager.resume_game()
-		get_viewport().set_input_as_handled()
 
 
 func set_objective(text: String) -> void:
@@ -218,6 +224,7 @@ func _on_retry_pressed() -> void:
 
 func _on_placement_started() -> void:
 	_placement_active = true
+	object_creation_panel.visible = false
 	_update_action_hint()
 
 

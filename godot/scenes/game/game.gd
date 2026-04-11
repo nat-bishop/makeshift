@@ -135,6 +135,7 @@ func _on_creation_failed() -> void:
 
 
 func _begin_placement() -> void:
+	GameManager.resume_game()
 	var ghost_start_pos: Vector2 = player.global_position + SPAWN_OFFSET
 	if _materialize_effect and is_instance_valid(_materialize_effect):
 		ghost_start_pos = _materialize_effect.global_position
