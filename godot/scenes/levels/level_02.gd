@@ -12,8 +12,7 @@ const GUARD_DOG_BLUEPRINT := {
 	"durability": 3,
 	"affordance": 3,
 	"autonomous": true,
-	"has_field": false,
-	"field_range_cm": 0,
+	"speed": 3,
 }
 
 const BONE_BLUEPRINT := {
@@ -25,8 +24,6 @@ const BONE_BLUEPRINT := {
 	"durability": 2,
 	"affordance": 0,
 	"autonomous": false,
-	"has_field": false,
-	"field_range_cm": 0,
 }
 
 
@@ -39,15 +36,18 @@ func _ready() -> void:
 	_spawn_game_object(BONE_BLUEPRINT, Vector2(200, 536))
 	_spawn_game_object(GUARD_DOG_BLUEPRINT, Vector2(800, 520))
 
-	# Pre-populate creature behavior: dog approaches player aggressively
-	InteractionCache.store_creature("guard dog", "player", {
-		"movement": 0, "priority": 2, "action": 1, "amount": 20, "state_id": 0,
+	# Pre-populate behavior: dog approaches and attacks player
+	InteractionCache.store_behavior("guard dog", "player", {
+		"movement": 0, "priority": 2, "action": 1, "amount": 20,
+		"state_action": 0, "state_id": 0, "force": 0,
 	})
-	# Dog approaches bone (distraction)
-	InteractionCache.store_creature("guard dog", "bone", {
-		"movement": 0, "priority": 3, "action": 6, "amount": 0, "state_id": 0,
+	# Dog approaches bone (distraction, higher priority than player)
+	InteractionCache.store_behavior("guard dog", "bone", {
+		"movement": 0, "priority": 3, "action": 3, "amount": 0,
+		"state_action": 0, "state_id": 0, "force": 0,
 	})
 
 
 func _build_terrain() -> void:
 	_create_platform(Vector2(0, 568), Vector2(1280, 64))
+	_create_kill_zone(Vector2(0, 700), Vector2(1280, 64))

@@ -12,8 +12,6 @@ const CRATE_BLUEPRINT := {
 	"durability": 2,
 	"affordance": 0,
 	"autonomous": false,
-	"has_field": false,
-	"field_range_cm": 0,
 }
 
 const ACID_POOL_BP := {
@@ -31,13 +29,10 @@ func _ready() -> void:
 	_build_terrain()
 	_spawn_game_object(CRATE_BLUEPRINT, Vector2(280, 536))
 
-	# Pre-populate pairwise cache for acid + crate
-	InteractionCache.store_pairwise("acid pool", "wooden crate", {
-		"name_a": "acid pool", "name_b": "wooden crate",
-		"damage_a": 0, "damage_b": 15,
-		"state_change_a": 0, "state_change_b": 0,
-		"force_b": 0,
-		"continuous": true,
+	# Pre-populate behavior: acid pool damages wooden crate (reactive)
+	InteractionCache.store_behavior("acid pool", "wooden crate", {
+		"movement": 2, "priority": 2, "action": 1, "amount": 15,
+		"state_action": 0, "state_id": 0, "force": 0,
 	})
 
 
