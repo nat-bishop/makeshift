@@ -12,8 +12,7 @@ const WOODEN_BOX_BLUEPRINT := {
 	"durability": 2,
 	"affordance": 0,
 	"autonomous": false,
-	"has_field": false,
-	"field_range_cm": 0,
+	"susceptible_states": [1],
 }
 
 const CAMPFIRE_BLUEPRINT := {
@@ -25,8 +24,7 @@ const CAMPFIRE_BLUEPRINT := {
 	"durability": 1,
 	"affordance": 3,
 	"autonomous": false,
-	"has_field": true,
-	"field_range_cm": 150,
+	"initial_states": [1],
 }
 
 const FIRE_PIT_BP := {
@@ -45,13 +43,10 @@ func _ready() -> void:
 	_spawn_game_object(WOODEN_BOX_BLUEPRINT, Vector2(200, 536))
 	_spawn_game_object(CAMPFIRE_BLUEPRINT, Vector2(600, 536))
 
-	# Pre-populate pairwise: campfire ignites wooden box
-	InteractionCache.store_pairwise("campfire", "wooden box", {
-		"name_a": "campfire", "name_b": "wooden box",
-		"damage_a": 0, "damage_b": 10,
-		"state_change_a": 0, "state_change_b": 1,  # burning
-		"force_b": 0,
-		"continuous": true,
+	# Pre-populate behavior: campfire damages wooden box and sets it on fire
+	InteractionCache.store_behavior("campfire", "wooden box", {
+		"movement": 2, "priority": 2, "action": 1, "amount": 10,
+		"state_action": 1, "state_id": 1, "force": 0,
 	})
 
 

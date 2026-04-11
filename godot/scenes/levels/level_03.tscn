@@ -12,7 +12,7 @@ objective_text = "Reach the top!"
 next_level_path = ""
 
 [node name="SpawnPoint" type="Marker2D" parent="."]
-position = Vector2(384, 636)
+position = Vector2(384, 536)
 
 [node name="Goal" type="Area2D" parent="."]
 position = Vector2(384, 40)
