@@ -10,12 +10,13 @@ One cache backend with typed entries, not separate systems per cache type. Singl
 
 ### Cache types
 
-| Type | Key | Value | Example |
-|------|-----|-------|---------|
-| `creation` | `"fire sword"` | All physics/affordance/destructibility/field properties | mass, height, friction, etc. |
-| `pairwise` | `"fire sword::wooden shield"` | `{damage_a, damage_b, state_change_a, state_change_b, force_b, continuous}` | Collision outcome (6 fields) |
-| `creature_behavior` | `"zombie cop::donut"` | `{reaction, strength, action, param}` | Full creature×object behavior (scene-local, not persistent — see below) |
-| `destruction_result` | `"wooden shield"` | `"broken wooden shield"` + pre-generated blueprint | What remains after destruction |
+| Type | Key | Value | Persistent |
+|------|-----|-------|-----------|
+| `creation` | `"fire sword"` | All physics/affordance/durability/state properties | Yes (cache.db) |
+| `collision` | `"fire sword::wooden shield"` | `{force_on_b}` | Yes (cache.db) |
+| `creature_behavior` | `"zombie cop::donut"` | `{movement, priority, action, amount, state_id}` | No (scene-local in BehaviorCache) |
+
+`collision` entries store only force. States are handled by per-object `initial_states`/`susceptible_states` + tick-based propagation — no state outcome in the pairwise cache. Legacy `pairwise` type (6-field format) is still readable for backward compatibility.
 
 All types have the same access pattern: composite key, JSON value, check before compute, write once.
 
@@ -84,9 +85,9 @@ Cache keys use **object names**, not UUIDs. This is both a correctness requireme
 
 **Creation cache — critical (correctness).** Without it, two "fire swords" get different physics. Players can't predict what they're creating.
 
-**Pairwise cache — critical (performance).** Without caching, every collision needs an LLM call at runtime. The entire V3 architecture depends on pre-computing interactions at spawn time.
+**Collision cache — important (latency).** Without caching, every collision cache miss triggers a WS round-trip for lazy eval. Pre-warming at spawn means the common case is a dict lookup. Stores only `force_on_b` — state interactions are now handled by `initial_states`/`susceptible_states` per object.
 
-**Creature behavior — scene-local only, not in persistent cache.db.** Creature behavior prompts include scene context ("Scene: [burning tree, bucket of water, ...]"), so results are scene-dependent — a firefighter reacts differently to water when fire exists. The cache key `"firefighter::bucket of water"` can't capture this. Creature behavior is stored in-memory per scene, computed at spawn time (~180ms for 3 creatures × 14 objects), and re-evaluated on scene changes. Cheap enough to recompute — no persistence needed.
+**Creature behavior — scene-local only, not in persistent cache.db.** Creature behavior prompts include scene context ("Scene: [burning tree, bucket of water, ...]"), so results are scene-dependent — a firefighter reacts differently to water when fire exists. The cache key `"firefighter::bucket of water"` can't capture this. Creature behavior is stored in-memory per scene, computed at spawn time, and re-evaluated when an object's states change. Cheap enough to recompute — no persistence needed.
 
 **Destruction results — important (latency).** Generating remains at destruction time would mean a visible delay (LLM call + image gen). Pre-caching makes destruction feel instant.
 
@@ -96,9 +97,9 @@ Cache keys use **object names**, not UUIDs. This is both a correctness requireme
 
 ### Sorted-key convention
 
-Pair keys are lexicographically sorted: `"fire sword::wooden shield"`. At runtime, collision participants arrive in arbitrary order. Convention: `damage_a`, `state_change_a` always refer to the **first name in lexicographic sort order**. The engine maps collision participants to cache A/B by sorting their names.
+Pair keys are lexicographically sorted: `"fire sword::wooden shield"`. At runtime, collision participants arrive in arbitrary order. `CollisionRule.force_on_b` always refers to the **second name in lexicographic sort order**. The engine maps collision participants to cache A/B by sorting their names.
 
-"Fire sword hits wooden shield" and "wooden shield hits fire sword" are the same collision. The cache stores effects on BOTH objects in one entry. Key is always the sorted pair so lookup order doesn't matter.
+"Fire sword hits wooden shield" and "wooden shield hits fire sword" are the same collision. Key is always the sorted pair so lookup order doesn't matter.
 
 ### Destruction creates new objects
 
@@ -126,25 +127,17 @@ Runtime lookups during collisions and field ticks must be fast. At scene load, r
 
 ---
 
-## Pairwise cache re-evaluation on state change
+## Collision rules vs. creature behaviors on state change
 
-When an object gains or loses a state, its pairwise cache entries are stale. Strategy: **always re-evaluate on state change.** The base entry is overwritten. When the state is later removed, re-evaluate again to restore base behavior.
+**Collision rules are permanent** — `state_changed` does NOT re-evaluate `CollisionRule` entries. Force between two objects is a property of their materials and shapes, not their runtime state.
 
-This is cheap because re-evaluation is **lazy** — only triggered on next collision or field tick. Most stale pairs never get re-evaluated because the objects aren't near each other. Cost per actual re-evaluation: 6 parallel 1-token calls (~145ms).
-
-Re-evaluation prompts include active states in the object description:
-```
-"[fire sword: 2kg, armor 80, hp 90, field 150cm] collides with
- [wooden shield [BURNING]: 3kg, armor 20, hp 40, no field]."
-```
-
-Same 6-call format, same parallelism.
+**Creature behaviors are re-evaluated** — when an object's active states change, all creature behaviors toward that object are invalidated and re-evaluated with the new state context. A firefighter's reaction to a burning tree differs from its reaction after the fire is extinguished. Re-eval is triggered by `state_changed` WS message from client → `_handle_state_changed()` in `ws/handler.py`.
 
 ---
 
 ## Design decisions
 
-**Uncached collision fallback:** "nothing" safe default. Spawn integration runs during sprite gen (2-5s). Players can't engineer collisions with a half-spawned object that fast. If they do, "nothing" is harmless — the interaction works normally once the cache populates.
+**Uncached collision fallback:** lazy eval via `request_collision` WS message. Client hits cache miss → sends `request_collision(name_a, name_b)` → server evaluates and pushes `collision_ready`. Deduped via `_pending_evals` on client. Force-only eval is 1 LLM call (~100ms), not the old 6-call round-trip.
 
 **Level pre-warming:** Ship a seeded `cache.db` for release builds (eliminates first-load latency). Compute on first load for dev to test the pipeline.
 
