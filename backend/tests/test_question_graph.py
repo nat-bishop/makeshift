@@ -77,7 +77,7 @@ class TestFormatMap:
 
 class TestGatePass:
     async def test_dependent_fires_when_gate_passes(self):
-        gate = Gate(key="durability", check=lambda v: v is not None and v < 6)
+        gate = Gate(key="durability", check=lambda v: v is not None and v < 6)  # type: ignore[operator]
         qs = [
             Question(key="durability", prompt="D", qtype="int", lo=0, hi=6, default=3),
             Question(
@@ -99,7 +99,7 @@ class TestGatePass:
 
 class TestGateFail:
     async def test_skipped_when_gate_fails(self):
-        gate = Gate(key="durability", check=lambda v: v is not None and v < 6)
+        gate = Gate(key="durability", check=lambda v: v is not None and v < 6)  # type: ignore[operator]
         qs = [
             Question(key="durability", prompt="D", qtype="int", lo=0, hi=6, default=3),
             Question(
@@ -213,7 +213,7 @@ class TestChainedGates:
         ]
         call_count = 0
 
-        async def counting_int(*_args, **_kwargs) -> int:
+        async def counting_int(*_args: object, **_kwargs: object) -> int:
             nonlocal call_count
             call_count += 1
             return call_count * 10

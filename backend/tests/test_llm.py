@@ -125,7 +125,7 @@ async def test_ask_text_failure_returns_default() -> None:
 
 def test_reset_agents_clears_caches() -> None:
     llm_module._numeric_agents[MagicMock()] = MagicMock()
-    llm_module._str_agent = MagicMock()  # type: ignore[assignment]
+    llm_module._str_agent = MagicMock()
     llm_module._choice_agents[("a",)] = MagicMock()
 
     reset_agents()

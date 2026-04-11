@@ -310,7 +310,7 @@ creation_tests:
   - name: dragon
     expected:
       mass_kg: [200, 10000]
-      height_cm: [120, 3000]
+      height_cm: [180, 3000]
       autonomous: true
       speed: [2, 4]
       durability: [3, 5]

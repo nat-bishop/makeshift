@@ -152,7 +152,7 @@ async def ask_int(
     try:
         agent = _get_numeric_agent(_bounded_int_model(lo, hi))
         result = await agent.run(prompt, instructions=instructions or None)
-        return result.output.response
+        return result.output.response  # type: ignore[attr-defined,no-any-return]
     except Exception as e:
         logger.warning("ask_int_failed", prompt=prompt[:60], default=default, error=str(e)[:200])
         return default
@@ -170,7 +170,7 @@ async def ask_float(
     try:
         agent = _get_numeric_agent(_bounded_float_model(lo, hi))
         result = await agent.run(prompt, instructions=instructions or None)
-        return result.output.response
+        return result.output.response  # type: ignore[attr-defined,no-any-return]
     except Exception as e:
         logger.warning("ask_float_failed", prompt=prompt[:60], default=default, error=str(e)[:200])
         return default
@@ -181,7 +181,7 @@ async def ask_bool(prompt: str, default: bool = False) -> bool:
     try:
         agent = _get_numeric_agent(_bounded_int_model(0, 1))
         result = await agent.run(prompt)
-        return result.output.response == 1
+        return result.output.response == 1  # type: ignore[attr-defined,no-any-return]
     except Exception:
         logger.warning("ask_bool_failed", prompt=prompt[:80], default=default)
         return default
