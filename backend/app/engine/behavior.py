@@ -85,27 +85,30 @@ def _state_context(active_states: list[int] | None) -> str:
 STAGE1_QUESTIONS: list[Question] = [
     Question(
         "movement",
-        "Scene: [{scene_list}]. {subject} sees {target}. {state_context}",
+        "{subject} → {target} {state_context}",
         "choice",
         default="ignore",
         instructions=(
-            "How does {subject} react to {target}? "
-            "approach=move toward it, flee=run away, ignore=no reaction. "
-            "If {subject} cannot move on its own, use ignore. Return one word."
+            "Would this creature move toward or away from the target? "
+            "Think about predator/prey, desires, fears, and duties. "
+            "approach=move toward (hunt, eat, help, play, investigate), "
+            "flee=run away (fear, repulsion, danger), "
+            "ignore=no movement reaction (unrelated, or object cannot move). "
+            "If the subject cannot move on its own, always use ignore."
         ),
         choices=("approach", "flee", "ignore"),
         choice_map=(("approach", 0), ("flee", 1), ("ignore", 2)),
     ),
     Question(
         "priority",
-        "Scene: [{scene_list}]. How strongly does {subject} react to {target}? {state_context}",
+        "{subject} → {target} {state_context}",
         "choice",
         default="ignore",
         instructions=(
-            "How strongly does {subject} react to {target}? "
+            "How strongly does this creature react to the target? "
             "ignore=no interest, mild=slight interest, moderate=clear drive, "
             "driven=high priority. For reactive objects that always act on contact, "
-            "use moderate or driven. Return one word."
+            "use moderate or driven."
         ),
         choices=("ignore", "mild", "moderate", "driven"),
         choice_map=(("ignore", 0), ("mild", 1), ("moderate", 2), ("driven", 3)),
@@ -114,14 +117,13 @@ STAGE1_QUESTIONS: list[Question] = [
 
 ACTION_QUESTION = Question(
     "action",
-    "{subject} contacts {target}.",
+    "{subject} → {target}",
     "choice",
     default="nothing",
     instructions=(
-        "What does {subject} do to {target} on contact? "
+        "What does the subject do to the target when nearby? "
         "nothing=no effect, attack=damage/harm, heal=repair/help, "
-        "consume=eat/absorb/destroy, push=knock away/blow. "
-        "Return one word."
+        "consume=eat/absorb/destroy, push=knock away/blow with force."
     ),
     choices=("nothing", "attack", "heal", "consume", "push"),
     choice_map=(
@@ -142,20 +144,19 @@ AMOUNT_QUESTION = Question(
     20,
     instructions=(
         "How intense is this action? 0-100. "
-        "5=scratch, 15=light, 30=moderate, 50=serious, 75=devastating, 100=lethal. "
-        "Return only an integer."
+        "5=negligible, 15=light, 30=moderate, 50=serious, 75=devastating, 100=maximum. "
+        "For healing: 15=patch up, 30=treat, 50=major surgery, 75=full restore."
     ),
 )
 
 STATE_ACTION_QUESTION = Question(
     "state_action",
-    "{subject} will {action_verb} {target}. Does it also apply or remove an elemental state?",
+    "{subject} will {action_verb} {target}.",
     "choice",
     default="nothing",
     instructions=(
         "Does this interaction also cause an elemental state change? "
-        "nothing=no state effect, ignite=apply a state, cleanse=remove a state. "
-        "Return one word."
+        "nothing=no state effect, ignite=apply a state, cleanse=remove a state."
     ),
     choices=("nothing", "ignite", "cleanse"),
     choice_map=(("nothing", 0), ("ignite", 1), ("cleanse", 2)),
@@ -167,9 +168,7 @@ STATE_ID_QUESTION = Question(
     "choice",
     default="burn",
     instructions=(
-        "Which elemental state? "
-        "burn=fire/heat, freeze=ice/cold, wet=water/liquid, zap=electricity. "
-        "Return one word."
+        "Which elemental state? burn=fire/heat, freeze=ice/cold, wet=water/liquid, zap=electricity."
     ),
     choices=("burn", "freeze", "wet", "zap"),
     choice_map=(("burn", 1), ("freeze", 2), ("wet", 3), ("zap", 4)),
@@ -177,13 +176,11 @@ STATE_ID_QUESTION = Question(
 
 FORCE_MODIFIER_QUESTION = Question(
     "force",
-    "{subject} attacks {target}. Does it also push {target} away?",
+    "{subject} attacks {target}.",
     "choice",
     default="nothing",
     instructions=(
-        "Does this attack also apply a physical knockback force? "
-        "nothing=no force, push=knock away. "
-        "Return one word."
+        "Does this attack also apply a physical knockback force? nothing=no force, push=knock away."
     ),
     choices=("nothing", "push"),
     choice_map=(("nothing", 0), ("push", 1)),
@@ -349,7 +346,6 @@ def _collect_results(
 async def evaluate_behaviors(
     subject: GameObjectBlueprint,
     targets: list[GameObjectBlueprint],
-    scene_inventory: list[str],
     scene: BehaviorCache,
     target_states: dict[str, list[int]] | None = None,
 ) -> dict[str, BehaviorEntry]:
@@ -358,7 +354,6 @@ async def evaluate_behaviors(
     Args:
         subject: The object whose behavior we're evaluating.
         targets: List of target blueprints.
-        scene_inventory: Names of all objects in the scene.
         scene: BehaviorCache for storing results.
         target_states: Optional dict of target_name -> active state IDs.
             Used during state_changed re-evaluation.
@@ -368,7 +363,6 @@ async def evaluate_behaviors(
     if not targets:
         return {}
 
-    scene_list = ", ".join(scene_inventory)
     behaviors: dict[str, BehaviorEntry] = {}
     bp_by_name: dict[str, GameObjectBlueprint] = {t.name: t for t in targets}
     target_states = target_states or {}
@@ -381,7 +375,6 @@ async def evaluate_behaviors(
             run_questions(
                 STAGE1_QUESTIONS,
                 {
-                    "scene_list": scene_list,
                     "subject": subject.name,
                     "target": _target_context(t),
                     "state_context": _state_context(target_states.get(t.name)),

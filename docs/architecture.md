@@ -16,103 +16,23 @@ See [llm-design-patterns.md](llm-design-patterns.md) for inference constraints. 
 
 ---
 
-## Two interaction systems
+## Unified behavior system
 
-This is the key architectural idea. The same two objects can produce different outcomes depending on HOW they meet.
+One system handles all object interactions — active creatures (wolf, zombie) AND reactive objects (bomb, fan, acid). Both use the same `BehaviorEntry` (movement, priority, action, amount, state_action, state_id, force) and the same staged evaluation pipeline.
 
-### Passive interactions — "what happens when objects collide"
+**Active objects** (autonomous=true, movement=approach/flee) move toward or away from targets and execute on-arrival actions.
 
-Physics-driven. Object A bumps into object B. Nobody intended it. The engine resolves it from the cached LLM evaluation.
+**Reactive objects** (autonomous=true, movement=ignore, priority>0) never move but act immediately when a target enters CONTACT_RANGE. A bomb ignores everything until something touches it.
 
-**Examples:**
-- Fire sword falls onto wooden shield → damage 40, add state burning
-- Rock rolls into glass bottle → damage 60, destroy bottle
-- Water splashes onto campfire → remove burning state, destroy water
-
-The LLM is asked at spawn time: "fire sword hits wooden shield, what happens?" The answer is cached. At runtime, the engine just looks it up. No LLM call during gameplay.
-
-### Intentional interactions — "what creatures do on purpose"
-
-Creature-driven. A zombie DECIDES to eat a brain. A guard dog DECIDES to protect the player. Intent determines the movement pattern, and the behavior verb determines what happens on contact.
-
-**Examples:**
-- Zombie (eat verb) reaches brain → destroy brain, heal zombie
-- Guard dog (guard verb) stays near player → attacks threats to player
-- Cat (investigate verb) approaches ball of yarn → idles nearby
-
-**Why both systems exist:**
-
-Zombie touches sword (passive collision — sword was kicked at zombie): pairwise cache → sword damages zombie.
-
-Zombie reaches sword (intentional — zombie investigating the weapon): behavior verb → zombie picks it up (if holdable).
-
-Same pair, different outcome. Intent is the difference. The engine distinguishes: collision events → pairwise cache. Behavior target reached → verb handler.
-
----
-
-## Collision cache
-
-A lookup table mapping object pairs to force-only collision rules, populated by LLM calls at spawn time.
-
-### Cache population
-
-When a new object enters the scene, a single screening call identifies which existing objects it would have interesting force interactions with. Only those pairs get evaluated.
-
-**Screening (1 call per new object, pre-warming only — not a gate):**
-```
-"New object: fire sword (2kg, normal, durability normal).
- Scene objects:
- 1. wooden shield (3kg, normal, durability normal)
- 2. rock (5kg, normal, durability tough)
- 3. glass bottle (0.3kg, normal, durability soft)
- Which would have interesting physical force interactions
- (pushing, pulling, magnetism, wind, repulsion) with fire sword? → "none"
-```
-
-Missed pairs are lazily evaluated on actual collision via `request_collision` WS message.
-
-**Force evaluation (1 call per interesting pair):**
-```
-"fire sword (2kg, 120cm, normal, normal-surface) contacts
- magnet (0.5kg, 10cm, normal, normal-surface).
- Does the first push or pull the second?
- none / pull / drag / push / throw"
-→ "pull"
-```
-
-Force categories map to signed values: none=0, pull=-30, drag=-80, push=30, throw=80.
-
-**A and B always refer to the first and second name in lexicographic sort order.** See [cache.md](cache.md) for key normalization.
-
-### State changes and collision rules
-
-Collision rules are permanent — gaining or losing a state does NOT re-evaluate `CollisionRule` entries. Force between objects is a material property, not state-dependent. State-based interactions (fire spreading to wood) are handled by `initial_states`/`susceptible_states` on each object and tick-based propagation, not by pairwise cache lookup.
-
----
-
-## Creation cache
-
-Separate from the interaction cache. Maps object names to their creation-time LLM answers (physics, affordance, destructibility, field, autonomous, behaviors).
-
-First "fire sword" → mass 2.0, affordance carry, etc. All subsequent "fire sword" creations return the same values. This is a correctness requirement, not optimization — two identical objects should have identical physics. Without this, players can't predict what they're creating.
-
-Exact name match only. "Fire sword" and "big fire sword" are different cache entries — they're different objects.
-
----
-
-## Creature behavior — per-pair evaluation
-
-Replaces both behavior verbs AND seek/avoid targeting from V2. Instead of classifying a creature into fixed verbs at creation ("firefighter investigates fire") and then separately evaluating movement at spawn, evaluate BOTH movement and outcome per creature×object pair.
-
-A firefighter doesn't have one behavior. It extinguishes fire, rescues people, and chases arsonists. The LLM decides what the creature does with EACH specific thing it encounters.
+A firefighter doesn't have one behavior. It extinguishes fire, rescues people, and chases arsonists. The LLM decides what each object does with EACH specific thing it encounters.
 
 ### Staged evaluation (sequential + parallel)
 
-Follows the graph thesis: simple questions, 1 token each, sequential stages that seed context forward.
+Bidirectional screening (1 call per spawn) identifies interesting pairs first. Then:
 
-**Stage 1 — Movement + Priority (parallel, all creature×object pairs, 2 calls per pair):**
+**Stage 1 — Movement + Priority (parallel, all subject×target pairs, 2 calls per pair):**
 
-All creature behavior prompts include the scene inventory for context (input is free). This lets the LLM make contextually-aware decisions — a firefighter cares about water more when fire exists. State context included for re-eval after `state_changed`.
+All behavior prompts include the scene inventory for context (input is free). State context included for re-eval after `state_changed`.
 
 ```
 "Scene: [burning tree, bucket of water, trapped person, fire hydrant].
@@ -126,48 +46,47 @@ All creature behavior prompts include the scene inventory for context (input is 
 → driven
 ```
 
-**Filter:** only pairs that returned approach (0) continue to stage 2. Flee and ignore pairs are complete.
+**Filter:** pairs where `movement=approach OR priority>0` continue to stage 2. This captures both approaching creatures and reactive objects (ignore + high priority).
 
-**Stage 2 — Action (parallel, approaching pairs only, 1 call per pair):**
+**Stage 2 — Composite action pipeline (parallel, filtered pairs, 1 call per pair):**
 ```
-"Firefighter is approaching [burning tree] and wants to interact with it.
- → nothing / attack / heal / ignite / cleanse / consume"
-→ cleanse
+"Firefighter contacts [burning tree].
+ → nothing / attack / heal / consume / push"
+→ attack
 ```
+Conditional parallel follow-ups: amount (actions 1-3), state_modifier+state_id (actions 1-3), force_modifier (damage only).
 
-**Stage 3 — Parameters (parallel, actions needing them: attack/heal/ignite/cleanse):**
-```
-"Firefighter will cleanse a state on [burning tree].
- → burn / freeze / wet / zap"
-→ burn
-```
+### Action enum
 
-### Why staged
+| # | Action | Force modifier | State modifier |
+|---|---|---|---|
+| 0 | nothing | — | — |
+| 1 | damage | optional push | optional add/remove state |
+| 2 | heal | — | optional add/remove state |
+| 3 | consume | — | optional add/remove state |
+| 4 | push | — | — |
 
-Each question is trivially simple because prior answers provide context. The sequential filtering saves work: with 3 creatures × 14 objects = 42 pairs in stage 1, maybe 12 survive to stage 2, and 8 need parameters in stage 3. All 1-token choices, 3 sequential batches.
+Actions are composite: a wolf can damage + push (knockback) + add_state(burning) in one interaction. Force modifier (knockback) fires for damage only. Pull is not a supported force modifier.
 
 ### What this replaces
 
-| V2 | Per-pair behavior |
+| Old system | Unified behavior |
 |---|---|
-| 6 behavior verbs (creation-time) | Dropped — outcomes are per-pair, not per-creature |
-| Seek/avoid target strings | Dropped — no freeform targets, no semantic matching |
-| BEHAVIOR_TARGETS enum (9 values) | Dropped — LLM evaluates each specific object directly |
-| Fixed creature classification | Each creature×object pair gets its own movement + outcome |
+| `pairwise.py` (force-only) | Dropped — force is now action=push or force_modifier on damage |
+| `creature.py` (creatures only) | Dropped — all objects (active + reactive) use one system |
+| `CollisionResolver` (Godot) | Dropped — `ObjectBehavior` handles both collision forces and creature actions |
+| 6-call `PairwiseResult` | Replaced by `BehaviorEntry` (movement + composite action) |
 
 ### Examples
 
 ```
-Zombie cop + donut → approach 90, destroy + heal (eats it)
+Zombie cop + donut → approach 90, consume + heal (eats it)
 Zombie cop + criminal → approach 80, damage
 Zombie cop + fire → flee 70
-Zombie cop + citizen → ignore 40
-Firefighter + burning tree → approach 90, remove burning
-Firefighter + trapped person → approach 80, heal
+Bomb + anything → ignore + driven, damage + push (explodes on contact)
+Fan + leaves → ignore + moderate, push (blows them away)
+Firefighter + burning tree → approach 90, damage(remove burning)
 Doctor + injured person → approach 90, heal
-Cat + mouse → approach 70, destroy
-Cat + ball of yarn → approach 50, nothing
-Cat + dog → flee 80
 ```
 
 ### New objects and re-evaluation triggers
@@ -180,6 +99,16 @@ When a new object spawns, run stages 1-3 for all existing creatures against it. 
 3. If the changed object is itself a creature, re-evaluates its outgoing behaviors
 
 Results delivered via `behavior_updated` WS message. Client updates `InteractionCache._behavior` dict in place.
+
+---
+
+## Creation cache
+
+Separate from the behavior cache. Maps object names to their creation-time LLM answers (physics, affordance, destructibility, states, autonomous).
+
+First "fire sword" → mass 2.0, affordance carry, etc. All subsequent "fire sword" creations return the same values. This is a correctness requirement, not optimization — two identical objects should have identical physics. Without this, players can't predict what they're creating.
+
+Exact name match only. "Fire sword" and "big fire sword" are different cache entries — they're different objects.
 
 ---
 
@@ -199,13 +128,13 @@ State spreading is handled by `StatePropagator` — a tick-based (2s) area compo
 
 ## What's genuinely new vs V2
 
-1. **LLM-populated collision + behavior cache** — replaces 56 hand-authored rules. Cop+donut, vampire+garlic, mongoose+cobra all work without anyone coding them.
+1. **LLM-populated behavior cache** — replaces 56 hand-authored rules. Cop+donut, vampire+garlic, mongoose+cobra all work without anyone coding them.
 
 2. **LLM-generated physics** — a "fiery ice sword" gets reasonable mass/bounce/friction without substance mixing. A "thought bubble" gets mass 0.001 and floats.
 
 3. **Graph-based creator** — parallel 1-token calls instead of 1 complex call. Faster, more reliable, works on smaller models.
 
-4. **Per-pair creature behavior** — firefighter extinguishes fire, rescues people, chases arsonists. Each creature×object relationship gets its own movement + outcome via staged LLM evaluation. Replaces fixed verb classification.
+4. **Unified per-pair behavior** — active creatures (approach/flee) and reactive objects (bomb, fan) share one system. Each subject×object pair gets its own movement + composite action. Replaces both fixed verb classification AND force-only pairwise evaluation.
 
 5. **State properties replace ObjectField** — `initial_states`/`susceptible_states` on blueprint replace `has_field`/`field_range_cm`. Fire spawns with burning state; wood is susceptible to burning. `StatePropagator` ticks every 2s and spreads states to susceptible neighbors.
 
@@ -244,7 +173,7 @@ async def create_object(name: str) -> dict:
     return results
 ```
 
-Same pattern for pairwise interaction calls and creature behavior stage calls.
+Same pattern for behavior evaluation stage calls.
 
 ### No client-side rate limiting
 
@@ -260,7 +189,7 @@ See [future-optimizations.md](future-optimizations.md) for a potential raw httpx
 
 ### Interaction resolver — cache-backed
 
-The static `RuleResolver` is replaced by `InteractionCache` (Godot autoload) and `BehaviorCache` (backend in-memory). `CollisionResolver` calls `InteractionCache.lookup_collision(a, b)` and applies force; on miss, it calls `request_collision_eval()` to trigger lazy LLM eval. See [cache.md](cache.md) for the cache design.
+The static `RuleResolver` is replaced by `InteractionCache` (Godot autoload) and `BehaviorCache` (backend in-memory). `ObjectBehavior` calls `InteractionCache.lookup_behavior(subject, target)` and executes the composite action on contact. Behavior is pre-warmed at spawn time; state changes trigger re-evaluation via `state_changed` WS message. See [cache.md](cache.md) for the cache design.
 
 ### Library decisions
 

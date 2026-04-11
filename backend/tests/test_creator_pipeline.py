@@ -123,13 +123,13 @@ async def test_full_pipeline_cache_miss() -> None:
 # ---------- 3. Name truncation (>3 words) ----------
 
 
-async def test_name_truncated_to_three_words() -> None:
+async def test_name_truncated_to_five_words() -> None:
     cache = _make_cache()
 
-    async with _pipeline_mocks(name="A Very Long Name Indeed"):
+    async with _pipeline_mocks(name="A Very Long Name That Goes On"):
         bp = await create_object("something", cache)
 
-    assert bp.name == "A Very Long"
+    assert bp.name == "A Very Long Name That"
 
 
 # ---------- 4. Empty name fallback (whitespace) ----------

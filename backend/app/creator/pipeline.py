@@ -2,20 +2,20 @@
 
 Flow:
   1. Check creation cache (description -> cached blueprint)
-  2. Generate name (~3 tokens, sequential — other prompts use it)
-  3. Fan-out: gated parallel calls via run_questions()
+  2. Fan-out: name + all questions in parallel (all use {description})
      - Unconditional: mass, height, surface, bounce, gravity,
        durability, autonomous, affordance, visual_description,
        initial state bools (4), susceptible state bools (4)
      - Gated on autonomous: speed
      - Gated on durability<6: destruction_result_name
-  4. Parse and assemble GameObjectBlueprint
-  5. Cache creation result
-  6. Return blueprint
+  3. Parse and assemble GameObjectBlueprint
+  4. Cache creation result
+  5. Return blueprint
 """
 
 from __future__ import annotations
 
+import asyncio
 import time
 import uuid
 from typing import TYPE_CHECKING
@@ -52,22 +52,19 @@ async def create_object(description: str, cache: CacheStore) -> GameObjectBluepr
             logger.debug("creation_cache_hit", description=description)
             return GameObjectBlueprint(id=str(uuid.uuid4()), description=description, **cached)
 
-    # 2. Generate name (~3 tokens, must run first — other prompts reference it)
-    raw_name = await ask_text(
-        NAME_QUESTION.prompt.format(description=description),
-        max_tokens=NAME_QUESTION.max_tokens,
-        default=str(NAME_QUESTION.default),
+    # 2. Fan-out: name + all questions in parallel (all use {description})
+    raw_name, answers = await asyncio.gather(
+        ask_text(
+            NAME_QUESTION.prompt.format(description=description),
+            max_tokens=NAME_QUESTION.max_tokens,
+            default=str(NAME_QUESTION.default),
+        ),
+        run_questions(ALL_CREATION_QUESTIONS, {"description": description}),
     )
     words = raw_name.split()
-    name = " ".join(words[:3]) if len(words) > 3 else raw_name
+    name = " ".join(words[:5]) if len(words) > 5 else raw_name
     if not name.strip():
         name = description.split()[0].capitalize() if description.strip() else "Object"
-
-    # 3. Fan-out: gated parallel calls
-    answers = await run_questions(
-        ALL_CREATION_QUESTIONS,
-        {"name": name, "description": description},
-    )
 
     # 4. Assemble
     physics = PhysicsProperties(

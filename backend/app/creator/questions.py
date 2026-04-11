@@ -17,13 +17,13 @@ GATE_DESTRUCTIBLE = Gate("durability", lambda v: int(v) < 6)  # type: ignore[cal
 
 # ---- Creation questions ----
 # All fired via run_questions() after name generation resolves.
-# Prompts use {name} placeholder (the LLM-generated name).
+# Prompts use {description} placeholder (the player's original input).
 
 CREATION_QUESTIONS: list[Question] = [
     # Physics — open-ended numeric (instructions + bare name)
     Question(
         "mass_kg",
-        "{name}",
+        "{description}",
         "float",
         0.001,
         100000,
@@ -34,60 +34,70 @@ CREATION_QUESTIONS: list[Question] = [
     ),
     Question(
         "height_cm",
-        "{name}",
+        "{description}",
         "int",
         1,
         5000,
         30,
         instructions=(
             "Estimate the real-world height of the given object in centimeters. "
+            "Examples: coin=2, apple=8, cat=25, chair=90, person=175, tree=800, mountain=5000. "
             "Return only an integer."
         ),
     ),
     Question(
         "surface",
-        "{name}",
+        "{description}",
         "choice",
         default="normal",
-        instructions="Classify this object's surface texture.",
+        instructions=(
+            "Classify this object's surface texture. "
+            "slick=ice/oil/glass, normal=wood/metal/stone/fabric, sticky=tar/glue/resin."
+        ),
         choices=("slick", "normal", "sticky"),
         choice_map=(("slick", 0), ("normal", 1), ("sticky", 2)),
     ),
     Question(
         "bounce",
-        "{name}",
+        "{description}",
         "int",
         0,
         100,
         10,
         instructions=(
             "Rate the bounciness of the given object from 0 to 100. "
-            "0=no bounce, 50=moderate, 100=maximum bounce. "
-            "Return only an integer."
+            "0=no bounce (sand, mud), 10=minimal (rock, wood), "
+            "30=soft cushion (pillow, mattress), 50=moderate (tennis ball), "
+            "80=very bouncy (rubber ball, bouncy ball), 100=maximum bounce."
         ),
     ),
     Question(
         "gravity",
-        "{name}",
+        "{description}",
         "int",
         instructions=(
             "Rate how the given object falls when unsupported. "
-            "0=floats upward, 25=drifts slowly, 50=falls normally, "
-            "75=falls heavily, 100=slams down instantly. Return only an integer."
+            "0=floats upward (balloon, helium), 10=drifts slowly (feather, smoke), "
+            "50=falls normally (person, ball), 65=falls heavily (anvil, boulder), "
+            "75=very heavy fall (lead block). "
+            "Immovable objects that sit on the ground use 50-65, not 100."
         ),
     ),
     # Durability
     Question(
         "durability",
-        "{name}",
+        "{description}",
         "choice",
         default="normal",
         instructions=(
             "How easily does this object break? "
-            "soft=crumbles on touch, weak=breaks from a drop, "
-            "normal=survives casual handling, solid=resists strong force, "
-            "strong=requires extreme force to damage, "
-            "iron=nearly indestructible, permanent=cannot be destroyed."
+            "soft=crumbles on touch (paper, balloon), "
+            "weak=breaks from a drop (glass, ice), "
+            "normal=survives casual handling (wood, campfire, plastic), "
+            "solid=resists strong force (iron, brick), "
+            "strong=requires extreme force (steel, thick stone), "
+            "iron=nearly indestructible (tank, vault), "
+            "permanent=cannot be destroyed (mountain, bedrock)."
         ),
         choices=("soft", "weak", "normal", "solid", "strong", "iron", "permanent"),
         choice_map=(
@@ -103,17 +113,21 @@ CREATION_QUESTIONS: list[Question] = [
     # Autonomous
     Question(
         "autonomous",
-        "{name}",
+        "{description}",
         "choice",
         default="no",
-        instructions="Does this object move and act on its own?",
+        instructions=(
+            "Does this object move and act on its own? "
+            "Animals, creatures, monsters, robots, and people are autonomous. "
+            "Plants, tools, furniture, and terrain are not."
+        ),
         choices=("yes", "no"),
         choice_map=(("yes", 1), ("no", 0)),
     ),
     # Gated on autonomous=true
     Question(
         "speed",
-        "{name}",
+        "{description}",
         "choice",
         default="normal",
         gates=(GATE_AUTONOMOUS,),
@@ -123,13 +137,15 @@ CREATION_QUESTIONS: list[Question] = [
     ),
     Question(
         "affordance",
-        "{name}",
+        "{description}",
         "choice",
         default="none",
         instructions=(
-            "In a 2D game, how can a player interact with this object? "
-            "carry=pick up and hold, ride=sit on top and move, "
-            "scale=climb up it, none=cannot interact physically."
+            "In a 2D game, how can a player physically interact with this object? "
+            "carry=pick up and hold (small light items like sword, bottle, ball), "
+            "ride=sit on top and move (horse, car, boat), "
+            "scale=climb up it (ladder, tree, wall), "
+            "none=too heavy/big/dangerous to interact with, or is a creature/person."
         ),
         choices=("carry", "ride", "scale", "none"),
         choice_map=(("carry", 0), ("ride", 1), ("scale", 2), ("none", 3)),
@@ -138,7 +154,7 @@ CREATION_QUESTIONS: list[Question] = [
     # Initial states — does this object spawn with these states?
     Question(
         "initially_burning",
-        "{name}",
+        "{description}",
         "choice",
         default="no",
         instructions="Does this object produce fire or heat?",
@@ -147,7 +163,7 @@ CREATION_QUESTIONS: list[Question] = [
     ),
     Question(
         "initially_frozen",
-        "{name}",
+        "{description}",
         "choice",
         default="no",
         instructions="Is this object frozen or ice-cold?",
@@ -156,7 +172,7 @@ CREATION_QUESTIONS: list[Question] = [
     ),
     Question(
         "initially_wet",
-        "{name}",
+        "{description}",
         "choice",
         default="no",
         instructions="Is this object wet or made of water or liquid?",
@@ -165,7 +181,7 @@ CREATION_QUESTIONS: list[Question] = [
     ),
     Question(
         "initially_electrified",
-        "{name}",
+        "{description}",
         "choice",
         default="no",
         instructions="Does this object produce electricity?",
@@ -175,7 +191,7 @@ CREATION_QUESTIONS: list[Question] = [
     # Susceptible states — can these states spread to this object?
     Question(
         "catches_fire",
-        "{name}",
+        "{description}",
         "choice",
         default="no",
         instructions="Can this object catch fire from a nearby burning object?",
@@ -184,7 +200,7 @@ CREATION_QUESTIONS: list[Question] = [
     ),
     Question(
         "can_freeze",
-        "{name}",
+        "{description}",
         "choice",
         default="no",
         instructions="Can this object freeze from contact with something frozen?",
@@ -193,7 +209,7 @@ CREATION_QUESTIONS: list[Question] = [
     ),
     Question(
         "gets_wet",
-        "{name}",
+        "{description}",
         "choice",
         default="no",
         instructions="Can this object get wet from a nearby wet object?",
@@ -202,7 +218,7 @@ CREATION_QUESTIONS: list[Question] = [
     ),
     Question(
         "conducts_electricity",
-        "{name}",
+        "{description}",
         "choice",
         default="no",
         instructions="Can this object conduct electricity from an electrified object?",
@@ -215,7 +231,9 @@ CREATION_QUESTIONS: list[Question] = [
 
 NAME_QUESTION = Question(
     "name",
-    "Give a 1-5 word game object name for: {description}. Reply with ONLY the name, nothing else.",
+    "Shorten this to a 1-5 word object name: {description}. "
+    "Keep the same words where possible. Do not rename or rephrase. "
+    "Reply with ONLY the name.",
     "text",
     max_tokens=20,
     default="Object",
@@ -223,17 +241,17 @@ NAME_QUESTION = Question(
 
 VISUAL_QUESTION = Question(
     "visual_description",
-    "Describe the appearance of '{name}' for a 2D sprite artist. "
+    "Describe the appearance of '{description}' for a 2D sprite artist. "
     "Shape, material, colors, distinctive features. "
     "Max 2 sentences. Reply with ONLY the description.",
     "text",
     max_tokens=40,
-    default="a {name}",
+    default="a {description}",
 )
 
 DESTRUCTION_QUESTION = Question(
     "destruction_result_name",
-    "When {name} is destroyed, what remains? "
+    "When {description} is destroyed, what remains? "
     "Reply with a 1-3 word name for the debris/remains, or 'nothing' if it vanishes completely. "
     "Examples: wooden sword -> splinters, glass bottle -> glass shards, balloon -> nothing, "
     "ice block -> puddle, robot -> scrap metal",

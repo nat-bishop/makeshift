@@ -50,8 +50,13 @@ class TestComputeUtility:
 class TestBehaviorEntry:
     def test_to_dict_roundtrip(self):
         be = BehaviorEntry(
-            movement=0, priority=3, action=4, amount=80,
-            state_action=1, state_id=2, force=1,
+            movement=0,
+            priority=3,
+            action=4,
+            amount=80,
+            state_action=1,
+            state_id=2,
+            force=1,
         )
         d = be.to_dict()
         be2 = BehaviorEntry.from_dict(d)

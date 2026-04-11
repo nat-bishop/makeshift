@@ -21,7 +21,7 @@ make check                     # lint + typecheck + test
 make fix                       # autofix lint issues
 make format                    # format code
 make clear-sprites             # delete all cached sprites (backend/static/sprites/*.png)
-make clear-cache               # delete LLM creation/collision cache (cache.db)
+make clear-cache               # delete LLM creation cache (cache.db)
 make install                   # install all Python dependencies
 make godot                     # open Godot editor
 make play                      # run the game (Godot)
@@ -120,7 +120,7 @@ Requires `.env` file (see `.env.example`):
 - `BG_REMOVAL_BACKEND` — `local` (GPU via PyTorch) or `cloud` (fal.ai birefnet). Default: local
 - `BG_REMOVAL_MODEL` — HuggingFace BiRefNet model. Default: `briaai/RMBG-2.0`
 - `SPRITE_CACHE_ENABLED` — toggles sprite cache read/write. Default: true
-- `CREATION_CACHE_ENABLED` — toggles creation/collision LLM cache read/write. Default: true. Evals disable this automatically.
+- `CREATION_CACHE_ENABLED` — toggles creation LLM cache read/write. Default: true. Evals disable this automatically.
 - `LLM_MODEL` — Provider-prefixed model ID. Default: `google-gla:gemini-3.1-flash-lite-preview`. Prefixes: `google-gla:`, `anthropic:`, `openai:`. Bare name when `LOCAL_LLM_URL` set
 - `LOCAL_LLM_URL` — SGLang OpenAI-compatible endpoint for local LLM. Unset by default
 - `FAL_IMAGE_MODEL` — fal.ai image model (with `IMAGE_BACKEND=fal`). Default: `fal-ai/flux/schnell`

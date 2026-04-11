@@ -26,33 +26,15 @@ Mass uses real-world kg (decimal, 2-4 tokens) because LLM grounding in physical 
 
 ## Destructibility
 
-Two questions, parallel with physics batch:
+One question, parallel with physics batch:
 
-| Property | Prompt | Output |
-|---|---|---|
-| **Armor** (0–100) | "How resistant to damage? (paper=5, wood=30, steel=80, diamond=99)" | 1 number |
-| **HP** (0–100) | "How much punishment before destroyed? (balloon=5, wood=40, steel=80, mountain=skip)" | 1 number |
-| **Indestructible** | "Can this be destroyed? 0=no 1=yes" | 1 number |
+| Property | Prompt | Output | HP mapping |
+|---|---|---|---|
+| **Durability** (0–6) | "How durable? 0=fragile..6=indestructible (paper=0, wood=2, steel=4)" | 1 integer | 0→5, 1→15, 2→40, 3→80, 4→150, 5→300, 6→999999 |
 
-Armor reduces incoming damage (percentage). HP is the total pool. A slime has low armor (easy to damage per hit) but high HP (lots of punishment). A glass window has low armor AND low HP. Indestructible objects skip HP tracking entirely — damage interactions are ignored.
+No armor/damage-reduction mechanic — `durability` maps directly to a starting HP pool via `DURABILITY_HP` in `models/blueprint.py`. Tier 6 objects have effectively infinite HP.
 
 ---
-
-## Collision outcomes (pairwise)
-
-The pairwise cache stores only one outcome: **force**. State interactions are handled by per-object properties + propagation (see States section below).
-
-| LLM choice | `force_on_b` value | Examples |
-|---|---|---|
-| none | 0 | Rock + rock, sword + wood |
-| pull | -30 | Weak magnetic attraction |
-| drag | -80 | Strong magnetic pull |
-| push | 30 | Explosion knock, repulsion |
-| throw | 80 | Strong repulsion, blast |
-
-1 LLM call per pair. Force on A is engine-derived: `force_a = force_b × (mass_b / mass_a)`.
-
-Carry/mount interactions are handled by the affordance system, not the collision cache.
 
 ---
 
@@ -119,7 +101,7 @@ One LLM call at creation, 1 token:
 ### Carry mechanics
 
 - **Pickup:** Object freeze = true, reparent under player's hand Marker2D
-- **Use/swing:** Rotate hand through arc (tween), check overlaps during swing, apply held object's pairwise interactions against targets
+- **Use/swing:** Rotate hand through arc (tween), check overlaps during swing, apply held object's cached behavior action against targets
 - **Throw:** Reparent to scene, unfreeze, apply impulse in aim direction
 - **Drop:** Same as throw, zero impulse
 
@@ -136,18 +118,22 @@ The held object IS the weapon. Player has no intrinsic attack damage — the hel
 - **While overlapping:** Player gains upward velocity (overrides gravity)
 - **On exit:** Normal gravity resumes
 
-### Some interactions are just carry + pairwise outcome
+### Some interactions are just carry + behavior outcome
 
 No separate affordance needed for:
-- **Drinkable/edible:** carry + pairwise interaction with player → heal (negative damage)
+- **Drinkable/edible:** carry + behavior action=heal on player
 - **Throwable:** carry + throw (release with impulse)
 - **Pushable:** mass too high for carry → engine applies force instead of reparenting
 
 ---
 
-## Creature behavior (per-pair)
+## Object behavior (per-pair)
 
-Autonomous creatures don't have fixed behavior verbs. Instead, each creature×object relationship is evaluated independently at spawn time. A firefighter extinguishes fire, rescues people, and chases arsonists — different behavior for different targets.
+All autonomous objects share one system — active creatures (wolf, zombie) AND reactive objects (bomb, fan, acid). Each subject×object relationship is evaluated independently at spawn time.
+
+**Active objects** (movement=approach/flee) move toward or away from targets and execute composite actions on contact.
+
+**Reactive objects** (movement=ignore, priority>0) never move but act when a target enters CONTACT_RANGE.
 
 ### Movement patterns
 
@@ -157,35 +143,29 @@ Autonomous creatures don't have fixed behavior verbs. Instead, each creature×ob
 | 1 | **flee** | Move away from target |
 | 2 | **ignore** | No movement reaction |
 
-Each creature×object pair gets a movement (0-2) and a strength (0-100) at spawn time.
+### Actions (composite)
 
-### On-arrival actions
+| # | Action | Amount | State modifier | Force modifier |
+|---|---|---|---|---|
+| 0 | **nothing** | — | — | — |
+| 1 | **damage** | 0-100 | add/remove state (optional) | push (optional) |
+| 2 | **heal** | 0-100 | add/remove state (optional) | — |
+| 3 | **consume** | 0-100 | add/remove state (optional) | — |
+| 4 | **push** | 0-100 | — | — |
 
-For pairs where the creature approaches, the LLM decides what happens on arrival:
-
-| # | Action | Parameters | Examples |
-|---|---|---|---|
-| 0 | **nothing** | — | Cat approaches ball of yarn, just watches |
-| 1 | **damage** | amount (0-100) | Cop attacks criminal |
-| 2 | **heal** | amount (0-100) | Doctor heals injured person |
-| 3 | **add state** | state_id (1-4) | Wizard sets enemy burning |
-| 4 | **remove state** | state_id (1-4) | Firefighter removes burning from tree |
-| 5 | **destroy** | — | Zombie destroys brain (instant kill) |
-| 6 | **take** | — | Thief takes gold (pickup holdable) |
-
-These are the same engine primitives as interaction outcomes. The creature behavior system and the pairwise collision cache both produce the same effect types — the engine doesn't care which system generated the effect.
+A single interaction can combine: primary action + state modifier (add/remove) + force modifier (knockback on damage only). A wolf can damage + push + add_state(burning) simultaneously. Pull is not supported — push/throw force is now in the action enum directly.
 
 ### Staged evaluation
 
-See [architecture.md](architecture.md) for the full staged evaluation flow. Three sequential stages, each parallel internally, each seeding context to the next. 1 token per call. ~104 calls for 3 creatures × 14 objects, ~180ms total.
+See [architecture.md](architecture.md) for the full staged evaluation flow. Three sequential stages (movement+priority → action → parameters), each parallel internally, each seeding context to the next. 1 token per call.
 
 ### Priority resolution — utility scoring
 
-When a creature has reactions to multiple objects, it picks ONE target per frame using utility scoring. Same pattern as The Sims and most single-agent game AI. The creature should look like it's making a decision — "going for the donut" or "running from the garlic" — not drifting at a blended angle.
+Active objects pick ONE target per frame using utility scoring. Same pattern as The Sims — the object should look like it's making a decision ("going for the donut"), not drifting at a blended angle.
 
 ```
-For each (creature, object) pair with movement ≠ ignore:
-  utility = strength / (1 + distance / perception_range)
+For each pair with movement ≠ ignore:
+  utility = priority_weight / (1 + distance / perception_range)
   if movement == flee:
     utility *= 1.5   # survival bias
 
@@ -194,14 +174,7 @@ Pick highest utility pair.
   approach → move toward that object
 ```
 
-Distance is normalized by perception range so falloff is relative to how far the creature can see, not absolute meters. A creature with 20m perception treats 10m as "half range" (utility halved), not "10 units away." The 1.5× flee multiplier ensures survival slightly overrides desire at equal strength and distance.
-
-**Examples** (assuming perception_range = 20m):
-- Vampire, garlic 2m (flee 90), human 5m (approach 85): garlic utility = 90×1.5/1.1 = 123, human utility = 85/1.25 = 68 → flees garlic
-- Vampire, garlic 15m (flee 90), human 2m (approach 85): garlic utility = 90×1.5/1.75 = 77, human utility = 85/1.1 = 77 → tie, slight edge to flee → flees but barely
-- Vampire, garlic 20m (flee 90), human 2m (approach 85): garlic utility = 90×1.5/2 = 67.5, human utility = 85/1.1 = 77 → approaches human
-
-When the creature reaches contact range of an approach target, execute the on-arrival action from the pairwise cache.
+`PRIORITY_WEIGHTS = {0: 0.0, 1: 25.0, 2: 60.0, 3: 100.0}`. The 1.5× flee multiplier ensures survival slightly overrides desire at equal priority and distance.
 
 If creatures need obstacle avoidance (curve around garlic to reach human), that's a pathfinding layer on top — not priority resolution. Defer until playtesting shows it's needed.
 

@@ -158,7 +158,6 @@ async def _handle_state_changed(
     # Invalidate all behavioral entries involving the changed object
     stale_keys = scene.invalidate_behavior(object_name)
 
-    scene_names = [obj.blueprint.name for obj in session.objects]
     target_states: dict[str, list[int]] = {object_name: active_states}
 
     # Find all objects that HAD behavior entries toward the changed object
@@ -177,7 +176,6 @@ async def _handle_state_changed(
         behaviors = await evaluate_behaviors(
             reactor_bp,
             [changed_bp],
-            scene_names,
             scene,
             target_states=target_states,
         )
@@ -200,7 +198,6 @@ async def _handle_state_changed(
         behaviors = await evaluate_behaviors(
             changed_bp,
             target_bps,
-            scene_names,
             scene,
         )
         if behaviors:
@@ -287,9 +284,7 @@ async def send_behaviors_ready(session_id: str, subject_name: str, behaviors: li
     )
 
 
-async def send_behavior_updated(
-    session_id: str, subject_name: str, behaviors: list[dict]
-) -> None:
+async def send_behavior_updated(session_id: str, subject_name: str, behaviors: list[dict]) -> None:
     """Deliver re-evaluated behavioral entries after state change."""
     logger.info("send_behavior_updated", session_id=session_id, subject=subject_name)
     await _broadcast(
