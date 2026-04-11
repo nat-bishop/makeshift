@@ -37,6 +37,9 @@ var _pre_slide_velocity: Vector2 = Vector2.ZERO
 var _prev_contacts: Dictionary = {}  # instance_id -> true
 var _game_state_manager: StateManager = null
 var _frozen_input: bool = false  # frozen state disables movement
+var _combined_sprite: Sprite2D = null  # static texture shown during carry/ride
+var held_object: Node = null  # the game object being carried/ridden
+var _affordance: Node = null
 @onready var _anim_sprite: AnimatedSprite2D = $AnimatedSprite2D
 
 
@@ -59,6 +62,13 @@ func _ready() -> void:
 	_kick_query.collide_with_bodies = true
 
 	_anim_sprite.animation_finished.connect(_on_animation_finished)
+
+	# Affordance system (carry/ride via sprite swap)
+	var aff_script: GDScript = preload("res://scripts/systems/affordance_system.gd")
+	_affordance = aff_script.new()
+	_affordance.name = "AffordanceSystem"
+	add_child(_affordance)
+	_affordance.init(self)
 	Log.info("Player: Spawned with %d HP" % MAX_HEALTH)
 
 
@@ -77,6 +87,7 @@ func _physics_process(delta: float) -> void:
 		_prev_contacts.clear()
 		return
 	_push_rigid_bodies()
+	_process_interact()
 	_process_kick(delta)
 	_process_damage_flash(delta)
 	_update_animation()
@@ -129,12 +140,20 @@ func _push_rigid_bodies() -> void:
 	_prev_contacts = current_contacts
 
 
+func _process_interact() -> void:
+	if Input.is_action_just_pressed("interact") and _affordance != null:
+		_affordance.interact()
+
+
 func _process_kick(delta: float) -> void:
 	if _kick_cooldown_timer > 0.0:
 		_kick_cooldown_timer -= delta
 
 	if Input.is_action_just_pressed("kick") and _kick_cooldown_timer <= 0.0:
-		_perform_kick()
+		if held_object != null and _affordance != null:
+			_affordance.throw_held()
+		else:
+			_perform_kick()
 		_kick_cooldown_timer = KICK_COOLDOWN
 
 
@@ -309,3 +328,29 @@ func _on_game_state_removed(state_name: String) -> void:
 			clear_speed_modifier()
 		"electrified":
 			WorldMutations.stop_dot(self, "_dot_electrified")
+
+
+# --- Carry/Ride Sprite Swap ---
+
+func swap_to_combined_sprite(texture: Texture2D, obj: Node) -> void:
+	held_object = obj
+	_anim_sprite.visible = false
+	if _combined_sprite == null:
+		_combined_sprite = Sprite2D.new()
+		add_child(_combined_sprite)
+	_combined_sprite.texture = texture
+	_combined_sprite.visible = true
+	Log.info("Player: Swapped to combined sprite (holding '%s')" % obj.get_object_name())
+
+
+func restore_original_sprite() -> Node:
+	if _combined_sprite:
+		_combined_sprite.visible = false
+	_anim_sprite.visible = true
+	var obj: Node = held_object
+	held_object = null
+	return obj
+
+
+func is_holding() -> bool:
+	return held_object != null

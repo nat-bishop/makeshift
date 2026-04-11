@@ -83,12 +83,28 @@ def _prompt_hash(prompt: str) -> str:
     return hashlib.sha256(prompt.encode()).hexdigest()[:16]
 
 
+PLAYER_VISUAL = "a small paper cutout person"
+
+_AFFORDANCE_ACTION = {0: "carrying", 1: "riding"}
+
+
 def build_prompt(name: str, visual_description: str) -> str:
     """Build an image generation prompt from a name and visual description string."""
     parts = [
         "mixed media collage style paper cutout, side view, flat lighting, clean edges",
         f"{name}, {visual_description}",
         "single centered object, contrasting solid background color, no text",
+    ]
+    return ", ".join(parts)
+
+
+def build_combined_prompt(affordance: int, object_name: str, object_visual: str) -> str:
+    """Build prompt for player + object combination sprite (carry/ride)."""
+    action = _AFFORDANCE_ACTION.get(affordance, "carrying")
+    parts = [
+        "mixed media collage style paper cutout, side view, flat lighting, clean edges",
+        f"{PLAYER_VISUAL} {action} {object_name}, {object_visual}",
+        "single centered scene, contrasting solid background color, no text",
     ]
     return ", ".join(parts)
 

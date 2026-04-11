@@ -35,6 +35,8 @@ var current_target_name: String = ""
 var current_movement: int = 2      # 2=no target
 var current_action: int = 0        # 0=nothing
 var current_action_amount: int = 0
+var current_best_utility: float = -1.0
+var current_target_distance: float = 0.0
 
 # Per-instance speeds computed from speed tier
 var _move_speed: float = BASE_MOVE_SPEED
@@ -61,6 +63,9 @@ func _scan_existing() -> void:
 	for node in _owner.get_tree().get_nodes_in_group("game_objects"):
 		if node == _owner:
 			continue
+		_try_add_target(node)
+	# Also scan the player (separate group, not in game_objects)
+	for node in _owner.get_tree().get_nodes_in_group("player"):
 		_try_add_target(node)
 
 
@@ -125,6 +130,8 @@ func _physics_process(delta: float) -> void:
 	current_movement = 2
 	current_action = 0
 	current_action_amount = 0
+	current_best_utility = -1.0
+	current_target_distance = 0.0
 
 	# Utility scoring for ALL pairs (active + reactive)
 	var best_target: Node = null
@@ -163,6 +170,8 @@ func _physics_process(delta: float) -> void:
 	current_movement = best_entry.get("movement", 2)
 	current_action = best_entry.get("action", 0)
 	current_action_amount = best_entry.get("amount", 0)
+	current_best_utility = best_utility
+	current_target_distance = _owner.global_position.distance_to(best_target.global_position)
 
 	var movement: int = best_entry.get("movement", 2)
 	var dir: Vector2 = (best_target.global_position - _owner.global_position).normalized()
@@ -220,10 +229,9 @@ func _execute_action(entry: Dictionary, target: Node) -> void:
 				return
 			WorldMutations.apply_damage(target, INSTANT_KILL_DAMAGE)
 		4:  # push (primary)
-			if target is RigidBody2D:
-				var force_dir: Vector2 = (target.global_position - _owner.global_position).normalized()
-				var magnitude: float = float(amount) * FORCE_SCALE if amount > 0 else 30.0 * FORCE_SCALE
-				WorldMutations.apply_impulse(target, force_dir, magnitude)
+			var force_dir: Vector2 = (target.global_position - _owner.global_position).normalized()
+			var magnitude: float = float(amount) * FORCE_SCALE if amount > 0 else 30.0 * FORCE_SCALE
+			WorldMutations.apply_impulse(target, force_dir, magnitude)
 
 	# State modifier
 	if state_action == 1 and state_id >= 1 and state_id <= 4:
@@ -238,6 +246,6 @@ func _execute_action(entry: Dictionary, target: Node) -> void:
 			)
 
 	# Force modifier (knockback on damage only)
-	if force == 1 and action == 1 and target is RigidBody2D:
+	if force == 1 and action == 1:
 		var force_dir: Vector2 = (target.global_position - _owner.global_position).normalized()
 		WorldMutations.apply_impulse(target, force_dir, FORCE_MODIFIER_IMPULSE * FORCE_SCALE)
