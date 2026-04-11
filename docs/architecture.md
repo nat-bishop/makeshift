@@ -91,7 +91,7 @@ Doctor + injured person → approach 90, heal
 
 ### New objects and re-evaluation triggers
 
-When a new object spawns, run stages 1-3 for all existing creatures against it. When a new creature spawns, run stages 1-3 for it against all existing objects.
+When a new object spawns, run bidirectional screening then stages 1-2 for all interesting pairs. The player is always included as a potential target via `PLAYER_BLUEPRINT`.
 
 **Re-evaluation on state change:** when `state_changed` WS message arrives, `_handle_state_changed()` in `ws/handler.py`:
 1. Invalidates all behavior entries involving the changed object (`BehaviorCache.invalidate_behavior()`)

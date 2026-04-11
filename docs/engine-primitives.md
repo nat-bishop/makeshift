@@ -87,8 +87,8 @@ What happens when the player presses interact near an object. Three mechanics, e
 
 | # | Affordance | Input | Engine mechanic |
 |---|---|---|---|
-| 0 | **carry** | Player presses interact | Object reparents as child of player. Player controls movement. Object loses independent physics while held. |
-| 1 | **mount** | Player presses interact | Player reparents as child of object. Object physics govern movement. Player input steers the object. |
+| 0 | **carry** | Player presses interact | Object hidden + physics frozen; player sprite swaps to pre-cached combined image. Drop/throw restores original sprites and unfreezes. |
+| 1 | **mount** | Player presses interact | Same sprite-swap as carry. Combined image shows player riding the object. |
 | 2 | **climb** | Player overlaps object | Player vertical velocity modified. Player moves upward while overlapping. No reparenting. |
 
 One LLM call at creation, 1 token:
@@ -98,20 +98,13 @@ One LLM call at creation, 1 token:
 → 1
 ```
 
-### Carry mechanics
+### Carry/mount mechanics (sprite-swap)
 
-- **Pickup:** Object freeze = true, reparent under player's hand Marker2D
-- **Use/swing:** Rotate hand through arc (tween), check overlaps during swing, apply held object's cached behavior action against targets
-- **Throw:** Reparent to scene, unfreeze, apply impulse in aim direction
+- **Pickup/mount:** Object `visible=false`, `freeze=true`, `collision_layer/mask=0`. Player sprite swaps to pre-cached combined image (generated at object creation time, delivered via `combined_sprite_ready` WS message)
+- **Throw:** Release object, restore visibility + physics, apply impulse in aim direction
 - **Drop:** Same as throw, zero impulse
-
-The held object IS the weapon. Player has no intrinsic attack damage — the held object's cached interactions determine attack effects. No held object → player can only kick (existing mechanic).
-
-### Mount mechanics
-
-- **Mount:** Player reparents under rideable object, player input redirects to object movement
-- **Movement:** Object's mass/speed/gravity govern physics
-- **Dismount:** Player reparents back to scene, input returns to normal
+- **Object destroyed while held:** `tree_exiting` signal restores player sprite automatically
+- Combined sprite prompt: `"{player} carrying/riding {object}"` — generated at creation, cached by SHA-256 of prompt
 
 ### Climb mechanics
 
