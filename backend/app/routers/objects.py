@@ -1,4 +1,4 @@
-"""Object creation endpoint — V3 pipeline with pairwise cache integration."""
+"""Object creation endpoint — V3 pipeline with collision + behavior integration."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 from app.sessions.manager import SessionManager
 from app.ws.handler import (
     send_behaviors_ready,
-    send_cache_ready,
+    send_collision_ready,
     send_sprite_failed,
     send_sprite_ready,
 )
@@ -45,7 +45,7 @@ async def create_object_endpoint(
     """Create a new game object from a text description.
 
     Returns the blueprint immediately.
-    Sprite generation + pairwise cache population happen async via background tasks.
+    Sprite generation + collision/behavior integration happen async via background tasks.
     """
     db = request.app.state.db
     manager = SessionManager(db)
@@ -68,7 +68,7 @@ async def create_object_endpoint(
     # Save object to session
     await manager.save_object(session_id, blueprint)
 
-    # Schedule background tasks: sprite gen + pairwise integration
+    # Schedule background tasks: sprite gen + collision/behavior integration
     scenes = request.app.state.scenes
     task = asyncio.create_task(_background_spawn(session_id, blueprint, manager, cache, scenes))
     _background_tasks.add(task)
@@ -95,7 +95,7 @@ async def _background_spawn(
     cache: Any,
     scenes: dict,
 ) -> None:
-    """Background: sprite gen + pairwise screening/eval + creature behavior."""
+    """Background: sprite gen + collision screening/eval + creature behavior."""
     logger.info("background_spawn_start", name=blueprint.name)
     results = await asyncio.gather(
         _generate_and_deliver_sprite(session_id, blueprint),
@@ -146,11 +146,6 @@ async def _generate_and_deliver_sprite(
             logger.error("sprite_failed_notify_error", object_id=object_id, exc_info=True)
 
 
-def _format_behaviors(behaviors: dict) -> list[dict]:
-    """Format creature behaviors for WS delivery."""
-    return [{"target": name, **b.to_dict()} for name, b in behaviors.items()]
-
-
 async def _run_spawn_integration(
     session_id: str,
     blueprint: GameObjectBlueprint,
@@ -158,35 +153,37 @@ async def _run_spawn_integration(
     cache: Any,
     scenes: dict,
 ) -> None:
-    """Run pairwise screening + eval + creature behavior for newly spawned object."""
-    from app.cache.scene import SceneCache
+    """Run collision screening/eval + creature behavior for newly spawned object."""
+    from app.cache.scene import BehaviorCache
     from app.engine.creature import evaluate_creature_behaviors
-    from app.engine.pairwise import spawn_integration
+    from app.engine.pairwise import collision_spawn_integration
 
-    scene = scenes.setdefault(session_id, SceneCache())
+    scene = scenes.setdefault(session_id, BehaviorCache())
 
-    # Load all session objects for pairwise context
+    # Load all session objects for context
     session = await manager.get_session(session_id)
     if session is None:
         return
 
     scene_objects = [obj.blueprint for obj in session.objects if obj.blueprint.id != blueprint.id]
 
-    # Pairwise integration
+    # Collision force rules (screening + eval)
     try:
-        results = await spawn_integration(blueprint, scene_objects, cache, scene)
+        results = await collision_spawn_integration(blueprint, scene_objects, cache, scene)
         if results:
+            from app.cache.store import normalize_name
+
             entries = []
-            for target_name, pr in results.items():
-                entry = pr.to_dict()
-                a, b = sorted([blueprint.name.lower(), target_name.lower()])
+            for target_name, rule in results.items():
+                entry = rule.to_dict()
+                a, b = sorted([normalize_name(blueprint.name), normalize_name(target_name)])
                 entry["name_a"] = a
                 entry["name_b"] = b
                 entries.append(entry)
-            await send_cache_ready(session_id, blueprint.name, entries)
+            await send_collision_ready(session_id, entries)
     except Exception:
         logger.error(
-            "spawn_integration_failed",
+            "collision_integration_failed",
             session_id=session_id,
             object_name=blueprint.name,
             exc_info=True,
@@ -194,21 +191,29 @@ async def _run_spawn_integration(
 
     # Creature behavior
     try:
+        scene_names = [o.name for o in scene_objects] + [blueprint.name]
+
         # Evaluate new creature against all existing objects
         if blueprint.autonomous:
-            scene_names = [o.name for o in scene_objects]
             behaviors = await evaluate_creature_behaviors(
                 blueprint, scene_objects, scene_names, scene
             )
             if behaviors:
-                await send_behaviors_ready(session_id, blueprint.name, _format_behaviors(behaviors))
+                from app.ws.handler import _format_behaviors
+
+                await send_behaviors_ready(
+                    session_id, blueprint.name, _format_behaviors(blueprint.name, behaviors)
+                )
 
         # Evaluate existing creatures against new object (parallel)
         async def _eval_creature(obj: GameObjectBlueprint) -> None:
-            snames = [o.name for o in scene_objects if o.id != obj.id] + [blueprint.name]
-            behaviors = await evaluate_creature_behaviors(obj, [blueprint], snames, scene)
+            behaviors = await evaluate_creature_behaviors(obj, [blueprint], scene_names, scene)
             if behaviors:
-                await send_behaviors_ready(session_id, obj.name, _format_behaviors(behaviors))
+                from app.ws.handler import _format_behaviors
+
+                await send_behaviors_ready(
+                    session_id, obj.name, _format_behaviors(obj.name, behaviors)
+                )
 
         creature_tasks = [_eval_creature(obj) for obj in scene_objects if obj.autonomous]
         if creature_tasks:

@@ -102,13 +102,25 @@ func request_destruction_spawn(debris_name: String, pos: Vector2) -> void:
 
 
 func send_state_changed(object_name: String, active_states: Array) -> void:
-	## Notify backend that an object's states changed (triggers lazy re-eval).
+	## Notify backend that an object's states changed (triggers behavioral re-eval).
 	if _ws == null or not _ws_connected:
 		return
 	var msg: Dictionary = {
 		"type": "state_changed",
 		"object_name": object_name,
 		"active_states": active_states,
+	}
+	_ws.send_text(JSON.stringify(msg))
+
+
+func send_collision_request(name_a: String, name_b: String) -> void:
+	## Request lazy collision evaluation from backend (cache miss).
+	if _ws == null or not _ws_connected:
+		return
+	var msg: Dictionary = {
+		"type": "request_collision",
+		"name_a": name_a,
+		"name_b": name_b,
 	}
 	_ws.send_text(JSON.stringify(msg))
 
@@ -191,19 +203,20 @@ func _handle_ws_message(text: String) -> void:
 			_handle_sprite_ready(data)
 		"sprite_failed":
 			_handle_sprite_failed(data)
-		"cache_ready":
+		"collision_ready":
 			var entries: Array = data.get("entries", [])
-			InteractionCache.load_pairwise_batch(entries)
-			Log.info("Backend: Cache ready for '%s' (%d entries)" % [data.get("object_name", "?"), entries.size()])
+			InteractionCache.load_collision_batch(entries)
+			Log.info("Backend: Collision rules ready (%d entries)" % entries.size())
 		"behaviors_ready":
 			var creature_name: String = data.get("creature_name", "")
 			var behaviors: Array = data.get("behaviors", [])
-			InteractionCache.load_creature_batch(creature_name, behaviors)
+			InteractionCache.load_behavior_batch(creature_name, behaviors)
 			Log.info("Backend: Behaviors ready for '%s' (%d entries)" % [creature_name, behaviors.size()])
-		"cache_updated":
+		"behavior_updated":
+			var creature_name: String = data.get("creature_name", "")
 			var entries: Array = data.get("entries", [])
-			InteractionCache.load_pairwise_batch(entries)
-			Log.info("Backend: Cache updated (%d entries)" % entries.size())
+			InteractionCache.load_behavior_batch(creature_name, entries)
+			Log.info("Backend: Behavior updated for '%s' (%d entries)" % [creature_name, entries.size()])
 		"error":
 			Log.warn("Backend WS error: %s" % data.get("message", "unknown"))
 

@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 import yaml
-from app.cache.scene import CreatureBehavior, PairwiseResult
+from app.cache.scene import BehaviorEntry, CollisionRule
 from app.cache.store import CacheStore, normalize_name, pair_key
 from app.models.blueprint import (
     GameObjectBlueprint,
@@ -189,37 +189,33 @@ class TestNameNormalization:
 
 
 class TestModelRoundtrips:
-    def test_pairwise_result_roundtrip(self) -> None:
-        pr = PairwiseResult(10, 20, 1, 5, 30, True)
-        d = pr.to_dict()
-        pr2 = PairwiseResult.from_dict(d)
-        assert pr == pr2
+    def test_collision_rule_roundtrip(self) -> None:
+        cr = CollisionRule(force_on_b=30)
+        d = cr.to_dict()
+        cr2 = CollisionRule.from_dict(d)
+        assert cr == cr2
 
-    def test_pairwise_result_defaults(self) -> None:
-        pr = PairwiseResult.from_dict({})
-        assert pr.damage_a == 0
-        assert pr.damage_b == 0
-        assert pr.state_change_a == 0
-        assert pr.force_b == 0
-        assert pr.continuous is False
+    def test_collision_rule_defaults(self) -> None:
+        cr = CollisionRule.from_dict({})
+        assert cr.force_on_b == 0
 
-    def test_pairwise_result_extra_keys_ignored(self) -> None:
-        pr = PairwiseResult.from_dict({"damage_a": 50, "bogus_key": 999})
-        assert pr.damage_a == 50
+    def test_collision_rule_extra_keys_ignored(self) -> None:
+        cr = CollisionRule.from_dict({"force_on_b": 80, "bogus_key": 999})
+        assert cr.force_on_b == 80
 
-    def test_creature_behavior_roundtrip(self) -> None:
-        cb = CreatureBehavior(movement=0, priority=3, action=5, amount=0, state_id=0)
-        d = cb.to_dict()
-        cb2 = CreatureBehavior.from_dict(d)
-        assert cb == cb2
+    def test_behavior_entry_roundtrip(self) -> None:
+        be = BehaviorEntry(movement=0, priority=3, action=5, amount=0, state_id=0)
+        d = be.to_dict()
+        be2 = BehaviorEntry.from_dict(d)
+        assert be == be2
 
-    def test_creature_behavior_defaults(self) -> None:
-        cb = CreatureBehavior.from_dict({})
-        assert cb.movement == 2  # ignore
-        assert cb.priority == 0
-        assert cb.action == 0
-        assert cb.amount == 0
-        assert cb.state_id == 0
+    def test_behavior_entry_defaults(self) -> None:
+        be = BehaviorEntry.from_dict({})
+        assert be.movement == 2  # ignore
+        assert be.priority == 0
+        assert be.action == 0
+        assert be.amount == 0
+        assert be.state_id == 0
 
     def test_blueprint_roundtrip(self) -> None:
         bp = GameObjectBlueprint(
@@ -238,8 +234,8 @@ class TestModelRoundtrips:
             affordance=0,
             autonomous=False,
             speed=2,
-            has_field=True,
-            field_range_cm=100,
+            initial_states=[1],
+            susceptible_states=[1, 3],
             destruction_result_name="broken sword",
         )
         d = bp.model_dump()
@@ -248,8 +244,8 @@ class TestModelRoundtrips:
         assert bp2.physics.mass_kg == bp.physics.mass_kg
         assert bp2.durability == bp.durability
         assert bp2.speed == bp.speed
-        assert bp2.has_field == bp.has_field
-        assert bp2.field_range_cm == bp.field_range_cm
+        assert bp2.initial_states == [1]
+        assert bp2.susceptible_states == [1, 3]
 
     def test_blueprint_missing_speed_defaults(self) -> None:
         """Old cached blueprints without speed field should default to 2 (normal)."""
@@ -262,8 +258,6 @@ class TestModelRoundtrips:
             "durability": 4,
             "affordance": 3,
             "autonomous": False,
-            "has_field": False,
-            "field_range_cm": 0,
         }
         bp = GameObjectBlueprint.model_validate(d)
         assert bp.speed == 2
@@ -287,16 +281,16 @@ async def test_cache_creation_roundtrip(memory_cache: CacheStore) -> None:
     assert result == {"mass_kg": 2.0, "gravity": 60}
 
 
-async def test_cache_pairwise_roundtrip(memory_cache: CacheStore) -> None:
-    value = {"damage_a": 0, "damage_b": 30, "state_change_b": 1}
-    await memory_cache.put_pairwise("fire", "wood", value)
-    result = await memory_cache.get_pairwise("fire", "wood")
+async def test_cache_collision_roundtrip(memory_cache: CacheStore) -> None:
+    value = {"force_on_b": 30}
+    await memory_cache.put_collision("fire", "wood", value)
+    result = await memory_cache.get_collision("fire", "wood")
     assert result == value
     # Order-invariant
-    result2 = await memory_cache.get_pairwise("wood", "fire")
+    result2 = await memory_cache.get_collision("wood", "fire")
     assert result2 == value
 
 
 async def test_cache_miss_returns_none(memory_cache: CacheStore) -> None:
     assert await memory_cache.get_creation("nonexistent") is None
-    assert await memory_cache.get_pairwise("a", "b") is None
+    assert await memory_cache.get_collision("a", "b") is None

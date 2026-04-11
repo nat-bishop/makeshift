@@ -11,6 +11,8 @@ const ACTION_COOLDOWN: float = 1.0
 const BASE_MOVE_SPEED: float = 200.0
 const BASE_FLEE_SPEED: float = 250.0
 const MAX_ERRORS: int = 5
+const LETHAL_THRESHOLD: int = 100
+const INSTANT_KILL_DAMAGE: float = 99999.0
 
 # Speed tier (0-4) → multiplier (mirrors backend SPEED_MULTIPLIER)
 const SPEED_MULTIPLIERS: Dictionary = {0: 0.3, 1: 0.6, 2: 1.0, 3: 1.5, 4: 2.0}
@@ -75,7 +77,7 @@ func _try_add_target(node: Node) -> void:
 	var target_name: String = node.get_object_name()
 	if target_name.is_empty() or target_name == _owner_name:
 		return
-	var entry: Dictionary = InteractionCache.lookup_creature(_owner_name, target_name)
+	var entry: Dictionary = InteractionCache.lookup_behavior(_owner_name, target_name)
 	if not entry.is_empty():
 		_pairs[target_name] = entry
 		_target_nodes[target_name] = node
@@ -165,7 +167,7 @@ func _execute_action(entry: Dictionary, target: Node) -> void:
 			if not target.has_method("take_damage"):
 				_record_error("target missing take_damage")
 				return
-			var effective: float = CollisionResolver.INSTANT_KILL_DAMAGE if amount >= CollisionResolver.LETHAL_THRESHOLD else (float(amount) if amount > 0 else 15.0)
+			var effective: float = INSTANT_KILL_DAMAGE if amount >= LETHAL_THRESHOLD else (float(amount) if amount > 0 else 15.0)
 			WorldMutations.apply_damage(target, effective)
 		2:  # heal
 			if not target.has_method("heal"):
@@ -173,21 +175,21 @@ func _execute_action(entry: Dictionary, target: Node) -> void:
 				return
 			WorldMutations.apply_heal(target, float(amount) if amount > 0 else 10.0)
 		3:  # add_state
-			if state_id < 1 or state_id > 7 or not target.has_method("add_state"):
+			if state_id < 1 or state_id > 4 or not target.has_method("add_state"):
 				_record_error("invalid state_id or target missing add_state")
 				return
 			WorldMutations.apply_add_state(
-				target, CollisionResolver.STATE_NAMES[state_id], 10.0
+				target, StateContradictions.STATE_NAMES[state_id], 10.0
 			)
 		4:  # remove_state
-			if state_id < 1 or state_id > 7 or not target.has_method("remove_state"):
+			if state_id < 1 or state_id > 4 or not target.has_method("remove_state"):
 				_record_error("invalid state_id or target missing remove_state")
 				return
 			WorldMutations.apply_remove_state(
-				target, CollisionResolver.STATE_NAMES[state_id]
+				target, StateContradictions.STATE_NAMES[state_id]
 			)
 		5:  # take/consume
 			if not target.has_method("take_damage"):
 				_record_error("target missing take_damage for destroy")
 				return
-			WorldMutations.apply_damage(target, CollisionResolver.INSTANT_KILL_DAMAGE)
+			WorldMutations.apply_damage(target, INSTANT_KILL_DAMAGE)

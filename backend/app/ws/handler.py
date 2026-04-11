@@ -22,10 +22,10 @@ _background_tasks: set[asyncio.Task[None]] = set()
 
 
 async def websocket_handler(websocket: WebSocket, session_id: str) -> None:
-    """WebSocket endpoint for server→client sprite delivery and events.
+    """WebSocket endpoint for server→client delivery and events.
 
-    Client→Server: ping (keepalive)
-    Server→Client: sprite_ready, error
+    Client→Server: ping, state_changed, request_sprite, request_collision
+    Server→Client: sprite_ready, collision_ready, behaviors_ready, behavior_updated
     """
     db = websocket.app.state.db
     manager = SessionManager(db)
@@ -68,7 +68,17 @@ async def websocket_handler(websocket: WebSocket, session_id: str) -> None:
                         states=active_states,
                     )
                     task = asyncio.create_task(
-                        _handle_state_changed(websocket, session_id, object_name)
+                        _handle_state_changed(websocket, session_id, object_name, active_states)
+                    )
+                    _background_tasks.add(task)
+                    task.add_done_callback(_background_tasks.discard)
+            elif msg_type == "request_collision":
+                # Lazy evaluation: client hit a cache miss on collision
+                name_a = data.get("name_a", "")
+                name_b = data.get("name_b", "")
+                if name_a and name_b:
+                    task = asyncio.create_task(
+                        _handle_request_collision(websocket, session_id, name_a, name_b)
                     )
                     _background_tasks.add(task)
                     task.add_done_callback(_background_tasks.discard)
@@ -122,21 +132,17 @@ async def _handle_request_sprite(websocket: WebSocket, session_id: str, object_i
     )
 
 
-async def _handle_state_changed(websocket: WebSocket, session_id: str, object_name: str) -> None:
-    """Re-evaluate pairwise + creature behaviors for a changed object."""
-    from app.cache.scene import SceneCache
-    from app.engine.creature import evaluate_creature_behaviors
-    from app.engine.pairwise import evaluate_pair
+async def _handle_request_collision(
+    websocket: WebSocket, session_id: str, name_a: str, name_b: str
+) -> None:
+    """Lazy collision evaluation: client had a cache miss, evaluate and push result."""
+    from app.cache.scene import BehaviorCache
+    from app.cache.store import normalize_name
+    from app.engine.pairwise import evaluate_collision
 
     scenes: dict = websocket.app.state.scenes
-    scene = scenes.setdefault(session_id, SceneCache())
+    scene = scenes.setdefault(session_id, BehaviorCache())
     cache = websocket.app.state.cache
-
-    # Invalidate stale creature behaviors for this target
-    scene.mark_creature_stale_for_target(object_name)
-
-    # Invalidate stale pairwise entries involving this object
-    stale_keys = scene.mark_stale(object_name)
 
     db = websocket.app.state.db
     manager = SessionManager(db)
@@ -144,11 +150,52 @@ async def _handle_state_changed(websocket: WebSocket, session_id: str, object_na
     if session is None:
         return
 
+    bp_a = None
+    bp_b = None
+    for obj in session.objects:
+        if normalize_name(obj.blueprint.name) == normalize_name(name_a):
+            bp_a = obj.blueprint
+        if normalize_name(obj.blueprint.name) == normalize_name(name_b):
+            bp_b = obj.blueprint
+
+    if bp_a is None or bp_b is None:
+        return
+
+    try:
+        result = await evaluate_collision(bp_a, bp_b, cache, scene)
+        a, b = sorted([normalize_name(name_a), normalize_name(name_b)])
+        entry = result.to_dict()
+        entry["name_a"] = a
+        entry["name_b"] = b
+        await send_collision_ready(session_id, [entry])
+    except Exception:
+        logger.warning("lazy_collision_eval_failed", name_a=name_a, name_b=name_b, exc_info=True)
+
+
+async def _handle_state_changed(
+    websocket: WebSocket, session_id: str, object_name: str, active_states: list[int]
+) -> None:
+    """Re-evaluate creature behaviors only for a changed object.
+
+    Collision rules are permanent — NOT re-evaluated on state change.
+    Behavioral entries are re-evaluated with active_states included in prompts.
+    """
+    from app.cache.scene import BehaviorCache
     from app.cache.store import normalize_name
+    from app.engine.creature import evaluate_creature_behaviors
+
+    scenes: dict = websocket.app.state.scenes
+    scene = scenes.setdefault(session_id, BehaviorCache())
+
+    db = websocket.app.state.db
+    manager = SessionManager(db)
+    session = await manager.get_session(session_id)
+    if session is None:
+        return
 
     target_norm = normalize_name(object_name)
-    creatures = []
-    changed_bp = None
+    creatures: list[GameObjectBlueprint] = []
+    changed_bp: GameObjectBlueprint | None = None
     bp_by_name: dict[str, GameObjectBlueprint] = {}
     for obj in session.objects:
         bp = obj.blueprint
@@ -161,61 +208,34 @@ async def _handle_state_changed(websocket: WebSocket, session_id: str, object_na
     if changed_bp is None:
         return
 
-    # If the changed object is itself a creature, invalidate its outgoing behaviors
-    if changed_bp.autonomous:
-        scene.mark_creature_stale_for_creature(object_name)
+    # Invalidate all behavioral entries involving the changed object
+    scene.invalidate_behavior(object_name)
 
     scene_names = [obj.blueprint.name for obj in session.objects]
 
-    # Re-evaluate stale pairwise pairs in background
-    async def _reeval_pairwise() -> None:
-        if not stale_keys:
-            return
-        reeval_tasks = []
-        for key in stale_keys:
-            a_name, b_name = key.split("::")
-            bp_a = bp_by_name.get(a_name)
-            bp_b = bp_by_name.get(b_name)
-            if bp_a is not None and bp_b is not None:
-                reeval_tasks.append(evaluate_pair(bp_a, bp_b, cache, scene))
-
-        if not reeval_tasks:
-            return
-        results = await asyncio.gather(*reeval_tasks, return_exceptions=True)
-        await cache.flush()
-
-        entries = []
-        for key, result in zip(stale_keys, results, strict=False):
-            if isinstance(result, BaseException):
-                logger.warning("pairwise_reeval_failed", key=key, error=str(result))
-                continue
-            entry = result.to_dict()
-            a_name, b_name = key.split("::")
-            entry["name_a"] = a_name
-            entry["name_b"] = b_name
-            entries.append(entry)
-        if entries:
-            await send_cache_updated(session_id, entries)
+    # Build target_states dict for state-aware prompts
+    target_states: dict[str, list[int]] = {object_name: active_states}
 
     # Re-evaluate creature behaviors toward the changed object
     async def _reeval_creatures() -> None:
         if not creatures:
             return
 
-        async def _eval_one(creature_bp):
+        async def _eval_one(creature_bp: GameObjectBlueprint) -> None:
             behaviors = await evaluate_creature_behaviors(
-                creature_bp, [changed_bp], scene_names, scene
+                creature_bp,
+                [changed_bp],
+                scene_names,
+                scene,
+                target_states=target_states,
             )
             if behaviors:
-                from app.routers.objects import _format_behaviors
-
-                await send_behaviors_ready(
-                    session_id, creature_bp.name, _format_behaviors(behaviors)
-                )
+                entries = _format_behaviors(creature_bp.name, behaviors)
+                await send_behavior_updated(session_id, creature_bp.name, entries)
 
         await asyncio.gather(*[_eval_one(c) for c in creatures], return_exceptions=True)
 
-    # Re-evaluate changed creature's behaviors toward all scene objects
+    # If the changed object is itself a creature, re-evaluate its outgoing behaviors
     async def _reeval_changed_creature() -> None:
         if not changed_bp.autonomous:
             return
@@ -224,16 +244,33 @@ async def _handle_state_changed(websocket: WebSocket, session_id: str, object_na
             return
         behaviors = await evaluate_creature_behaviors(changed_bp, targets, scene_names, scene)
         if behaviors:
-            from app.routers.objects import _format_behaviors
-
-            await send_behaviors_ready(session_id, changed_bp.name, _format_behaviors(behaviors))
+            entries = _format_behaviors(changed_bp.name, behaviors)
+            await send_behavior_updated(session_id, changed_bp.name, entries)
 
     await asyncio.gather(
-        _reeval_pairwise(),
         _reeval_creatures(),
         _reeval_changed_creature(),
         return_exceptions=True,
     )
+
+
+def _format_behaviors(
+    creature_name: str,
+    behaviors: dict,
+) -> list[dict]:
+    """Format behavior entries for WS delivery."""
+    from app.cache.store import normalize_name
+
+    entries = []
+    for target_name, entry in behaviors.items():
+        d = entry.to_dict()
+        d["creature_name"] = normalize_name(creature_name)
+        d["target_name"] = normalize_name(target_name)
+        entries.append(d)
+    return entries
+
+
+# ---- Broadcast helpers ----
 
 
 async def _broadcast(session_id: str, message: dict[str, object]) -> None:
@@ -253,34 +290,22 @@ async def _broadcast(session_id: str, message: dict[str, object]) -> None:
             ws_set.discard(ws)
 
 
-async def send_sprite_ready(
-    session_id: str,
-    object_id: str,
-    sprite_url: str,
-) -> None:
-    """Notify clients that a sprite is ready and where to fetch it."""
-    logger.info(
-        "send_sprite_ready",
-        session_id=session_id,
-        object_id=object_id,
-        sprite_url=sprite_url,
+async def send_sprite_ready(session_id: str, object_id: str, sprite_url: str) -> None:
+    """Notify clients that a sprite is ready."""
+    logger.info("send_sprite_ready", session_id=session_id, object_id=object_id)
+    await _broadcast(
+        session_id,
+        {
+            "type": "sprite_ready",
+            "object_id": object_id,
+            "sprite_url": sprite_url,
+        },
     )
-    msg: dict[str, object] = {
-        "type": "sprite_ready",
-        "object_id": object_id,
-        "sprite_url": sprite_url,
-    }
-    await _broadcast(session_id, msg)
 
 
 async def send_sprite_failed(session_id: str, object_id: str, reason: str = "") -> None:
-    """Notify clients that sprite generation failed for an object."""
-    logger.warning(
-        "send_sprite_failed",
-        session_id=session_id,
-        object_id=object_id,
-        reason=reason,
-    )
+    """Notify clients that sprite generation failed."""
+    logger.warning("send_sprite_failed", session_id=session_id, object_id=object_id, reason=reason)
     await _broadcast(
         session_id,
         {
@@ -291,32 +316,21 @@ async def send_sprite_failed(session_id: str, object_id: str, reason: str = "") 
     )
 
 
-async def send_cache_ready(session_id: str, object_name: str, entries: list[dict]) -> None:
-    """Deliver pairwise cache entries to clients after spawn integration."""
-    logger.info(
-        "send_cache_ready",
-        session_id=session_id,
-        object_name=object_name,
-        entry_count=len(entries),
-    )
+async def send_collision_ready(session_id: str, entries: list[dict]) -> None:
+    """Deliver collision rule entries to clients."""
+    logger.info("send_collision_ready", session_id=session_id, entry_count=len(entries))
     await _broadcast(
         session_id,
         {
-            "type": "cache_ready",
-            "object_name": object_name,
+            "type": "collision_ready",
             "entries": entries,
         },
     )
 
 
 async def send_behaviors_ready(session_id: str, creature_name: str, behaviors: list[dict]) -> None:
-    """Deliver creature behavior entries to clients."""
-    logger.info(
-        "send_behaviors_ready",
-        session_id=session_id,
-        creature_name=creature_name,
-        behavior_count=len(behaviors),
-    )
+    """Deliver creature behavior entries to clients after spawn integration."""
+    logger.info("send_behaviors_ready", session_id=session_id, creature_name=creature_name)
     await _broadcast(
         session_id,
         {
@@ -327,17 +341,14 @@ async def send_behaviors_ready(session_id: str, creature_name: str, behaviors: l
     )
 
 
-async def send_cache_updated(session_id: str, entries: list[dict]) -> None:
-    """Deliver re-evaluated pairwise cache entries after state change."""
-    logger.info(
-        "send_cache_updated",
-        session_id=session_id,
-        entry_count=len(entries),
-    )
+async def send_behavior_updated(session_id: str, creature_name: str, entries: list[dict]) -> None:
+    """Deliver re-evaluated behavioral entries after state change."""
+    logger.info("send_behavior_updated", session_id=session_id, creature_name=creature_name)
     await _broadcast(
         session_id,
         {
-            "type": "cache_updated",
+            "type": "behavior_updated",
+            "creature_name": creature_name,
             "entries": entries,
         },
     )

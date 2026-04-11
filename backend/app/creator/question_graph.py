@@ -4,7 +4,7 @@ Questions declare dependencies via Gate tuples. The executor uses
 asyncio.Event per node for maximum parallelism — each question fires
 the instant all its gates resolve, not when the entire prior stage completes.
 
-Used by: creation pipeline, pairwise evaluation, creature behavior.
+Used by: creation pipeline, collision evaluation, creature behavior.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 
 import structlog
 
-from app.creator.llm import ask_bool, ask_float, ask_int, ask_text
+from app.creator.llm import ask_bool, ask_choice, ask_float, ask_int, ask_text
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -37,23 +37,30 @@ class Question:
 
     key: str
     prompt: str  # f-string with named placeholders
-    qtype: str  # "int", "float", "bool", "text"
+    qtype: str  # "int", "float", "bool", "text", "choice"
     lo: int | float = 0
     hi: int | float = 100
     default: int | float | str = 50
     max_tokens: int = 4  # only used for qtype="text"
     gates: tuple[Gate, ...] = field(default_factory=tuple)
+    instructions: str = ""  # if set, sent as instructions (prompt becomes user message)
+    choices: tuple[str, ...] = ()  # valid tokens for qtype="choice"
+    choice_map: tuple[tuple[str, int], ...] = ()  # token → int value (hashable)
 
 
 async def run_questions(
     questions: Sequence[Question],
     context: dict[str, str],
+    on_resolved: dict[str, Callable[[object], object]] | None = None,
 ) -> dict[str, int | float | bool | str]:
     """Execute a question graph with maximum parallelism.
 
     Each question fires as soon as all its gates resolve and pass.
     Ungated questions fire immediately. Returns results dict keyed by question key.
     Skipped questions (gate condition failed) are absent from results.
+
+    *on_resolved*: optional dict mapping question keys to sync callbacks.
+    Called with the result value as soon as that question resolves.
     """
     results: dict[str, int | float | bool | str] = {}
     events: dict[str, asyncio.Event] = {q.key: asyncio.Event() for q in questions}
@@ -73,19 +80,45 @@ async def run_questions(
         # Dispatch to the appropriate ask_* function
         prompt = q.prompt.format_map(context)
         try:
-            if q.qtype == "float":
-                results[q.key] = await ask_float(prompt, float(q.lo), float(q.hi), float(q.default))
+            if q.qtype == "choice":
+                token = await ask_choice(
+                    prompt,
+                    q.choices,
+                    default=str(q.default),
+                    instructions=q.instructions,
+                )
+                mapping = dict(q.choice_map)
+                results[q.key] = mapping.get(token, mapping.get(str(q.default), 0))
+            elif q.qtype == "float":
+                results[q.key] = await ask_float(
+                    prompt,
+                    float(q.lo),
+                    float(q.hi),
+                    float(q.default),
+                    instructions=q.instructions,
+                )
             elif q.qtype == "bool":
                 results[q.key] = await ask_bool(prompt)
             elif q.qtype == "text":
                 results[q.key] = await ask_text(
-                    prompt, max_tokens=q.max_tokens, default=str(q.default)
+                    prompt,
+                    max_tokens=q.max_tokens,
+                    default=str(q.default),
+                    instructions=q.instructions,
                 )
             else:
-                results[q.key] = await ask_int(prompt, int(q.lo), int(q.hi), int(q.default))
+                results[q.key] = await ask_int(
+                    prompt,
+                    int(q.lo),
+                    int(q.hi),
+                    int(q.default),
+                    instructions=q.instructions,
+                )
         except Exception:
             logger.warning("question_failed", key=q.key, prompt=prompt[:80])
 
+        if on_resolved and q.key in on_resolved:
+            on_resolved[q.key](results.get(q.key))
         events[q.key].set()
 
     await asyncio.gather(*[_run(q) for q in questions], return_exceptions=True)

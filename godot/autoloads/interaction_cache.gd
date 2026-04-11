@@ -1,15 +1,15 @@
 extends Node
-## Client-side in-memory cache for pairwise interactions and creature behaviors.
-## Receives entries from the backend via WebSocket and stores them for
-## O(1) lookup at collision time.
+## Client-side cache for collision rules and creature behaviors.
+## Two flat dicts, no staleness tracking — server pushes updates, client overwrites.
+## Collision rules: force-only pairwise data (persistent on backend).
+## Behaviors: creature AI decisions (session-local on backend).
 
-var _pairwise: Dictionary = {}   # "a::b" -> Dictionary
-var _creature: Dictionary = {}   # "creature::target" -> Dictionary
-var _stale: Dictionary = {}      # "a::b" -> true
+var _collision: Dictionary = {}      # "a::b" -> {force_on_b: int}
+var _behavior: Dictionary = {}       # "creature::target" -> {movement, priority, action, ...}
+var _pending_evals: Dictionary = {}  # "a::b" -> true (dedup for lazy eval requests)
 
 
 func _normalize(name: String) -> String:
-	# Must match backend's normalize_name: lowercase, strip, collapse internal whitespace
 	var parts: PackedStringArray = name.strip_edges().to_lower().split(" ", false)
 	return " ".join(parts)
 
@@ -22,55 +22,52 @@ func pair_key(a: String, b: String) -> String:
 	return "%s::%s" % [na, nb]
 
 
-# --- Pairwise cache ---
+# --- Collision rules (force only) ---
 
-func store_pairwise(a: String, b: String, entry: Dictionary) -> void:
+func store_collision(a: String, b: String, entry: Dictionary) -> void:
 	var key: String = pair_key(a, b)
-	_pairwise[key] = entry
-	_stale.erase(key)
+	_collision[key] = entry
+	_pending_evals.erase(key)
 
 
-func lookup_pairwise(a: String, b: String) -> Dictionary:
-	var key: String = pair_key(a, b)
-	if key in _stale:
-		return {}
-	return _pairwise.get(key, {})
+func lookup_collision(a: String, b: String) -> Dictionary:
+	return _collision.get(pair_key(a, b), {})
 
 
-func mark_stale(object_name: String) -> void:
-	var n: String = _normalize(object_name)
-	for key in _pairwise.keys():
-		var parts: PackedStringArray = key.split("::")
-		if parts.size() == 2 and (parts[0] == n or parts[1] == n):
-			_stale[key] = true
+func request_collision_eval(name_a: String, name_b: String) -> void:
+	## Request lazy evaluation from backend on cache miss.
+	## Deduplicates: won't send the same pair twice until result arrives.
+	var key: String = pair_key(name_a, name_b)
+	if key in _pending_evals:
+		return
+	_pending_evals[key] = true
+	Backend.send_collision_request(name_a, name_b)
 
 
-func clear_stale(a: String, b: String) -> void:
-	_stale.erase(pair_key(a, b))
+# --- Creature behavior ---
+
+func store_behavior(creature: String, target: String, entry: Dictionary) -> void:
+	_behavior[pair_key(creature, target)] = entry
 
 
-# --- Creature behavior cache ---
-
-func store_creature(creature: String, target: String, entry: Dictionary) -> void:
-	_creature[pair_key(creature, target)] = entry
-
-
-func lookup_creature(creature: String, target: String) -> Dictionary:
-	return _creature.get(pair_key(creature, target), {})
+func lookup_behavior(creature_name: String, target_name: String) -> Dictionary:
+	return _behavior.get(pair_key(creature_name, target_name), {})
 
 
 # --- Bulk loading from backend WS messages ---
 
-func load_pairwise_batch(entries: Array) -> void:
+func load_collision_batch(entries: Array) -> void:
 	for e in entries:
 		var a: String = e.get("name_a", "")
 		var b: String = e.get("name_b", "")
 		if a != "" and b != "":
-			store_pairwise(a, b, e)
+			store_collision(a, b, e)
 
 
-func load_creature_batch(creature_name: String, behaviors: Array) -> void:
+func load_behavior_batch(creature_name: String, behaviors: Array) -> void:
 	for b in behaviors:
-		var target: String = b.get("target", "")
-		if target != "":
-			store_creature(creature_name, target, b)
+		var target: String = b.get("target_name", "")
+		if target.is_empty():
+			target = b.get("target", "")
+		if not target.is_empty():
+			store_behavior(creature_name, target, b)

@@ -2,9 +2,9 @@
 
 Two cache types:
   - creation: object name -> physics/affordance/etc (persistent, global)
-  - pairwise: sorted pair key -> 9-field interaction result (persistent, global)
+  - collision: sorted pair key -> force-only collision rule (persistent, global)
 
-Creature behavior is scene-local and lives only in SceneCache (scene.py).
+Creature behavior is scene-local and lives only in BehaviorCache (scene.py).
 """
 
 from __future__ import annotations
@@ -106,15 +106,16 @@ class CacheStore:
     async def put_creation(self, name: str, value: dict, model_version: str = "") -> None:
         await self.put("creation", normalize_name(name), value, model_version)
 
-    # --- Pairwise cache ---
+    # --- Collision cache (force-only pairwise rules) ---
 
-    async def get_pairwise(self, name_a: str, name_b: str) -> dict | None:
-        return await self.get("pairwise", pair_key(name_a, name_b))
+    async def get_collision(self, name_a: str, name_b: str) -> dict | None:
+        # Also check legacy "pairwise" type for backwards compat
+        result = await self.get("collision", pair_key(name_a, name_b))
+        if result is None:
+            result = await self.get("pairwise", pair_key(name_a, name_b))
+        return result
 
-    async def exists_pairwise(self, name_a: str, name_b: str) -> bool:
-        return await self.exists("pairwise", pair_key(name_a, name_b))
-
-    async def put_pairwise(
+    async def put_collision(
         self,
         name_a: str,
         name_b: str,
@@ -123,10 +124,10 @@ class CacheStore:
         *,
         commit: bool = True,
     ) -> None:
-        await self.put("pairwise", pair_key(name_a, name_b), value, model_version, commit=commit)
+        await self.put("collision", pair_key(name_a, name_b), value, model_version, commit=commit)
 
-    async def get_all_for_names(self, cache_type: str, names: list[str]) -> dict[str, dict]:
-        """Fetch all cache entries for all N*(N-1)/2 pairs from a list of names."""
+    async def get_all_collisions_for_names(self, names: list[str]) -> dict[str, dict]:
+        """Fetch all collision entries for all N*(N-1)/2 pairs from a list of names."""
         normalized = sorted({normalize_name(n) for n in names})
         keys = [f"{a}::{b}" for i, a in enumerate(normalized) for b in normalized[i + 1 :]]
 
@@ -136,25 +137,13 @@ class CacheStore:
         placeholders = ",".join("?" for _ in keys)
         cur = await self._db.execute(
             f"SELECT cache_key, value_json FROM cache "
-            f"WHERE cache_type=? AND cache_key IN ({placeholders})",
-            (cache_type, *keys),
+            f"WHERE cache_type IN ('collision', 'pairwise') AND cache_key IN ({placeholders})",
+            (*keys,),
         )
-        results = {}
+        results: dict[str, dict] = {}
         async for row in cur:
             results[row[0]] = json.loads(row[1])
         return results
-
-    async def invalidate_pairwise(self, name: str) -> int:
-        """Delete all pairwise entries involving this object name.
-        Returns count of deleted rows."""
-        n = normalize_name(name)
-        cur = await self._db.execute(
-            "DELETE FROM cache WHERE cache_type='pairwise' "
-            "AND (cache_key LIKE ? OR cache_key LIKE ?)",
-            (f"{n}::%", f"%::{n}"),
-        )
-        await self._db.commit()
-        return cur.rowcount or 0
 
     # --- Lifecycle ---
 

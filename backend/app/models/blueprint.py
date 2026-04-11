@@ -103,8 +103,8 @@ class GameObjectBlueprint(BaseModel):
     affordance: int = Field(ge=0, le=3, default=3)  # 0=carry 1=mount 2=climb 3=nothing
     autonomous: bool = False
     speed: int = Field(ge=0, le=4, default=2)  # 0=sluggish .. 4=rapid (autonomous only)
-    has_field: bool = False
-    field_range_cm: int = Field(default=0, ge=0, le=1000)
+    initial_states: list[int] = Field(default_factory=list)  # state IDs this object spawns with
+    susceptible_states: list[int] = Field(default_factory=list)  # state IDs that can spread to this
     destruction_result_name: str = ""
 
     @field_validator("name")
@@ -113,8 +113,8 @@ class GameObjectBlueprint(BaseModel):
         name = name.strip()
         if not name:
             raise ValueError("Name cannot be empty")
-        if len(name.split()) > 3:
-            raise ValueError(f'Name "{name}" exceeds 3 words')
+        if len(name.split()) > 5:
+            raise ValueError(f'Name "{name}" exceeds 5 words')
         return name
 
     @property

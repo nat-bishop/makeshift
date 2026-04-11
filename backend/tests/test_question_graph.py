@@ -20,7 +20,7 @@ class TestUngatedQuestions:
         with patch(_PATCH_INT, new_callable=AsyncMock, return_value=42) as mock:
             result = await run_questions([q], {"name": "rock"})
         assert result == {"mass": 42}
-        mock.assert_awaited_once_with("How heavy is rock?", 1, 100, 50)
+        mock.assert_awaited_once_with("How heavy is rock?", 1, 100, 50, instructions="")
 
     async def test_multiple_ungated_fire_immediately(self):
         qs = [
@@ -43,14 +43,14 @@ class TestQtypeDispatch:
         with patch(_PATCH_INT, new_callable=AsyncMock, return_value=7) as mock:
             result = await run_questions([q], {})
         assert result["k"] == 7
-        mock.assert_awaited_once_with("P", 0, 10, 5)
+        mock.assert_awaited_once_with("P", 0, 10, 5, instructions="")
 
     async def test_float_dispatch(self):
         q = Question(key="k", prompt="P", qtype="float", lo=0.0, hi=10.0, default=5.0)
         with patch(_PATCH_FLOAT, new_callable=AsyncMock, return_value=3.0) as mock:
             result = await run_questions([q], {})
         assert result["k"] == 3.0
-        mock.assert_awaited_once_with("P", 0.0, 10.0, 5.0)
+        mock.assert_awaited_once_with("P", 0.0, 10.0, 5.0, instructions="")
 
     async def test_bool_dispatch(self):
         q = Question(key="k", prompt="P", qtype="bool")
@@ -64,7 +64,7 @@ class TestQtypeDispatch:
         with patch(_PATCH_TEXT, new_callable=AsyncMock, return_value="answer") as mock:
             result = await run_questions([q], {})
         assert result["k"] == "answer"
-        mock.assert_awaited_once_with("P", max_tokens=20, default="fallback")
+        mock.assert_awaited_once_with("P", max_tokens=20, default="fallback", instructions="")
 
 
 class TestFormatMap:
@@ -72,7 +72,7 @@ class TestFormatMap:
         q = Question(key="k", prompt="{name} weighs how much in {unit}?", qtype="int")
         with patch(_PATCH_INT, new_callable=AsyncMock, return_value=5) as mock:
             await run_questions([q], {"name": "anvil", "unit": "kg"})
-        mock.assert_awaited_once_with("anvil weighs how much in kg?", 0, 100, 50)
+        mock.assert_awaited_once_with("anvil weighs how much in kg?", 0, 100, 50, instructions="")
 
 
 class TestGatePass:

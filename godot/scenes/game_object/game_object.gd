@@ -13,12 +13,16 @@ var affordance: int = 3  # 0=carry 1=mount 2=climb 3=nothing
 var autonomous: bool = false
 var speed_tier: int = 2  # 0=sluggish .. 4=rapid
 var destruction_result_name: String = ""
+var initial_states: Array = []       # state IDs this object spawns with
+var susceptible_states: Array = []   # state IDs that can spread to this
+var _dying: bool = false
 var _state_manager: StateManager = null
-var _object_field: Node = null
+var _state_propagator: Node = null
 var _creature_behavior: Node = null
 var _state_change_debounce: float = 0.0
 var _base_surface: int = 1  # stored at init for WET state restore (0=slippery 1=normal 2=sticky)
 const STATE_CHANGE_DEBOUNCE_TIME: float = 0.5
+const ESSENTIAL_STATE_KILL_DAMAGE: float = 99999.0
 
 # Durability tier → HP lookup (mirrors backend DURABILITY_HP)
 const DURABILITY_HP: Dictionary = {
@@ -28,7 +32,6 @@ const DURABILITY_HP: Dictionary = {
 
 @onready var physics_applicator: Node = $PhysicsApplicator
 @onready var object_visual: Node = $ObjectVisual
-@onready var cascade_area: Area2D = $CascadeArea
 
 
 func _ready() -> void:
@@ -61,6 +64,10 @@ func init_from_blueprint(bp: Dictionary) -> void:
 	speed_tier = bp.get("speed", 2)
 	destruction_result_name = bp.get("destruction_result_name", "")
 
+	# State properties
+	initial_states = bp.get("initial_states", [])
+	susceptible_states = bp.get("susceptible_states", [])
+
 	# Surface type for WET restore
 	var phys: Dictionary = bp.get("physics", {})
 	_base_surface = phys.get("surface", 1)
@@ -85,11 +92,13 @@ func init_from_blueprint(bp: Dictionary) -> void:
 	if autonomous:
 		add_to_group("living")
 
-	# Field system
-	var has_field: bool = bp.get("has_field", false)
-	var field_range: int = bp.get("field_range_cm", 0)
-	if has_field and field_range > 0:
-		_create_object_field(field_range)
+	# State propagation system (replaces ObjectField + cascade)
+	_create_state_propagator(phys.get("height_cm", 30))
+
+	# Apply initial states (fire spawns burning, ice spawns frozen, etc)
+	for state_id in initial_states:
+		if state_id >= 1 and state_id <= 4:
+			_state_manager.add_state(StateContradictions.STATE_NAMES[state_id], 0.0)  # 0 = infinite
 
 	# Creature behavior
 	if autonomous:
@@ -119,12 +128,11 @@ func get_states() -> Array:
 	return _state_manager.get_states() if _state_manager != null else []
 
 
-func get_tags() -> Array[String]:
-	## Compatibility: return states as "tags" for systems that expect get_tags().
-	var result: Array[String] = []
-	for s in get_states():
-		result.append(s)
-	return result
+func get_susceptible_states() -> Array:
+	return susceptible_states
+
+func get_initial_states() -> Array:
+	return initial_states
 
 
 func get_object_id() -> String:
@@ -166,8 +174,6 @@ func _on_state_added(state: String) -> void:
 	# Visual feedback
 	if state in StateVisuals.COLORS:
 		object_visual.spawn_particles(StateVisuals.COLORS[state])
-	# Mark pairwise cache stale
-	InteractionCache.mark_stale(object_name)
 	# State-specific mechanics
 	match state:
 		"burning":
@@ -199,6 +205,20 @@ func _on_states_changed(_updated_states: Array) -> void:
 	# Restore friction if no longer wet
 	if not _state_manager.has_state("wet") and physics_material_override:
 		physics_material_override.friction = PhysicsComposer.SURFACE_FRICTION.get(_base_surface, 0.5)
+	# Essential-state destruction: if object lost ALL its initial states, destroy it
+	# (e.g., fire loses burning → destroyed, ice loses frozen → melted)
+	if not initial_states.is_empty() and not _dying:
+		var has_any_initial: bool = false
+		var current: Array = _state_manager.get_states()
+		for sid in initial_states:
+			if sid >= 1 and sid <= 4:
+				if StateContradictions.STATE_NAMES[sid] in current:
+					has_any_initial = true
+					break
+		if not has_any_initial:
+			_dying = true
+			take_damage(ESSENTIAL_STATE_KILL_DAMAGE)
+			return
 	# Debounced backend notification for creature re-evaluation
 	_state_change_debounce = STATE_CHANGE_DEBOUNCE_TIME
 	set_process(true)
@@ -213,14 +233,6 @@ func _process(delta: float) -> void:
 			Backend.send_state_changed(object_name, get_states())
 
 
-func get_cascade_neighbors() -> Array:
-	var neighbors: Array = []
-	for body in cascade_area.get_overlapping_bodies():
-		if body != self and body.has_method("get_object_name"):
-			neighbors.append(body)
-	return neighbors
-
-
 func _create_creature_behavior() -> void:
 	var cb_script = preload("res://scripts/systems/creature_behavior.gd")
 	_creature_behavior = cb_script.new()
@@ -229,12 +241,12 @@ func _create_creature_behavior() -> void:
 	_creature_behavior.init_creature(self, object_name, speed_tier)
 
 
-func _create_object_field(range_cm: int) -> void:
-	var field_script = preload("res://scripts/systems/object_field.gd")
-	_object_field = field_script.new()
-	_object_field.name = "ObjectField"
-	add_child(_object_field)
-	_object_field.init_field(self, float(range_cm))
+func _create_state_propagator(height_cm: int) -> void:
+	var sp_script = preload("res://scripts/systems/state_propagator.gd")
+	_state_propagator = sp_script.new()
+	_state_propagator.name = "StatePropagator"
+	add_child(_state_propagator)
+	_state_propagator.init_propagator(self, height_cm)
 
 
 func is_passively_pushable() -> bool:
