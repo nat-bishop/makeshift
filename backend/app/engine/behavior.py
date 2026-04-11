@@ -212,10 +212,10 @@ async def screen_pairs(
         f"New object: {_obj_summary(new_obj)}.\n"
         f"Scene objects:\n{numbered}\n"
         f"Which would have interesting interactions with {new_obj.name} (in either direction)? "
-        f"Include physical (fire melts ice, water conducts lightning), "
-        f"behavioral (cat chases mouse, bomb explodes on contact), "
-        f"cultural/fictional (garlic repels vampire), "
-        f"and practical (key opens lock, fan blows feather). "
+        f"Think about: material reactions (burning, melting, conducting, dissolving), "
+        f"creature instincts (hunting, fleeing, feeding), "
+        f"folklore/fiction relationships, "
+        f"and tools or forces acting on objects. "
         f"Reply with just the numbers separated by commas, or 'none'."
     )
 

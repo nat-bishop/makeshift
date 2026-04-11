@@ -247,9 +247,8 @@ async def main() -> None:
     save_report(screening_report, run_dir)
 
     # --- Behavior eval ---
-    scene = BehaviorCache()
-
     async def behavior_task(inputs: BehaviorInput) -> dict[str, Any]:
+        scene = BehaviorCache()  # fresh per case — no shared state between cases/repeats
         subject_bp = make_blueprint(inputs.subject_name)
         target_bps = [make_blueprint(t.target_name) for t in inputs.targets]
 
