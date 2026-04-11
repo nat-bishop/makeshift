@@ -103,7 +103,7 @@ func swing() -> void:
 	_hand_marker.rotation = start_angle * _facing
 	tween.tween_property(_hand_marker, "rotation", end_angle * _facing, SWING_DURATION)
 
-	# Check overlaps during swing — apply held object's pairwise interaction
+	# Check overlaps during swing — apply physics impulse from swing
 	await _player.get_tree().create_timer(SWING_DURATION * 0.5).timeout
 	if not is_instance_valid(_held_object):
 		return
@@ -118,7 +118,10 @@ func swing() -> void:
 		var target: Node = result.get("collider", null)
 		if target == null or target == _held_object or target == _player:
 			continue
-		CollisionResolver.resolve_collision(_held_object, target)
+		if target is RigidBody2D:
+			var swing_dir: Vector2 = (target.global_position - _held_object.global_position).normalized()
+			var held_mass: float = _held_object.mass if _held_object is RigidBody2D else 1.0
+			WorldMutations.apply_impulse(target, swing_dir, held_mass * 150.0)
 
 
 func throw_held(direction: Vector2) -> void:

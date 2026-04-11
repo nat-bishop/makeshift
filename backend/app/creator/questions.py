@@ -82,7 +82,13 @@ CREATION_QUESTIONS: list[Question] = [
         "{name}",
         "choice",
         default="normal",
-        instructions="Rate this object's durability.",
+        instructions=(
+            "How easily does this object break? "
+            "soft=crumbles on touch, weak=breaks from a drop, "
+            "normal=survives casual handling, solid=resists strong force, "
+            "strong=requires extreme force to damage, "
+            "iron=nearly indestructible, permanent=cannot be destroyed."
+        ),
         choices=("soft", "weak", "normal", "solid", "strong", "iron", "permanent"),
         choice_map=(
             ("soft", 0),
@@ -120,7 +126,11 @@ CREATION_QUESTIONS: list[Question] = [
         "{name}",
         "choice",
         default="none",
-        instructions="How can a player interact with this object in a 2D game?",
+        instructions=(
+            "In a 2D game, how can a player interact with this object? "
+            "carry=pick up and hold, ride=sit on top and move, "
+            "scale=climb up it, none=cannot interact physically."
+        ),
         choices=("carry", "ride", "scale", "none"),
         choice_map=(("carry", 0), ("ride", 1), ("scale", 2), ("none", 3)),
     ),

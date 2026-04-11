@@ -1,4 +1,4 @@
-.PHONY: dev gpu api stop gpu-restart llm-restart gpu-logs godot play install test lint fix format format-check typecheck check clear-sprites clear-cache cli-create cli-image cli-sprite cli-status eval eval-creation eval-pairwise eval-creature eval-judge bench-tokens help
+.PHONY: dev gpu api stop gpu-restart llm-restart gpu-logs godot play install test lint fix format format-check typecheck check clear-sprites clear-cache cli-create cli-image cli-sprite cli-status eval eval-creation eval-behavior eval-judge bench-tokens help
 
 GODOT ?= godot
 VERBOSE ?= 0
@@ -100,17 +100,13 @@ cli-animate: ## Test I2V animation (SPRITE=path.png PROMPT="walk cycle")
 eval: ## Run all quality evals (LLM, costs money, REPEATS=3)
 	cd backend && RUN_TS=$$(date +%Y%m%d_%H%M%S) && \
 		EVAL_RUN_DIR=$$RUN_TS uv run python -m evals.run_creation --repeat $(REPEATS) && \
-		EVAL_RUN_DIR=$$RUN_TS uv run python -m evals.run_pairwise --repeat $(REPEATS) && \
-		EVAL_RUN_DIR=$$RUN_TS uv run python -m evals.run_creature --repeat $(REPEATS)
+		EVAL_RUN_DIR=$$RUN_TS uv run python -m evals.run_behavior --repeat $(REPEATS)
 
 eval-creation: ## Creation quality eval (LLM, costs money, REPEATS=3)
 	cd backend && uv run python -m evals.run_creation --repeat $(REPEATS)
 
-eval-pairwise: ## Pairwise + screening eval (LLM, costs money, REPEATS=3)
-	cd backend && uv run python -m evals.run_pairwise --repeat $(REPEATS)
-
-eval-creature: ## Creature eval (LLM, costs money, REPEATS=3)
-	cd backend && uv run python -m evals.run_creature --repeat $(REPEATS)
+eval-behavior: ## Behavior + screening eval (LLM, costs money, REPEATS=3)
+	cd backend && uv run python -m evals.run_behavior --repeat $(REPEATS)
 
 bench-tokens: ## Measure token overhead: tool call vs plain text (LLM, cheap)
 	cd backend && uv run python scripts/benchmark_token_overhead.py
@@ -118,8 +114,7 @@ bench-tokens: ## Measure token overhead: tool call vs plain text (LLM, cheap)
 eval-judge: ## All evals + LLM judge (LLM, costs more money, REPEATS=3)
 	cd backend && RUN_TS=$$(date +%Y%m%d_%H%M%S) && \
 		EVAL_RUN_DIR=$$RUN_TS uv run python -m evals.run_creation --judge --repeat $(REPEATS) && \
-		EVAL_RUN_DIR=$$RUN_TS uv run python -m evals.run_pairwise --repeat $(REPEATS) && \
-		EVAL_RUN_DIR=$$RUN_TS uv run python -m evals.run_creature --repeat $(REPEATS)
+		EVAL_RUN_DIR=$$RUN_TS uv run python -m evals.run_behavior --repeat $(REPEATS)
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'

@@ -1,4 +1,4 @@
-"""Object creation endpoint — V3 pipeline with collision + behavior integration."""
+"""Object creation endpoint — V3 pipeline with unified behavior integration."""
 
 from __future__ import annotations
 
@@ -12,7 +12,6 @@ from pydantic import BaseModel, Field
 from app.sessions.manager import SessionManager
 from app.ws.handler import (
     send_behaviors_ready,
-    send_collision_ready,
     send_sprite_failed,
     send_sprite_ready,
 )
@@ -45,7 +44,7 @@ async def create_object_endpoint(
     """Create a new game object from a text description.
 
     Returns the blueprint immediately.
-    Sprite generation + collision/behavior integration happen async via background tasks.
+    Sprite generation + behavior integration happen async via background tasks.
     """
     db = request.app.state.db
     manager = SessionManager(db)
@@ -68,7 +67,7 @@ async def create_object_endpoint(
     # Save object to session
     await manager.save_object(session_id, blueprint)
 
-    # Schedule background tasks: sprite gen + collision/behavior integration
+    # Schedule background tasks: sprite gen + behavior integration
     scenes = request.app.state.scenes
     task = asyncio.create_task(_background_spawn(session_id, blueprint, manager, cache, scenes))
     _background_tasks.add(task)
@@ -95,7 +94,7 @@ async def _background_spawn(
     cache: Any,
     scenes: dict,
 ) -> None:
-    """Background: sprite gen + collision screening/eval + creature behavior."""
+    """Background: sprite gen + behavior screening/eval."""
     logger.info("background_spawn_start", name=blueprint.name)
     results = await asyncio.gather(
         _generate_and_deliver_sprite(session_id, blueprint),
@@ -153,10 +152,10 @@ async def _run_spawn_integration(
     cache: Any,
     scenes: dict,
 ) -> None:
-    """Run collision screening/eval + creature behavior for newly spawned object."""
+    """Run bidirectional screening + behavior evaluation for newly spawned object."""
     from app.cache.scene import BehaviorCache
-    from app.engine.creature import evaluate_creature_behaviors
-    from app.engine.pairwise import collision_spawn_integration
+    from app.engine.behavior import evaluate_behaviors, screen_pairs
+    from app.ws.handler import format_behaviors
 
     scene = scenes.setdefault(session_id, BehaviorCache())
 
@@ -166,62 +165,42 @@ async def _run_spawn_integration(
         return
 
     scene_objects = [obj.blueprint for obj in session.objects if obj.blueprint.id != blueprint.id]
+    if not scene_objects:
+        return
 
-    # Collision force rules (screening + eval)
-    try:
-        results = await collision_spawn_integration(blueprint, scene_objects, cache, scene)
-        if results:
-            from app.cache.store import normalize_name
+    scene_names = [o.name for o in scene_objects] + [blueprint.name]
 
-            entries = []
-            for target_name, rule in results.items():
-                entry = rule.to_dict()
-                a, b = sorted([normalize_name(blueprint.name), normalize_name(target_name)])
-                entry["name_a"] = a
-                entry["name_b"] = b
-                entries.append(entry)
-            await send_collision_ready(session_id, entries)
-    except Exception:
-        logger.error(
-            "collision_integration_failed",
-            session_id=session_id,
-            object_name=blueprint.name,
-            exc_info=True,
-        )
+    # Bidirectional screen: which pairs are interesting?
+    interesting = await screen_pairs(blueprint, scene_objects)
+    if not interesting:
+        return
 
-    # Creature behavior
-    try:
-        scene_names = [o.name for o in scene_objects] + [blueprint.name]
+    bp_by_name = {o.name: o for o in scene_objects}
+    interesting_bps = [bp_by_name[n] for n in interesting if n in bp_by_name]
 
-        # Evaluate new creature against all existing objects
-        if blueprint.autonomous:
-            behaviors = await evaluate_creature_behaviors(
-                blueprint, scene_objects, scene_names, scene
+    # Evaluate both directions for each interesting pair
+    async def _eval_direction(
+        subject: GameObjectBlueprint, targets: list[GameObjectBlueprint]
+    ) -> None:
+        behaviors = await evaluate_behaviors(subject, targets, scene_names, scene)
+        if behaviors:
+            entries = format_behaviors(subject.name, behaviors)
+            await send_behaviors_ready(session_id, subject.name, entries)
+
+    tasks = []
+
+    # New object → interesting scene objects
+    tasks.append(_eval_direction(blueprint, interesting_bps))
+
+    # Each interesting scene object → new object
+    tasks.extend(_eval_direction(target_bp, [blueprint]) for target_bp in interesting_bps)
+
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    for result in results:
+        if isinstance(result, BaseException):
+            logger.error(
+                "behavior_integration_failed",
+                session_id=session_id,
+                object_name=blueprint.name,
+                error=str(result),
             )
-            if behaviors:
-                from app.ws.handler import _format_behaviors
-
-                await send_behaviors_ready(
-                    session_id, blueprint.name, _format_behaviors(blueprint.name, behaviors)
-                )
-
-        # Evaluate existing creatures against new object (parallel)
-        async def _eval_creature(obj: GameObjectBlueprint) -> None:
-            behaviors = await evaluate_creature_behaviors(obj, [blueprint], scene_names, scene)
-            if behaviors:
-                from app.ws.handler import _format_behaviors
-
-                await send_behaviors_ready(
-                    session_id, obj.name, _format_behaviors(obj.name, behaviors)
-                )
-
-        creature_tasks = [_eval_creature(obj) for obj in scene_objects if obj.autonomous]
-        if creature_tasks:
-            await asyncio.gather(*creature_tasks, return_exceptions=True)
-    except Exception:
-        logger.error(
-            "creature_eval_failed",
-            session_id=session_id,
-            object_name=blueprint.name,
-            exc_info=True,
-        )

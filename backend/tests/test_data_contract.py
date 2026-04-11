@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 import yaml
-from app.cache.scene import BehaviorEntry, CollisionRule
+from app.cache.scene import BehaviorEntry
 from app.cache.store import CacheStore, normalize_name, pair_key
 from app.models.blueprint import (
     GameObjectBlueprint,
@@ -45,25 +45,14 @@ class TestFixtureSchemas:
         for name, arch in archetypes.items():
             assert isinstance(arch, dict), f"{name} archetype is not a dict"
 
-    def test_eval_suite_pairs(self) -> None:
+    def test_eval_suite_behaviors(self) -> None:
         with open(FIXTURES_DIR / "eval_suite.yaml") as f:
             data = yaml.safe_load(f)
-        pairs = data["pairs"]
-        assert isinstance(pairs, list)
-        assert len(pairs) > 0
-        for entry in pairs:
-            assert "pair" in entry, f"missing 'pair' in {entry}"
-            assert isinstance(entry["pair"], list) and len(entry["pair"]) == 2
-            assert "expected" in entry, f"missing 'expected' in {entry}"
-
-    def test_eval_suite_creatures(self) -> None:
-        with open(FIXTURES_DIR / "eval_suite.yaml") as f:
-            data = yaml.safe_load(f)
-        creatures = data["creatures"]
-        assert isinstance(creatures, list)
-        assert len(creatures) > 0
-        for entry in creatures:
-            assert "creature" in entry, f"missing 'creature' in {entry}"
+        behaviors = data["behaviors"]
+        assert isinstance(behaviors, list)
+        assert len(behaviors) > 0
+        for entry in behaviors:
+            assert "subject" in entry, f"missing 'subject' in {entry}"
             assert "targets" in entry, f"missing 'targets' in {entry}"
             for t in entry["targets"]:
                 assert "name" in t
@@ -85,26 +74,10 @@ class TestFixtureSchemas:
 class TestStateMapping:
     """Every state string used in fixture files maps to a valid code."""
 
-    def test_all_fixture_states_map(self) -> None:
+    def test_all_behavior_values_valid(self) -> None:
         with open(FIXTURES_DIR / "eval_suite.yaml") as f:
             data = yaml.safe_load(f)
-        for entry in data["pairs"]:
-            expected = entry["expected"]
-            for key in ("state_a", "state_b"):
-                if key in expected:
-                    val = expected[key]
-                    states = val if isinstance(val, list) else [val]
-                    for state_str in states:
-                        assert state_str in STATE_STRING_TO_CODE, (
-                            f"unmapped state string: {state_str!r} in {entry['pair']}"
-                        )
-                        code = STATE_STRING_TO_CODE[state_str]
-                        assert 1 <= code <= 8, f"code {code} out of range for {state_str}"
-
-    def test_all_creature_values_valid(self) -> None:
-        with open(FIXTURES_DIR / "eval_suite.yaml") as f:
-            data = yaml.safe_load(f)
-        for entry in data["creatures"]:
+        for entry in data["behaviors"]:
             for t in entry["targets"]:
                 exp = t["expected"]
                 if "movement" in exp:
@@ -112,13 +85,29 @@ class TestStateMapping:
                     vals = mv if isinstance(mv, list) else [mv]
                     for v in vals:
                         assert 0 <= v <= 2, (
-                            f"invalid movement {v} for {entry['creature']} vs {t['name']}"
+                            f"invalid movement {v} for {entry['subject']} vs {t['name']}"
                         )
                 if "action" in exp:
                     vals = exp["action"] if isinstance(exp["action"], list) else [exp["action"]]
                     for v in vals:
-                        assert 0 <= v <= 5, (
-                            f"invalid action {v} for {entry['creature']} vs {t['name']}"
+                        assert 0 <= v <= 4, (
+                            f"invalid action {v} for {entry['subject']} vs {t['name']}"
+                        )
+                if "state_action" in exp:
+                    vals = (
+                        exp["state_action"]
+                        if isinstance(exp["state_action"], list)
+                        else [exp["state_action"]]
+                    )
+                    for v in vals:
+                        assert 0 <= v <= 2, (
+                            f"invalid state_action {v} for {entry['subject']} vs {t['name']}"
+                        )
+                if "force" in exp:
+                    vals = exp["force"] if isinstance(exp["force"], list) else [exp["force"]]
+                    for v in vals:
+                        assert 0 <= v <= 1, (
+                            f"invalid force {v} for {entry['subject']} vs {t['name']}"
                         )
 
     def test_state_string_to_code_covers_all_states(self) -> None:
@@ -189,22 +178,16 @@ class TestNameNormalization:
 
 
 class TestModelRoundtrips:
-    def test_collision_rule_roundtrip(self) -> None:
-        cr = CollisionRule(force_on_b=30)
-        d = cr.to_dict()
-        cr2 = CollisionRule.from_dict(d)
-        assert cr == cr2
-
-    def test_collision_rule_defaults(self) -> None:
-        cr = CollisionRule.from_dict({})
-        assert cr.force_on_b == 0
-
-    def test_collision_rule_extra_keys_ignored(self) -> None:
-        cr = CollisionRule.from_dict({"force_on_b": 80, "bogus_key": 999})
-        assert cr.force_on_b == 80
-
     def test_behavior_entry_roundtrip(self) -> None:
-        be = BehaviorEntry(movement=0, priority=3, action=5, amount=0, state_id=0)
+        be = BehaviorEntry(
+            movement=0,
+            priority=3,
+            action=4,
+            amount=50,
+            state_action=1,
+            state_id=2,
+            force=1,
+        )
         d = be.to_dict()
         be2 = BehaviorEntry.from_dict(d)
         assert be == be2
@@ -215,7 +198,14 @@ class TestModelRoundtrips:
         assert be.priority == 0
         assert be.action == 0
         assert be.amount == 0
+        assert be.state_action == 0
         assert be.state_id == 0
+        assert be.force == 0
+
+    def test_behavior_entry_extra_keys_ignored(self) -> None:
+        be = BehaviorEntry.from_dict({"movement": 1, "priority": 2, "bogus_key": 999})
+        assert be.movement == 1
+        assert be.priority == 2
 
     def test_blueprint_roundtrip(self) -> None:
         bp = GameObjectBlueprint(
@@ -281,16 +271,5 @@ async def test_cache_creation_roundtrip(memory_cache: CacheStore) -> None:
     assert result == {"mass_kg": 2.0, "gravity": 60}
 
 
-async def test_cache_collision_roundtrip(memory_cache: CacheStore) -> None:
-    value = {"force_on_b": 30}
-    await memory_cache.put_collision("fire", "wood", value)
-    result = await memory_cache.get_collision("fire", "wood")
-    assert result == value
-    # Order-invariant
-    result2 = await memory_cache.get_collision("wood", "fire")
-    assert result2 == value
-
-
 async def test_cache_miss_returns_none(memory_cache: CacheStore) -> None:
     assert await memory_cache.get_creation("nonexistent") is None
-    assert await memory_cache.get_collision("a", "b") is None

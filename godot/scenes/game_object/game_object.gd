@@ -18,7 +18,7 @@ var susceptible_states: Array = []   # state IDs that can spread to this
 var _dying: bool = false
 var _state_manager: StateManager = null
 var _state_propagator: Node = null
-var _creature_behavior: Node = null
+var _object_behavior: Node = null
 var _state_change_debounce: float = 0.0
 var _base_surface: int = 1  # stored at init for WET state restore (0=slippery 1=normal 2=sticky)
 const STATE_CHANGE_DEBOUNCE_TIME: float = 0.5
@@ -37,9 +37,6 @@ const DURABILITY_HP: Dictionary = {
 func _ready() -> void:
 	collision_layer = CollisionLayers.OBJECTS
 	collision_mask = CollisionLayers.TERRAIN | CollisionLayers.PLAYER | CollisionLayers.OBJECTS
-	body_entered.connect(_on_body_entered)
-	contact_monitor = true
-	max_contacts_reported = 4
 	set_process(false)
 
 
@@ -100,9 +97,9 @@ func init_from_blueprint(bp: Dictionary) -> void:
 		if state_id >= 1 and state_id <= 4:
 			_state_manager.add_state(StateContradictions.STATE_NAMES[state_id], 0.0)  # 0 = infinite
 
-	# Creature behavior
+	# Object behavior (active creatures + reactive objects like bombs/fans)
 	if autonomous:
-		_create_creature_behavior()
+		_create_object_behavior()
 
 	# Debug label
 	var debug_label_script: GDScript = preload("res://scripts/ui/debug_label.gd")
@@ -233,12 +230,12 @@ func _process(delta: float) -> void:
 			Backend.send_state_changed(object_name, get_states())
 
 
-func _create_creature_behavior() -> void:
-	var cb_script = preload("res://scripts/systems/creature_behavior.gd")
-	_creature_behavior = cb_script.new()
-	_creature_behavior.name = "CreatureBehavior"
-	add_child(_creature_behavior)
-	_creature_behavior.init_creature(self, object_name, speed_tier)
+func _create_object_behavior() -> void:
+	var ob_script = preload("res://scripts/systems/object_behavior.gd")
+	_object_behavior = ob_script.new()
+	_object_behavior.name = "ObjectBehavior"
+	add_child(_object_behavior)
+	_object_behavior.init_object(self, object_name, speed_tier, autonomous)
 
 
 func _create_state_propagator(height_cm: int) -> void:
@@ -259,13 +256,3 @@ func is_heavy() -> bool:
 	return phys.get("mass_kg", 1.0) > 50.0
 
 
-func _on_body_entered(body: Node) -> void:
-	if not body.has_method("get_object_name") and not body.has_method("get_states"):
-		return
-	call_deferred("_resolve_deferred", body)
-
-
-func _resolve_deferred(body: Node) -> void:
-	if not is_instance_valid(body):
-		return
-	CollisionResolver.resolve_collision(self, body)

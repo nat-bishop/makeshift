@@ -14,7 +14,7 @@ const AFF_NAMES: Array[String] = ["carry", "mount", "climb", "none"]
 const SURFACE_NAMES: Array[String] = ["slip", "norm", "grip"]
 const SPEED_NAMES: Array[String] = ["slug", "slow", "norm", "fast", "rapid"]
 const MOVE_NAMES: Array[String] = ["approach", "flee", "idle"]
-const ACT_NAMES: Array[String] = ["idle", "dmg", "heal", "+state", "-state", "destroy", "take"]
+const ACT_NAMES: Array[String] = ["idle", "dmg", "heal", "eat", "push"]
 
 var _game_object: Node
 var _name_label: Label
@@ -118,7 +118,7 @@ func _process(_delta: float) -> void:
 	var needs_refresh := hp != _last_hp or states != _last_states
 
 	if _is_creature:
-		var cb: Node = _game_object.get_node_or_null("CreatureBehavior")
+		var cb: Node = _game_object.get_node_or_null("ObjectBehavior")
 		if cb and (cb.current_target_name != _last_target
 				or cb.current_movement != _last_movement
 				or cb.current_action != _last_action):
@@ -154,7 +154,7 @@ func _refresh() -> void:
 
 	# Creature behavior
 	if _is_creature and _behavior_label:
-		var cb: Node = _game_object.get_node_or_null("CreatureBehavior")
+		var cb: Node = _game_object.get_node_or_null("ObjectBehavior")
 		if cb:
 			_last_target = cb.current_target_name
 			_last_movement = cb.current_movement
@@ -175,13 +175,8 @@ func _refresh() -> void:
 func _format_action(cb: Node) -> String:
 	var action: int = cb.current_action
 	var base: String = ACT_NAMES[action] if action >= 0 and action < ACT_NAMES.size() else "?"
-	if action in [1, 2]:  # damage, heal
+	if action in [1, 2, 4]:  # damage, heal, push
 		return "%s:%d" % [base, cb.current_action_amount]
-	if action in [3, 4]:  # add/remove state
-		var entry: Dictionary = cb._pairs.get(cb.current_target_name, {})
-		var sid: int = entry.get("state_id", 0)
-		if sid >= 1 and sid <= 4:
-			return "%s:%s" % [base, StateContradictions.STATE_NAMES[sid]]
 	return base
 
 

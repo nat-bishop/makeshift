@@ -79,10 +79,18 @@ async def create_object(description: str, cache: CacheStore) -> GameObjectBluepr
     )
 
     # Collect initial/susceptible states from boolean answers
-    _INITIAL_KEYS = {1: "initially_burning", 2: "initially_frozen",
-                     3: "initially_wet", 4: "initially_electrified"}
-    _SUSCEPTIBLE_KEYS = {1: "catches_fire", 2: "can_freeze",
-                         3: "gets_wet", 4: "conducts_electricity"}
+    _INITIAL_KEYS = {
+        1: "initially_burning",
+        2: "initially_frozen",
+        3: "initially_wet",
+        4: "initially_electrified",
+    }
+    _SUSCEPTIBLE_KEYS = {
+        1: "catches_fire",
+        2: "can_freeze",
+        3: "gets_wet",
+        4: "conducts_electricity",
+    }
     initial_states = [sid for sid, key in _INITIAL_KEYS.items() if answers.get(key)]
     susceptible_states = [sid for sid, key in _SUSCEPTIBLE_KEYS.items() if answers.get(key)]
 

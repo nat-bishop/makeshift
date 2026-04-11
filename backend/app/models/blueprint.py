@@ -25,6 +25,10 @@ DURABILITY_NAMES: dict[int, str] = {
     6: "indestructible",
 }
 
+SURFACE_NAMES: dict[int, str] = {0: "slick", 1: "normal", 2: "sticky"}
+
+AFFORDANCE_LABELS: dict[int, str] = {0: "carryable", 1: "mountable", 2: "climbable"}
+
 # Speed tier → name mapping (autonomous creatures only).
 SPEED_NAMES: dict[int, str] = {
     0: "sluggish",
@@ -34,7 +38,7 @@ SPEED_NAMES: dict[int, str] = {
     4: "rapid",
 }
 
-# Speed tier → movement multiplier applied to base speeds in creature_behavior.gd.
+# Speed tier → movement multiplier applied to base speeds in object_behavior.gd.
 SPEED_MULTIPLIER: dict[int, float] = {
     0: 0.3,
     1: 0.6,
