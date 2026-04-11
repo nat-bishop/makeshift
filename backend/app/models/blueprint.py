@@ -129,3 +129,24 @@ class GameObjectBlueprint(BaseModel):
     @property
     def is_indestructible(self) -> bool:
         return self.durability >= 6
+
+
+# Synthetic blueprint for the player character — used by the behavior system
+# so creatures can be evaluated against the player at spawn time.
+PLAYER_BLUEPRINT = GameObjectBlueprint(
+    id="player",
+    name="Player",
+    description="A human player character",
+    visual_description="A human character",
+    physics=PhysicsProperties(
+        mass_kg=70.0,
+        height_cm=175,
+        surface=1,
+        bounce=5,
+        gravity=50,
+    ),
+    durability=2,
+    affordance=3,
+    autonomous=True,
+    speed=2,
+)

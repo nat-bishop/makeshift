@@ -143,6 +143,8 @@ async def _handle_state_changed(
     if session is None:
         return
 
+    from app.models.blueprint import PLAYER_BLUEPRINT
+
     target_norm = normalize_name(object_name)
     changed_bp: GameObjectBlueprint | None = None
     bp_by_name: dict[str, GameObjectBlueprint] = {}
@@ -151,6 +153,11 @@ async def _handle_state_changed(
         bp_by_name[normalize_name(bp.name)] = bp
         if normalize_name(bp.name) == target_norm:
             changed_bp = bp
+
+    # Always include player so creature re-evaluations can reference it
+    bp_by_name[normalize_name(PLAYER_BLUEPRINT.name)] = PLAYER_BLUEPRINT
+    if target_norm == normalize_name(PLAYER_BLUEPRINT.name):
+        changed_bp = PLAYER_BLUEPRINT
 
     if changed_bp is None:
         return
@@ -252,6 +259,19 @@ async def send_sprite_ready(session_id: str, object_id: str, sprite_url: str) ->
         session_id,
         {
             "type": "sprite_ready",
+            "object_id": object_id,
+            "sprite_url": sprite_url,
+        },
+    )
+
+
+async def send_combined_sprite_ready(session_id: str, object_id: str, sprite_url: str) -> None:
+    """Notify clients that a carry/ride combined sprite is ready."""
+    logger.info("send_combined_sprite_ready", session_id=session_id, object_id=object_id)
+    await _broadcast(
+        session_id,
+        {
+            "type": "combined_sprite_ready",
             "object_id": object_id,
             "sprite_url": sprite_url,
         },

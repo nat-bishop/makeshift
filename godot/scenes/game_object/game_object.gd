@@ -13,6 +13,7 @@ var affordance: int = 3  # 0=carry 1=mount 2=climb 3=nothing
 var autonomous: bool = false
 var speed_tier: int = 2  # 0=sluggish .. 4=rapid
 var destruction_result_name: String = ""
+var combined_sprite_url: String = "" # carry/ride combined sprite (pre-cached by backend)
 var initial_states: Array = []       # state IDs this object spawns with
 var susceptible_states: Array = []   # state IDs that can spread to this
 var _dying: bool = false

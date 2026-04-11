@@ -8,6 +8,7 @@ var _ws_connected: bool = false
 var _reconnect_timer: float = 0.0
 var _reconnect_delay: float = 1.0
 var _sprite_cache: Dictionary = {}  # object_id -> Texture2D
+var _combined_sprite_cache: Dictionary = {}  # object_id -> Texture2D
 var _pending_sprites: Array = []  # object_ids waiting for sprites
 var _sync_timer: float = 0.0
 const SYNC_INTERVAL: float = 10.0
@@ -191,6 +192,8 @@ func _handle_ws_message(text: String) -> void:
 			_handle_sprite_ready(data)
 		"sprite_failed":
 			_handle_sprite_failed(data)
+		"combined_sprite_ready":
+			_handle_combined_sprite_ready(data)
 		"behaviors_ready":
 			var subject_name: String = data.get("subject_name", "")
 			var behaviors: Array = data.get("behaviors", [])
@@ -207,6 +210,20 @@ func _handle_ws_message(text: String) -> void:
 			Log.warn("Backend WS error: %s" % data.get("message", "unknown"))
 
 
+func _fetch_texture(sprite_url: String, label: String) -> Texture2D:
+	## Fetch a sprite URL and return an ImageTexture, or null on failure.
+	var full_url: String = base_url + sprite_url
+	var body: PackedByteArray = await _fetch_binary(full_url)
+	if body.is_empty():
+		Log.warn("Backend: %s fetch failed for %s" % [label, sprite_url])
+		return null
+	var image := Image.new()
+	if image.load_png_from_buffer(body) != OK:
+		Log.warn("Backend: Failed to decode %s PNG from %s" % [label, sprite_url])
+		return null
+	return ImageTexture.create_from_image(image)
+
+
 func _handle_sprite_ready(data: Dictionary) -> void:
 	var object_id: String = data.get("object_id", "")
 	var sprite_url: String = data.get("sprite_url", "")
@@ -214,24 +231,12 @@ func _handle_sprite_ready(data: Dictionary) -> void:
 		Log.warn("Backend: Malformed sprite_ready message: %s" % [data])
 		return
 
-	var full_url: String = base_url + sprite_url
-	Log.debug("Backend: Fetching sprite for %s from %s" % [object_id, full_url])
-
-	var body: PackedByteArray = await _fetch_binary(full_url)
-	if body.is_empty():
-		Log.warn("Backend: Sprite fetch failed for %s" % object_id)
+	var texture: Texture2D = await _fetch_texture(sprite_url, "sprite")
+	if texture == null:
 		return
 
-	var image := Image.new()
-	var load_err: int = image.load_png_from_buffer(body)
-	if load_err != OK:
-		Log.warn("Backend: Failed to decode sprite PNG for %s" % object_id)
-		return
-
-	var texture := ImageTexture.create_from_image(image)
 	_sprite_cache[object_id] = texture
 	_pending_sprites.erase(object_id)
-
 	Log.info("Backend: Sprite ready for %s" % object_id)
 	EventBus.sprite_ready.emit(object_id, texture)
 
@@ -245,6 +250,31 @@ func _handle_sprite_failed(data: Dictionary) -> void:
 	_pending_sprites.erase(object_id)
 	Log.warn("Backend: Sprite generation failed for %s: %s" % [object_id, reason])
 	EventBus.sprite_failed.emit(object_id)
+
+
+func _handle_combined_sprite_ready(data: Dictionary) -> void:
+	var object_id: String = data.get("object_id", "")
+	var sprite_url: String = data.get("sprite_url", "")
+	if object_id.is_empty() or sprite_url.is_empty():
+		Log.warn("Backend: Malformed combined_sprite_ready message: %s" % [data])
+		return
+
+	var texture: Texture2D = await _fetch_texture(sprite_url, "combined sprite")
+	if texture == null:
+		return
+
+	# Buffer in cache so objects can pick it up even if they aren't placed yet
+	_combined_sprite_cache[object_id] = texture
+	# Also try to set directly on existing game object
+	for obj in get_tree().get_nodes_in_group("game_objects"):
+		if obj.has_method("get_object_id") and obj.get_object_id() == object_id:
+			obj.set_meta("combined_texture", texture)
+			Log.info("Backend: Combined sprite ready for '%s'" % obj.get_object_name())
+			break
+
+
+func get_combined_sprite(object_id: String) -> Texture2D:
+	return _combined_sprite_cache.get(object_id, null)
 
 
 func _process_reconnect(delta: float) -> void:
