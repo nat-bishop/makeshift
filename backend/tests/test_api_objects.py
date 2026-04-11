@@ -86,7 +86,8 @@ async def _test_client() -> AsyncIterator[tuple[AsyncClient, FastAPI]]:
 async def _create_session(client: AsyncClient) -> str:
     resp = await client.post("/api/sessions")
     assert resp.status_code == 200
-    return resp.json()["session_id"]
+    sid: str = resp.json()["session_id"]
+    return sid
 
 
 async def test_create_object_success() -> None:

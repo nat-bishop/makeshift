@@ -28,7 +28,7 @@ Focus on issues that automated tools miss. Refer to CLAUDE.md's architecture and
 
 **Framework-specific pitfalls** — Each framework (Pydantic, PydanticAI, Godot engine) has subtle footguns documented in CLAUDE.md's gotchas. Check whether the diff introduces any of them.
 
-**Domain invariants** — The project's data systems (tags, behaviors, rules) have invariants documented in CLAUDE.md. Check whether the diff maintains them.
+**Domain invariants** — The project's data systems (states, behavior cache, physics properties) have invariants. Check CLAUDE.md gotchas and docs/ for project-specific constraints the diff might violate.
 
 ### AI-generated code issues
 
