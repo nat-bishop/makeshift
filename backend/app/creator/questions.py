@@ -131,7 +131,11 @@ CREATION_QUESTIONS: list[Question] = [
         "choice",
         default="normal",
         gates=(GATE_AUTONOMOUS,),
-        instructions="Rate this creature's movement speed.",
+        instructions=(
+            "Rate this creature's movement speed. "
+            "crawl=snail/turtle, slow=zombie/slug, normal=person/dog, "
+            "fast=horse/wolf, rapid=cheetah/falcon."
+        ),
         choices=("crawl", "slow", "normal", "fast", "rapid"),
         choice_map=(("crawl", 0), ("slow", 1), ("normal", 2), ("fast", 3), ("rapid", 4)),
     ),
@@ -142,10 +146,10 @@ CREATION_QUESTIONS: list[Question] = [
         default="none",
         instructions=(
             "In a 2D game, how can a player physically interact with this object? "
-            "carry=pick up and hold (small light items like sword, bottle, ball), "
+            "carry=pick up and hold (sword, bottle, ball, cat, small items), "
             "ride=sit on top and move (horse, car, boat), "
             "scale=climb up it (ladder, tree, wall), "
-            "none=too heavy/big/dangerous to interact with, or is a creature/person."
+            "none=too heavy/big/dangerous (boulder, lava, mountain)."
         ),
         choices=("carry", "ride", "scale", "none"),
         choice_map=(("carry", 0), ("ride", 1), ("scale", 2), ("none", 3)),

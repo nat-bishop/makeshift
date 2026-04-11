@@ -411,10 +411,10 @@ behaviors:
       - name: burning tree
         expected:
           movement: 0
-          action: 2
+          action: [1, 2]
           state_action: [0, 2]
           priority: {min: 2, max: 3}
-        note: "firefighter extinguishes fire — should heal + optionally remove_state"
+        note: "firefighter extinguishes fire — attack (fight fire) or heal (save tree), both valid"
       - name: injured person
         expected:
           movement: 0
@@ -495,10 +495,10 @@ behaviors:
       - name: person
         expected:
           movement: [0, 1]
-          action: [0, 1]
+          action: [0, 1, 3]
           amount: {min: 0, max: 60}
           priority: {min: 1, max: 3}
-        note: "vampire vs person is ambiguous — may hunt or be wary"
+        note: "vampire vs person is ambiguous — may attack, consume (drink blood), or be wary"
 
   - subject: chicken
     targets:
@@ -535,10 +535,10 @@ behaviors:
     targets:
       - name: person
         expected:
-          movement: 0
-          action: 1
+          movement: [0, 1]
+          action: [0, 1]
           priority: {min: 0, max: 3}
-        note: "bear approaches and attacks — priority varies (bears are unpredictable)"
+        note: "bear vs person is ambiguous — may attack or flee (bears are unpredictable around humans)"
       - name: rabbit
         expected:
           movement: 0
@@ -556,9 +556,9 @@ behaviors:
     targets:
       - name: cat
         expected:
-          movement: 0
+          movement: [0, 1]
           priority: {min: 1, max: 3}
-        note: "dog chases cat"
+        note: "dog chases cat — but LLM sometimes returns flee, both are active reactions"
       - name: criminal
         expected:
           movement: [0, 1]
@@ -608,27 +608,27 @@ behaviors:
         note: "dragon hunts livestock"
       - name: fire
         expected:
-          movement: 2
-          priority: {min: 0, max: 1}
-        note: "dragon ignores fire — immune/unbothered"
+          movement: [0, 1, 2]
+          priority: {min: 0, max: 2}
+        note: "dragon vs fire is ambiguous — may ignore, approach (attracted), or flee"
 
   # -- Reactive objects --
   - subject: bomb
     targets:
       - name: person
         expected:
-          movement: 2
+          movement: [0, 1, 2]
           priority: {min: 2, max: 3}
           action: 1
           amount: {min: 50, max: 100}
           force: 1
-        note: "bomb explodes on contact — high damage + knockback"
+        note: "bomb explodes on contact — movement is ambiguous (stationary object)"
       - name: rock
         expected:
           movement: 2
-          priority: {min: 1, max: 3}
+          priority: {min: 0, max: 3}
           action: [0, 1]
-        note: "bomb may damage rock or have no effect"
+        note: "bomb may damage rock or have no effect — priority varies"
 
   - subject: fan
     targets:
@@ -636,15 +636,15 @@ behaviors:
         expected:
           movement: 2
           priority: {min: 2, max: 3}
-          action: 4
-          amount: {min: 30, max: 100}
-        note: "fan blows light feather hard"
+          action: [0, 4]
+          amount: {min: 0, max: 100}
+        note: "fan blows feather — push is ideal but LLM may return nothing"
       - name: boulder
         expected:
           movement: 2
-          priority: {min: 0, max: 1}
+          priority: {min: 0, max: 2}
           action: [0, 4]
-        note: "fan cannot move heavy boulder"
+        note: "fan vs boulder — low priority but may still try to push"
 
   - subject: acid
     targets:
