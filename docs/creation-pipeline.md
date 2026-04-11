@@ -1,4 +1,4 @@
-# V3 Creation Pipeline
+# Creation Pipeline
 
 The exact sequence of LLM calls from player input to spawned object. All call counts assume the model and prompt formats from [llm-design-patterns.md](llm-design-patterns.md).
 

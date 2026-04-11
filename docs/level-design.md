@@ -16,9 +16,9 @@ Design patterns and BaseLevel API for Makeshift levels.
 
 ---
 
-## V3 Level Design Notes
+## Core Mechanics for Level Design
 
-The V3 interaction system replaces tag-based rules with:
+The interaction system provides:
 - **State propagation**: objects with `initial_states` spread those states to nearby objects with matching `susceptible_states` every 2s
 - **Essential-state destruction**: objects with `initial_states` are destroyed when all initial states are removed (fire extinguished = destroyed)
 - **Object behavior**: per-pair staged evaluation — active objects (approach/flee) and reactive objects (bomb, fan) use composite actions (damage/heal/consume/push + state modifier)
@@ -29,7 +29,7 @@ Level puzzles should be designed around these mechanics. Examples:
 - Creating a wet object near electrified ones is dangerous (wet susceptible to electrified)
 - Creatures with high priority toward specific states (firefighter → burning) create natural puzzles
 
-**Seed object blueprints** should use the V3 `GameObjectBlueprint` format: no tags, no behavior verb lists, instead `initial_states`, `susceptible_states`, `autonomous`, `durability`, and `affordance`. See `CLAUDE.md` → Data Model Flow for the complete blueprint structure.
+**Seed object blueprints** use the `GameObjectBlueprint` format with `initial_states`, `susceptible_states`, `autonomous`, `durability`, and `affordance`. See `models/blueprint.py` for the complete structure.
 
 ---
 
@@ -47,10 +47,10 @@ _create_kill_zone(pos: Vector2, size: Vector2) -> void
 
 `BaseLevel` requires a `$Goal` Area2D node in the scene for level completion detection.
 
-### V3 Seed Object Blueprint Format
+### Seed Object Blueprint Format
 
 ```gdscript
-# V3 blueprint — no tags, no behavior verbs
+# Example seed blueprint
 const FIRE_BLUEPRINT := {
     "id": "fire_01",
     "name": "Fire",

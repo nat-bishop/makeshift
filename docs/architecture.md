@@ -1,12 +1,6 @@
-# V3 Architecture
+# Architecture
 
-## What this actually is
-
-V2 with fewer enums, LLM-generated physics, and auto-populated interaction rules instead of hand-authored ones.
-
-The pitch isn't "delete everything and just ask the LLM." It's: **automate the most tedious part (rule authoring) while keeping the engine infrastructure that makes the game work.**
-
-The architecture keeps: a state system (smaller), affordances (simpler), and contradiction resolution. What it replaces: substance profiles with LLM-generated numbers, hand-authored rules with an LLM-populated cache, tag derivation with interaction-only states, cascade + ObjectField with tick-based StatePropagator, and the single complex creator call with a graph of tiny parallel calls.
+The core idea: **automate rule authoring with LLM calls while keeping the engine infrastructure that makes the game work.** The LLM generates physics properties and populates a per-pair behavior cache at spawn time. The engine executes a state system, affordances, and contradiction resolution at runtime.
 
 See [llm-design-patterns.md](llm-design-patterns.md) for inference constraints. Key numbers:
 - ~55ms base cost per call, input tokens are free
@@ -68,15 +62,6 @@ Conditional parallel follow-ups: amount (actions 1-3), state_modifier+state_id (
 
 Actions are composite: a wolf can damage + push (knockback) + add_state(burning) in one interaction. Force modifier (knockback) fires for damage only. Pull is not a supported force modifier.
 
-### What this replaces
-
-| Old system | Unified behavior |
-|---|---|
-| `pairwise.py` (force-only) | Dropped — force is now action=push or force_modifier on damage |
-| `creature.py` (creatures only) | Dropped — all objects (active + reactive) use one system |
-| `CollisionResolver` (Godot) | Dropped — `ObjectBehavior` handles both collision forces and creature actions |
-| 6-call `PairwiseResult` | Replaced by `BehaviorEntry` (movement + composite action) |
-
 ### Examples
 
 ```
@@ -123,22 +108,6 @@ State spreading is handled by `StatePropagator` — a tick-based (2s) area compo
 - **No cascade depth limit:** propagation doesn't chain recursively — each tick is independent.
 
 **Essential-state destruction** replaces the old "LLM decides destroy." If an object's `initial_states` are all removed via contradiction (e.g., fire [burning] is hit by water → burning removed), `take_damage(99999)` is called immediately. No LLM call, no `damage=100` pairwise field.
-
----
-
-## What's genuinely new vs V2
-
-1. **LLM-populated behavior cache** — replaces 56 hand-authored rules. Cop+donut, vampire+garlic, mongoose+cobra all work without anyone coding them.
-
-2. **LLM-generated physics** — a "fiery ice sword" gets reasonable mass/bounce/friction without substance mixing. A "thought bubble" gets mass 0.001 and floats.
-
-3. **Graph-based creator** — parallel 1-token calls instead of 1 complex call. Faster, more reliable, works on smaller models.
-
-4. **Unified per-pair behavior** — active creatures (approach/flee) and reactive objects (bomb, fan) share one system. Each subject×object pair gets its own movement + composite action. Replaces both fixed verb classification AND force-only pairwise evaluation.
-
-5. **State properties replace ObjectField** — `initial_states`/`susceptible_states` on blueprint replace `has_field`/`field_range_cm`. Fire spawns with burning state; wood is susceptible to burning. `StatePropagator` ticks every 2s and spreads states to susceptible neighbors.
-
-6. **Essential-state destruction** — objects with `initial_states` are destroyed when all their initial states are removed. No pairwise "damage=100" for fire/ice destruction — it's structural.
 
 ---
 
