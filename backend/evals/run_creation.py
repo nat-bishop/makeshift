@@ -97,7 +97,8 @@ class CreationEvaluator(Evaluator[str, GameObjectBlueprint, dict[str, Any]]):
                     reason=None if passed else f"got {actual}, expected {val}",
                 )
             elif isinstance(val, int):
-                actual = getattr(bp, field)
+                attr_path = FIELD_TO_ATTR.get(field, field)
+                actual = _get_nested(bp, attr_path)
                 passed = actual == val
                 results[field] = EvaluationReason(
                     value=passed,

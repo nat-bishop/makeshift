@@ -113,18 +113,6 @@ func send_state_changed(object_name: String, active_states: Array) -> void:
 	_ws.send_text(JSON.stringify(msg))
 
 
-func send_collision_request(name_a: String, name_b: String) -> void:
-	## Request lazy collision evaluation from backend (cache miss).
-	if _ws == null or not _ws_connected:
-		return
-	var msg: Dictionary = {
-		"type": "request_collision",
-		"name_a": name_a,
-		"name_b": name_b,
-	}
-	_ws.send_text(JSON.stringify(msg))
-
-
 func sync_state(state: Dictionary) -> void:
 	if session_id.is_empty() or offline_mode:
 		return
@@ -203,20 +191,18 @@ func _handle_ws_message(text: String) -> void:
 			_handle_sprite_ready(data)
 		"sprite_failed":
 			_handle_sprite_failed(data)
-		"collision_ready":
-			var entries: Array = data.get("entries", [])
-			InteractionCache.load_collision_batch(entries)
-			Log.info("Backend: Collision rules ready (%d entries)" % entries.size())
 		"behaviors_ready":
-			var creature_name: String = data.get("creature_name", "")
+			var subject_name: String = data.get("subject_name", "")
 			var behaviors: Array = data.get("behaviors", [])
-			InteractionCache.load_behavior_batch(creature_name, behaviors)
-			Log.info("Backend: Behaviors ready for '%s' (%d entries)" % [creature_name, behaviors.size()])
+			InteractionCache.load_behavior_batch(subject_name, behaviors)
+			EventBus.behavior_updated.emit(subject_name)
+			Log.info("Backend: Behaviors ready for '%s' (%d entries)" % [subject_name, behaviors.size()])
 		"behavior_updated":
-			var creature_name: String = data.get("creature_name", "")
-			var entries: Array = data.get("entries", [])
-			InteractionCache.load_behavior_batch(creature_name, entries)
-			Log.info("Backend: Behavior updated for '%s' (%d entries)" % [creature_name, entries.size()])
+			var upd_name: String = data.get("subject_name", "")
+			var upd_behaviors: Array = data.get("behaviors", [])
+			InteractionCache.load_behavior_batch(upd_name, upd_behaviors)
+			EventBus.behavior_updated.emit(upd_name)
+			Log.info("Backend: Behavior updated for '%s' (%d entries)" % [upd_name, upd_behaviors.size()])
 		"error":
 			Log.warn("Backend WS error: %s" % data.get("message", "unknown"))
 

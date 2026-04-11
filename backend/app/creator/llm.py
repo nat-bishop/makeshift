@@ -16,6 +16,7 @@ from __future__ import annotations
 from typing import Literal
 
 import structlog
+from pydantic import BaseModel, Field
 from pydantic_ai import Agent, NativeOutput
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.profiles.openai import OpenAIModelProfile
@@ -25,10 +26,8 @@ from app.config import settings as _settings
 
 logger = structlog.get_logger()
 
-# One agent per output type — int/float use NativeOutput (json_schema constrained),
-# str uses plain text. Lazy singletons, cleared via reset_agents().
-_int_agent: Agent[None, int] | None = None
-_float_agent: Agent[None, float] | None = None
+# Agent caches — keyed by output schema. Cleared via reset_agents().
+_numeric_agents: dict[type[BaseModel], Agent] = {}
 _str_agent: Agent[None, str] | None = None
 _choice_agents: dict[tuple[str, ...], Agent] = {}
 
@@ -68,35 +67,50 @@ def _base_model_settings() -> dict:
 # Max tokens for structured output — caps xgrammar generation to prevent
 # infinite whitespace loops (known SGLang/xgrammar bug). JSON like
 # {"response": 50000} needs ~15 tokens; 30 gives comfortable headroom.
+# With bounded schemas (Field ge/le), xgrammar enforces min/max at the
+# grammar level so outputs stay within range and within token budget.
 _STRUCTURED_MAX_TOKENS = 30
 
 
-def _get_int_agent() -> Agent[None, int]:
-    global _int_agent
-    if _int_agent is None:
+# Bounded output model factories — Field(ge, le) emits minimum/maximum
+# in JSON schema, which xgrammar enforces at the grammar level.
+_bounded_int_models: dict[tuple[int, int], type[BaseModel]] = {}
+_bounded_float_models: dict[tuple[float, float], type[BaseModel]] = {}
+
+
+def _bounded_int_model(lo: int, hi: int) -> type[BaseModel]:
+    key = (lo, hi)
+    if key not in _bounded_int_models:
+
+        class BoundedInt(BaseModel):
+            response: int = Field(ge=lo, le=hi)
+
+        _bounded_int_models[key] = BoundedInt
+    return _bounded_int_models[key]
+
+
+def _bounded_float_model(lo: float, hi: float) -> type[BaseModel]:
+    key = (lo, hi)
+    if key not in _bounded_float_models:
+
+        class BoundedFloat(BaseModel):
+            response: float = Field(ge=lo, le=hi)
+
+        _bounded_float_models[key] = BoundedFloat
+    return _bounded_float_models[key]
+
+
+def _get_numeric_agent(model_cls: type[BaseModel]) -> Agent:
+    if model_cls not in _numeric_agents:
         settings = _base_model_settings()
         settings["max_tokens"] = _STRUCTURED_MAX_TOKENS
-        _int_agent = Agent(  # type: ignore[call-overload]
+        _numeric_agents[model_cls] = Agent(  # type: ignore[call-overload]
             _build_model(),
-            output_type=NativeOutput(int),
+            output_type=NativeOutput(model_cls),
             retries=2,
             model_settings=settings,
         )
-    return _int_agent
-
-
-def _get_float_agent() -> Agent[None, float]:
-    global _float_agent
-    if _float_agent is None:
-        settings = _base_model_settings()
-        settings["max_tokens"] = _STRUCTURED_MAX_TOKENS
-        _float_agent = Agent(  # type: ignore[call-overload]
-            _build_model(),
-            output_type=NativeOutput(float),
-            retries=2,
-            model_settings=settings,
-        )
-    return _float_agent
+    return _numeric_agents[model_cls]
 
 
 def _get_choice_agent(choices: tuple[str, ...]) -> Agent:
@@ -134,12 +148,13 @@ async def ask_int(
     *,
     instructions: str = "",
 ) -> int:
-    """Ask a 1-token integer question. Returns clamped value or default on failure."""
+    """Ask a bounded integer question. Schema enforces [lo, hi] via xgrammar."""
     try:
-        result = await _get_int_agent().run(prompt, instructions=instructions or None)
-        return max(lo, min(hi, result.output))
-    except Exception:
-        logger.warning("ask_int_failed", prompt=prompt[:80], default=default)
+        agent = _get_numeric_agent(_bounded_int_model(lo, hi))
+        result = await agent.run(prompt, instructions=instructions or None)
+        return result.output.response
+    except Exception as e:
+        logger.warning("ask_int_failed", prompt=prompt[:60], default=default, error=str(e)[:200])
         return default
 
 
@@ -151,20 +166,22 @@ async def ask_float(
     *,
     instructions: str = "",
 ) -> float:
-    """Ask a numeric question. Returns clamped value or default on failure."""
+    """Ask a bounded float question. Schema enforces [lo, hi] via xgrammar."""
     try:
-        result = await _get_float_agent().run(prompt, instructions=instructions or None)
-        return max(lo, min(hi, result.output))
-    except Exception:
-        logger.warning("ask_float_failed", prompt=prompt[:80], default=default)
+        agent = _get_numeric_agent(_bounded_float_model(lo, hi))
+        result = await agent.run(prompt, instructions=instructions or None)
+        return result.output.response
+    except Exception as e:
+        logger.warning("ask_float_failed", prompt=prompt[:60], default=default, error=str(e)[:200])
         return default
 
 
 async def ask_bool(prompt: str, default: bool = False) -> bool:
     """Ask a 0/1 question. Returns True if output is 1."""
     try:
-        result = await _get_int_agent().run(prompt)
-        return result.output == 1
+        agent = _get_numeric_agent(_bounded_int_model(0, 1))
+        result = await agent.run(prompt)
+        return result.output.response == 1
     except Exception:
         logger.warning("ask_bool_failed", prompt=prompt[:80], default=default)
         return default
@@ -181,8 +198,14 @@ async def ask_choice(
     try:
         result = await _get_choice_agent(choices).run(prompt, instructions=instructions or None)
         return result.output
-    except Exception:
-        logger.warning("ask_choice_failed", prompt=prompt[:80], default=default)
+    except Exception as e:
+        logger.warning(
+            "ask_choice_failed",
+            prompt=prompt[:60],
+            choices=choices,
+            default=default,
+            error=str(e)[:200],
+        )
         return default
 
 
@@ -207,8 +230,7 @@ async def ask_text(
 
 def reset_agents() -> None:
     """Clear cached agents (for testing or model swap)."""
-    global _int_agent, _float_agent, _str_agent, _choice_agents
-    _int_agent = None
-    _float_agent = None
+    global _str_agent
+    _numeric_agents.clear()
     _str_agent = None
     _choice_agents.clear()

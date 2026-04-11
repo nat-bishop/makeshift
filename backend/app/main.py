@@ -1,4 +1,4 @@
-"""FastAPI application — V3 with cache.db for pairwise interactions."""
+"""FastAPI application — V3 with unified behavior system."""
 
 from __future__ import annotations
 

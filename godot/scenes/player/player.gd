@@ -126,7 +126,6 @@ func _push_rigid_bodies() -> void:
 					var impact_speed: float = maxf(-_pre_slide_velocity.dot(normal), 0.0)
 					if impact_speed > BOUNCE_MIN_SPEED:
 						velocity = normal * impact_speed * BOUNCE_ENERGY
-				CollisionResolver.resolve_and_notify(self, collider)
 	_prev_contacts = current_contacts
 
 
@@ -158,7 +157,6 @@ func _perform_kick() -> void:
 			if not collider.has_method("is_heavy") or not collider.is_heavy():
 				collider.apply_central_impulse(kick_dir * KICK_FORCE)
 			WorldMutations.apply_damage(collider, KICK_DAMAGE)
-			CollisionResolver.resolve_and_notify(self, collider)
 			Log.debug("Player: Kicked '%s'" % collider.name)
 
 

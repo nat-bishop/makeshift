@@ -13,7 +13,6 @@ from app.ws.handler import (
     _handle_request_sprite,
     send_behavior_updated,
     send_behaviors_ready,
-    send_collision_ready,
 )
 
 if TYPE_CHECKING:
@@ -28,21 +27,8 @@ def _clear_connections() -> Iterator[None]:
 
 
 # ---------------------------------------------------------------------------
-# Broadcast functions: send_collision_ready, send_behaviors_ready, send_behavior_updated
+# Broadcast functions: send_behaviors_ready, send_behavior_updated
 # ---------------------------------------------------------------------------
-
-
-async def test_send_collision_ready() -> None:
-    ws = AsyncMock()
-    _connections["s1"] = {ws}
-    entries = [{"name_a": "fire", "name_b": "wood", "force_on_b": 30}]
-    await send_collision_ready("s1", entries)
-    ws.send_json.assert_called_once()
-    msg = ws.send_json.call_args[0][0]
-    assert msg == {
-        "type": "collision_ready",
-        "entries": entries,
-    }
 
 
 async def test_send_behaviors_ready() -> None:
@@ -54,7 +40,7 @@ async def test_send_behaviors_ready() -> None:
     msg = ws.send_json.call_args[0][0]
     assert msg == {
         "type": "behaviors_ready",
-        "creature_name": "wolf",
+        "subject_name": "wolf",
         "behaviors": behaviors,
     }
 
@@ -69,7 +55,7 @@ async def test_send_behavior_updated() -> None:
             "action": 3,
             "amount": 0,
             "state_id": 1,
-            "creature_name": "wolf",
+            "subject_name": "wolf",
             "target_name": "fire",
         }
     ]
@@ -78,8 +64,8 @@ async def test_send_behavior_updated() -> None:
     msg = ws.send_json.call_args[0][0]
     assert msg == {
         "type": "behavior_updated",
-        "creature_name": "wolf",
-        "entries": entries,
+        "subject_name": "wolf",
+        "behaviors": entries,
     }
 
 

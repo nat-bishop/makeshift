@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from app.cache.store import normalize_name
 from app.models.blueprint import (
     GameObjectBlueprint,
     PhysicsProperties,
@@ -122,42 +121,9 @@ def make_blueprint(
         affordance=int(data.get("affordance", 3)),
         autonomous=bool(data.get("autonomous", False)),
         speed=int(data.get("speed", 2)),
-        has_field=bool(data.get("has_field", False)),
-        field_range_cm=int(data.get("field_range_cm", 0)),
+        initial_states=data.get("initial_states", []),
+        susceptible_states=data.get("susceptible_states", []),
     )
-
-
-# ---------------------------------------------------------------------------
-# Pair orientation helper
-# ---------------------------------------------------------------------------
-
-_SIDE_FIELDS = {
-    "damage_a": "damage_b",
-    "damage_b": "damage_a",
-    "state_a": "state_b",
-    "state_b": "state_a",
-}
-
-
-def orient_expected(pair: list[str], expected: dict) -> dict:
-    """Remap expected a/b fields to match evaluate_pair's sorted order.
-
-    evaluate_pair() sorts A/B lexicographically by normalized name.
-    Fixture pairs may list them in either order, so if the fixture's A
-    sorts after B, we swap all a/b suffixed fields.
-    force_b is signed and always relative to the sorted B, so negate on swap.
-    """
-    a, b = normalize_name(pair[0]), normalize_name(pair[1])
-    if a <= b:
-        return expected
-    swapped: dict = {}
-    for k, v in expected.items():
-        new_key = _SIDE_FIELDS.get(k, k)
-        if k == "force_b" and isinstance(v, list):
-            # Negate and reverse the range bounds for signed force
-            v = [-v[1], -v[0]]
-        swapped[new_key] = v
-    return swapped
 
 
 # ---------------------------------------------------------------------------

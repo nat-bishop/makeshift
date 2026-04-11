@@ -1,7 +1,7 @@
-"""Tests for collision rule and creature behavior data models + utility function."""
+"""Tests for behavior data models + utility function."""
 
-from app.cache.scene import BehaviorEntry, CollisionRule
-from app.engine.creature import PRIORITY_WEIGHTS, compute_utility
+from app.cache.scene import BehaviorEntry
+from app.engine.behavior import PRIORITY_WEIGHTS, compute_utility
 
 
 class TestComputeUtility:
@@ -47,19 +47,24 @@ class TestComputeUtility:
             assert u_high > u_low
 
 
-class TestCollisionRule:
-    def test_to_dict_roundtrip(self):
-        cr = CollisionRule(force_on_b=30)
-        d = cr.to_dict()
-        cr2 = CollisionRule.from_dict(d)
-        assert cr2.force_on_b == 30
-
-
 class TestBehaviorEntry:
     def test_to_dict_roundtrip(self):
-        be = BehaviorEntry(movement=0, priority=3, action=5, amount=0, state_id=0)
+        be = BehaviorEntry(
+            movement=0, priority=3, action=4, amount=80,
+            state_action=1, state_id=2, force=1,
+        )
         d = be.to_dict()
         be2 = BehaviorEntry.from_dict(d)
         assert be2.movement == 0
         assert be2.priority == 3
-        assert be2.action == 5
+        assert be2.action == 4
+        assert be2.amount == 80
+        assert be2.state_action == 1
+        assert be2.state_id == 2
+        assert be2.force == 1
+
+    def test_defaults(self):
+        be = BehaviorEntry.from_dict({})
+        assert be.movement == 2
+        assert be.state_action == 0
+        assert be.force == 0

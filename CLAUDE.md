@@ -39,8 +39,7 @@ make bench-tokens                          # measure token overhead: tool call v
 # Evals — LLM quality gates (cost money, NOT in `make test`):
 make eval                      # run all quality gate evals
 make eval-creation             # creation pipeline quality
-make eval-pairwise             # pairwise interaction + screening quality
-make eval-creature             # creature behavior quality
+make eval-behavior             # behavior + screening quality
 make eval-judge                # all evals + LLM judge for visual descriptions
 
 # For more granular control:
@@ -54,9 +53,7 @@ uv run pytest -k "test_name"                  # single test by name
 
 - **Object creation pipeline** (`creator/pipeline.py` → `routers/objects.py` → `images/pipeline.py` → `ws/handler.py`): Player text → `create_object()` generates name then fans out parallel LLM calls via `run_questions()` (defined in `creator/questions.py`) → `GameObjectBlueprint` → immediate JSON response (blueprint + `budget_remaining`) → background sprite gen + spawn integration. `GATE_DESTRUCTIBLE` gates `destruction_result_name` on `durability < 6`; `GATE_AUTONOMOUS` gates `speed` on `autonomous=True`. 8 new boolean questions set `initial_states` and `susceptible_states`. See [creation-pipeline.md](docs/creation-pipeline.md) for pipeline flow.
 
-- **Collision system** (`engine/pairwise.py`, `cache/scene.py`, `cache/store.py`): Force-only pairwise evaluation — 1 LLM call per pair (replaced the old 6-call PairwiseResult). Screening (1 call per new object) is pre-warming only, not a gate. `evaluate_collision()` → `CollisionRule(force_on_b: int)`. Force categories: none=0, pull=-30, drag=-80, push=30, throw=80. Results persisted to `cache.db` under `collision` cache type (reads legacy `pairwise` type too). Client requests lazy eval via WS `request_collision` on cache miss.
-
-- **Creature behavior** (`engine/creature.py`, `cache/scene.py`): `BehaviorEntry` (movement, priority, action, amount, state_id) stored scene-local in `BehaviorCache`. Three sequential stages: Stage 1 = movement + priority (all pairs, parallel) → Stage 2 = action (approach pairs only) → Stage 3 = params (actions 1-4 only). State-aware: `target_states` dict included in Stage 1 prompts for re-eval after `state_changed`. Delivered via `behaviors_ready` / `behavior_updated` WS messages. `compute_utility()` in `creature.py`: priority→weight via `PRIORITY_WEIGHTS {0:0.0, 1:25.0, 2:60.0, 3:100.0}` → distance falloff → 1.5× flee multiplier.
+- **Unified behavior system** (`engine/behavior.py`, `cache/scene.py`): All object interactions (active creatures + reactive objects like bombs/fans) in one system. `BehaviorEntry` (movement, priority, action, amount, state_action, state_id, force) stored scene-local in `BehaviorCache`. Bidirectional screening (1 call per spawn) identifies interesting pairs. Stage 1 = movement + priority (all pairs, parallel). Stage 2 filter: `movement=approach OR priority>0` (captures reactive objects). Stage 2 = composite action pipeline per pair: Call 1 (action: nothing/damage/heal/consume/push) → conditional parallel follow-ups (amount, state_modifier+state_id, force_modifier). Force modifier fires for damage ONLY. State-aware: `target_states` dict in Stage 1 prompts for re-eval after `state_changed`. Delivered via `behaviors_ready` / `behavior_updated` WS messages. `compute_utility()`: priority→weight via `PRIORITY_WEIGHTS {0:0.0, 1:25.0, 2:60.0, 3:100.0}` → distance falloff → 1.5× flee multiplier. Active objects (wolf, zombie) approach/flee targets. Reactive objects (bomb, fan, acid) have `movement=ignore` + `priority>0`, act at CONTACT_RANGE without moving.
 
 - **State system** (`models/state.py`): 4 `State` IntEnum values: BURNING(1), FROZEN(2), WET(3), ELECTRIFIED(4). Directed contradiction table: `STATE_REMOVES` dict. State properties on `GameObjectBlueprint`: `initial_states` (state IDs this object spawns with — fire spawns burning) and `susceptible_states` (state IDs that can propagate to this object — wood catches fire). Essential-state destruction: when an object loses ALL its `initial_states` via contradiction, it's destroyed instantly (no LLM call).
 
@@ -66,19 +63,18 @@ uv run pytest -k "test_name"                  # single test by name
 
 - **Session persistence** (`sessions/manager.py`): aiosqlite, 2 tables (sessions, objects). Session financial budget: $1.00 at $0.041/object.
 
-- **WebSocket** (`ws/handler.py`): Per-session multi-client broadcast. Client→Server: `ping`, `request_sprite`, `state_changed`, `request_collision`. Server→Client: `sprite_ready`, `sprite_failed`, `collision_ready`, `behaviors_ready`, `behavior_updated`.
+- **WebSocket** (`ws/handler.py`): Per-session multi-client broadcast. Client→Server: `ping`, `request_sprite`, `state_changed`. Server→Client: `sprite_ready`, `sprite_failed`, `behaviors_ready`, `behavior_updated`.
 
-- **Eval suite** (`backend/evals/`): Three standalone pydantic-evals runners (real LLM calls, run via `make eval-*`, NOT in `make test`), all reading `fixtures/eval_suite.yaml`: `run_creation.py` validates `create_object()` physics ranges; `run_pairwise.py` validates `evaluate_collision()` + `screen_pairs()`; `run_creature.py` validates creature behavioral phases. All evaluators return `dict[str, EvaluationReason]` (binary pass/fail via `in_range()`).
+- **Eval suite** (`backend/evals/`): Two standalone pydantic-evals runners (real LLM calls, run via `make eval-*`, NOT in `make test`), all reading `fixtures/eval_suite.yaml`: `run_creation.py` validates `create_object()` physics ranges; `run_behavior.py` validates `screen_pairs()` + `evaluate_behaviors()` (creatures + reactive objects). All evaluators return `dict[str, EvaluationReason]` (binary pass/fail via `in_range()`).
 
 **Godot Client** (`godot/`): Godot 4.6, GDScript.
 
 | Autoload | Purpose |
 |----------|---------|
 | `EventBus` | Central signal bus (14 signals: interaction_triggered, object_created, sprite_ready, sprite_failed, level_completed, creation_requested, creation_failed, placement_started, placement_ended, debug_toggled, player_died, player_damaged, player_healed, effect_applied) |
-| `InteractionCache` | Client-side cache. `_collision` dict: `"a::b" → {force_on_b}`. `_behavior` dict: `"creature::target" → {movement, priority, action, ...}`. `_pending_evals` dedup for lazy requests. `lookup_collision(a,b)`, `lookup_behavior(creature,target)`, `request_collision_eval(a,b)`. Populated via WS `collision_ready`/`behaviors_ready`/`behavior_updated` |
+| `InteractionCache` | Client-side cache. `_behavior` dict: `"subject::target" → {movement, priority, action, amount, state_action, state_id, force}`. `lookup_behavior(subject,target)`. Populated via WS `behaviors_ready`/`behavior_updated` |
 | `Backend` | HTTP + WebSocket client, session persistence, sprite cache, 10s sync timer |
 | `GameManager` | Game state (MENU/PLAYING/PAUSED), level management, scene transitions, `debug_mode` flag (toggled by `toggle_debug` input, emits `debug_toggled`) |
-| `CollisionResolver` | Per-frame collision resolution. Force-only: reads `InteractionCache.lookup_collision()`, applies `force_on_b`. On cache miss: calls `InteractionCache.request_collision_eval()` (lazy WS request). No cascade, no state changes |
 | `Log` | Structured logging (`autoloads/logger.gd`) |
 
 | System | File | Purpose |
@@ -89,7 +85,7 @@ uv run pytest -k "test_name"                  # single test by name
 | `StatePropagator` | `scripts/systems/state_propagator.gd` | Tick-based (2s) area spread. Objects with active states spread to susceptible neighbors. Replaces ObjectField + cascade. Radius scales with `height_cm` |
 | `PhysicsApplicator` | `scenes/game_object/physics_applicator.gd` | Applies LLM-generated physics values from blueprint to RigidBody2D |
 | `PhysicsComposer` | `scripts/systems/physics_composer.gd` | Continuous log2 height scaling via `scale_from_height(height_cm)`. Helpers: `world_sprite_size()`, `world_collision_size()`, `size_from_height()` (category label), `get_size_mass_multiplier(height_cm)`. `SURFACE_FRICTION = {0:0.05, 1:0.5, 2:1.0}` |
-| `CreatureBehavior` | `scripts/systems/creature_behavior.gd` | Per-object autonomous behavior runtime. Utility-based targeting via `InteractionCache.lookup_behavior()`. 5 consecutive errors → self-disables |
+| `ObjectBehavior` | `scripts/systems/object_behavior.gd` | Per-object behavior runtime for active + reactive objects. Utility-based targeting via `InteractionCache.lookup_behavior()`. Active objects (approach/flee) move toward targets; reactive objects (ignore + priority>0) act at CONTACT_RANGE without moving. Composite `_execute_action()`: primary action + state modifier + force modifier. 5 consecutive errors → self-disables |
 | `AffordanceSystem` | `scripts/systems/affordance_system.gd` | Carry/mount/climb interaction handling |
 | `StateContradictions` | `scripts/data/state_contradictions.gd` | Runtime mirror of backend `STATE_REMOVES`. Owns canonical `STATE_NAMES` dict. Used by `StateManager.add_state()` |
 | `DebugLabel` | `scripts/ui/debug_label.gd` | Floating overlay (name, HP, states). Driven by `GameManager.debug_mode` |
@@ -104,10 +100,8 @@ uv run pytest -k "test_name"                  # single test by name
 | GET | `/api/sessions/{id}` | Restore session |
 | PUT | `/api/sessions/{id}/sync` | Batch state sync from client |
 | POST | `/api/sessions/{id}/objects` | Create object from description |
-| GET | `/api/sessions/{id}/interactions/scene` | Bulk-load cached collision entries for all objects |
-| POST | `/api/sessions/{id}/interactions` | Evaluate a collision pair on demand (cache miss fallback) |
 | GET | `/health` | Health check |
-| WS | `/ws/{session_id}` | Sprite + collision/behavior delivery, lazy eval, state-change re-eval |
+| WS | `/ws/{session_id}` | Sprite + behavior delivery, state-change re-eval |
 
 ## Data Model Flow
 
@@ -150,12 +144,11 @@ Requires `.env` file (see `.env.example`):
 - `PhysicsProperties.surface: int` (0-2). `friction` is a computed property: `SURFACE_FRICTION[surface]` → 0.05/0.5/1.0. `surface` is what the LLM and pipeline set; `friction` is what physics reads.
 - `initial_states` and `susceptible_states` are `list[int]` of state IDs (1=burning, 2=frozen, 3=wet, 4=electrified). Fire has `initial_states=[1]`. Wood has `susceptible_states=[1]`. Set by 8 boolean creation questions in `creator/questions.py`.
 - Essential-state destruction: `_on_states_changed()` in `game_object.gd` checks if ANY initial state is still active. If none remain (e.g., fire loses burning via water contact), `take_damage(99999)` is called immediately. `_dying` flag prevents double-destruction.
-- `CollisionRule.force_on_b` uses discrete categories mapped to signed values: none=0, pull=-30, drag=-80, push=30, throw=80. These are set in `_FORCE_MAP` in `engine/pairwise.py`.
 - State propagation (`StatePropagator`) starts immediately on first state added (first tick deferred, then 2s interval). Stops when all states cleared. No `continuous` flag — all susceptible overlapping bodies get the state every 2s.
-- `InteractionCache.lookup_collision()` returns `{}` on miss — `CollisionResolver` checks `rule.is_empty()` and calls `request_collision_eval()`. The request is deduped via `_pending_evals`. Result arrives via `collision_ready` WS message.
-- Collision rules are permanent — NOT re-evaluated on `state_changed`. Only creature behaviors are re-evaluated. `state_changed` WS message triggers `_handle_state_changed()` which calls `invalidate_behavior()` then re-evaluates creature behaviors toward the changed object.
-- `cache.db` has two collision cache types: `collision` (new) and legacy `pairwise` (old). `get_collision()` checks both for backward compatibility.
-- `CreatureBehavior.priority` (0-3): 0=ignore, 1=mild(25), 2=moderate(60), 3=driven(100). `PRIORITY_WEIGHTS` dict in `engine/creature.py`; `compute_utility()` maps priority to weight before distance falloff.
+- `ObjectBehavior` runs in `_physics_process()` (per-frame, ~60fps) — NOT tick-based. First action fires immediately when target enters CONTACT_RANGE (48 units). Then ACTION_COOLDOWN (1.0s) between repeats. Critical for reactive objects: bomb explodes the frame something enters range.
+- `state_changed` WS message triggers `_handle_state_changed()` which calls `invalidate_behavior()` then re-evaluates all behaviors involving the changed object (both directions).
+- `ObjectBehavior.priority` (0-3): 0=ignore, 1=mild(25), 2=moderate(60), 3=driven(100). `PRIORITY_WEIGHTS` dict in `engine/behavior.py`; `compute_utility()` maps priority to weight before distance falloff.
+- `BehaviorEntry.action` enum: 0=nothing, 1=damage, 2=heal, 3=consume, 4=push. Force modifier (knockback) fires for damage only. State modifier (add/remove state) fires for damage/heal/consume. Actions are composite — a wolf can damage + push (knockback) + add_state(burning) in one interaction.
 - `pytest-asyncio` is configured with `asyncio_mode = "auto"` — `async def` tests run without extra markers
 - Background `asyncio.Task`s must be held in a module-level `set` to prevent GC before completion (see `routers/objects.py`)
 - `@computed_field` properties require `# type: ignore[prop-decorator]` — mypy still doesn't support decorators above `@property`
@@ -164,7 +157,6 @@ Requires `.env` file (see `.env.example`):
 - Interaction cache uses `creation_cache_enabled` setting (same toggle as creation cache). `cache.db` is separate from `game.db`.
 - Backend autoload uses `127.0.0.1` not `localhost` — avoids DNS resolution delays and IPv6 fallback issues on some systems
 - `Backend` autoload has `process_mode = PROCESS_MODE_ALWAYS` — it must process during pause (creation panel pauses the game, but WebSocket keepalive and sprite delivery must continue).
-- `body_entered` collision handling is deferred via `call_deferred` — resolving collisions directly in the signal callback crashes Godot with "Can't change state while flushing queries" because resolution can chain into state changes → new physics shapes.
 - `StateContradictions` owns the canonical `STATE_NAMES` dict (used by `StatePropagator` and `game_object.gd` to map state IDs to names).
 - `StateManager.add_state()` enforces contradictions (e.g., adding `burning` removes `frozen` and `wet`). Contradictions defined in `StateContradictions` (mirrors backend `STATE_REMOVES`).
 - GDScript `:=` type inference fails on Variant-returning functions — `abs()`, `clamp()`, `min()`, `max()`, array/dict element access, `instantiate()` all return Variant. Use explicit type (`var x: float = abs(speed)`) or untyped (`var x = abs(speed)`), never `:=`.

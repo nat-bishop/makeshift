@@ -2,11 +2,7 @@ extends SceneTree
 ## Comprehensive test harness: exercises all Godot subsystems headlessly.
 ## Run: cd godot && timeout 60 godot --headless --quit --script res://test/test_systems.gd
 
-const TPM = preload("res://scripts/data/tag_physics_map.gd")
-const TC = preload("res://scripts/data/tag_colors.gd")
 const CL = preload("res://scripts/data/collision_layers.gd")
-# PhysicsComposer can't be preloaded (class_name TagPhysicsMap dependency
-# isn't registered in --script mode). Algorithm tested inline instead.
 
 var _pass_count: int = 0
 var _fail_count: int = 0
@@ -16,10 +12,8 @@ var _cam: Camera2D
 # Autoload references (resolved from root children)
 var _event_bus: Node
 var _game_manager: Node
-var _rule_engine: Node
 var _backend: Node
 var _log: Node
-var _collision_resolver: Node
 
 
 func _initialize() -> void:
@@ -31,23 +25,15 @@ func _initialize() -> void:
 		match child.name:
 			"EventBus": _event_bus = child
 			"GameManager": _game_manager = child
-			"RuleEngine": _rule_engine = child
 			"Backend": _backend = child
 			"Log": _log = child
-			"CollisionResolver": _collision_resolver = child
 
 	_test_autoloads()
 	_test_collision_layers()
 	_test_game_manager()
-	_test_rule_engine()
 	_test_event_bus_signals()
-	_test_physics_composer()
-	_test_tag_colors()
-	_test_tag_physics_map()
-	_test_effect_executor()
 	_test_scene_compilation()
 	_test_level_construction()
-	_test_collision_resolver()
 	_test_game_object()
 
 	# Camera for screenshot compatibility
@@ -139,10 +125,8 @@ func _test_autoloads() -> void:
 	_section("Autoloads")
 	_assert("EventBus exists", _event_bus != null)
 	_assert("GameManager exists", _game_manager != null)
-	_assert("RuleEngine exists", _rule_engine != null)
 	_assert("Backend exists", _backend != null)
 	_assert("Log exists", _log != null)
-	_assert("CollisionResolver exists", _collision_resolver != null)
 
 	_assert("Log has debug()", _log.has_method("debug"))
 	_assert("Log has info()", _log.has_method("info"))
@@ -181,106 +165,7 @@ func _test_game_manager() -> void:
 
 
 # ---------------------------------------------------------------------------
-# Section 4: RuleEngine
-# ---------------------------------------------------------------------------
-
-func _test_rule_engine() -> void:
-	_section("RuleEngine")
-	_assert("not loaded initially", not _rule_engine.is_loaded())
-
-	var test_rules: Array = [
-		{
-			"rule_id": "fire",
-			"tags_required_a": ["HEAT_SOURCE"],
-			"tags_required_b": ["FLAMMABLE"],
-			"effects": [
-				{"effect_type": "ADD_TAG", "target": "b", "tag": "HEAT_SOURCE"},
-				{"effect_type": "ADD_TAG", "target": "b", "tag": "HOT"},
-				{"effect_type": "DAMAGE", "target": "b", "damage_amount": 10.0, "tick_interval": 1.0, "tick_duration": 5.0, "message": "catches fire"},
-			],
-			"execution_order": 5,
-			"bidirectional": false,
-			"cascade_eligible": true,
-		},
-		{
-			"rule_id": "freeze",
-			"tags_required_a": ["COLD"],
-			"tags_required_b": ["LIQUID"],
-			"effects": [
-				{"effect_type": "ADD_TAG", "target": "b", "tag": "FROZEN"},
-				{"effect_type": "ADD_TAG", "target": "b", "tag": "RIGID"},
-				{"effect_type": "REMOVE_TAG", "target": "b", "tag": "LIQUID", "message": "freezes"},
-			],
-			"execution_order": 3,
-			"bidirectional": false,
-		},
-		{
-			"rule_id": "electric",
-			"tags_required_a": ["ELECTRIC"],
-			"tags_required_b": ["METALLIC"],
-			"effects": [
-				{"effect_type": "DAMAGE", "target": "b", "damage_amount": 30.0},
-				{"effect_type": "ADD_TAG", "target": "b", "tag": "ELECTRIC", "message": "zaps"},
-			],
-			"execution_order": 4,
-			"bidirectional": true,
-		},
-		{
-			"rule_id": "wild_explosive",
-			"tags_required_a": ["EXPLOSIVE"],
-			"tags_required_b": [],
-			"effects": [{"effect_type": "DAMAGE", "target": "both", "damage_amount": 50}],
-			"execution_order": 10,
-			"bidirectional": false,
-		},
-	]
-	_rule_engine.load_rules(test_rules)
-	_assert("loaded after load_rules", _rule_engine.is_loaded())
-
-	# Direct match
-	var fire: Array = _rule_engine.find_matching_rules(["HEAT_SOURCE"], ["FLAMMABLE"])
-	_assert("fire rule matched", fire.size() == 1)
-	_assert("fire rule id correct", fire[0].get("rule_id", "") == "fire")
-
-	# No match
-	var none: Array = _rule_engine.find_matching_rules(["RIGID"], ["BOUNCY"])
-	_assert("no match for RIGID+BOUNCY", none.is_empty())
-
-	# Bidirectional
-	var bidir: Array = _rule_engine.find_matching_rules(["METALLIC"], ["ELECTRIC"])
-	_assert("bidirectional match (reversed)", bidir.size() == 1)
-	_assert("bidirectional rule id correct", bidir[0].get("rule_id", "") == "electric")
-
-	# Priority ordering
-	var multi: Array = _rule_engine.find_matching_rules(["HEAT_SOURCE", "COLD"], ["FLAMMABLE", "LIQUID"])
-	_assert("multi-match returns 2 rules", multi.size() == 2)
-	_assert("higher execution_order first", multi[0].get("execution_order", 0) > multi[1].get("execution_order", 0))
-
-	# Partial mismatch
-	var partial: Array = _rule_engine.find_matching_rules(["HEAT_SOURCE"], ["RIGID"])
-	_assert("no match when b-tags miss required", partial.is_empty())
-
-	# Wildcard match
-	var wild: Array = _rule_engine.find_matching_rules(["EXPLOSIVE"], ["ANYTHING"])
-	_assert("wildcard matches any tags_b", wild.size() == 1)
-	_assert("wildcard rule id", wild[0].get("rule_id", "") == "wild_explosive")
-
-	# Wildcard does not match if tags_a missing
-	var no_wild: Array = _rule_engine.find_matching_rules(["RIGID"], ["ANYTHING"])
-	_assert("wildcard skips if tags_a miss", no_wild.is_empty())
-
-	# Wildcard + pair match simultaneously
-	var both: Array = _rule_engine.find_matching_rules(["EXPLOSIVE", "HEAT_SOURCE"], ["FLAMMABLE"])
-	_assert("wildcard+pair both match", both.size() == 2)
-	_assert("explosive (priority 10) first", both[0].get("rule_id", "") == "wild_explosive")
-
-	# Empty input
-	var empty: Array = _rule_engine.find_matching_rules([], [])
-	_assert("empty tags returns empty", empty.is_empty())
-
-
-# ---------------------------------------------------------------------------
-# Section 5: EventBus Signals
+# Section 4: EventBus Signals
 # ---------------------------------------------------------------------------
 
 func _test_event_bus_signals() -> void:
@@ -294,347 +179,7 @@ func _test_event_bus_signals() -> void:
 
 
 # ---------------------------------------------------------------------------
-# Section 6: PhysicsComposer
-# ---------------------------------------------------------------------------
-
-func _test_physics_composer() -> void:
-	_section("PhysicsComposer")
-	# PhysicsComposer can't be loaded in --script mode (class_name dep chain).
-	# Test the algorithm inline using TPM.TAG_PHYSICS data directly.
-	# This mirrors PhysicsComposer.compose_physics() logic exactly.
-
-	# Empty tags -> defaults
-	var empty_result: Dictionary = _compose_physics([])
-	_assert("empty: mass == 1.0", is_equal_approx(empty_result["mass"], 1.0))
-	_assert("empty: gravity == 1.0", is_equal_approx(empty_result["gravity"], 1.0))
-	_assert("empty: friction == 0.5", is_equal_approx(empty_result["friction"], 0.5))
-	_assert("empty: bounce == 0.0", is_equal_approx(empty_result["bounce"], 0.0))
-
-	# Single tag HEAVY
-	var heavy: Dictionary = _compose_physics(["HEAVY"])
-	_assert("HEAVY: mass == 5.0", is_equal_approx(heavy["mass"], 5.0))
-	_assert("HEAVY: gravity == 1.2", is_equal_approx(heavy["gravity"], 1.2))
-	_assert("HEAVY: friction == 0.7", is_equal_approx(heavy["friction"], 0.7))
-	_assert("HEAVY: bounce == 0.0", is_equal_approx(heavy["bounce"], 0.0))
-
-	# Single tag BOUNCY
-	var bouncy: Dictionary = _compose_physics(["BOUNCY"])
-	_assert("BOUNCY: bounce == 0.9", is_equal_approx(bouncy["bounce"], 0.9))
-	_assert("BOUNCY: friction == 0.2", is_equal_approx(bouncy["friction"], 0.2))
-	_assert("BOUNCY: mass == 1.0 (default)", is_equal_approx(bouncy["mass"], 1.0))
-	_assert("BOUNCY: gravity == 1.0 (default)", is_equal_approx(bouncy["gravity"], 1.0))
-
-	# HEAVY(priority 8) wins over LIGHT(priority 7) for mass
-	var heavy_light: Dictionary = _compose_physics(["HEAVY", "LIGHT"])
-	_assert("HEAVY wins over LIGHT for mass", is_equal_approx(heavy_light["mass"], 5.0))
-
-	# Same-priority average: BOUNCY(6) + FROZEN(6) for friction
-	var bouncy_frozen: Dictionary = _compose_physics(["BOUNCY", "FROZEN"])
-	_assert("same priority friction avg", is_equal_approx(bouncy_frozen["friction"], (0.2 + 0.05) / 2.0))
-
-	# Higher priority wins: FLYING(9) over HEAVY(8) for gravity
-	var fly_heavy: Dictionary = _compose_physics(["FLYING", "HEAVY"])
-	_assert("FLYING overrides HEAVY gravity", is_equal_approx(fly_heavy["gravity"], 0.0))
-
-	# Size data (inline constants matching PhysicsComposer.SIZE_TO_PHYSICS)
-	var size_data: Dictionary = {
-		"tiny": {"sprite": 24, "collision": 16},
-		"small": {"sprite": 44, "collision": 32},
-		"medium": {"sprite": 72, "collision": 56},
-		"large": {"sprite": 120, "collision": 96},
-		"huge": {"sprite": 192, "collision": 160},
-	}
-	_assert("tiny: sprite == 24", size_data["tiny"]["sprite"] == 24)
-	_assert("tiny: collision == 16", size_data["tiny"]["collision"] == 16)
-	_assert("medium: sprite == 72", size_data["medium"]["sprite"] == 72)
-	_assert("unknown size -> medium default", size_data.get("gigantic", size_data["medium"])["sprite"] == 72)
-
-	# Shape detection (inline constants matching PhysicsComposer)
-	var elongated: Array[String] = ["sword", "plank", "rope", "ladder", "wand", "torch", "fan"]
-	var round_forms: Array[String] = ["sphere", "ball", "boulder", "wheel"]
-	_assert("sword -> capsule", "sword" in elongated)
-	_assert("ball -> circle", "ball" in round_forms)
-	_assert("box -> rectangle (default)", "box" not in elongated and "box" not in round_forms)
-	_assert("unknown -> rectangle", "xyz" not in elongated and "xyz" not in round_forms)
-
-
-# Inline mirror of PhysicsComposer.compose_physics() — tests the algorithm
-# using TPM.TAG_PHYSICS data directly (avoids class_name dep chain).
-func _compose_physics(tags: Array) -> Dictionary:
-	var mass_entries: Array = []
-	var gravity_entries: Array = []
-	var friction_entries: Array = []
-	var bounce_entries: Array = []
-
-	for tag in tags:
-		var tag_str: String = str(tag)
-		if tag_str not in TPM.TAG_PHYSICS:
-			continue
-		var props: Dictionary = TPM.TAG_PHYSICS[tag_str]
-		var priority: int = props["priority"]
-
-		if props["mass"] >= 0.0:
-			mass_entries.append({"priority": priority, "value": props["mass"]})
-		if props["gravity"] > -2.0 and props["gravity"] != -1.0:
-			gravity_entries.append({"priority": priority, "value": props["gravity"]})
-		if props["friction"] >= 0.0:
-			friction_entries.append({"priority": priority, "value": props["friction"]})
-		if props["bounce"] >= 0.0:
-			bounce_entries.append({"priority": priority, "value": props["bounce"]})
-
-	return {
-		"mass": _resolve_property(mass_entries, 1.0),
-		"gravity": _resolve_property(gravity_entries, 1.0),
-		"friction": _resolve_property(friction_entries, 0.5),
-		"bounce": _resolve_property(bounce_entries, 0.0),
-	}
-
-
-func _resolve_property(entries: Array, default_value: float) -> float:
-	if entries.is_empty():
-		return default_value
-	var max_priority: int = -1
-	for entry in entries:
-		if entry["priority"] > max_priority:
-			max_priority = entry["priority"]
-	var values: Array = []
-	for entry in entries:
-		if entry["priority"] == max_priority:
-			values.append(entry["value"])
-	var total: float = 0.0
-	for v in values:
-		total += v
-	return total / values.size()
-
-
-# ---------------------------------------------------------------------------
-# Section 9: TagColors
-# ---------------------------------------------------------------------------
-
-func _test_tag_colors() -> void:
-	_section("TagColors")
-	_assert("HEAT_SOURCE has color", TC.get_color("HEAT_SOURCE") != TC.DEFAULT)
-	_assert("FROZEN has color", TC.get_color("FROZEN") != TC.DEFAULT)
-	_assert("ELECTRIC has color", TC.get_color("ELECTRIC") != TC.DEFAULT)
-	_assert("LIVING has color", TC.get_color("LIVING") != TC.DEFAULT)
-	_assert("unknown tag -> DEFAULT", TC.get_color("NONEXISTENT") == TC.DEFAULT)
-	_assert("DEFAULT is gray", TC.DEFAULT == Color("#AAAAAA"))
-	_assert("COLORS has 14 entries", TC.COLORS.size() == 14)
-
-
-# ---------------------------------------------------------------------------
-# Section 10: TagPhysicsMap
-# ---------------------------------------------------------------------------
-
-func _test_tag_physics_map() -> void:
-	_section("TagPhysicsMap")
-	_assert("HEAVY defined", "HEAVY" in TPM.TAG_PHYSICS)
-	_assert("LIGHT defined", "LIGHT" in TPM.TAG_PHYSICS)
-	_assert("BOUNCY defined", "BOUNCY" in TPM.TAG_PHYSICS)
-	_assert("FLYING defined", "FLYING" in TPM.TAG_PHYSICS)
-	_assert("FROZEN defined", "FROZEN" in TPM.TAG_PHYSICS)
-	_assert("MOLTEN defined", "MOLTEN" in TPM.TAG_PHYSICS)
-
-	var heavy: Dictionary = TPM.TAG_PHYSICS["HEAVY"]
-	_assert("HEAVY has priority", heavy.has("priority"))
-	_assert("HEAVY mass > 1.0", heavy["mass"] > 1.0)
-	_assert("HEAVY priority is 8", heavy["priority"] == 8)
-	_assert("TAG_PHYSICS has 12 entries", TPM.TAG_PHYSICS.size() == 12)
-
-
-# ---------------------------------------------------------------------------
-# Section 11: EffectExecutor
-# ---------------------------------------------------------------------------
-
-func _test_effect_executor() -> void:
-	_section("EffectExecutor")
-	var root = get_root()
-
-	var ee_script = load("res://scripts/systems/effect_executor.gd")
-	var ee = Node.new()
-	ee.set_script(ee_script)
-	root.add_child(ee)
-
-	# --- DAMAGE ---
-	var a1 = _make_mock_body("src1", ["HEAT_SOURCE"])
-	var b1 = _make_mock_body("tgt1", ["FLAMMABLE"])
-	root.add_child(a1)
-	root.add_child(b1)
-	var damage_rule: Dictionary = {
-		"effects": [{"effect_type": "DAMAGE", "target": "b", "damage_amount": 25.0, "message": ""}],
-	}
-	ee.execute(damage_rule, a1, b1)
-	_assert("DAMAGE: logged", b1.get("damage_log").size() == 1)
-	_assert("DAMAGE: amount 25", b1.get("damage_log")[0] == 25.0)
-	a1.free()
-	b1.free()
-
-	# --- DESTROY (DAMAGE 99999) ---
-	var a2 = _make_mock_body("src2", [])
-	var b2 = _make_mock_body("tgt2", ["BREAKABLE"], 100.0)
-	root.add_child(a2)
-	root.add_child(b2)
-	ee.execute({"effects": [{"effect_type": "DAMAGE", "target": "b", "damage_amount": 99999.0, "message": ""}]}, a2, b2)
-	_assert("DESTROY: 99999 damage", b2.get("damage_log")[0] == 99999.0)
-	a2.free()
-	b2.free()
-
-	# --- IGNITE (decomposed: ADD_TAG + ADD_TAG + DOT) ---
-	var a3 = _make_mock_body("src3", ["HEAT_SOURCE"])
-	var b3 = _make_mock_body("tgt3", ["FLAMMABLE"])
-	root.add_child(a3)
-	root.add_child(b3)
-	ee.execute({"effects": [
-		{"effect_type": "ADD_TAG", "target": "b", "tag": "HEAT_SOURCE"},
-		{"effect_type": "ADD_TAG", "target": "b", "tag": "HOT"},
-		{"effect_type": "DAMAGE", "target": "b", "damage_amount": 10.0, "tick_interval": 1.0, "tick_duration": 5.0, "message": "burns"},
-	]}, a3, b3)
-	_assert("IGNITE: adds HEAT_SOURCE", "HEAT_SOURCE" in b3.get("tags"))
-	_assert("IGNITE: adds HOT", "HOT" in b3.get("tags"))
-	a3.free()
-	b3.free()
-
-	# --- EXTINGUISH (decomposed: REMOVE_TAG + REMOVE_TAG) ---
-	var a4 = _make_mock_body("src4", ["LIQUID"])
-	var b4 = _make_mock_body("tgt4", ["HEAT_SOURCE", "HOT"])
-	root.add_child(a4)
-	root.add_child(b4)
-	ee.execute({"effects": [
-		{"effect_type": "REMOVE_TAG", "target": "b", "tag": "HEAT_SOURCE"},
-		{"effect_type": "REMOVE_TAG", "target": "b", "tag": "HOT", "message": ""},
-	]}, a4, b4)
-	_assert("EXTINGUISH: removes HEAT_SOURCE", "HEAT_SOURCE" not in b4.get("tags"))
-	_assert("EXTINGUISH: removes HOT", "HOT" not in b4.get("tags"))
-	a4.free()
-	b4.free()
-
-	# --- FREEZE (decomposed: ADD_TAG + ADD_TAG + REMOVE_TAG) ---
-	var a5 = _make_mock_body("src5", ["COLD"])
-	var b5 = _make_mock_body("tgt5", ["LIQUID"])
-	root.add_child(a5)
-	root.add_child(b5)
-	ee.execute({"effects": [
-		{"effect_type": "ADD_TAG", "target": "b", "tag": "FROZEN"},
-		{"effect_type": "ADD_TAG", "target": "b", "tag": "RIGID"},
-		{"effect_type": "REMOVE_TAG", "target": "b", "tag": "LIQUID", "message": ""},
-	]}, a5, b5)
-	_assert("FREEZE: adds FROZEN", "FROZEN" in b5.get("tags"))
-	_assert("FREEZE: adds RIGID", "RIGID" in b5.get("tags"))
-	_assert("FREEZE: removes LIQUID", "LIQUID" not in b5.get("tags"))
-	a5.free()
-	b5.free()
-
-	# --- MELT (decomposed: REMOVE_TAG + REMOVE_TAG + ADD_TAG) ---
-	var a6 = _make_mock_body("src6", ["HEAT_SOURCE"])
-	var b6 = _make_mock_body("tgt6", ["FROZEN", "RIGID"])
-	root.add_child(a6)
-	root.add_child(b6)
-	ee.execute({"effects": [
-		{"effect_type": "REMOVE_TAG", "target": "b", "tag": "FROZEN"},
-		{"effect_type": "REMOVE_TAG", "target": "b", "tag": "RIGID"},
-		{"effect_type": "ADD_TAG", "target": "b", "tag": "LIQUID", "message": ""},
-	]}, a6, b6)
-	_assert("MELT: removes FROZEN", "FROZEN" not in b6.get("tags"))
-	_assert("MELT: removes RIGID", "RIGID" not in b6.get("tags"))
-	_assert("MELT: adds LIQUID", "LIQUID" in b6.get("tags"))
-	a6.free()
-	b6.free()
-
-	# --- ADD_TAG (now one effect per tag) ---
-	var a7 = _make_mock_body("src7", [])
-	var b7 = _make_mock_body("tgt7", ["RIGID"])
-	root.add_child(a7)
-	root.add_child(b7)
-	ee.execute({"effects": [
-		{"effect_type": "ADD_TAG", "target": "b", "tag": "MAGNETIC"},
-		{"effect_type": "ADD_TAG", "target": "b", "tag": "GLOWING", "message": ""},
-	]}, a7, b7)
-	_assert("ADD_TAG: MAGNETIC added", "MAGNETIC" in b7.get("tags"))
-	_assert("ADD_TAG: GLOWING added", "GLOWING" in b7.get("tags"))
-	a7.free()
-	b7.free()
-
-	# --- REMOVE_TAG (now one effect per tag) ---
-	var a8 = _make_mock_body("src8", [])
-	var b8 = _make_mock_body("tgt8", ["MAGNETIC", "GLOWING"])
-	root.add_child(a8)
-	root.add_child(b8)
-	ee.execute({"effects": [
-		{"effect_type": "REMOVE_TAG", "target": "b", "tag": "MAGNETIC"},
-		{"effect_type": "REMOVE_TAG", "target": "b", "tag": "GLOWING", "message": ""},
-	]}, a8, b8)
-	_assert("REMOVE_TAG: MAGNETIC gone", "MAGNETIC" not in b8.get("tags"))
-	_assert("REMOVE_TAG: GLOWING gone", "GLOWING" not in b8.get("tags"))
-	a8.free()
-	b8.free()
-
-	# --- TRANSFORM (decomposed: REMOVE_TAG + ADD_TAG) ---
-	var a9 = _make_mock_body("src9", [])
-	var b9 = _make_mock_body("tgt9", ["LIQUID"])
-	root.add_child(a9)
-	root.add_child(b9)
-	ee.execute({"effects": [
-		{"effect_type": "REMOVE_TAG", "target": "b", "tag": "LIQUID"},
-		{"effect_type": "ADD_TAG", "target": "b", "tag": "FROZEN", "message": ""},
-	]}, a9, b9)
-	_assert("TRANSFORM: FROZEN added", "FROZEN" in b9.get("tags"))
-	_assert("TRANSFORM: LIQUID removed", "LIQUID" not in b9.get("tags"))
-	a9.free()
-	b9.free()
-
-	# --- ELECTRIFY (decomposed: DAMAGE + ADD_TAG) ---
-	var a10 = _make_mock_body("src10", ["ELECTRIC"])
-	var b10 = _make_mock_body("tgt10", ["METALLIC"])
-	root.add_child(a10)
-	root.add_child(b10)
-	ee.execute({"effects": [
-		{"effect_type": "DAMAGE", "target": "b", "damage_amount": 30.0},
-		{"effect_type": "ADD_TAG", "target": "b", "tag": "ELECTRIC", "message": ""},
-	]}, a10, b10)
-	_assert("ELECTRIFY: damage applied", b10.get("damage_log").size() == 1)
-	_assert("ELECTRIFY: ELECTRIC tag added", "ELECTRIC" in b10.get("tags"))
-	a10.free()
-	b10.free()
-
-	# --- Target routing: "a" ---
-	var ta = _make_mock_body("target_a", ["RIGID"])
-	var tb = _make_mock_body("target_b", ["RIGID"])
-	root.add_child(ta)
-	root.add_child(tb)
-	ee.execute({"effects": [{"effect_type": "DAMAGE", "target": "a", "damage_amount": 10.0, "message": ""}]}, ta, tb)
-	_assert("target=a: body_a damaged", ta.get("damage_log").size() == 1)
-	_assert("target=a: body_b untouched", tb.get("damage_log").size() == 0)
-	ta.free()
-	tb.free()
-
-	# --- Target routing: "both" ---
-	var ba = _make_mock_body("both_a", ["RIGID"])
-	var bb = _make_mock_body("both_b", ["RIGID"])
-	root.add_child(ba)
-	root.add_child(bb)
-	ee.execute({"effects": [{"effect_type": "DAMAGE", "target": "both", "damage_amount": 5.0, "message": ""}]}, ba, bb)
-	_assert("target=both: body_a damaged", ba.get("damage_log").size() == 1)
-	_assert("target=both: body_b damaged", bb.get("damage_log").size() == 1)
-	ba.free()
-	bb.free()
-
-	# --- interaction_triggered signal ---
-	var signal_fired: Array = [false]
-	_event_bus.interaction_triggered.connect(func(_sn, _st, _tn, _tt, _em, _wp): signal_fired[0] = true, CONNECT_ONE_SHOT)
-	var sa = _make_mock_body("sig_a", ["X"])
-	var sb = _make_mock_body("sig_b", ["Y"])
-	root.add_child(sa)
-	root.add_child(sb)
-	ee.execute({"effects": [{"effect_type": "DAMAGE", "target": "b", "damage_amount": 1.0, "message": "test hit"}]}, sa, sb)
-	_assert("interaction_triggered signal fires", signal_fired[0])
-	sa.free()
-	sb.free()
-
-	ee.free()
-
-
-# ---------------------------------------------------------------------------
-# Section 12: Scene Compilation
+# Section 6: Scene Compilation
 # ---------------------------------------------------------------------------
 
 func _test_scene_compilation() -> void:
@@ -696,90 +241,7 @@ func _test_level_construction() -> void:
 
 
 # ---------------------------------------------------------------------------
-# Section 14: CollisionResolver
-# ---------------------------------------------------------------------------
-
-func _test_collision_resolver() -> void:
-	_section("CollisionResolver")
-	var root = get_root()
-
-	_assert("has resolve_collision()", _collision_resolver.has_method("resolve_collision"))
-
-	# Manually init _effect_executor since _ready() didn't fire
-	var ee_script = load("res://scripts/systems/effect_executor.gd")
-	var ee = Node.new()
-	ee.set_script(ee_script)
-	_collision_resolver.add_child(ee)
-	_collision_resolver.set("_effect_executor", ee)
-
-	# Load rules for collision tests (primitive effects)
-	_rule_engine.load_rules([{
-		"rule_id": "test_fire",
-		"tags_required_a": ["HEAT_SOURCE"],
-		"tags_required_b": ["FLAMMABLE"],
-		"effects": [
-			{"effect_type": "ADD_TAG", "target": "b", "tag": "HEAT_SOURCE"},
-			{"effect_type": "ADD_TAG", "target": "b", "tag": "HOT"},
-			{"effect_type": "DAMAGE", "target": "b", "damage_amount": 10.0, "tick_interval": 1.0, "tick_duration": 5.0, "message": "burns"},
-		],
-		"execution_order": 5,
-		"bidirectional": false,
-		"cascade_eligible": false,
-	}])
-
-	# Functional collision
-	var body_a = _make_mock_body("fire_src", ["HEAT_SOURCE"])
-	var body_b = _make_mock_body("wood", ["FLAMMABLE"])
-	root.add_child(body_a)
-	root.add_child(body_b)
-	_collision_resolver.resolve_collision(body_a, body_b)
-	_assert("collision: adds HEAT_SOURCE", "HEAT_SOURCE" in body_b.get("tags"))
-	_assert("collision: adds HOT", "HOT" in body_b.get("tags"))
-
-	# Separate calls fire independently (no cross-call blocking)
-	body_b.remove_tag("HEAT_SOURCE")
-	body_b.remove_tag("HOT")
-	body_b.set("tags", ["FLAMMABLE"])
-	_collision_resolver.resolve_collision(body_a, body_b)
-	_assert("separate call fires again", "HEAT_SOURCE" in body_b.get("tags"))
-
-	body_a.free()
-	body_b.free()
-
-	# No-match collision
-	var body_c = _make_mock_body("rock", ["RIGID"])
-	var body_d = _make_mock_body("dirt", ["RIGID"])
-	root.add_child(body_c)
-	root.add_child(body_d)
-	_collision_resolver.resolve_collision(body_c, body_d)
-	_assert("no-match: c unchanged", body_c.get("tags") == ["RIGID"])
-	_assert("no-match: d unchanged", body_d.get("tags") == ["RIGID"])
-	body_c.free()
-	body_d.free()
-
-	# Per-chain dedup: same pair blocked within one cascade chain
-	var body_e = _make_mock_body("aaa", ["HEAT_SOURCE"])
-	var body_f = _make_mock_body("zzz", ["FLAMMABLE"])
-	root.add_child(body_e)
-	root.add_child(body_f)
-	var shared_resolved: Dictionary = {}
-	# First call at depth 1 (simulates being inside a cascade) to use shared dict
-	_collision_resolver.resolve_collision(body_e, body_f, 1, "", shared_resolved)
-	body_f.remove_tag("HEAT_SOURCE")
-	body_f.remove_tag("HOT")
-	body_f.set("tags", ["FLAMMABLE"])
-	# Same resolved dict blocks re-fire within the chain
-	_collision_resolver.resolve_collision(body_f, body_e, 1, "", shared_resolved)
-	_assert("chain dedup blocks re-fire", "HEAT_SOURCE" not in body_f.get("tags"))
-
-	body_e.free()
-	body_f.free()
-
-	ee.free()
-
-
-# ---------------------------------------------------------------------------
-# Section 15: GameObject
+# Section 14: GameObject
 # ---------------------------------------------------------------------------
 
 func _test_game_object() -> void:
@@ -787,8 +249,8 @@ func _test_game_object() -> void:
 	var root = get_root()
 	# game_object.gd can't be loaded in --script mode (CollisionLayers class_name).
 	# Test the GameObject API contract via mock bodies that implement the same
-	# interface. This validates the behavior that EffectExecutor/CollisionResolver
-	# depend on.
+	# interface. This validates the behavior that the interaction system
+	# depends on.
 
 	var go = _make_mock_body("test_001", ["RIGID", "HEAVY"], 100.0)
 	go.set("blueprint", {"id": "test_001", "tags": ["RIGID", "HEAVY"], "visual_descriptor": {}})
