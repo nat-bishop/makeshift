@@ -186,6 +186,43 @@ def save_report(report: EvaluationReport, run_dir: Path) -> Path:
     return path
 
 
+def _report_stats(report: EvaluationReport) -> tuple[int, int, int]:
+    """Return (unique_subjects, repetitions, total_assertions) for a report."""
+    source_names = {c.source_case_name or c.name for c in report.cases}
+    unique = len(source_names)
+    reps = len(report.cases) // unique if unique else 0
+    total_assertions = sum(len(c.assertions) for c in report.cases)
+    return unique, reps, total_assertions
+
+
+def _collect_failures(report: EvaluationReport) -> list[tuple[str, str, int, int, str]]:
+    """Collect failing assertions, deduplicated by (source_case, assertion_name).
+
+    Returns list of (source_case, assertion_name, fail_count, total_reps, reason)
+    sorted by source_case then assertion_name.
+    """
+    # Group by (source_case, assertion_name)
+    fail_counts: dict[tuple[str, str], int] = defaultdict(int)
+    rep_counts: dict[tuple[str, str], int] = defaultdict(int)
+    reasons: dict[tuple[str, str], str] = {}
+
+    for case in report.cases:
+        source = case.source_case_name or case.name
+        for aname, result in case.assertions.items():
+            key = (source, aname)
+            rep_counts[key] += 1
+            if not result.value:
+                fail_counts[key] += 1
+                if key not in reasons and result.reason:
+                    reasons[key] = result.reason
+
+    rows: list[tuple[str, str, int, int, str]] = []
+    for key in sorted(fail_counts):
+        source, aname = key
+        rows.append((source, aname, fail_counts[key], rep_counts[key], reasons.get(key, "")))
+    return rows
+
+
 def generate_summary(run_dir: Path) -> Path:
     """Generate summary.md from all report JSONs in run_dir. Idempotent."""
     reports: list[EvaluationReport] = []
@@ -197,15 +234,19 @@ def generate_summary(run_dir: Path) -> Path:
 
     if reports:
         # Overview table
-        lines.append("| Report | Pass Rate | Cases |")
-        lines.append("|--------|-----------|-------|")
+        lines.append("| Report | Pass Rate | Subjects | Reps | Cases | Assertions |")
+        lines.append("|--------|-----------|----------|------|-------|------------|")
         for report in reports:
             pass_rate = "N/A"
             for a in report.analyses:
                 if isinstance(a, ScalarResult) and "pass rate" in a.title.lower():
                     pass_rate = f"{a.value}{a.unit}"
                     break
-            lines.append(f"| {report.name} | {pass_rate} | {len(report.cases)} |")
+            unique, reps, total_assertions = _report_stats(report)
+            lines.append(
+                f"| {report.name} | {pass_rate} | {unique} | {reps} "
+                f"| {len(report.cases)} | {total_assertions} |"
+            )
 
         # Per-report detail
         for report in reports:
@@ -221,6 +262,16 @@ def generate_summary(run_dir: Path) -> Path:
                         "| " + " | ".join(str(v) for v in row) + " |" for row in analysis.rows
                     )
                     lines.append("")
+
+            # Failures section
+            failures = _collect_failures(report)
+            if failures:
+                lines.append("### Failures\n")
+                lines.append("| Subject | Assertion | Failed | Reason |")
+                lines.append("|---------|-----------|--------|--------|")
+                for source, aname, fails, reps, reason in failures:
+                    lines.append(f"| {source} | {aname} | {fails}/{reps} | {reason} |")
+                lines.append("")
 
     summary_path = run_dir / "summary.md"
     summary_path.write_text("\n".join(lines), encoding="utf-8")

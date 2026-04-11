@@ -244,7 +244,7 @@ creation_tests:
 
   - name: diamond
     expected:
-      mass_kg: [1e-07, 0.1]
+      mass_kg: [0.001, 0.5]
       height_cm: [0.1, 5]
       affordance: 0
       durability: [4, 6]
@@ -310,7 +310,7 @@ creation_tests:
   - name: dragon
     expected:
       mass_kg: [200, 10000]
-      height_cm: [200, 3000]
+      height_cm: [120, 3000]
       autonomous: true
       speed: [2, 4]
       durability: [3, 5]

@@ -96,17 +96,17 @@ CREATION_QUESTIONS: list[Question] = [
             "normal=survives casual handling (wood, campfire, plastic), "
             "solid=resists strong force (iron, brick), "
             "strong=requires extreme force (steel, thick stone), "
-            "iron=nearly indestructible (tank, vault), "
+            "elite=nearly indestructible (tank, vault), "
             "permanent=cannot be destroyed (mountain, bedrock)."
         ),
-        choices=("soft", "weak", "normal", "solid", "strong", "iron", "permanent"),
+        choices=("soft", "weak", "normal", "solid", "strong", "elite", "permanent"),
         choice_map=(
             ("soft", 0),
             ("weak", 1),
             ("normal", 2),
             ("solid", 3),
             ("strong", 4),
-            ("iron", 5),
+            ("elite", 5),
             ("permanent", 6),
         ),
     ),
@@ -149,7 +149,7 @@ CREATION_QUESTIONS: list[Question] = [
             "carry=pick up and hold (sword, bottle, ball, cat, small items), "
             "ride=sit on top and move (horse, car, boat), "
             "scale=climb up it (ladder, tree, wall), "
-            "none=too heavy/big/dangerous (boulder, lava, mountain)."
+            "none=too heavy/large/immovable (boulder, lava, mountain)."
         ),
         choices=("carry", "ride", "scale", "none"),
         choice_map=(("carry", 0), ("ride", 1), ("scale", 2), ("none", 3)),

@@ -59,6 +59,10 @@ func _process(delta: float) -> void:
 		_auto_fade_out()
 
 
+func is_busy() -> bool:
+	return _is_creating
+
+
 func _on_create_pressed() -> void:
 	_submit()
 
@@ -82,7 +86,6 @@ func _submit() -> void:
 	create_button.disabled = true
 	status_label.text = "Creating..."
 	status_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
-	GameManager.resume_game()
 	EventBus.creation_requested.emit()
 
 	var result: Dictionary = await Backend.create_object(description)
@@ -96,7 +99,6 @@ func _submit() -> void:
 		status_label.text = error_msg
 		status_label.add_theme_color_override("font_color", Color(1.0, 0.3, 0.3))
 		EventBus.creation_failed.emit()
-		GameManager.pause_game()
 	else:
 		status_label.text = ""
 		description_input.text = ""
