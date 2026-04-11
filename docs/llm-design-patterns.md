@@ -132,39 +132,40 @@ All parallel (~60ms wall):
 Later questions use answers from earlier questions as input context. Each stage is trivially simple because prior answers are given.
 
 ```
-Stage 1: "Firefighter sees burning tree. 0=approach 1=flee 2=ignore"
-  → 0 (approach)
+Stage 1: "Firefighter sees burning tree. approach/flee/ignore"
+  → approach
 
 Stage 2: "Firefighter is APPROACHING burning tree because it wants to help.
-          On arrival: 0=nothing 1=damage 2=heal 3=add state 4=remove state 5=destroy 6=take"
-  → 4 (remove state)
+          On contact: nothing/attack/heal/consume/push"
+  → attack
 
-Stage 3: "Firefighter will REMOVE A STATE from burning tree. Which?
-          1=burning 2=frozen 3=wet 4=electrified"
-  → 1 (burning)
+Stage 3 (parallel): "Firefighter will ATTACK burning tree.
+                     Apply/remove a state? none/add/remove"  → remove
+                    "Firefighter will ATTACK burning tree. Which state?
+                     burning/frozen/wet/electrified"          → burning
 ```
 
-Stage 2 includes "is APPROACHING because it wants to help" — seeded from stage 1's answer. Stage 3 includes "will REMOVE A STATE" — seeded from stage 2. The model doesn't re-derive intent; it's given. This makes each question trivially simple even for very small models.
+Stage 2 includes "is APPROACHING because it wants to help" — seeded from stage 1's answer. Stage 3 includes "will ATTACK" — seeded from stage 2. The model doesn't re-derive intent; it's given. This makes each question trivially simple even for very small models.
 
 **When to use:** Decisions naturally cascade — the answer to question 1 determines the framing of question 2. The key benefit isn't speed (sequential adds base cost per stage) — it's answer quality. Seeded context makes each question easier, enabling smaller models and more consistent answers.
 
-**Used in:** Creature behavior staged evaluation (movement → action → parameters).
+**Used in:** Object behavior staged evaluation (movement → action → parameters).
 
 ### 3. Fan-out, filter, fan-in
 
 Fan out to many parallel calls. Filter results. Fan in to a smaller set of follow-up calls.
 
 ```
-Stage 1 — Fan out (42 parallel calls, 1 token each):
-  "Creature A sees object 1 → approach/flee/ignore?"  → approach
-  "Creature A sees object 2 → approach/flee/ignore?"  → ignore
-  "Creature A sees object 3 → approach/flee/ignore?"  → ignore
+Stage 1 — Fan out (42 parallel calls, 2 tokens each):
+  "Object A sees object 1 → approach/flee/ignore?" + "How strongly?"  → approach, driven
+  "Object A sees object 2 → approach/flee/ignore?" + "How strongly?"  → ignore, ignore
+  "Object A sees object 3 → approach/flee/ignore?" + "How strongly?"  → ignore, mild
   ...
 
-Filter: keep only approach pairs (~12 out of 42 survive)
+Filter: keep pairs where movement=approach OR priority>0 (~12 out of 42 survive)
 
-Stage 2 — Fan in (12 parallel calls, 1 token each):
-  "Creature A is approaching object 1. On arrival?"  → remove state
+Stage 2 — Fan in (12 parallel calls, 1+ tokens each):
+  "Object A contacts object 1. nothing/attack/heal/consume/push?"  → attack
   ...
 ```
 
@@ -172,7 +173,7 @@ The filter eliminates ~70% of follow-up work. Stage 2 only runs for pairs that m
 
 **When to use:** A cheap first question (binary or categorical) can determine whether expensive follow-up is needed. Always ask the cheap question first.
 
-**Used in:** Creature behavior — movement reaction (all pairs) filters to on-arrival action (approaching pairs only) filters to parameters (actions that need them).
+**Used in:** Object behavior — movement+priority (all pairs) filters to composite action pipeline (approach-or-priority pairs only) filters to parameters (actions that need them).
 
 ### 4. Combined: parallel fan-out + conditional sequential
 
@@ -188,13 +189,12 @@ Batch 1b — Parallel with batch 1 (~200ms):
   Visual description                                    → 1 call, ~25 tokens
 
 Conditional — depends on batch 1 results:
-  If autonomous → creature behavior (pattern 3: fan-out, filter, fan-in)
-  If has field → field range (already asked in batch 1)
+  If autonomous → behavior evaluation for this object vs all existing objects
 
 Spawn integration — depends on creation results:
-  Pairwise screening (pattern 5: batch screening)
-  Pairwise full eval (pattern 1: parallel fan-out, screened pairs only)
-  Creature behavior stages (pattern 2+3: sequential seeding + filter)
+  Behavior screening (pattern 5: batch screening)
+  Behavior stage 1 (pattern 1: parallel fan-out, all screened pairs)
+  Behavior stage 2 (pattern 2+3: sequential seeding + filter, interesting pairs only)
 ```
 
 Independent work runs in parallel. Dependent work waits for prior results. Conditional paths skip unnecessary work.
@@ -219,7 +219,7 @@ Output is ~5-15 tokens depending on how many items pass the screen. This intenti
 
 **When to use:** You need to select a subset from a larger set, and the selection benefits from seeing all candidates together. The output is a short list of IDs, not detailed answers — keep expensive follow-up for the items that pass.
 
-**Used in:** Pairwise interaction screening — identifies which object pairs are worth fully evaluating. Most pairs (~75%) are boring and get filtered.
+**Used in:** Behavior screening — identifies which object pairs are worth fully evaluating. Most pairs (~75%) have no interesting interaction and get filtered.
 
 ---
 

@@ -6,7 +6,7 @@ Architecture and design docs for the Makeshift game engine.
 
 | Doc | What it covers |
 |-----|----------------|
-| [Architecture](architecture.md) | Core system design: collision rules (force), state propagation, creature behavior, caching strategy |
+| [Architecture](architecture.md) | Core system design: unified behavior system (active + reactive), state propagation, caching strategy |
 | [Engine Primitives](engine-primitives.md) | Everything the engine can execute: physics, force, 4 states, state propagation, essential-state destruction, affordances, creature behavior |
 | [Creation Pipeline](creation-pipeline.md) | Call sequence from player input to spawned object: name gen, parallel questions, state properties, batching, call budgets |
 | [LLM Design Patterns](llm-design-patterns.md) | Core patterns for decomposing problems into LLM calls: fan-out, sequential seeding, filter, constrained decoding |

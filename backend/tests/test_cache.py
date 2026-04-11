@@ -84,8 +84,13 @@ class TestBehaviorCache:
 
     def test_behavior_entry_to_dict(self):
         entry = BehaviorEntry(
-            movement=0, priority=3, action=1, amount=50,
-            state_action=1, state_id=2, force=1,
+            movement=0,
+            priority=3,
+            action=1,
+            amount=50,
+            state_action=1,
+            state_id=2,
+            force=1,
         )
         d = entry.to_dict()
         assert d["movement"] == 0
@@ -105,10 +110,17 @@ class TestBehaviorCache:
         assert entry.force == 0  # default
 
     def test_behavior_entry_from_dict_full(self):
-        entry = BehaviorEntry.from_dict({
-            "movement": 0, "priority": 3, "action": 4, "amount": 80,
-            "state_action": 2, "state_id": 1, "force": 1,
-        })
+        entry = BehaviorEntry.from_dict(
+            {
+                "movement": 0,
+                "priority": 3,
+                "action": 4,
+                "amount": 80,
+                "state_action": 2,
+                "state_id": 1,
+                "force": 1,
+            }
+        )
         assert entry.movement == 0
         assert entry.priority == 3
         assert entry.action == 4

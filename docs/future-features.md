@@ -72,15 +72,15 @@ Each requires engine code before it can be added to the LLM classification list.
 
 ## Triadic reasoning (multi-object tool use)
 
-Creatures using objects to solve problems: firefighter grabs bucket of water because there's a fire. This is a three-object relationship (firefighter + water + fire) that pairwise evaluation can't directly capture.
+Creatures using objects to solve problems: firefighter grabs bucket of water because there's a fire. This is a three-object relationship (firefighter + water + fire) that per-pair evaluation can't directly capture.
 
 **How it emerges from existing systems:**
 
 The architecture supports this without new systems via scene context + re-evaluation:
 
-1. Scene context in creature behavior prompts means the firefighter's reaction to "bucket of water" is evaluated with "Scene: [burning tree, ...]" — the LLM boosts approach strength for water when fire exists
+1. Scene context in behavior prompts means the firefighter's reaction to "bucket of water" is evaluated with "Scene: [burning tree, ...]" — the LLM boosts approach strength for water when fire exists
 2. Firefighter approaches water (high utility due to scene context) → picks up (affordance: carry)
-3. Creature pickup triggers re-evaluation (see architecture.md re-evaluation triggers) — prompts now include "Firefighter [holding: bucket of water] sees burning tree" → approach with high strength
-4. Firefighter approaches fire → pairwise interaction water+fire = extinguish
+3. Pickup triggers re-evaluation — prompts now include "Firefighter [holding: bucket of water] sees burning tree" → approach with high strength
+4. Firefighter approaches fire → behavior action water+fire = extinguish
 
-**Why deferred:** The core creature behavior system and scene context need to work first. This emergence falls out naturally once those pieces are in place — no additional systems required, just confirming that the re-evaluation loop produces good results during playtesting.
+**Why deferred:** The core behavior system and scene context need to work first. This emergence falls out naturally once those pieces are in place — no additional systems required, just confirming that the re-evaluation loop produces good results during playtesting.

@@ -252,7 +252,6 @@ async def main() -> None:
     async def behavior_task(inputs: BehaviorInput) -> dict[str, Any]:
         subject_bp = make_blueprint(inputs.subject_name)
         target_bps = [make_blueprint(t.target_name) for t in inputs.targets]
-        target_names = [t.name for t in target_bps]
 
         # Build target_states from archetype initial_states for state-aware eval
         target_states: dict[str, list[int]] = {}
@@ -263,7 +262,6 @@ async def main() -> None:
         results = await evaluate_behaviors(
             subject=subject_bp,
             targets=target_bps,
-            scene_inventory=target_names,
             scene=scene,
             target_states=target_states or None,
         )

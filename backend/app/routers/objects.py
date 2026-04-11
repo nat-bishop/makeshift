@@ -168,8 +168,6 @@ async def _run_spawn_integration(
     if not scene_objects:
         return
 
-    scene_names = [o.name for o in scene_objects] + [blueprint.name]
-
     # Bidirectional screen: which pairs are interesting?
     interesting = await screen_pairs(blueprint, scene_objects)
     if not interesting:
@@ -182,7 +180,7 @@ async def _run_spawn_integration(
     async def _eval_direction(
         subject: GameObjectBlueprint, targets: list[GameObjectBlueprint]
     ) -> None:
-        behaviors = await evaluate_behaviors(subject, targets, scene_names, scene)
+        behaviors = await evaluate_behaviors(subject, targets, scene)
         if behaviors:
             entries = format_behaviors(subject.name, behaviors)
             await send_behaviors_ready(session_id, subject.name, entries)

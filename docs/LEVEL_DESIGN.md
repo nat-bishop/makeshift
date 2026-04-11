@@ -21,8 +21,7 @@ Design patterns and BaseLevel API for Makeshift levels.
 The V3 interaction system replaces tag-based rules with:
 - **State propagation**: objects with `initial_states` spread those states to nearby objects with matching `susceptible_states` every 2s
 - **Essential-state destruction**: objects with `initial_states` are destroyed when all initial states are removed (fire extinguished = destroyed)
-- **Collision force**: pairwise force (push/pull) is the only pairwise LLM result; all other interactions come from state spread
-- **Creature behavior**: per-pair staged evaluation replaces fixed behavior verbs
+- **Object behavior**: per-pair staged evaluation — active objects (approach/flee) and reactive objects (bomb, fan) use composite actions (damage/heal/consume/push + state modifier)
 
 Level puzzles should be designed around these mechanics. Examples:
 - A fire (initial_states=[burning]) spreads to wood (susceptible_states=[burning]) → fire spread puzzle

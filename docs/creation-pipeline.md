@@ -51,81 +51,68 @@ evaluated per-pair at spawn time (see below).
 
 Runs AFTER creation, DURING sprite generation (2-5s). Player doesn't wait for this.
 
-### Collision force rules
+### Behavior evaluation
 
-Two phases: a single screening call identifies pairs with interesting force interactions, then only those get evaluated. Screening is pre-warming — missed pairs are lazily evaluated on actual collision.
+Bidirectional screening (1 call per spawn) identifies pairs with interesting interactions. Then staged evaluation per pair.
 
 **Phase 1 — Screening (1 call, ~5-15 output tokens):**
 
 ```
-"New object: fire sword (1.5kg, 120cm, normal, normal-surface).
+"New object: fire sword (1.5kg, 120cm, normal-surface).
  Scene objects:
- 1. wooden shield (3kg, 100cm, normal, normal-surface)
- 2. magnet (0.5kg, 10cm, normal, normal-surface)
- Which would have interesting force interactions (push, pull, magnetism)?
+ 1. wooden shield (3kg, 100cm, normal-surface)
+ 2. zombie (70kg, 170cm, normal-surface)
+ Which would have interesting interactions with fire sword?
  Reply with numbers or 'none'."
  → "2"
 ```
 
-**Phase 2 — Force eval (1 call per interesting pair):**
+**Phase 2 — Staged behavior eval (per interesting pair):**
+
+Stage 1: movement (approach/flee/ignore) + priority (0-3) — parallel, 2 calls.
+Stage 2: composite action (nothing/damage/heal/consume/push) + amount + state modifier + force modifier — parallel, up to 4 calls.
+
+See [architecture.md](architecture.md) for the full staged evaluation design.
+
+### Object behavior (staged, autonomous objects only)
+
+For every autonomous object in the scene, evaluate its relationship with each new object in 3 sequential stages. If the NEW object is autonomous, run stages 1-3 for it against all existing objects. See [architecture.md](architecture.md) for the full staged evaluation design.
 
 ```
-"fire sword (1.5kg, 120cm, normal, normal-surface) contacts
- magnet (0.5kg, 10cm, normal, normal-surface).
- none / pull / drag / push / throw"
-→ "pull"
+Stage 1 (parallel, all subject×object pairs, 2 calls each):
+  Movement: "Zombie cop sees [fire sword]. approach/flee/ignore" → flee
+  Priority: "How strongly? ignore/mild/moderate/driven"          → mild
+
+Stage 2 (parallel, pairs where approach OR priority>0):
+  Action: "Zombie cop contacts [donut]. nothing/attack/heal/consume/push" → consume
+  Conditional: amount, state modifier (add/remove), force modifier (damage only)
 ```
-
-Result: `CollisionRule(force_on_b=-30)`. State interactions (fire spreading to wood) are NOT in the pairwise cache — they're handled by `initial_states`/`susceptible_states` + `StatePropagator`.
-
-### Creature behavior (staged, autonomous creatures only)
-
-For every autonomous creature in the scene, evaluate its relationship with each object in 3 sequential stages. See [architecture.md](architecture.md) for the full staged evaluation design.
-
-```
-Stage 1 + 1b (parallel, all creature×object pairs, 1 token each):
-  Movement: "Zombie cop sees [fire sword]. 0=approach 1=flee 2=ignore" → 1
-  Strength: "How strongly? 0-100" → 70
-
-Stage 2 (parallel, approaching pairs only, 1 token each):
-  Action: "Zombie cop is approaching [donut]. On arrival? 0=nothing 1=damage 
-           2=heal 3=add state 4=remove state 5=destroy 6=take" → 5 (destroy)
-
-Stage 3 (parallel, actions needing parameters, 1 token each):
-  Params: damage amount, which state, etc.
-```
-
-If the NEW object is autonomous, run stages 1-3 for it against all existing objects.
 
 ---
 
 ## Call budget
 
-### 7-object scene, 1 creature
+### 7-object scene, 1 autonomous object
 
 | Phase | Calls | Wall time |
 |---|---|---|
 | Creation (new object) | ~19 | ~200ms |
-| Collision screening (1 call) | 1 | ~90ms |
-| Collision force eval (~2 interesting pairs × 1 call) | 2 | ~90ms |
-| Creature behavior stage 1 (1 creature × 1 object, movement + priority) | 2 | ~60ms |
-| Creature behavior stage 2 (~1 approaching pair) | 1 | ~60ms |
-| Creature behavior stage 3 (~1 needing params) | 1 | ~60ms |
-| **Total** | **~26** | **~560ms** |
+| Behavior screening (1 call) | 1 | ~90ms |
+| Behavior stage 1 (1 subject × 1 object × 2 questions) | 2 | ~60ms |
+| Behavior stage 2 (~1 interesting pair, up to 4 calls) | ~3 | ~60ms |
+| **Total** | **~25** | **~410ms** |
 
-### 15-object scene, 3 creatures
+### 15-object scene, 3 autonomous objects
 
 | Phase | Calls | Wall time |
 |---|---|---|
 | Creation (new object) | ~19 | ~200ms |
-| Collision screening (1 call) | 1 | ~125ms |
-| Collision force eval (~4 interesting pairs × 1 call) | 4 | ~90ms |
-| Creature behavior stage 1 (3 creatures × 1 object × 2 questions) | 6 | ~60ms |
-| Creature behavior stage 2 (~2 approaching) | 2 | ~60ms |
-| Creature behavior stage 3 (~1 needing params) | 1 | ~60ms |
-| **Total (new non-creature)** | **~33** | **~595ms** |
+| Behavior screening (1 call) | 1 | ~125ms |
+| Behavior stage 1 (3 subjects × 1 object × 2 questions) | 6 | ~60ms |
+| Behavior stage 2 (~3 interesting pairs × ~3 calls) | ~9 | ~60ms |
+| **Total (new non-autonomous)** | **~35** | **~445ms** |
 
-If new object is autonomous, add: stage 1 (14 objects × 2 questions = 28 calls), stage 2 (~5), stage 3 (~3) = **~69 calls, ~770ms**.
+If new object is autonomous, add: stage 1 (14 objects × 2 questions = 28 calls), stage 2 (~5 interesting pairs × ~3 calls = 15) = **~78 calls, ~605ms**.
 
 All spawn integration runs during the 2-5s sprite gen window. Player sees no interaction latency.
 
@@ -133,15 +120,15 @@ All spawn integration runs during the 2-5s sprite gen window. Player sees no int
 
 ## Scaling characteristics
 
-Collision evaluation is O(N²) in theory, but screening reduces this significantly — most pairs have no interesting force interaction (rock+rock, sword+wood). Screening identifies ~10-15% of pairs as worth evaluating:
+Behavior evaluation is O(N²) in theory, but screening reduces this significantly — most pairs have no interesting interaction. Screening identifies ~10-15% of pairs as worth evaluating:
 
-| Objects | Pairs | Screening calls | Interesting pairs (~10%) | Full eval calls (1 per pair) |
+| Objects | Pairs | Screening calls | Interesting pairs (~10%) | Stage 1+2 calls |
 |---|---|---|---|---|
-| 7 | 21 | 7 | ~2 | ~2 |
-| 15 | 105 | 15 | ~10 | ~10 |
-| 30 | 435 | 30 | ~25 | ~25 |
+| 7 | 21 | 7 | ~2 | ~10 |
+| 15 | 105 | 15 | ~10 | ~50 |
+| 30 | 435 | 30 | ~25 | ~125 |
 
-Screening adds 1 call per new object. Missed pairs are lazily evaluated on actual collision via `request_collision` WS message (1 call, ~100ms).
+Screening adds 1 call per new object. All evaluation runs during sprite generation (2-5s window).
 
 Scribblenauts on DS managed 10-15 simultaneous objects. Reasonable starting target.
 
