@@ -51,7 +51,7 @@ uv run pytest -k "test_name"                  # single test by name
 
 **Backend** (`backend/app/`): FastAPI application with these key subsystems:
 
-- **Object creation pipeline** (`creator/pipeline.py` → `routers/objects.py` → `images/pipeline.py` → `ws/handler.py`): Player text → `create_object()` generates name then fans out parallel LLM calls via `run_questions()` (defined in `creator/questions.py`) → `GameObjectBlueprint` → immediate JSON response (blueprint + `budget_remaining`) → background sprite gen + spawn integration. `GATE_DESTRUCTIBLE` gates `destruction_result_name` on `durability < 6`; `GATE_AUTONOMOUS` gates `speed` on `autonomous=True`. 8 new boolean questions set `initial_states` and `susceptible_states`. See [creation-pipeline.md](docs/creation-pipeline.md) for pipeline flow.
+- **Object creation pipeline** (`creator/pipeline.py` → `routers/objects.py` → `images/pipeline.py` → `ws/handler.py`): Player text → `create_object()` fans out name + all questions in parallel via `asyncio.gather(ask_text(NAME_QUESTION), run_questions(ALL_CREATION_QUESTIONS))` → `GameObjectBlueprint` → immediate JSON response (blueprint + `budget_remaining`) → background sprite gen + spawn integration. `GATE_DESTRUCTIBLE` gates `destruction_result_name` on `durability < 6`; `GATE_AUTONOMOUS` gates `speed` on `autonomous=True`. 8 boolean questions set `initial_states` and `susceptible_states`. Combined carry/ride sprite pre-cached in background when `affordance in (0, 1)`. See [creation-pipeline.md](docs/creation-pipeline.md) for pipeline flow.
 
 - **Unified behavior system** (`engine/behavior.py`, `cache/scene.py`): All object interactions (active creatures + reactive objects like bombs/fans) in one system. `BehaviorEntry` (movement, priority, action, amount, state_action, state_id, force) stored scene-local in `BehaviorCache`. Bidirectional screening (1 call per spawn) identifies interesting pairs. Stage 1 = movement + priority (all pairs, parallel). Stage 2 filter: `movement=approach OR priority>0` (captures reactive objects). Stage 2 = composite action pipeline per pair: Call 1 (action: nothing/damage/heal/consume/push) → conditional parallel follow-ups (amount, state_modifier+state_id, force_modifier). Force modifier fires for damage ONLY. State-aware: `target_states` dict in Stage 1 prompts for re-eval after `state_changed`. Delivered via `behaviors_ready` / `behavior_updated` WS messages. `compute_utility()`: priority→weight via `PRIORITY_WEIGHTS {0:0.0, 1:25.0, 2:60.0, 3:100.0}` → distance falloff → 1.5× flee multiplier. Active objects (wolf, zombie) approach/flee targets. Reactive objects (bomb, fan, acid) have `movement=ignore` + `priority>0`, act at CONTACT_RANGE without moving.
 
@@ -63,7 +63,7 @@ uv run pytest -k "test_name"                  # single test by name
 
 - **Session persistence** (`sessions/manager.py`): aiosqlite, 2 tables (sessions, objects). Session financial budget: $1.00 at $0.041/object.
 
-- **WebSocket** (`ws/handler.py`): Per-session multi-client broadcast. Client→Server: `ping`, `request_sprite`, `state_changed`. Server→Client: `sprite_ready`, `sprite_failed`, `behaviors_ready`, `behavior_updated`.
+- **WebSocket** (`ws/handler.py`): Per-session multi-client broadcast. Client→Server: `ping`, `request_sprite`, `state_changed`. Server→Client: `sprite_ready`, `sprite_failed`, `combined_sprite_ready`, `behaviors_ready`, `behavior_updated`.
 
 - **Eval suite** (`backend/evals/`): Two standalone pydantic-evals runners (real LLM calls, run via `make eval-*`, NOT in `make test`), all reading `fixtures/eval_suite.yaml`: `run_creation.py` validates `create_object()` physics ranges; `run_behavior.py` validates `screen_pairs()` + `evaluate_behaviors()` (creatures + reactive objects). All evaluators return `dict[str, EvaluationReason]` (binary pass/fail via `in_range()`).
 
@@ -71,7 +71,7 @@ uv run pytest -k "test_name"                  # single test by name
 
 | Autoload | Purpose |
 |----------|---------|
-| `EventBus` | Central signal bus (14 signals: interaction_triggered, object_created, sprite_ready, sprite_failed, level_completed, creation_requested, creation_failed, placement_started, placement_ended, debug_toggled, player_died, player_damaged, player_healed, effect_applied) |
+| `EventBus` | Central signal bus (15 signals: interaction_triggered, object_created, sprite_ready, sprite_failed, level_completed, creation_requested, creation_failed, placement_started, placement_ended, debug_toggled, player_died, player_damaged, player_healed, effect_applied, behavior_updated) |
 | `InteractionCache` | Client-side cache. `_behavior` dict: `"subject::target" → {movement, priority, action, amount, state_action, state_id, force}`. `lookup_behavior(subject,target)`. Populated via WS `behaviors_ready`/`behavior_updated` |
 | `Backend` | HTTP + WebSocket client, session persistence, sprite cache, 10s sync timer |
 | `GameManager` | Game state (MENU/PLAYING/PAUSED), level management, scene transitions, `debug_mode` flag (toggled by `toggle_debug` input, emits `debug_toggled`) |
@@ -86,7 +86,7 @@ uv run pytest -k "test_name"                  # single test by name
 | `PhysicsApplicator` | `scenes/game_object/physics_applicator.gd` | Applies LLM-generated physics values from blueprint to RigidBody2D |
 | `PhysicsComposer` | `scripts/systems/physics_composer.gd` | Continuous log2 height scaling via `scale_from_height(height_cm)`. Helpers: `world_sprite_size()`, `world_collision_size()`, `size_from_height()` (category label), `get_size_mass_multiplier(height_cm)`. `SURFACE_FRICTION = {0:0.05, 1:0.5, 2:1.0}` |
 | `ObjectBehavior` | `scripts/systems/object_behavior.gd` | Per-object behavior runtime for active + reactive objects. Utility-based targeting via `InteractionCache.lookup_behavior()`. Active objects (approach/flee) move toward targets; reactive objects (ignore + priority>0) act at CONTACT_RANGE without moving. Composite `_execute_action()`: primary action + state modifier + force modifier. 5 consecutive errors → self-disables |
-| `AffordanceSystem` | `scripts/systems/affordance_system.gd` | Carry/mount/climb interaction handling |
+| `AffordanceSystem` | `scripts/systems/affordance_system.gd` | Carry/ride interaction via sprite-swap. On pickup/mount, player sprite swaps to pre-cached combined image; drop/dismount restores originals. Held object physics disabled (freeze=true, collision zeroed). Attack while holding throws. |
 | `StateContradictions` | `scripts/data/state_contradictions.gd` | Runtime mirror of backend `STATE_REMOVES`. Owns canonical `STATE_NAMES` dict. Used by `StateManager.add_state()` |
 | `DebugLabel` | `scripts/ui/debug_label.gd` | Floating overlay (name, HP, states). Driven by `GameManager.debug_mode` |
 
@@ -105,7 +105,7 @@ uv run pytest -k "test_name"                  # single test by name
 
 ## Data Model Flow
 
-`create_object(description)` → parallel LLM calls → `GameObjectBlueprint` (id, name, description, `visual_description`, `physics: PhysicsProperties`, `durability: int` 0-6, `affordance: int` 0-3, `autonomous: bool`, `speed: int` 0-4, `initial_states: list[int]`, `susceptible_states: list[int]`, `destruction_result_name: str`) → `WorldObject` (adds `object_id`, `x`, `y`, `hp`, `active_states: list[int]`) → persisted as `objects` table row. `PhysicsProperties` has `mass_kg`, `height_cm`, `surface` (0-2), `bounce` (0-100), `gravity` (0-100); `damping` and `friction` are computed properties. Size category (`tiny/small/medium/large/huge`) derived from `height_cm` at runtime by `PhysicsComposer.size_from_height()`.
+`create_object(description)` → parallel LLM calls → `GameObjectBlueprint` (id, name, description, `visual_description`, `physics: PhysicsProperties`, `durability: int` 0-6, `affordance: int` 0-3, `autonomous: bool`, `speed: int` 0-4, `initial_states: list[int]`, `susceptible_states: list[int]`, `destruction_result_name: str`) → `WorldObject` (adds `object_id`, `x`, `y`, `hp`, `active_states: list[int]`) → persisted as `objects` table row. `PhysicsProperties` has `mass_kg`, `height_cm`, `surface` (0-2), `bounce` (0-100), `gravity` (0-100); `damping` and `friction` are computed properties. Size category (`tiny/small/medium/large/huge`) derived from `height_cm` at runtime by `PhysicsComposer.size_from_height()`. `PLAYER_BLUEPRINT` (in `models/blueprint.py`) is a synthetic `GameObjectBlueprint` for the player — injected into every `screen_pairs()` + `evaluate_behaviors()` call so creatures are always evaluated against the player at spawn time.
 
 ## Environment
 
@@ -150,7 +150,7 @@ Requires `.env` file (see `.env.example`):
 - `ObjectBehavior.priority` (0-3): 0=ignore, 1=mild(25), 2=moderate(60), 3=driven(100). `PRIORITY_WEIGHTS` dict in `engine/behavior.py`; `compute_utility()` maps priority to weight before distance falloff.
 - `BehaviorEntry.action` enum: 0=nothing, 1=damage, 2=heal, 3=consume, 4=push. Force modifier (knockback) fires for damage only. State modifier (add/remove state) fires for damage/heal/consume. Actions are composite — a wolf can damage + push (knockback) + add_state(burning) in one interaction.
 - `pytest-asyncio` is configured with `asyncio_mode = "auto"` — `async def` tests run without extra markers
-- Background `asyncio.Task`s must be held in a module-level `set` to prevent GC before completion (see `routers/objects.py`)
+- Background `asyncio.Task`s must be held in a module-level `set` to prevent GC before completion (see `routers/objects.py`, `ws/handler.py`)
 - `@computed_field` properties require `# type: ignore[prop-decorator]` — mypy still doesn't support decorators above `@property`
 - WebSocket connection rejected with close code 4004 if session doesn't exist
 - Sprite cache keyed by SHA-256 hash of the image prompt (first 16 hex chars), not object ID — identical prompts share sprites. Controlled by `SPRITE_CACHE_ENABLED` setting.

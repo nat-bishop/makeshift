@@ -6,7 +6,7 @@
 
 - Python 3.11+
 - [uv](https://docs.astral.sh/uv/) package manager
-- [Godot 4.3](https://godotengine.org/) (for the client)
+- [Godot 4.6](https://godotengine.org/) (for the client)
 - API keys: [Google AI](https://ai.google.dev/) (Gemini — LLM + image generation); [fal.ai](https://fal.ai/) only if using cloud background removal
 
 ## Quick Start
@@ -62,31 +62,16 @@ make cli-status                       # check health of configured services
 
 ### Evals
 
-Evaluate creator agent output quality. Evals call a real LLM and cost money — they are separate from `make test`.
+LLM quality gates — call a real LLM and cost money. Separate from `make test`.
 
 ```bash
-# Run evals and save results (50 cases, ~2-5 min)
-cd backend && uv run python -m evals.run_eval
-
-# Run a specific prompt variant
-cd backend && uv run python -m evals.run_eval --variant v2
-
-# Filter to specific cases
-cd backend && uv run python -m evals.run_eval --cases "fire sword,rock"
-
-# Compare two saved results (no LLM calls — instant)
-cd backend && uv run python -m evals.run_comparison --a baseline --b v2
-
-# Analyze a single saved result
-cd backend && uv run python -m evals.run_comparison --a baseline
-
-# Pytest runner (also saves results)
-cd backend && uv run pytest evals/test_eval.py -v
+make eval              # run all evals
+make eval-creation     # creation pipeline quality
+make eval-behavior     # behavior + screening quality
+make eval-judge        # all evals + LLM judge for visual descriptions
 ```
 
-**7 metrics** per case: Validity, Tag Recall, Interaction Surface, Has Signature (deterministic) + Faithfulness, Gameplay Quality, Sprite Prompt (LLM-as-judge via Gemini). Results saved as structured JSON to `backend/evals/results/` with pre-parsed tags/behaviors/size, retry counts, and aggregate stats. Comparison uses Wilcoxon signed-rank test for statistical significance. Distribution analysis shows tag/behavior/size frequencies across all objects.
-
-Add prompt variants in `backend/evals/prompts.py`. Test cases in `backend/evals/dataset.py` (50 cases across 9 categories).
+Eval cases in `backend/evals/fixtures/eval_suite.yaml`. Results in `backend/evals/results/`.
 
 ## Documentation
 

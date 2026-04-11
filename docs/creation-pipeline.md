@@ -74,9 +74,9 @@ Stage 2: composite action (nothing/damage/heal/consume/push) + amount + state mo
 
 See [architecture.md](architecture.md) for the full staged evaluation design.
 
-### Object behavior (staged, autonomous objects only)
+### Object behavior (staged, all interesting pairs)
 
-For every autonomous object in the scene, evaluate its relationship with each new object in 3 sequential stages. If the NEW object is autonomous, run stages 1-3 for it against all existing objects. See [architecture.md](architecture.md) for the full staged evaluation design.
+For every scene object that passes screening, evaluate both directions with the new object. The player is always included as a potential target via `PLAYER_BLUEPRINT`. See [architecture.md](architecture.md) for the full staged evaluation design.
 
 ```
 Stage 1 (parallel, all subject×object pairs, 2 calls each):
