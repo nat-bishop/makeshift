@@ -1,6 +1,6 @@
 """Tests for the V3 creator pipeline (backend/app/creator/pipeline.py).
 
-Covers cache hit/miss paths, name truncation/fallback, field gating,
+Covers cache hit/miss paths, name truncation/fallback, state assembly,
 destruction name parsing, and cache-disabled mode.
 """
 
@@ -24,7 +24,14 @@ _BASE_ANSWERS: dict[str, object] = {
     "surface": 1,
     "bounce": 10,
     "gravity": 50,
-    "has_field": False,
+    "initially_burning": False,
+    "initially_frozen": False,
+    "initially_wet": False,
+    "initially_electrified": False,
+    "catches_fire": False,
+    "can_freeze": False,
+    "gets_wet": False,
+    "conducts_electricity": False,
     "durability": 2,
     "autonomous": False,
     "affordance": 0,
@@ -74,8 +81,8 @@ async def test_cache_hit_returns_cached_blueprint() -> None:
         "durability": 4,
         "affordance": 0,
         "autonomous": False,
-        "has_field": False,
-        "field_range_cm": 0,
+        "initial_states": [1],
+        "susceptible_states": [1, 3],
         "destruction_result_name": "",
     }
     cache = _make_cache(get_return=cached_data)
@@ -182,18 +189,31 @@ async def test_destruction_name_none_becomes_empty() -> None:
     assert bp.destruction_result_name == ""
 
 
-# ---------- 7. has_field=False zeroes field_range_cm ----------
+# ---------- 7. Initial states assembled from booleans ----------
 
 
-async def test_has_field_false_zeroes_field_range() -> None:
+async def test_initial_states_assembled_from_bools() -> None:
     cache = _make_cache()
-    answers = {**_BASE_ANSWERS, "has_field": False, "field_range_cm": 200}
+    answers = {**_BASE_ANSWERS, "initially_burning": True, "initially_wet": True}
 
-    async with _pipeline_mocks(name="Rock", answers=answers):
-        bp = await create_object("rock", cache)
+    async with _pipeline_mocks(name="Lava Rock", answers=answers):
+        bp = await create_object("lava rock", cache)
 
-    assert bp.field_range_cm == 0
-    assert bp.has_field is False
+    assert 1 in bp.initial_states  # BURNING
+    assert 3 in bp.initial_states  # WET
+    assert len(bp.initial_states) == 2
+
+
+async def test_susceptible_states_assembled_from_bools() -> None:
+    cache = _make_cache()
+    answers = {**_BASE_ANSWERS, "catches_fire": True, "conducts_electricity": True}
+
+    async with _pipeline_mocks(name="Wood", answers=answers):
+        bp = await create_object("wood", cache)
+
+    assert 1 in bp.susceptible_states  # BURNING
+    assert 4 in bp.susceptible_states  # ELECTRIFIED
+    assert len(bp.susceptible_states) == 2
 
 
 # ---------- 8. Cache disabled skips read and write ----------

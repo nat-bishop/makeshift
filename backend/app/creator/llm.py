@@ -2,11 +2,18 @@
 
 Uses PydanticAI agents with typed output:
   - int/float/bool: NativeOutput (response_format json_schema, no tool calls)
+  - choice: constrained decoding via Literal output type
   - str: plain text mode (model responds directly, no tool call)
 Each ask_* function handles clamping and error fallback.
+
+One singleton Agent per output type. Per-call system prompts are passed via
+the ``instructions`` parameter on ``agent.run()``, not by constructing
+throwaway agents.
 """
 
 from __future__ import annotations
+
+from typing import Literal
 
 import structlog
 from pydantic_ai import Agent, NativeOutput
@@ -23,6 +30,7 @@ logger = structlog.get_logger()
 _int_agent: Agent[None, int] | None = None
 _float_agent: Agent[None, float] | None = None
 _str_agent: Agent[None, str] | None = None
+_choice_agents: dict[tuple[str, ...], Agent] = {}
 
 
 def _build_model():
@@ -91,6 +99,21 @@ def _get_float_agent() -> Agent[None, float]:
     return _float_agent
 
 
+def _get_choice_agent(choices: tuple[str, ...]) -> Agent:
+    """Get or create a constrained-choice agent for the given vocabulary."""
+    if choices not in _choice_agents:
+        literal_type = Literal[choices]  # type: ignore[valid-type]
+        settings = _base_model_settings()
+        settings["max_tokens"] = _STRUCTURED_MAX_TOKENS
+        _choice_agents[choices] = Agent(  # type: ignore[call-overload]
+            _build_model(),
+            output_type=NativeOutput(literal_type),
+            retries=2,
+            model_settings=settings,
+        )
+    return _choice_agents[choices]
+
+
 def _get_str_agent() -> Agent[None, str]:
     global _str_agent
     if _str_agent is None:
@@ -103,10 +126,17 @@ def _get_str_agent() -> Agent[None, str]:
     return _str_agent
 
 
-async def ask_int(prompt: str, lo: int = 0, hi: int = 100, default: int = 50) -> int:
+async def ask_int(
+    prompt: str,
+    lo: int = 0,
+    hi: int = 100,
+    default: int = 50,
+    *,
+    instructions: str = "",
+) -> int:
     """Ask a 1-token integer question. Returns clamped value or default on failure."""
     try:
-        result = await _get_int_agent().run(prompt)
+        result = await _get_int_agent().run(prompt, instructions=instructions or None)
         return max(lo, min(hi, result.output))
     except Exception:
         logger.warning("ask_int_failed", prompt=prompt[:80], default=default)
@@ -114,11 +144,16 @@ async def ask_int(prompt: str, lo: int = 0, hi: int = 100, default: int = 50) ->
 
 
 async def ask_float(
-    prompt: str, lo: float = 0.001, hi: float = 100000.0, default: float = 1.0
+    prompt: str,
+    lo: float = 0.001,
+    hi: float = 100000.0,
+    default: float = 1.0,
+    *,
+    instructions: str = "",
 ) -> float:
-    """Ask a numeric question (e.g. mass in kg). Returns clamped value or default."""
+    """Ask a numeric question. Returns clamped value or default on failure."""
     try:
-        result = await _get_float_agent().run(prompt)
+        result = await _get_float_agent().run(prompt, instructions=instructions or None)
         return max(lo, min(hi, result.output))
     except Exception:
         logger.warning("ask_float_failed", prompt=prompt[:80], default=default)
@@ -135,13 +170,35 @@ async def ask_bool(prompt: str, default: bool = False) -> bool:
         return default
 
 
-async def ask_text(prompt: str, max_tokens: int = 40, default: str = "") -> str:
-    """Ask a freeform text question. Plain text mode (no tool call)."""
+async def ask_choice(
+    prompt: str,
+    choices: tuple[str, ...],
+    default: str = "",
+    *,
+    instructions: str = "",
+) -> str:
+    """Constrained output from a fixed vocabulary. Returns the chosen word."""
+    try:
+        result = await _get_choice_agent(choices).run(prompt, instructions=instructions or None)
+        return result.output
+    except Exception:
+        logger.warning("ask_choice_failed", prompt=prompt[:80], default=default)
+        return default
+
+
+async def ask_text(
+    prompt: str, max_tokens: int = 40, default: str = "", *, instructions: str = ""
+) -> str:
+    """Ask a freeform text question. Plain text mode (no structured output)."""
     try:
         settings = _base_model_settings()
         settings["temperature"] = 0.7
         settings["max_tokens"] = max_tokens
-        result = await _get_str_agent().run(prompt, model_settings=settings)  # type: ignore[call-overload]
+        result = await _get_str_agent().run(
+            prompt,
+            instructions=instructions or None,
+            model_settings=settings,
+        )  # type: ignore[call-overload]
         return result.output.strip() or default
     except Exception:
         logger.warning("ask_text_failed", prompt=prompt[:80])
@@ -150,7 +207,8 @@ async def ask_text(prompt: str, max_tokens: int = 40, default: str = "") -> str:
 
 def reset_agents() -> None:
     """Clear cached agents (for testing or model swap)."""
-    global _int_agent, _float_agent, _str_agent
+    global _int_agent, _float_agent, _str_agent, _choice_agents
     _int_agent = None
     _float_agent = None
     _str_agent = None
+    _choice_agents.clear()

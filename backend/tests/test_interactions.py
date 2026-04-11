@@ -1,4 +1,4 @@
-"""Tests for pairwise interaction endpoints."""
+"""Tests for collision rule query endpoint."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, patch
 
 import aiosqlite
-from app.cache.scene import PairwiseResult, SceneCache
+from app.cache.scene import BehaviorCache, CollisionRule
 from app.cache.store import CacheStore
 from app.middleware import session_context_middleware
 from app.models.blueprint import GameObjectBlueprint, PhysicsProperties
@@ -89,11 +89,8 @@ async def _insert_object(
     await db.commit()
 
 
-def _assert_nothing_happens(data: dict) -> None:
-    assert data["damage_a"] == 0
-    assert data["damage_b"] == 0
-    assert data["force_b"] == 0
-    assert data["continuous"] is False
+def _assert_no_force(data: dict) -> None:
+    assert data["force_on_b"] == 0
     assert data["cached"] is False
 
 
@@ -110,17 +107,12 @@ async def test_get_scene_valid_session_returns_cached_pairs() -> None:
         await _insert_object(db, session_id, bp_a)
         await _insert_object(db, session_id, bp_b)
 
-        # Seed a pairwise cache entry for this pair
+        # Seed a collision cache entry for this pair
         cache: CacheStore = app.state.cache
         pair_data = {
-            "damage_a": 10,
-            "damage_b": 5,
-            "state_change_a": 0,
-            "state_change_b": 0,
-            "force_b": 20,
-            "continuous": False,
+            "force_on_b": 30,
         }
-        await cache.put_pairwise("shield", "sword", pair_data)
+        await cache.put_collision("shield", "sword", pair_data)
 
         resp = await client.get(f"/api/sessions/{session_id}/interactions/scene")
         assert resp.status_code == 200
@@ -128,7 +120,7 @@ async def test_get_scene_valid_session_returns_cached_pairs() -> None:
         assert "pairs" in data
         assert len(data["pairs"]) == 1
         key = next(iter(data["pairs"].keys()))
-        assert data["pairs"][key]["damage_a"] == 10
+        assert data["pairs"][key]["force_on_b"] == 30
 
 
 async def test_get_scene_invalid_session_returns_empty() -> None:
@@ -151,21 +143,14 @@ async def test_post_interaction_success() -> None:
         await _insert_object(db, session_id, bp_a)
         await _insert_object(db, session_id, bp_b)
 
-        # Set up a SceneCache for this session
-        scene = SceneCache()
+        # Set up a BehaviorCache for this session
+        scene = BehaviorCache()
         app.state.scenes[session_id] = scene
 
-        mock_result = PairwiseResult(
-            damage_a=25,
-            damage_b=10,
-            state_change_a=0,
-            state_change_b=1,
-            force_b=30,
-            continuous=False,
-        )
+        mock_result = CollisionRule(force_on_b=30)
 
         with patch(
-            "app.routers.interactions.evaluate_pair",
+            "app.routers.interactions.evaluate_collision",
             new_callable=AsyncMock,
             return_value=mock_result,
         ):
@@ -176,18 +161,15 @@ async def test_post_interaction_success() -> None:
 
         assert resp.status_code == 200
         data = resp.json()
-        assert data["damage_a"] == 25
-        assert data["damage_b"] == 10
-        assert data["state_change_b"] == 1
-        assert data["force_b"] == 30
+        assert data["force_on_b"] == 30
         assert data["cached"] is True
 
 
-async def test_post_interaction_missing_session_returns_nothing_happens() -> None:
+async def test_post_interaction_missing_session_returns_no_force() -> None:
     async with _test_client() as (client, app):
         # Scene exists but session not in DB — hits the session-missing branch
         fake_id = "no-such-session"
-        app.state.scenes[fake_id] = SceneCache()
+        app.state.scenes[fake_id] = BehaviorCache()
 
         resp = await client.post(
             f"/api/sessions/{fake_id}/interactions",
@@ -195,10 +177,10 @@ async def test_post_interaction_missing_session_returns_nothing_happens() -> Non
         )
 
         assert resp.status_code == 200
-        _assert_nothing_happens(resp.json())
+        _assert_no_force(resp.json())
 
 
-async def test_post_interaction_missing_scene_returns_nothing_happens() -> None:
+async def test_post_interaction_missing_scene_returns_no_force() -> None:
     async with _test_client() as (client, _app):
         session_id = await _create_session(client)
 
@@ -208,17 +190,18 @@ async def test_post_interaction_missing_scene_returns_nothing_happens() -> None:
         )
 
         assert resp.status_code == 200
-        _assert_nothing_happens(resp.json())
+        # Scene gets auto-created, but session lookup may fail to find objects
+        _assert_no_force(resp.json())
 
 
-async def test_post_interaction_unknown_object_returns_nothing_happens() -> None:
+async def test_post_interaction_unknown_object_returns_no_force() -> None:
     async with _test_client() as (client, app):
         session_id = await _create_session(client)
         db = app.state.db
 
         bp_a = _make_blueprint("sword")
         await _insert_object(db, session_id, bp_a)
-        app.state.scenes[session_id] = SceneCache()
+        app.state.scenes[session_id] = BehaviorCache()
 
         resp = await client.post(
             f"/api/sessions/{session_id}/interactions",
@@ -226,4 +209,4 @@ async def test_post_interaction_unknown_object_returns_nothing_happens() -> None
         )
 
         assert resp.status_code == 200
-        _assert_nothing_happens(resp.json())
+        _assert_no_force(resp.json())

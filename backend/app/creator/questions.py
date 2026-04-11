@@ -1,9 +1,9 @@
 """Data-driven question definitions for all LLM call pipelines.
 
-Creation, pairwise, and creature questions are all defined here as Question
+Creation and creature questions are all defined here as Question
 instances. Edit this file to add, remove, or tweak object properties during
-playtesting. Gate conditions control conditional fan-out (e.g. field_range_cm
-only fires when has_field=true).
+playtesting. Gate conditions control conditional fan-out (e.g. speed
+only fires when autonomous=true).
 """
 
 from __future__ import annotations
@@ -12,122 +12,192 @@ from app.creator.question_graph import Gate, Question
 
 # ---- Reusable gate conditions ----
 
-GATE_HAS_FIELD = Gate("has_field", lambda v: bool(v))
 GATE_AUTONOMOUS = Gate("autonomous", lambda v: bool(v))
 GATE_DESTRUCTIBLE = Gate("durability", lambda v: int(v) < 6)  # type: ignore[call-overload]
 
 # ---- Creation questions ----
 # All fired via run_questions() after name generation resolves.
-# Prompts use {name} and {description} placeholders.
+# Prompts use {name} placeholder (the LLM-generated name).
 
 CREATION_QUESTIONS: list[Question] = [
-    # Physics
+    # Physics — open-ended numeric (instructions + bare name)
     Question(
         "mass_kg",
-        "How heavy is {name} in kg? "
-        "(ant=0.001, feather=0.01, ball=0.2, torch=0.5, sword=1.5, chair=8, "
-        "human=70, boulder=100, horse=400, car=1500, mountain=50000)",
+        "{name}",
         "float",
         0.001,
         100000,
         1.0,
+        instructions=(
+            "Estimate the real-world mass of the given object in kilograms. Return only a number."
+        ),
     ),
     Question(
         "height_cm",
-        "How tall is {name} in cm? "
-        "(ant=1, mouse=5, coin=2, sword=120, human=170, horse=200, house=800)",
+        "{name}",
         "int",
         1,
         5000,
         30,
+        instructions=(
+            "Estimate the real-world height of the given object in centimeters. "
+            "Return only an integer."
+        ),
     ),
     Question(
         "surface",
-        "What surface does {name} have? "
-        "0=slippery(ice, oil, wet) 1=normal(wood, metal, stone, rubber) "
-        "2=sticky(glue, tar, tape, gum)",
-        "int",
-        0,
-        2,
-        1,
+        "{name}",
+        "choice",
+        default="normal",
+        instructions="Classify this object's surface texture.",
+        choices=("slick", "normal", "sticky"),
+        choice_map=(("slick", 0), ("normal", 1), ("sticky", 2)),
     ),
     Question(
         "bounce",
-        "How bouncy is {name} 0-100? "
-        "(clay=0, brick=5, animal=10, wood=20, tennis ball=70, super ball=99)",
+        "{name}",
         "int",
         0,
         100,
         10,
+        instructions=(
+            "Rate the bounciness of the given object from 0 to 100. "
+            "0=no bounce, 50=moderate, 100=maximum bounce. "
+            "Return only an integer."
+        ),
     ),
     Question(
         "gravity",
-        "How does {name} fall when unsupported? "
-        "0=floats upward(balloon, helium) 25=drifts slowly(feather, smoke) "
-        "50=falls normally(rock, sword) 75=falls heavily(lead, anvil) "
-        "100=slams down(neutron star)",
+        "{name}",
         "int",
+        instructions=(
+            "Rate how the given object falls when unsupported. "
+            "0=floats upward, 25=drifts slowly, 50=falls normally, "
+            "75=falls heavily, 100=slams down instantly. Return only an integer."
+        ),
     ),
-    # Gate trigger
-    Question(
-        "has_field",
-        "Does {name} affect nearby things without touching "
-        "(heat, cold, magnetism, toxin)? "
-        "(torch=1, campfire=1, magnet=1, sword=0, rock=0) 0=no 1=yes",
-        "bool",
-    ),
-    # Gated on has_field=true
-    Question(
-        "field_range_cm",
-        "If {name} has area effect, range in cm? "
-        "(candle=50, campfire=200, bonfire=400, volcano=500)",
-        "int",
-        10,
-        500,
-        100,
-        gates=(GATE_HAS_FIELD,),
-    ),
-    # Durability (single scale replaces hp + armor + indestructible)
+    # Durability
     Question(
         "durability",
-        "How durable is {name}? "
-        "0=fragile(paper, balloon) 1=weak(glass, web) 2=normal(wood, flesh) "
-        "3=tough(stone, bone) 4=hardy(steel, diamond) "
-        "5=fortified(castle wall) 6=indestructible(mountain)",
-        "int",
-        0,
-        6,
-        2,
+        "{name}",
+        "choice",
+        default="normal",
+        instructions="Rate this object's durability.",
+        choices=("soft", "weak", "normal", "solid", "strong", "iron", "permanent"),
+        choice_map=(
+            ("soft", 0),
+            ("weak", 1),
+            ("normal", 2),
+            ("solid", 3),
+            ("strong", 4),
+            ("iron", 5),
+            ("permanent", 6),
+        ),
     ),
-    # Other unconditional
+    # Autonomous
     Question(
         "autonomous",
-        "Does {name} move and act on its own? "
-        "(rock=0, sword=0, horse=1, zombie=1, cat=1, robot=1) 0=no 1=yes",
-        "bool",
+        "{name}",
+        "choice",
+        default="no",
+        instructions="Does this object move and act on its own?",
+        choices=("yes", "no"),
+        choice_map=(("yes", 1), ("no", 0)),
     ),
     # Gated on autonomous=true
     Question(
         "speed",
-        "How fast does {name} move? "
-        "0=sluggish(snail, slime, golem) 1=slow(zombie, crab, turtle) "
-        "2=normal(human, dog, horse) 3=fast(wolf, cheetah, hawk) "
-        "4=rapid(hummingbird, dragon)",
-        "int",
-        0,
-        4,
-        2,
+        "{name}",
+        "choice",
+        default="normal",
         gates=(GATE_AUTONOMOUS,),
+        instructions="Rate this creature's movement speed.",
+        choices=("crawl", "slow", "normal", "fast", "rapid"),
+        choice_map=(("crawl", 0), ("slow", 1), ("normal", 2), ("fast", 3), ("rapid", 4)),
     ),
     Question(
         "affordance",
-        "When a player interacts with {name}: "
-        "0=pick up and carry 1=ride on top 2=climb it 3=can't interact "
-        "(sword=0, horse=1, ladder=2, zombie=3, boulder=3, fire=3)",
-        "int",
-        0,
-        3,
-        3,
+        "{name}",
+        "choice",
+        default="none",
+        instructions="How can a player interact with this object in a 2D game?",
+        choices=("carry", "ride", "scale", "none"),
+        choice_map=(("carry", 0), ("ride", 1), ("scale", 2), ("none", 3)),
+    ),
+    # ---- State properties (initial + susceptible) ----
+    # Initial states — does this object spawn with these states?
+    Question(
+        "initially_burning",
+        "{name}",
+        "choice",
+        default="no",
+        instructions="Does this object produce fire or heat?",
+        choices=("yes", "no"),
+        choice_map=(("yes", 1), ("no", 0)),
+    ),
+    Question(
+        "initially_frozen",
+        "{name}",
+        "choice",
+        default="no",
+        instructions="Is this object frozen or ice-cold?",
+        choices=("yes", "no"),
+        choice_map=(("yes", 1), ("no", 0)),
+    ),
+    Question(
+        "initially_wet",
+        "{name}",
+        "choice",
+        default="no",
+        instructions="Is this object wet or made of water or liquid?",
+        choices=("yes", "no"),
+        choice_map=(("yes", 1), ("no", 0)),
+    ),
+    Question(
+        "initially_electrified",
+        "{name}",
+        "choice",
+        default="no",
+        instructions="Does this object produce electricity?",
+        choices=("yes", "no"),
+        choice_map=(("yes", 1), ("no", 0)),
+    ),
+    # Susceptible states — can these states spread to this object?
+    Question(
+        "catches_fire",
+        "{name}",
+        "choice",
+        default="no",
+        instructions="Can this object catch fire from a nearby burning object?",
+        choices=("yes", "no"),
+        choice_map=(("yes", 1), ("no", 0)),
+    ),
+    Question(
+        "can_freeze",
+        "{name}",
+        "choice",
+        default="no",
+        instructions="Can this object freeze from contact with something frozen?",
+        choices=("yes", "no"),
+        choice_map=(("yes", 1), ("no", 0)),
+    ),
+    Question(
+        "gets_wet",
+        "{name}",
+        "choice",
+        default="no",
+        instructions="Can this object get wet from a nearby wet object?",
+        choices=("yes", "no"),
+        choice_map=(("yes", 1), ("no", 0)),
+    ),
+    Question(
+        "conducts_electricity",
+        "{name}",
+        "choice",
+        default="no",
+        instructions="Can this object conduct electricity from an electrified object?",
+        choices=("yes", "no"),
+        choice_map=(("yes", 1), ("no", 0)),
     ),
 ]
 
@@ -135,20 +205,20 @@ CREATION_QUESTIONS: list[Question] = [
 
 NAME_QUESTION = Question(
     "name",
-    "Give a 1-3 word game object name for: {description}. Reply with ONLY the name, nothing else.",
+    "Give a 1-5 word game object name for: {description}. Reply with ONLY the name, nothing else.",
     "text",
-    max_tokens=8,
+    max_tokens=20,
     default="Object",
 )
 
 VISUAL_QUESTION = Question(
     "visual_description",
-    "Describe the appearance of '{name}' ({description}) for a 2D sprite artist. "
+    "Describe the appearance of '{name}' for a 2D sprite artist. "
     "Shape, material, colors, distinctive features. "
     "Max 2 sentences. Reply with ONLY the description.",
     "text",
     max_tokens=40,
-    default="a {description}",
+    default="a {name}",
 )
 
 DESTRUCTION_QUESTION = Question(

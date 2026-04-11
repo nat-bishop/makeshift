@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, patch
 
-from app.cache.scene import SceneCache
+from app.cache.scene import BehaviorCache
 from app.engine.creature import _collect_results, evaluate_creature_behaviors
 from app.models.blueprint import GameObjectBlueprint, PhysicsProperties
 
@@ -99,13 +99,13 @@ class TestEvaluateCreatureBehaviors:
         creature = _make_blueprint(autonomous=False)
         target = _make_blueprint(id="t1", name="sword")
         result = await evaluate_creature_behaviors(
-            creature, [target], ["zombie", "sword"], SceneCache()
+            creature, [target], ["zombie", "sword"], BehaviorCache()
         )
         assert result == {}
 
     async def test_empty_targets_returns_empty(self) -> None:
         creature = _make_blueprint()
-        result = await evaluate_creature_behaviors(creature, [], ["zombie"], SceneCache())
+        result = await evaluate_creature_behaviors(creature, [], ["zombie"], BehaviorCache())
         assert result == {}
 
     async def test_full_pipeline_approach_damage_amount(self) -> None:
@@ -121,7 +121,7 @@ class TestEvaluateCreatureBehaviors:
             }
         )
         with patch("app.engine.creature.run_questions", new=AsyncMock(side_effect=side_effect)):
-            scene = SceneCache()
+            scene = BehaviorCache()
             result = await evaluate_creature_behaviors(
                 creature, [target], ["zombie", "villager"], scene
             )
@@ -135,7 +135,7 @@ class TestEvaluateCreatureBehaviors:
         assert b.state_id == 0
 
         # Verify cached in scene
-        cached = scene.get_creature("zombie", "villager")
+        cached = scene.get_behavior("zombie", "villager")
         assert cached is not None
         assert cached.amount == 75
 
@@ -153,7 +153,7 @@ class TestEvaluateCreatureBehaviors:
         )
         with patch("app.engine.creature.run_questions", new=AsyncMock(side_effect=side_effect)):
             result = await evaluate_creature_behaviors(
-                creature, [target], ["zombie", "villager"], SceneCache()
+                creature, [target], ["zombie", "villager"], BehaviorCache()
             )
 
         b = result["villager"]
@@ -177,7 +177,7 @@ class TestEvaluateCreatureBehaviors:
 
         with patch("app.engine.creature.run_questions", new=AsyncMock(side_effect=_side_effect)):
             result = await evaluate_creature_behaviors(
-                creature, [t1, t2], ["zombie", "rock", "tree"], SceneCache()
+                creature, [t1, t2], ["zombie", "rock", "tree"], BehaviorCache()
             )
 
         # 2 calls for stage 1, 0 for stage 2
@@ -203,7 +203,7 @@ class TestEvaluateCreatureBehaviors:
 
         with patch("app.engine.creature.run_questions", new=AsyncMock(side_effect=_side_effect)):
             result = await evaluate_creature_behaviors(
-                creature, [t1, t2], ["zombie", "sword", "shield"], SceneCache()
+                creature, [t1, t2], ["zombie", "sword", "shield"], BehaviorCache()
             )
 
         # sword gets defaults (ignore)
@@ -215,8 +215,8 @@ class TestEvaluateCreatureBehaviors:
         assert result["shield"].movement == 0
         assert result["shield"].priority == 2
 
-    async def test_results_stored_in_scene_cache(self) -> None:
-        """All behavior results are persisted via scene.put_creature()."""
+    async def test_results_stored_in_behavior_cache(self) -> None:
+        """All behavior results are persisted via scene.put_behavior()."""
         creature = _make_blueprint()
         t1 = _make_blueprint(id="t1", name="cat")
         t2 = _make_blueprint(id="t2", name="dog")
@@ -226,14 +226,14 @@ class TestEvaluateCreatureBehaviors:
                 return {"movement": 1, "priority": 1}  # flee, no stage 2
             return {}
 
-        scene = SceneCache()
+        scene = BehaviorCache()
         with patch("app.engine.creature.run_questions", new=AsyncMock(side_effect=_side_effect)):
             await evaluate_creature_behaviors(creature, [t1, t2], ["zombie", "cat", "dog"], scene)
 
-        # Both should be in scene cache
-        assert scene.get_creature("zombie", "cat") is not None
-        assert scene.get_creature("zombie", "dog") is not None
-        assert scene.get_creature("zombie", "cat").movement == 1
+        # Both should be in behavior cache
+        assert scene.get_behavior("zombie", "cat") is not None
+        assert scene.get_behavior("zombie", "dog") is not None
+        assert scene.get_behavior("zombie", "cat").movement == 1
 
     async def test_ignore_skips_stage2(self) -> None:
         """Ignore (movement=2) does not proceed to stage 2."""
@@ -249,7 +249,7 @@ class TestEvaluateCreatureBehaviors:
 
         with patch("app.engine.creature.run_questions", new=AsyncMock(side_effect=_side_effect)):
             result = await evaluate_creature_behaviors(
-                creature, [target], ["zombie", "campfire"], SceneCache()
+                creature, [target], ["zombie", "campfire"], BehaviorCache()
             )
 
         assert call_count == 1  # only stage 1
@@ -270,7 +270,7 @@ class TestEvaluateCreatureBehaviors:
 
         with patch("app.engine.creature.run_questions", new=AsyncMock(side_effect=_side_effect)):
             result = await evaluate_creature_behaviors(
-                creature, [target], ["zombie", "fire"], SceneCache()
+                creature, [target], ["zombie", "fire"], BehaviorCache()
             )
 
         assert call_count == 1  # only stage 1
@@ -278,20 +278,20 @@ class TestEvaluateCreatureBehaviors:
         assert result["fire"].action == 0
 
     async def test_action_not_needing_params_skips_stage3(self) -> None:
-        """Actions 0, 5, 6 skip stage 3 (no params needed)."""
+        """Actions 0, 5 skip stage 3 (no params needed)."""
         creature = _make_blueprint()
         target = _make_blueprint(id="t1", name="barrel")
 
         side_effect = _make_side_effect(
             {
                 "movement": [{"movement": 0, "priority": 2}],
-                "action": [{"action": 5}],  # destroy — no params
+                "action": [{"action": 5}],  # consume — no params
             }
         )
         mock = AsyncMock(side_effect=side_effect)
         with patch("app.engine.creature.run_questions", new=mock):
             result = await evaluate_creature_behaviors(
-                creature, [target], ["zombie", "barrel"], SceneCache()
+                creature, [target], ["zombie", "barrel"], BehaviorCache()
             )
 
         assert mock.call_count == 2  # stage 1 + stage 2, no stage 3
@@ -324,7 +324,7 @@ class TestEvaluateCreatureBehaviors:
             return {}
 
         with patch("app.engine.creature.run_questions", new=AsyncMock(side_effect=_side_effect)):
-            scene = SceneCache()
+            scene = BehaviorCache()
             result = await evaluate_creature_behaviors(
                 creature,
                 [t_approach, t_ignore, t_flee],

@@ -11,9 +11,9 @@ from app.ws.handler import (
     _broadcast,
     _connections,
     _handle_request_sprite,
+    send_behavior_updated,
     send_behaviors_ready,
-    send_cache_ready,
-    send_cache_updated,
+    send_collision_ready,
 )
 
 if TYPE_CHECKING:
@@ -28,20 +28,19 @@ def _clear_connections() -> Iterator[None]:
 
 
 # ---------------------------------------------------------------------------
-# Broadcast functions: send_cache_ready, send_behaviors_ready, send_cache_updated
+# Broadcast functions: send_collision_ready, send_behaviors_ready, send_behavior_updated
 # ---------------------------------------------------------------------------
 
 
-async def test_send_cache_ready() -> None:
+async def test_send_collision_ready() -> None:
     ws = AsyncMock()
     _connections["s1"] = {ws}
-    entries = [{"name_a": "fire", "name_b": "wood", "effects": []}]
-    await send_cache_ready("s1", "fire", entries)
+    entries = [{"name_a": "fire", "name_b": "wood", "force_on_b": 30}]
+    await send_collision_ready("s1", entries)
     ws.send_json.assert_called_once()
     msg = ws.send_json.call_args[0][0]
     assert msg == {
-        "type": "cache_ready",
-        "object_name": "fire",
+        "type": "collision_ready",
         "entries": entries,
     }
 
@@ -49,7 +48,7 @@ async def test_send_cache_ready() -> None:
 async def test_send_behaviors_ready() -> None:
     ws = AsyncMock()
     _connections["s1"] = {ws}
-    behaviors = [{"trigger": "ALWAYS", "action": "WANDER", "target": "SELF"}]
+    behaviors = [{"movement": 0, "priority": 3, "action": 1, "amount": 50, "state_id": 0}]
     await send_behaviors_ready("s1", "wolf", behaviors)
     ws.send_json.assert_called_once()
     msg = ws.send_json.call_args[0][0]
@@ -60,15 +59,26 @@ async def test_send_behaviors_ready() -> None:
     }
 
 
-async def test_send_cache_updated() -> None:
+async def test_send_behavior_updated() -> None:
     ws = AsyncMock()
     _connections["s1"] = {ws}
-    entries = [{"name_a": "ice", "name_b": "fire", "effects": []}]
-    await send_cache_updated("s1", entries)
+    entries = [
+        {
+            "movement": 0,
+            "priority": 2,
+            "action": 3,
+            "amount": 0,
+            "state_id": 1,
+            "creature_name": "wolf",
+            "target_name": "fire",
+        }
+    ]
+    await send_behavior_updated("s1", "wolf", entries)
     ws.send_json.assert_called_once()
     msg = ws.send_json.call_args[0][0]
     assert msg == {
-        "type": "cache_updated",
+        "type": "behavior_updated",
+        "creature_name": "wolf",
         "entries": entries,
     }
 

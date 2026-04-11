@@ -1,12 +1,14 @@
-"""Creature behavior: per-pair staged evaluation.
+"""Creature behavior: per-pair staged evaluation with state context.
 
 Three sequential stages, each parallel internally via run_questions():
   Stage 1: movement (0-2) + priority (0-3) — all creature x object pairs
   Stage 2: action (0-5) — approach pairs only (filtered)
   Stage 3: params — actions needing them (filtered)
 
-Scene-local, not persisted to cache.db (prompts include scene inventory
-for context-aware decisions).
+State-aware: Phase 1 prompts include target's current active states,
+so re-evaluation after state_changed produces meaningful results.
+
+Scene-local, not persisted to cache.db.
 """
 
 from __future__ import annotations
@@ -16,9 +18,9 @@ from typing import TYPE_CHECKING
 
 import structlog
 
-from app.cache.scene import CreatureBehavior, SceneCache
+from app.cache.scene import BehaviorCache, BehaviorEntry
 from app.creator.question_graph import Question, run_questions
-from app.models.state import STATE_LIST_PROMPT
+from app.models.state import STATE_NAMES
 
 if TYPE_CHECKING:
     from app.models.blueprint import GameObjectBlueprint
@@ -41,69 +43,101 @@ def _target_context(bp: GameObjectBlueprint) -> str:
     return bp.name
 
 
+def _state_context(active_states: list[int] | None) -> str:
+    """Build state context string for behavioral prompts."""
+    if not active_states:
+        return ""
+    names = [STATE_NAMES[s] for s in active_states if s in STATE_NAMES]
+    if not names:
+        return ""
+    return f"[currently: {', '.join(names)}] "
+
+
 # Actions that need a follow-up parameter call
 ACTIONS_NEEDING_PARAMS = {1, 2, 3, 4}  # damage, heal, add_state, remove_state
 
-# Movement motivation template for seeding stage 2
-APPROACH_MOTIVATION = "wants to interact with"
+# Priority level → utility weight mapping (exported for client-side mirroring)
+PRIORITY_WEIGHTS: dict[int, float] = {0: 0.0, 1: 25.0, 2: 60.0, 3: 100.0}
 
 # ---- Question definitions per stage ----
-
-# Priority level → utility weight mapping
-PRIORITY_WEIGHTS: dict[int, float] = {0: 0.0, 1: 25.0, 2: 60.0, 3: 100.0}
 
 STAGE1_QUESTIONS: list[Question] = [
     Question(
         "movement",
-        "Scene: [{scene_list}].\n"
-        "{creature} sees {target}. How does it react?\n"
-        "0=approach 1=flee 2=ignore",
-        "int",
-        0,
-        2,
-        3,
+        "Scene: [{scene_list}]. {creature} sees {target}. {state_context}",
+        "choice",
+        default="ignore",
+        instructions=(
+            "How does this creature react to the target? "
+            "approach=move toward it, flee=run away, ignore=no reaction. "
+            "Return one word."
+        ),
+        choices=("approach", "flee", "ignore"),
+        choice_map=(("approach", 0), ("flee", 1), ("ignore", 2)),
     ),
     Question(
         "priority",
-        "Scene: [{scene_list}].\n"
-        "How strongly does {creature} react to {target}?\n"
-        "0=ignore 1=mild interest 2=moderate drive 3=high priority",
-        "int",
-        0,
-        3,
-        0,
+        "Scene: [{scene_list}]. How strongly does {creature} react to {target}? {state_context}",
+        "choice",
+        default="ignore",
+        instructions=(
+            "How strongly does this creature react? "
+            "ignore=no interest, mild=slight interest, moderate=clear drive, "
+            "driven=high priority. Return one word."
+        ),
+        choices=("ignore", "mild", "moderate", "driven"),
+        choice_map=(("ignore", 0), ("mild", 1), ("moderate", 2), ("driven", 3)),
     ),
 ]
 
 STAGE2_QUESTION = Question(
     "action",
-    "{creature} is {movement_verb} {target} and {motivation} it.\n"
-    "What does {creature} do to {target}?\n"
-    "0=nothing 1=damage/attack 2=heal/repair/extinguish 3=add state "
-    "4=remove state 5=take/eat/consume",
-    "int",
-    0,
-    5,
-    0,
+    "{creature} is approaching {target} and wants to interact with it.",
+    "choice",
+    default="nothing",
+    instructions=(
+        "What does this creature do to the target? "
+        "nothing=no action, attack=damage/harm, heal=repair/help, "
+        "ignite=add a state, cleanse=remove a state, consume=eat/absorb. "
+        "Return one word."
+    ),
+    choices=("nothing", "attack", "heal", "ignite", "cleanse", "consume"),
+    choice_map=(
+        ("nothing", 0),
+        ("attack", 1),
+        ("heal", 2),
+        ("ignite", 3),
+        ("cleanse", 4),
+        ("consume", 5),
+    ),
 )
 
 STAGE3_AMOUNT = Question(
     "amount",
-    "{creature} will {action_verb} {target}. How much (0-100)?\n"
-    "5=scratch 15=light 30=moderate 50=serious 75=devastating 100=lethal",
+    "{creature} will {action_verb} {target}.",
     "int",
     0,
     100,
     20,
+    instructions=(
+        "How intense is this action? 0-100. "
+        "5=scratch, 15=light, 30=moderate, 50=serious, 75=devastating, 100=lethal. "
+        "Return only an integer."
+    ),
 )
 
 STAGE3_STATE = Question(
     "state_id",
-    "{creature} will {action_verb} a state on {target}. Which?\n" + STATE_LIST_PROMPT,
-    "int",
-    1,
-    4,
-    1,
+    "{creature} will {action_verb} a state on {target}.",
+    "choice",
+    default="burn",
+    instructions=(
+        "Which elemental state does this creature apply or remove? "
+        "burn=fire/heat, freeze=ice/cold, wet=water/liquid, zap=electricity. "
+        "Return one word."
+    ),
+    choices=("burn", "freeze", "wet", "zap"),
+    choice_map=(("burn", 1), ("freeze", 2), ("wet", 3), ("zap", 4)),
 )
 
 
@@ -127,28 +161,44 @@ async def evaluate_creature_behaviors(
     creature: GameObjectBlueprint,
     targets: list[GameObjectBlueprint],
     scene_inventory: list[str],
-    scene: SceneCache,
-) -> dict[str, CreatureBehavior]:
+    scene: BehaviorCache,
+    target_states: dict[str, list[int]] | None = None,
+) -> dict[str, BehaviorEntry]:
     """Evaluate creature behavior toward all targets.
 
-    Returns target_name -> CreatureBehavior.
+    Args:
+        creature: The autonomous creature blueprint.
+        targets: List of target blueprints.
+        scene_inventory: Names of all objects in the scene.
+        scene: BehaviorCache for storing results.
+        target_states: Optional dict of target_name -> active state IDs.
+            Used during state_changed re-evaluation to include runtime state
+            in behavioral prompts.
+
+    Returns target_name -> BehaviorEntry.
     Three sequential stages with filtering between each.
     """
     if not creature.autonomous or not targets:
         return {}
 
     scene_list = ", ".join(scene_inventory)
-    behaviors: dict[str, CreatureBehavior] = {}
+    behaviors: dict[str, BehaviorEntry] = {}
     bp_by_name: dict[str, GameObjectBlueprint] = {t.name: t for t in targets}
+    target_states = target_states or {}
 
-    # --- Stage 1: movement + strength (parallel, all pairs) ---
+    # --- Stage 1: movement + priority (parallel, all pairs) ---
 
     target_names_s1 = [t.name for t in targets]
     stage1_raw = await asyncio.gather(
         *[
             run_questions(
                 STAGE1_QUESTIONS,
-                {"scene_list": scene_list, "creature": creature.name, "target": _target_context(t)},
+                {
+                    "scene_list": scene_list,
+                    "creature": creature.name,
+                    "target": _target_context(t),
+                    "state_context": _state_context(target_states.get(t.name)),
+                },
             )
             for t in targets
         ],
@@ -179,9 +229,7 @@ async def evaluate_creature_behaviors(
                     [STAGE2_QUESTION],
                     {
                         "creature": creature.name,
-                        "movement_verb": "APPROACHING",
                         "target": _target_context(bp_by_name[name]),
-                        "motivation": APPROACH_MOTIVATION,
                     },
                 )
                 for name, _, _ in approaching
@@ -225,7 +273,7 @@ async def evaluate_creature_behaviors(
     for name, movement, priority in stage1_results:
         action = stage2.get(name, 0)
         s3: dict[str, int | float | bool | str] = stage3.get(name, {})
-        behavior = CreatureBehavior(
+        behavior = BehaviorEntry(
             movement=movement,
             priority=priority,
             action=action,
@@ -233,7 +281,7 @@ async def evaluate_creature_behaviors(
             state_id=int(s3.get("state_id", 0)),
         )
         behaviors[name] = behavior
-        scene.put_creature(creature.name, name, behavior)
+        scene.put_behavior(creature.name, name, behavior)
 
     logger.info(
         "creature_eval",

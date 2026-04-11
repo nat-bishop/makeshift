@@ -6,6 +6,9 @@ extends RefCounted
 ## but adding "wet" only removes "burning".
 ## "electrified" has no contradictions — can stack with anything.
 
+## Canonical state ID → name mapping. Single source of truth for GDScript.
+const STATE_NAMES: Array[String] = ["", "burning", "frozen", "wet", "electrified"]
+
 const REMOVES: Dictionary = {
 	"burning": ["frozen", "wet"],
 	"frozen": ["burning"],

@@ -1,6 +1,6 @@
-"""Tests for V3 pairwise and creature engine."""
+"""Tests for collision rule and creature behavior data models + utility function."""
 
-from app.cache.scene import CreatureBehavior, PairwiseResult
+from app.cache.scene import BehaviorEntry, CollisionRule
 from app.engine.creature import PRIORITY_WEIGHTS, compute_utility
 
 
@@ -47,23 +47,19 @@ class TestComputeUtility:
             assert u_high > u_low
 
 
-class TestPairwiseResult:
+class TestCollisionRule:
     def test_to_dict_roundtrip(self):
-        pr = PairwiseResult(10, 20, 1, 0, 30, True)
-        d = pr.to_dict()
-        pr2 = PairwiseResult.from_dict(d)
-        assert pr2.damage_a == 10
-        assert pr2.damage_b == 20
-        assert pr2.state_change_a == 1
-        assert pr2.force_b == 30
-        assert pr2.continuous is True
+        cr = CollisionRule(force_on_b=30)
+        d = cr.to_dict()
+        cr2 = CollisionRule.from_dict(d)
+        assert cr2.force_on_b == 30
 
 
-class TestCreatureBehavior:
+class TestBehaviorEntry:
     def test_to_dict_roundtrip(self):
-        cb = CreatureBehavior(movement=0, priority=3, action=5, amount=0, state_id=0)
-        d = cb.to_dict()
-        cb2 = CreatureBehavior.from_dict(d)
-        assert cb2.movement == 0
-        assert cb2.priority == 3
-        assert cb2.action == 5
+        be = BehaviorEntry(movement=0, priority=3, action=5, amount=0, state_id=0)
+        d = be.to_dict()
+        be2 = BehaviorEntry.from_dict(d)
+        assert be2.movement == 0
+        assert be2.priority == 3
+        assert be2.action == 5

@@ -181,7 +181,7 @@ func _format_action(cb: Node) -> String:
 		var entry: Dictionary = cb._pairs.get(cb.current_target_name, {})
 		var sid: int = entry.get("state_id", 0)
 		if sid >= 1 and sid <= 4:
-			return "%s:%s" % [base, CollisionResolver.STATE_NAMES[sid]]
+			return "%s:%s" % [base, StateContradictions.STATE_NAMES[sid]]
 	return base
 
 

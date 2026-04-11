@@ -141,10 +141,10 @@ class TestGameObjectBlueprint:
             )
 
     def test_name_validation_too_long(self):
-        with pytest.raises(ValidationError, match="3 words"):
+        with pytest.raises(ValidationError, match="5 words"):
             GameObjectBlueprint(
                 id="t",
-                name="a very long name indeed",
+                name="a very long name indeed with extras",
                 description="x",
                 visual_description="x",
                 physics=PhysicsProperties(

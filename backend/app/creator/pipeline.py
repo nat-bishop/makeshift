@@ -4,10 +4,10 @@ Flow:
   1. Check creation cache (description -> cached blueprint)
   2. Generate name (~3 tokens, sequential — other prompts use it)
   3. Fan-out: gated parallel calls via run_questions()
-     - Unconditional: mass, height, surface, bounce, gravity, has_field,
-       durability, autonomous, affordance, visual_description
+     - Unconditional: mass, height, surface, bounce, gravity,
+       durability, autonomous, affordance, visual_description,
+       initial state bools (4), susceptible state bools (4)
      - Gated on autonomous: speed
-     - Gated on has_field: field_range_cm
      - Gated on durability<6: destruction_result_name
   4. Parse and assemble GameObjectBlueprint
   5. Cache creation result
@@ -66,13 +66,10 @@ async def create_object(description: str, cache: CacheStore) -> GameObjectBluepr
     # 3. Fan-out: gated parallel calls
     answers = await run_questions(
         ALL_CREATION_QUESTIONS,
-        {"name": description, "description": description},
+        {"name": name, "description": description},
     )
 
     # 4. Assemble
-    has_field = bool(answers.get("has_field", False))
-    field_range = int(answers.get("field_range_cm", 0)) if has_field else 0
-
     physics = PhysicsProperties(
         mass_kg=float(answers.get("mass_kg", 1.0)),
         height_cm=int(answers.get("height_cm", 30)),
@@ -80,6 +77,14 @@ async def create_object(description: str, cache: CacheStore) -> GameObjectBluepr
         bounce=int(answers.get("bounce", 10)),
         gravity=int(answers.get("gravity", 50)),
     )
+
+    # Collect initial/susceptible states from boolean answers
+    _INITIAL_KEYS = {1: "initially_burning", 2: "initially_frozen",
+                     3: "initially_wet", 4: "initially_electrified"}
+    _SUSCEPTIBLE_KEYS = {1: "catches_fire", 2: "can_freeze",
+                         3: "gets_wet", 4: "conducts_electricity"}
+    initial_states = [sid for sid, key in _INITIAL_KEYS.items() if answers.get(key)]
+    susceptible_states = [sid for sid, key in _SUSCEPTIBLE_KEYS.items() if answers.get(key)]
 
     destruction_raw = str(answers.get("destruction_result_name", "nothing"))
     destruction_name = "" if destruction_raw in ("nothing", "none", "") else destruction_raw
@@ -92,8 +97,8 @@ async def create_object(description: str, cache: CacheStore) -> GameObjectBluepr
         "affordance": int(answers.get("affordance", 3)),
         "autonomous": bool(answers.get("autonomous", False)),
         "speed": int(answers.get("speed", 2)),
-        "has_field": has_field,
-        "field_range_cm": field_range,
+        "initial_states": initial_states,
+        "susceptible_states": susceptible_states,
         "destruction_result_name": destruction_name,
     }
 

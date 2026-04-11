@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3 uid="uid://game_object"]
+[gd_scene load_steps=5 format=3 uid="uid://game_object"]
 
 [ext_resource type="Script" path="res://scenes/game_object/game_object.gd" id="1_game_object"]
 [ext_resource type="Script" path="res://scenes/game_object/physics_applicator.gd" id="2_physics"]
@@ -6,9 +6,6 @@
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_default"]
 size = Vector2(48, 48)
-
-[sub_resource type="CircleShape2D" id="CircleShape2D_cascade"]
-radius = 96.0
 
 [node name="GameObject" type="RigidBody2D"]
 collision_layer = 4
@@ -21,14 +18,6 @@ script = ExtResource("1_game_object")
 shape = SubResource("RectangleShape2D_default")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
-
-[node name="CascadeArea" type="Area2D" parent="."]
-collision_layer = 0
-collision_mask = 4
-monitoring = true
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="CascadeArea"]
-shape = SubResource("CircleShape2D_cascade")
 
 [node name="PhysicsApplicator" type="Node" parent="."]
 script = ExtResource("2_physics")
