@@ -1,4 +1,8 @@
-# LLM Model Benchmark Results (Novel Prompts Only)
+# LLM Model Benchmark Results (Historical)
+
+> **Historical data from March 2026.** These benchmarks used the old tag/behavior-verb system that has since been replaced. Retained for reference on local model performance characteristics.
+
+## Novel Prompts Only
 
 All 10 prompts are NOT in the system prompt examples. Each test was run individually (sequential, not batched) to get accurate timing.
 

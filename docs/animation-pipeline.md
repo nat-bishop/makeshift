@@ -1,6 +1,8 @@
 # Animation Pipeline Reference
 
-Reference document for implementing sprite sheet animation generation into the game pipeline. Based on extensive experimentation (March 2026) testing reference images, iterative generation, single-sheet approaches, and various prompting strategies.
+> **Status: Experimental** — This pipeline is not yet in production. Based on March 2026 experimentation.
+
+Reference document for implementing sprite sheet animation generation into the game pipeline. Based on testing reference images, iterative generation, single-sheet approaches, and various prompting strategies.
 
 ## Approach Summary
 

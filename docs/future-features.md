@@ -1,4 +1,4 @@
-# V3 Future Features
+# Future Features
 
 Ideas explored during design that aren't part of the core system. Each could be added independently once the base architecture is working.
 

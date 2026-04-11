@@ -1,6 +1,6 @@
 # Makeshift
 
-"Scribblenauts meets Terraria" — a 2D physics sandbox where you type text descriptions to create game objects. An LLM generates tagged blueprints, a generative model produces pixel art sprites, and objects interact through a tag-based rule system with chain reactions.
+"Scribblenauts meets Terraria" — a 2D physics sandbox where you type text descriptions to create game objects. An LLM generates physics blueprints via parallel 1-token calls, Gemini produces sprites, and objects interact through a unified behavior system with state propagation.
 
 ## Prerequisites
 
@@ -75,5 +75,5 @@ Eval cases in `backend/evals/fixtures/eval_suite.yaml`. Results in `backend/eval
 
 ## Documentation
 
-- [V3 Design Docs](docs/index.md) — architecture, engine primitives, creation pipeline, caching, LLM design patterns
+- [Design Documentation](docs/index.md) — architecture, engine primitives, creation pipeline, caching, LLM design patterns
 - [CLAUDE.md](CLAUDE.md) — developer quick-reference (conventions, gotchas, API endpoints)

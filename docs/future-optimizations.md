@@ -1,6 +1,6 @@
-# V3 Future Optimizations
+# Future Optimizations
 
-Ideas evaluated during architecture review that aren't part of the initial build. Each can be adopted independently.
+Optimizations evaluated during architecture review that aren't part of the current build. Each can be adopted independently. These apply to the **local LLM path** (when `LOCAL_LLM_URL` is set), not the default Gemini cloud backend.
 
 ---
 
