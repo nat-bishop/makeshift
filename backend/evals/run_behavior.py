@@ -99,6 +99,30 @@ class BehaviorInput(BaseModel):
     targets: list[TargetExpectation]
 
 
+# Human-readable labels for behavior field values
+_FIELD_LABELS: dict[str, dict[int, str]] = {
+    "movement": {0: "approach", 1: "flee", 2: "ignore"},
+    "priority": {0: "ignore", 1: "mild", 2: "moderate", 3: "driven"},
+    "action": {0: "nothing", 1: "damage", 2: "heal", 3: "consume", 4: "push"},
+    "state_action": {0: "nothing", 1: "apply", 2: "remove"},
+    "state_id": {0: "none", 1: "burn", 2: "freeze", 3: "wet", 4: "zap"},
+    "force": {0: "nothing", 1: "push"},
+}
+
+
+def _label(field: str, value: object) -> str:
+    """Return human-readable label for a behavior field value, or str(value) as fallback."""
+    labels = _FIELD_LABELS.get(field)
+    if labels and isinstance(value, int):
+        return labels.get(value, str(value))
+    return str(value)
+
+
+def _label_list(field: str, values: list) -> str:
+    """Format a list of values with human-readable labels."""
+    return "[" + ", ".join(_label(field, v) for v in values) + "]"
+
+
 @dataclass(repr=False)
 class BehaviorEvaluator(Evaluator[BehaviorInput, dict[str, Any], None]):
     """Check behavior results against fixture expectations.
@@ -107,7 +131,7 @@ class BehaviorEvaluator(Evaluator[BehaviorInput, dict[str, Any], None]):
       - list of acceptable values: actual must be in the list
       - {min, max} dict: range check (min <= actual <= max)
       - exact value: actual must equal expected
-    Failures include a reason string showing actual vs expected.
+    Failures include a reason string with human-readable labels.
     """
 
     def evaluate(
@@ -135,19 +159,31 @@ class BehaviorEvaluator(Evaluator[BehaviorInput, dict[str, Any], None]):
                     passed = lo <= actual <= hi
                     results[f"{prefix}.{field}"] = EvaluationReason(
                         value=passed,
-                        reason=None if passed else f"got {actual}, expected [{lo}, {hi}]",
+                        reason=None
+                        if passed
+                        else (
+                            f"got {_label(field, actual)}, "
+                            f"expected [{_label(field, lo)}, {_label(field, hi)}]"
+                        ),
                     )
                 elif isinstance(expected_val, list):
                     passed = actual in expected_val
                     results[f"{prefix}.{field}"] = EvaluationReason(
                         value=passed,
-                        reason=None if passed else f"got {actual}, expected one of {expected_val}",
+                        reason=None
+                        if passed
+                        else (
+                            f"got {_label(field, actual)}, "
+                            f"expected one of {_label_list(field, expected_val)}"
+                        ),
                     )
                 else:
                     passed = actual == expected_val
                     results[f"{prefix}.{field}"] = EvaluationReason(
                         value=passed,
-                        reason=None if passed else f"got {actual}, expected {expected_val}",
+                        reason=None
+                        if passed
+                        else f"got {_label(field, actual)}, expected {_label(field, expected_val)}",
                     )
 
         return results

@@ -66,6 +66,33 @@ STATE_FIELD_MAP: dict[str, tuple[int, str]] = {
 }
 
 
+# Human-readable labels for creation field values
+_CREATION_LABELS: dict[str, dict[int, str]] = {
+    "affordance": {0: "carry", 1: "ride", 2: "scale", 3: "none"},
+    "surface": {0: "slick", 1: "normal", 2: "sticky"},
+    "durability": {
+        0: "soft",
+        1: "weak",
+        2: "normal",
+        3: "tough",
+        4: "hardy",
+        5: "fortified",
+        6: "permanent",
+    },
+    "speed": {0: "crawl", 1: "slow", 2: "normal", 3: "fast", 4: "rapid"},
+}
+
+_STATE_NAMES: dict[int, str] = {1: "burning", 2: "frozen", 3: "wet", 4: "electrified"}
+
+
+def _creation_label(field: str, value: object) -> str:
+    """Return human-readable label for a creation field value."""
+    labels = _CREATION_LABELS.get(field)
+    if labels and isinstance(value, (int, float)):
+        return labels.get(int(value), str(value))
+    return str(value)
+
+
 def _get_nested(obj: object, dotted_path: str) -> object:
     result = obj
     for part in dotted_path.split("."):
@@ -97,28 +124,35 @@ class CreationEvaluator(Evaluator[str, GameObjectBlueprint, dict[str, Any]]):
                 actual_list: list[int] = getattr(bp, attr_name)
                 actual_present = state_id in actual_list
                 passed = actual_present == bool(val)
+                state_name = _STATE_NAMES.get(state_id, str(state_id))
+                actual_names = [_STATE_NAMES.get(s, str(s)) for s in actual_list]
                 results[field] = EvaluationReason(
                     value=passed,
                     reason=None
                     if passed
-                    else f"state {state_id} {'not ' if val else ''}in {attr_name}: {actual_list}",
+                    else f"{state_name} {'not ' if val else ''}in {attr_name}: {actual_names}",
                 )
             elif isinstance(val, list) and len(val) == 2:
                 attr_path: str = FIELD_TO_ATTR.get(field, field)
                 actual_num = float(_get_nested(bp, attr_path))  # type: ignore[arg-type]
                 lo, hi = float(val[0]), float(val[1])
                 passed = in_range(actual_num, lo, hi)
+                actual_lbl = _creation_label(field, actual_num)
+                lo_lbl = _creation_label(field, lo)
+                hi_lbl = _creation_label(field, hi)
                 results[field] = EvaluationReason(
                     value=passed,
-                    reason=None if passed else f"got {actual_num}, expected [{lo}, {hi}]",
+                    reason=None if passed else f"got {actual_lbl}, expected [{lo_lbl}, {hi_lbl}]",
                 )
             elif isinstance(val, (bool, int)):
                 attr_path = FIELD_TO_ATTR.get(field, field)
                 actual = _get_nested(bp, attr_path)
                 passed = actual == val
+                got = _creation_label(field, actual)
+                exp = _creation_label(field, val)
                 results[field] = EvaluationReason(
                     value=passed,
-                    reason=None if passed else f"got {actual}, expected {val}",
+                    reason=None if passed else f"got {got}, expected {exp}",
                 )
 
         return results
