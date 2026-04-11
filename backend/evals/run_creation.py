@@ -52,6 +52,19 @@ FIELD_TO_ATTR: dict[str, str] = {
     "speed": "speed",
 }
 
+# State boolean fields → (state_id, blueprint list attribute)
+# Maps creation question names to membership checks on initial_states / susceptible_states.
+STATE_FIELD_MAP: dict[str, tuple[int, str]] = {
+    "initially_burning": (1, "initial_states"),
+    "initially_frozen": (2, "initial_states"),
+    "initially_wet": (3, "initial_states"),
+    "initially_electrified": (4, "initial_states"),
+    "catches_fire": (1, "susceptible_states"),
+    "can_freeze": (2, "susceptible_states"),
+    "gets_wet": (3, "susceptible_states"),
+    "conducts_electricity": (4, "susceptible_states"),
+}
+
 
 def _get_nested(obj: object, dotted_path: str) -> object:
     result = obj
@@ -79,7 +92,18 @@ class CreationEvaluator(Evaluator[str, GameObjectBlueprint, dict[str, Any]]):
         results: dict[str, EvaluationReason] = {}
 
         for field, val in expected.items():
-            if isinstance(val, list) and len(val) == 2:
+            if field in STATE_FIELD_MAP:
+                state_id, attr_name = STATE_FIELD_MAP[field]
+                actual_list: list[int] = getattr(bp, attr_name)
+                actual_present = state_id in actual_list
+                passed = actual_present == bool(val)
+                results[field] = EvaluationReason(
+                    value=passed,
+                    reason=None
+                    if passed
+                    else f"state {state_id} {'not ' if val else ''}in {attr_name}: {actual_list}",
+                )
+            elif isinstance(val, list) and len(val) == 2:
                 attr_path: str = FIELD_TO_ATTR.get(field, field)
                 actual_num = float(_get_nested(bp, attr_path))  # type: ignore[arg-type]
                 lo, hi = float(val[0]), float(val[1])

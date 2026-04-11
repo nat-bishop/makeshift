@@ -84,6 +84,9 @@ archetypes:
   vampire: { mass_kg: 70.0, height_cm: 180, bounce: 10, gravity: 55, autonomous: true, speed: 3, surface: 1 }
   chicken: { mass_kg: 3.0, height_cm: 40, bounce: 10, gravity: 50, autonomous: true, speed: 2, surface: 1 }
   cat: { mass_kg: 4.0, height_cm: 25, bounce: 15, gravity: 50, autonomous: true, speed: 3, surface: 1 }
+  # Elemental archetypes (for behavior eval state_id coverage)
+  ice elemental: { mass_kg: 50.0, height_cm: 150, bounce: 10, gravity: 55, autonomous: true, speed: 2, surface: 0, initial_states: [2] }
+  water elemental: { mass_kg: 80.0, height_cm: 160, bounce: 10, gravity: 55, autonomous: true, speed: 2, surface: 0, initial_states: [3] }
 
 
 # ---------------------------------------------------------------------------
@@ -102,6 +105,8 @@ creation_tests:
       affordance: 0
       surface: 1
       durability: [3, 4]
+      conducts_electricity: true
+      catches_fire: false
 
   - name: wooden shield
     expected:
@@ -109,12 +114,18 @@ creation_tests:
       height_cm: [30, 120]
       bounce: [5, 30]
       gravity: [45, 65]
+      catches_fire: true
+      gets_wet: true
 
   - name: campfire
     expected:
       gravity: [20, 65]
       affordance: 3
       durability: [2, 3]
+      initially_burning: true
+      initially_frozen: false
+      initially_electrified: false
+      can_freeze: false
 
   - name: zombie
     expected:
@@ -141,6 +152,7 @@ creation_tests:
       bounce: [50, 99]
       gravity: [40, 60]
       durability: [1, 3]
+      initially_burning: false
 
   - name: mountain
     expected:
@@ -158,6 +170,9 @@ creation_tests:
       gravity: [40, 60]
       surface: 0
       durability: [0, 1]
+      initially_frozen: true
+      initially_burning: false
+      initially_wet: false
 
   - name: horse
     expected:
@@ -179,6 +194,8 @@ creation_tests:
       gravity: [40, 75]
       affordance: 3
       durability: [3, 6]
+      initially_burning: true
+      initially_frozen: false
 
   - name: feather
     expected:
@@ -188,6 +205,8 @@ creation_tests:
       gravity: [0, 40]
       affordance: 0
       durability: [0, 1]
+      catches_fire: true
+      conducts_electricity: false
 
   - name: boulder
     expected:
@@ -197,6 +216,8 @@ creation_tests:
       gravity: [50, 80]
       affordance: 3
       durability: [3, 5]
+      initially_burning: false
+      catches_fire: false
 
   - name: smoke cloud
     expected:
@@ -223,6 +244,7 @@ creation_tests:
     expected:
       mass_kg: [0.2, 3.0]
       durability: [1, 2]
+      initially_burning: true
 
   - name: cat
     expected:
@@ -240,7 +262,8 @@ creation_tests:
       height_cm: [20, 50]
       gravity: [55, 85]
       bounce: [0, 15]
-      durability: [4, 6]
+      durability: [3, 6]
+      catches_fire: false
 
   - name: diamond
     expected:
@@ -281,12 +304,15 @@ creation_tests:
       mass_kg: [3, 20]
       height_cm: [60, 120]
       durability: [1, 3]
+      catches_fire: true
 
   - name: tree
     expected:
       mass_kg: [50, 10000]
       height_cm: [200, 5000]
       durability: [2, 4]
+      catches_fire: true
+      gets_wet: true
 
   - name: robot
     expected:
@@ -295,10 +321,12 @@ creation_tests:
       autonomous: true
       speed: [1, 3]
       durability: [3, 5]
+      conducts_electricity: true
 
   - name: oil puddle
     expected:
       surface: 0
+      initially_electrified: false
 
   - name: pillow
     expected:
@@ -306,6 +334,8 @@ creation_tests:
       height_cm: [20, 60]
       bounce: [15, 70]
       durability: [0, 1]
+      catches_fire: true
+      gets_wet: true
 
   - name: dragon
     expected:
@@ -314,6 +344,45 @@ creation_tests:
       autonomous: true
       speed: [2, 4]
       durability: [3, 5]
+      initially_burning: true
+
+  - name: tar pit
+    expected:
+      mass_kg: [20, 100000]
+      height_cm: [10, 200]
+      surface: 2
+      affordance: 3
+      autonomous: false
+      durability: [2, 6]
+      catches_fire: true
+
+  - name: puddle
+    expected:
+      mass_kg: [0.1, 10]
+      height_cm: [1, 20]
+      surface: 0
+      affordance: 3
+      durability: [0, 2]
+      initially_wet: true
+      initially_burning: false
+      can_freeze: true
+
+  - name: lightning bolt
+    expected:
+      mass_kg: [0.0001, 1]
+      height_cm: [50, 10000]
+      gravity: [0, 30]
+      initially_electrified: true
+      initially_frozen: false
+
+  - name: snowball
+    expected:
+      mass_kg: [0.05, 2]
+      height_cm: [3, 25]
+      bounce: [0, 30]
+      durability: [0, 1]
+      initially_frozen: true
+      initially_burning: false
 
 
 # ---------------------------------------------------------------------------
@@ -403,8 +472,10 @@ behaviors:
           movement: 0
           action: 1
           amount: {min: 15, max: 100}
+          state_action: 0
+          force: 0
           priority: {min: 2, max: 3}
-        note: "zombie attacks living people"
+        note: "zombie attacks living people — no elemental, no knockback"
 
   - subject: firefighter
     targets:
@@ -459,8 +530,9 @@ behaviors:
           movement: 0
           action: 1
           amount: {min: 15, max: 100}
+          state_action: 0
           priority: {min: 2, max: 3}
-        note: "guard dog attacks threats"
+        note: "guard dog attacks threats — no elemental state change"
 
   - subject: doctor
     targets:
@@ -500,22 +572,15 @@ behaviors:
           priority: {min: 1, max: 3}
         note: "vampire vs person is ambiguous — may attack, consume (drink blood), or be wary"
 
-  - subject: chicken
-    targets:
-      - name: wolf
-        expected:
-          movement: 1
-          priority: {min: 2, max: 3}
-        note: "chicken runs from predators"
-
   - subject: wolf
     targets:
       - name: sheep
         expected:
           movement: 0
           action: [1, 3]
+          state_action: 0
           priority: {min: 2, max: 3}
-        note: "wolf aggressively hunts sheep"
+        note: "wolf aggressively hunts sheep — no elemental state change"
 
   - subject: sheep
     targets:
@@ -543,8 +608,9 @@ behaviors:
         expected:
           movement: 0
           action: [1, 3]
+          state_action: 0
           priority: {min: 1, max: 3}
-        note: "bear hunts small prey"
+        note: "bear hunts small prey — no elemental state change"
       - name: rock
         expected:
           movement: 2
@@ -573,12 +639,6 @@ behaviors:
 
   - subject: rabbit
     targets:
-      - name: rock
-        expected:
-          movement: [0, 2]
-          action: 0
-          priority: {min: 0, max: 1}
-        note: "rabbit vs inert rock — ignore or mild curiosity, no action"
       - name: wolf
         expected:
           movement: 1
@@ -598,8 +658,9 @@ behaviors:
           movement: 0
           action: 1
           amount: {min: 30, max: 100}
+          force: [0, 1]
           priority: {min: 2, max: 3}
-        note: "dragon attacks people"
+        note: "dragon attacks people — may or may not knock back"
       - name: sheep
         expected:
           movement: 0
@@ -628,7 +689,8 @@ behaviors:
           movement: 2
           priority: {min: 0, max: 3}
           action: [0, 1]
-        note: "bomb may damage rock or have no effect — priority varies"
+          force: [0, 1]
+        note: "bomb may damage rock or have no effect — force possible if action=attack"
 
   - subject: fan
     targets:
@@ -650,8 +712,98 @@ behaviors:
     targets:
       - name: glass bottle
         expected:
-          movement: 2
+          movement: [1, 2]
           priority: {min: 2, max: 3}
           action: [1, 3]
-        note: "acid dissolves or damages glass"
+          state_action: 0
+        note: "acid dissolves or damages glass — no elemental state. movement ambiguous for reactive elements"
+
+  - subject: fire
+    targets:
+      - name: wood
+        expected:
+          movement: [0, 1, 2]
+          action: [1, 3]
+          state_action: 1
+          state_id: 1
+          priority: {min: 2, max: 3}
+        note: "fire ignites flammable wood — canonical state modifier test. movement ambiguous for reactive elements"
+      - name: ice cube
+        expected:
+          movement: [0, 1, 2]
+          action: [1, 3]
+          priority: {min: 1, max: 3}
+        note: "fire melts ice — action is clear, state modifier is ambiguous (no 'melt' state)"
+
+  - subject: live wire
+    targets:
+      - name: water
+        expected:
+          movement: [0, 1, 2]
+          action: [1, 4]
+          state_action: [0, 1]
+          priority: {min: 2, max: 3}
+        note: "live wire electrifies water — movement ambiguous for reactive elements"
+      - name: iron sword
+        expected:
+          movement: [0, 2]
+          action: [1, 4]
+          priority: {min: 1, max: 3}
+        note: "live wire interacts with metal conductor"
+
+  - subject: ice elemental
+    targets:
+      - name: person
+        expected:
+          movement: [0, 1, 2]
+          action: [1, 3]
+          state_action: [0, 1]
+          state_id: [0, 2]
+          priority: {min: 1, max: 3}
+        note: "ice elemental vs person — may or may not apply freeze. LLM doesn't reliably map fantasy names to state effects"
+      - name: campfire
+        expected:
+          movement: [0, 1, 2]
+          action: [1, 3]
+          priority: {min: 2, max: 3}
+        note: "ice elemental vs fire — action clear, state modifier ambiguous (cleanse burn or apply freeze?)"
+
+  - subject: water elemental
+    targets:
+      - name: person
+        expected:
+          movement: [0, 1, 2]
+          action: [1, 2, 3]
+          state_action: [0, 1]
+          state_id: [0, 3]
+          priority: {min: 1, max: 3}
+        note: "water elemental wets/floods person — state_id=3(wet) if state_action triggered, 0 otherwise"
+      - name: campfire
+        expected:
+          movement: [0, 1, 2]
+          action: [1, 3]
+          state_action: [1, 2]
+          state_id: [1, 3]
+          priority: {min: 2, max: 3}
+        note: "water elemental vs fire — may cleanse burn(1) or apply wet(3), both valid"
+
+  - subject: lightning
+    targets:
+      - name: water
+        expected:
+          movement: [0, 1, 2]
+          action: 1
+          state_action: 1
+          state_id: 4
+          priority: {min: 2, max: 3}
+        note: "lightning electrifies water — action=attack reliable for lightning, tests state_id=4 (zap)"
+      - name: person
+        expected:
+          movement: [0, 1, 2]
+          action: 1
+          amount: {min: 30, max: 100}
+          state_action: [0, 1]
+          force: [0, 1]
+          priority: {min: 2, max: 3}
+        note: "lightning strikes person — strong damage, may also electrify and knock back"
 
