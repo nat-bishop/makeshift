@@ -131,9 +131,31 @@ def make_blueprint(
 # ---------------------------------------------------------------------------
 
 
+def _extract_category(field_name: str) -> str:
+    """Extract the category (field type) from an assertion name.
+
+    Behavior assertions: 'zombie_vs_person.action' -> 'action'
+    Creation assertions: 'mass_kg', 'initially_burning' -> as-is
+    Screening assertions: 'includes_wood', 'excludes_rock' -> 'includes' / 'excludes'
+    """
+    if "." in field_name:
+        return field_name.rsplit(".", 1)[1]
+    if field_name.startswith("includes_"):
+        return "includes"
+    if field_name.startswith("excludes_"):
+        return "excludes"
+    return field_name
+
+
+def _bar(pct: float, width: int = 20) -> str:
+    """Render a text bar chart segment."""
+    filled = round(pct / 100 * width)
+    return "\u2588" * filled + "\u2591" * (width - filled)
+
+
 @dataclass(repr=False)
 class SummaryEvaluator(ReportEvaluator):
-    """Aggregate pass rates across all cases — overall + per-field breakdown."""
+    """Aggregate pass rates — overall, per-category, and per-field breakdown."""
 
     def evaluate(self, ctx: ReportEvaluatorContext) -> list[ReportAnalysis]:
         field_pass: dict[str, int] = defaultdict(int)
@@ -149,23 +171,47 @@ class SummaryEvaluator(ReportEvaluator):
         passed = sum(field_pass.values())
         overall_pct = (passed / total * 100) if total else 0.0
 
-        # Per-field table sorted worst-first
-        rows: list[list[str | int | float | bool | None]] = []
+        # --- Category-level aggregation ---
+        cat_pass: dict[str, int] = defaultdict(int)
+        cat_total: dict[str, int] = defaultdict(int)
+        for field in field_total:
+            cat = _extract_category(field)
+            cat_pass[cat] += field_pass[field]
+            cat_total[cat] += field_total[field]
+
+        cat_rows: list[list[str | int | float | bool | None]] = []
+        for cat in sorted(cat_total, key=lambda c: cat_pass[c] / max(cat_total[c], 1)):
+            t = cat_total[cat]
+            p = cat_pass[cat]
+            pct = p / t * 100 if t else 0.0
+            cat_rows.append([cat, f"{pct:.0f}%", _bar(pct), p, t - p, t])
+
+        # --- Per-field (only failures) ---
+        fail_rows: list[list[str | int | float | bool | None]] = []
         for field in sorted(field_total, key=lambda f: field_pass[f] / max(field_total[f], 1)):
             t = field_total[field]
             p = field_pass[field]
-            pct = p / t * 100 if t else 0.0
-            rows.append([field, f"{pct:.0f}%", p, t - p, t])
+            if p < t:
+                pct = p / t * 100 if t else 0.0
+                fail_rows.append([field, f"{pct:.0f}%", p, t - p, t])
 
         analyses: list[ReportAnalysis] = [
             ScalarResult(title="Overall pass rate", value=round(overall_pct, 1), unit="%"),
         ]
-        if rows:
+        if cat_rows:
             analyses.append(
                 TableResult(
-                    title="Per-field pass rates (worst first)",
+                    title="By category (worst first)",
+                    columns=["Category", "Pass %", "Bar", "Passed", "Failed", "Total"],
+                    rows=cat_rows,
+                )
+            )
+        if fail_rows:
+            analyses.append(
+                TableResult(
+                    title="Failing fields (worst first)",
                     columns=["Field", "Pass %", "Passed", "Failed", "Total"],
-                    rows=rows,
+                    rows=fail_rows,
                 )
             )
         return analyses
