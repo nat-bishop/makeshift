@@ -34,8 +34,8 @@ Gated on autonomous=true:
 17. Speed (crawl→rapid)          → (skipped)
 
 === Batch 1b: Concurrent with batch 1 ===
-18. Visual description            → "flaming longsword with orange 
-                                     blade and ember particles" (~20-30 tokens)
+18. Visual description            → "Cut paper flames in orange and red
+                                     over a cardboard blade, foil hilt" (~60-80 tokens)
 19. Destruction result name       → "splinters" (gated: durability < 6)
 
 Total creation calls: ~19 (17 properties + visual + destruction)

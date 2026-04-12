@@ -9,6 +9,7 @@ var _reconnect_timer: float = 0.0
 var _reconnect_delay: float = 1.0
 var _sprite_cache: Dictionary = {}  # object_id -> Texture2D
 var _combined_sprite_cache: Dictionary = {}  # object_id -> Texture2D
+var _destruction_sprite_cache: Dictionary = {}  # destruction_result_name -> Texture2D
 var _pending_sprites: Array = []  # object_ids waiting for sprites
 var _sync_timer: float = 0.0
 const SYNC_INTERVAL: float = 10.0
@@ -96,6 +97,11 @@ func request_destruction_spawn(debris_name: String, pos: Vector2) -> void:
 		Log.warn("Backend: Failed to create destruction debris '%s'" % debris_name)
 		return
 	var bp: Dictionary = result.get("blueprint", result)
+	# If a pre-generated img2img destruction sprite exists, attach it so the
+	# debris object can use it immediately instead of waiting for text-to-image.
+	var preloaded: Texture2D = _destruction_sprite_cache.get(debris_name, null)
+	if preloaded != null:
+		bp["_preloaded_sprite"] = preloaded
 	var world_node: Node = get_tree().get_first_node_in_group("world")
 	if world_node and world_node.has_method("spawn_object"):
 		world_node.spawn_object(bp, pos)
@@ -194,6 +200,8 @@ func _handle_ws_message(text: String) -> void:
 			_handle_sprite_failed(data)
 		"combined_sprite_ready":
 			_handle_combined_sprite_ready(data)
+		"destruction_sprite_ready":
+			_handle_destruction_sprite_ready(data)
 		"behaviors_ready":
 			var subject_name: String = data.get("subject_name", "")
 			var behaviors: Array = data.get("behaviors", [])
@@ -275,6 +283,25 @@ func _handle_combined_sprite_ready(data: Dictionary) -> void:
 
 func get_combined_sprite(object_id: String) -> Texture2D:
 	return _combined_sprite_cache.get(object_id, null)
+
+
+func _handle_destruction_sprite_ready(data: Dictionary) -> void:
+	var debris_name: String = data.get("destruction_result_name", "")
+	var sprite_url: String = data.get("sprite_url", "")
+	if debris_name.is_empty() or sprite_url.is_empty():
+		Log.warn("Backend: Malformed destruction_sprite_ready message: %s" % [data])
+		return
+
+	var texture: Texture2D = await _fetch_texture(sprite_url, "destruction sprite")
+	if texture == null:
+		return
+
+	_destruction_sprite_cache[debris_name] = texture
+	Log.info("Backend: Destruction sprite cached for debris '%s'" % debris_name)
+
+
+func get_destruction_sprite(debris_name: String) -> Texture2D:
+	return _destruction_sprite_cache.get(debris_name, null)
 
 
 func _process_reconnect(delta: float) -> void:

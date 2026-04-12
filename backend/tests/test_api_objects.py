@@ -70,15 +70,16 @@ async def _test_client() -> AsyncIterator[tuple[AsyncClient, FastAPI]]:
 
     import app.images.pipeline as _pipeline
 
-    orig_gen, orig_bg = _pipeline._generate_image, _pipeline._remove_bg
-    _pipeline._generate_image = AsyncMock(return_value=b"fake_image")
-    _pipeline._remove_bg = AsyncMock(return_value=b"fake_image")
+    orig_bg = _pipeline.remove_bg
+    _pipeline.remove_bg = AsyncMock(return_value=b"fake_image")
     try:
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-            yield client, app
+        with patch.object(_pipeline, "generate_image", new=AsyncMock(return_value=b"fake_image")):
+            async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                yield client, app
     finally:
-        _pipeline._generate_image = orig_gen
-        _pipeline._remove_bg = orig_bg
+        _pipeline.remove_bg = orig_bg
         await cache.close()
         await db.close()
 

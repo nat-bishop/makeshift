@@ -146,13 +146,12 @@ async def generate_sprite(appearance: str, char_id: str) -> Image.Image:
         print(f"  Using cached sprite: {cache_path.name}")
         return Image.open(cache_path).convert("RGBA")
 
-    from app.images.pipeline import _crop_and_fit, get_generate_image, get_remove_bg
+    from app.images.local_image import generate_image
+    from app.images.pipeline import _crop_and_fit, remove_bg
 
     prompt = SPRITE_PROMPT_TEMPLATE.format(appearance=appearance)
     print(f"  Generating sprite for {char_id}...")
-    generate_image = get_generate_image()
     raw_bytes = await generate_image(prompt)
-    remove_bg = get_remove_bg()
     nobg_bytes = await remove_bg(raw_bytes)
     img = Image.open(io.BytesIO(nobg_bytes)).convert("RGBA")
     fitted = _crop_and_fit(img, 512)
