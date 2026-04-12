@@ -1,20 +1,20 @@
 # Makeshift
 
-"Scribblenauts meets Terraria" — a 2D physics sandbox where you type text descriptions to create game objects. An LLM generates physics blueprints via parallel 1-token calls, Gemini produces sprites, and objects interact through a unified behavior system with state propagation.
+"Scribblenauts meets Terraria" — a 2D physics sandbox where you type text descriptions to create game objects. An LLM generates physics blueprints via parallel 1-token calls, FLUX generates sprites locally, and objects interact through a unified behavior system with state propagation.
 
 ## Prerequisites
 
 - Python 3.11+
 - [uv](https://docs.astral.sh/uv/) package manager
 - [Godot 4.6](https://godotengine.org/) (for the client)
-- API keys: [Google AI](https://ai.google.dev/) (Gemini — LLM + image generation); [fal.ai](https://fal.ai/) only if using cloud background removal
+- API keys: [Google AI](https://ai.google.dev/) (Gemini — LLM only); GPU server running FLUX (for sprite generation) and BiRefNet (for background removal) via Docker
 
 ## Quick Start
 
 ```bash
 # Configure environment
 cp .env.example .env
-# Edit .env with your GOOGLE_API_KEY (FAL_KEY only needed for cloud bg removal)
+# Edit .env with your GOOGLE_API_KEY
 
 # Install dependencies
 make install
