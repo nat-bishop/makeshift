@@ -47,7 +47,7 @@ func focus_input() -> void:
 		_reveal_card.modulate.a = 1.0
 		_reveal_card.visible = false
 		_creation_form.visible = true
-	description_input.grab_focus()
+	description_input.call_deferred("grab_focus")
 
 
 func _process(delta: float) -> void:

@@ -54,8 +54,8 @@ func _input(event: InputEvent) -> void:
 		object_creation_panel.visible = !object_creation_panel.visible
 		Log.debug("HUD: Creation panel %s" % ("opened" if object_creation_panel.visible else "closed"))
 		if object_creation_panel.visible:
-			object_creation_panel.focus_input()
 			GameManager.pause_game()
+			object_creation_panel.focus_input()
 		else:
 			GameManager.resume_game()
 		get_viewport().set_input_as_handled()
