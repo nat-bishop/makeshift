@@ -89,24 +89,27 @@ _AFFORDANCE_ACTION = {0: "carrying", 1: "riding"}
 
 
 def build_prompt(name: str, visual_description: str) -> str:
-    """Build an image generation prompt from a name and visual description string."""
-    parts = [
-        "mixed media collage style paper cutout, side view, flat lighting, clean edges",
-        f"{name}, {visual_description}",
-        "single centered object, contrasting solid background color, no text",
-    ]
-    return ", ".join(parts)
+    """Build a narrative image prompt from a name and visual description."""
+    return (
+        f"A mixed media collage of {name} made from cut paper, magazine clippings, "
+        f"and cardboard, held together with visible scotch tape and glue. "
+        f"{visual_description} "
+        f"Side view, single centered object on a solid contrasting background. "
+        f"Flat lighting, clean edges, no text."
+    )
 
 
 def build_combined_prompt(affordance: int, object_name: str, object_visual: str) -> str:
-    """Build prompt for player + object combination sprite (carry/ride)."""
+    """Build a narrative prompt for player + object combination sprite (carry/ride)."""
     action = _AFFORDANCE_ACTION.get(affordance, "carrying")
-    parts = [
-        "mixed media collage style paper cutout, side view, flat lighting, clean edges",
-        f"{PLAYER_VISUAL} {action} {object_name}, {object_visual}",
-        "single centered scene, contrasting solid background color, no text",
-    ]
-    return ", ".join(parts)
+    return (
+        f"A mixed media collage of {PLAYER_VISUAL} {action} {object_name}, "
+        f"made from cut paper, magazine clippings, and cardboard, "
+        f"held together with visible scotch tape and glue. "
+        f"{object_visual} "
+        f"Side view, single centered scene on a solid contrasting background. "
+        f"Flat lighting, clean edges, no text."
+    )
 
 
 def get_cached_sprite_path(prompt: str) -> Path:
