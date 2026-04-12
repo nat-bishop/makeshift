@@ -24,13 +24,9 @@ if TYPE_CHECKING:
 
 @pytest.fixture(autouse=True)
 def _reset_singletons():
-    orig_gen = pipeline._generate_image
-    orig_bg = pipeline._remove_bg
-    pipeline._generate_image = None
-    pipeline._remove_bg = None
+    orig_bg = pipeline.remove_bg
     yield
-    pipeline._generate_image = orig_gen
-    pipeline._remove_bg = orig_bg
+    pipeline.remove_bg = orig_bg
 
 
 def _make_png(width: int = 100, height: int = 100) -> bytes:
@@ -54,10 +50,11 @@ def _make_blueprint(id: str = "test-id", name: str = "test object") -> GameObjec
 class TestGenerateStaticSprite:
     async def test_generates_valid_512_png(self):
         raw_png = _make_png()
-        pipeline._generate_image = AsyncMock(return_value=raw_png)
-        pipeline._remove_bg = AsyncMock(return_value=raw_png)
-
-        result = await generate_static_sprite("test")
+        with (
+            patch.object(pipeline, "generate_image", new=AsyncMock(return_value=raw_png)),
+            patch.object(pipeline, "remove_bg", new=AsyncMock(return_value=raw_png)),
+        ):
+            result = await generate_static_sprite("test")
 
         assert result[:4] == b"\x89PNG"
         img = Image.open(io.BytesIO(result))
@@ -107,12 +104,16 @@ class TestGenerateSprite:
 
     async def test_returns_none_on_error(self, tmp_path: Path) -> None:
         blueprint = _make_blueprint()
-        pipeline._generate_image = AsyncMock(side_effect=RuntimeError("boom"))
-        pipeline._remove_bg = AsyncMock()
 
         with (
             patch.object(pipeline, "STATIC_DIR", tmp_path),
             patch("app.config.settings") as mock_settings,
+            patch.object(
+                pipeline,
+                "generate_static_sprite",
+                new_callable=AsyncMock,
+                side_effect=RuntimeError("boom"),
+            ),
         ):
             mock_settings.sprite_cache_enabled = True
             result = await generate_sprite(blueprint)

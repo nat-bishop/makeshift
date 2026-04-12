@@ -17,7 +17,7 @@ ORIGINAL_HEIGHT = FRAME_SIZE * ORIGINAL_ROWS  # 992
 
 
 async def main() -> None:
-    from app.images.pipeline import _crop_and_fit, get_remove_bg
+    from app.images.pipeline import _crop_and_fit, remove_bg
     from app.logging_setup import setup_logging
 
     setup_logging()
@@ -42,8 +42,6 @@ async def main() -> None:
     frame2_raw = raw.crop((half_w, y_offset, w, y_offset + square_size))
 
     # Remove backgrounds using the project's bg removal pipeline
-    remove_bg = get_remove_bg()
-
     frames = []
     for i, frame_img in enumerate([frame1_raw, frame2_raw]):
         buf = io.BytesIO()

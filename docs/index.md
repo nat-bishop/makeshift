@@ -20,6 +20,7 @@ Start here to understand the architecture. Read in order for a complete picture,
 |-----|-----------------|----------------|
 | [Level Design](level-design.md) | When creating or modifying levels. | Design principles, BaseLevel API, seed object blueprint format, GameManager level registration. |
 | [Animation Pipeline](animation-pipeline.md) | When implementing sprite animation. **Experimental — not yet in production.** | 2x2 spritesheet generation via Gemini, cell creator LLM, post-processing, Godot integration. |
+| [Image Combination](image-combination.md) | When implementing img2img sprite combination, carry/ride, or destruction. | FLUX Kontext img2img pipeline: object combination, carry/ride, destruction. Winning prompts, reference image format (256x256 white bg), LLM instruction patterns. |
 
 ## Deferred work
 

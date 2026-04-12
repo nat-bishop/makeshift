@@ -42,9 +42,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         "server_starting",
         llm_model=settings.llm_model,
         local_llm_url=settings.local_llm_url,
-        image_model=settings.image_model,
-        image_backend=settings.image_backend,
-        bg_removal=settings.bg_removal_backend,
+        local_image_model=settings.local_image_model,
         budget=settings.session_budget_usd,
     )
 
@@ -53,11 +51,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     (STATIC_DIR / "sprites").mkdir(exist_ok=True)
     DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Warm up image pipeline singletons
-    from app.images.pipeline import get_generate_image, get_remove_bg
+    # Warm up image pipeline singletons (player sprite extraction)
+    from app.images.pipeline import get_player_sprite
 
-    get_generate_image()
-    get_remove_bg()
+    get_player_sprite()
 
     # Initialize game.db (sessions + objects)
     import aiosqlite
@@ -115,10 +112,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     logger.info("server_stopping")
 
-    from app.images.fal_helpers import close_http_client as close_fal_client
     from app.images.local_image import close_http_client as close_local_client
 
-    await close_fal_client()
     await close_local_client()
     await cache.close()
     await db.close()

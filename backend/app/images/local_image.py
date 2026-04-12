@@ -63,3 +63,41 @@ async def generate_image(prompt: str) -> bytes:
         elapsed=f"{time.monotonic() - t0:.2f}s",
     )
     return result
+
+
+async def generate_image_edit(prompt: str, images: list[tuple[str, bytes]]) -> bytes:
+    """Generate an image via FLUX Kontext img2img edits endpoint. Returns raw PNG bytes.
+
+    Args:
+        prompt: Full assembled text prompt.
+        images: List of (filename, png_bytes) tuples. Order matters -- first image
+            gets T10, second gets T20 in Kontext positional encoding.
+    """
+    t0 = time.monotonic()
+    logger.info("local_edit_start", prompt_len=len(prompt), num_refs=len(images))
+    client = _get_http_client()
+    files = [("image", (fname, data, "image/png")) for fname, data in images]
+    resp = await asyncio.wait_for(
+        client.post(
+            "/v1/images/edits",
+            files=files,
+            data={
+                "model": settings.local_image_model,
+                "prompt": prompt,
+                "n": "1",
+                "size": "512x512",
+                "response_format": "b64_json",
+                "num_inference_steps": str(settings.local_image_steps),
+            },
+        ),
+        timeout=settings.image_timeout_seconds,
+    )
+    resp.raise_for_status()
+    b64_data = resp.json()["data"][0]["b64_json"]
+    result = base64.b64decode(b64_data)
+    logger.info(
+        "local_edit_complete",
+        size_bytes=len(result),
+        elapsed=f"{time.monotonic() - t0:.2f}s",
+    )
+    return result

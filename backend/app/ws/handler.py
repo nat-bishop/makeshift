@@ -278,6 +278,30 @@ async def send_combined_sprite_ready(session_id: str, object_id: str, sprite_url
     )
 
 
+async def send_destruction_sprite_ready(
+    session_id: str,
+    object_id: str,
+    destruction_result_name: str,
+    sprite_url: str,
+) -> None:
+    """Notify clients that a pre-generated destruction debris sprite is ready."""
+    logger.info(
+        "send_destruction_sprite_ready",
+        session_id=session_id,
+        object_id=object_id,
+        debris=destruction_result_name,
+    )
+    await _broadcast(
+        session_id,
+        {
+            "type": "destruction_sprite_ready",
+            "object_id": object_id,
+            "destruction_result_name": destruction_result_name,
+            "sprite_url": sprite_url,
+        },
+    )
+
+
 async def send_sprite_failed(session_id: str, object_id: str, reason: str = "") -> None:
     """Notify clients that sprite generation failed."""
     logger.warning("send_sprite_failed", session_id=session_id, object_id=object_id, reason=reason)

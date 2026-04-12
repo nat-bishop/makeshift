@@ -41,6 +41,13 @@ func _process(delta: float) -> void:
 
 func set_object_id(id: String) -> void:
 	_object_id = id
+	# Check parent blueprint for a preloaded sprite (e.g. img2img destruction debris).
+	var parent := get_parent()
+	if parent and parent.blueprint.has("_preloaded_sprite"):
+		var preloaded = parent.blueprint.get("_preloaded_sprite")
+		if preloaded != null:
+			set_sprite(preloaded)
+			return
 	var cached: Texture2D = Backend.get_cached_sprite(id)
 	if cached != null:
 		set_sprite(cached)

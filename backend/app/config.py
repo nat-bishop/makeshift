@@ -29,7 +29,6 @@ _PROFILE_FIELD_MAP: dict[str, str] = {
 
 class Settings(BaseSettings):
     google_api_key: str = ""
-    fal_key: str = ""
     session_budget_usd: float = 1.00
     llm_timeout_seconds: int = 30
     image_timeout_seconds: int = 120
@@ -48,14 +47,10 @@ class Settings(BaseSettings):
     llm_repetition_penalty: float = 1.0
     local_llm_url: str | None = None
     local_llm_thinking_disabled: bool = True
-    image_model: str = "gemini-3.1-flash-image-preview"
-    image_backend: Literal["gemini", "local", "fal"] = "gemini"
     local_image_url: str = "http://127.0.0.1:5100"
     local_image_model: str = "black-forest-labs/FLUX.2-klein-4B"
     local_image_steps: int = 4
     local_image_guidance_scale: float = 1.0
-    fal_image_model: str = "fal-ai/flux/schnell"
-    bg_removal_backend: Literal["local", "cloud"] = "local"
     sprite_cache_enabled: bool = True
     creation_cache_enabled: bool = True
 

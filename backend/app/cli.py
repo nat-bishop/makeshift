@@ -119,13 +119,8 @@ async def _run_llm(description: str, timer: Timer) -> Any:
 
 async def _run_image(prompt: str, timer: Timer) -> bytes:
     """Run image generation. Adds step to timer."""
-    from app.images.pipeline import get_generate_image
+    from app.images.local_image import generate_image
 
-    t0 = time.monotonic()
-    generate_image = get_generate_image()
-    init_time = time.monotonic() - t0
-    if init_time > 0.01:
-        timer.add("image init", init_time)
     t0 = time.monotonic()
     image_bytes = await generate_image(prompt)
     timer.add("image gen", time.monotonic() - t0, f"{len(image_bytes):,} bytes")
@@ -138,13 +133,8 @@ async def _run_bg_removal(raw_bytes: bytes, timer: Timer) -> bytes:
 
     from PIL import Image
 
-    from app.images.pipeline import TEXTURE_RESOLUTION, _crop_and_fit, get_remove_bg
+    from app.images.pipeline import TEXTURE_RESOLUTION, _crop_and_fit, remove_bg
 
-    t0 = time.monotonic()
-    remove_bg = get_remove_bg()
-    init_time = time.monotonic() - t0
-    if init_time > 0.01:
-        timer.add("bg init", init_time)
     t0 = time.monotonic()
     output_bytes = await remove_bg(raw_bytes)
     timer.add("bg removal", time.monotonic() - t0, f"{len(output_bytes):,} bytes")
@@ -171,8 +161,6 @@ async def cmd_create(description: str) -> None:
 
 
 async def cmd_image(prompt: str, out_path: Path) -> None:
-    from app.config import settings
-
     timer = Timer()
     image_bytes = await _run_image(prompt, timer)
 
@@ -183,7 +171,6 @@ async def cmd_image(prompt: str, out_path: Path) -> None:
             {
                 "path": str(out_path),
                 "size_bytes": len(image_bytes),
-                "backend": settings.image_backend,
             },
             indent=2,
         )
@@ -192,7 +179,6 @@ async def cmd_image(prompt: str, out_path: Path) -> None:
 
 
 async def cmd_sprite(description: str, out_path: str | None, skip_llm: bool) -> None:
-    from app.config import settings
     from app.images.pipeline import build_prompt
 
     timer = Timer()
@@ -218,8 +204,6 @@ async def cmd_sprite(description: str, out_path: str | None, skip_llm: bool) -> 
         "path": out_path,
         "size_bytes": len(sprite_bytes),
         "prompt": prompt,
-        "backend": settings.image_backend,
-        "bg_removal": settings.bg_removal_backend,
     }
     print(json.dumps(result, indent=2))
     timer.print_summary()
@@ -232,28 +216,26 @@ async def cmd_status() -> None:
 
     checks: dict = {
         "config": {
-            "image_backend": settings.image_backend,
-            "bg_removal_backend": settings.bg_removal_backend,
             "llm_model": settings.llm_model,
             "local_llm_url": settings.local_llm_url,
+            "local_image_url": settings.local_image_url,
+            "local_image_model": settings.local_image_model,
             "sprite_cache_enabled": settings.sprite_cache_enabled,
         },
-        "services": {},
+        "services": {
+            "birefnet": "in-process (GPU)",
+        },
     }
 
     async with httpx.AsyncClient(timeout=3) as client:
-        if settings.image_backend == "local":
-            checks["services"]["local_flux"] = await _check_health(
-                client, f"{settings.local_image_url}/health"
-            )
-        if settings.bg_removal_backend == "local":
-            checks["services"]["birefnet"] = "in-process (GPU)"
+        checks["services"]["local_flux"] = await _check_health(
+            client, f"{settings.local_image_url}/health"
+        )
         if settings.local_llm_url:
             base = settings.local_llm_url.rstrip("/").removesuffix("/v1")
             checks["services"]["local_llm"] = await _check_health(client, f"{base}/health")
 
     checks["services"]["google_api_key"] = "set" if settings.google_api_key else "missing"
-    checks["services"]["fal_key"] = "set" if settings.fal_key else "missing"
 
     print(json.dumps(checks, indent=2))
 
