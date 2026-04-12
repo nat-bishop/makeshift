@@ -51,6 +51,15 @@ evaluated per-pair at spawn time (see below).
 
 Runs AFTER creation, DURING sprite generation (2-5s). Player doesn't wait for this.
 
+### img2img sprite pre-generation
+
+After the base sprite arrives (`sprite_ready`), two img2img tasks fan out in parallel using the base sprite bytes:
+
+- **Destruction sprite** (if `durability < 6`): FLUX img2img transforms the object sprite into a visually distinct debris pile. Delivered via `destruction_sprite_ready` WS message; cached on the debris blueprint as `_preloaded_sprite` meta in Godot.
+- **Carry/ride sprite** (if `affordance == carry or ride`): FLUX img2img composites the player sprite + object sprite into a carrying/riding scene. Delivered via `combined_sprite_ready`.
+
+Both use LLM-generated descriptions (`ask_text`, ≤250 tokens) wrapped in a shared art style template. See [image-combination.md](image-combination.md) for pipeline details and prompt design.
+
 ### Behavior evaluation
 
 Bidirectional screening (1 call per spawn) identifies pairs with interesting interactions. Then staged evaluation per pair.
