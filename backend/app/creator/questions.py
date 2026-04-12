@@ -239,18 +239,19 @@ NAME_QUESTION = Question(
     "Keep the same words where possible. Do not rename or rephrase. "
     "Reply with ONLY the name.",
     "text",
-    max_tokens=20,
+    max_tokens=50,
     default="Object",
 )
 
 VISUAL_QUESTION = Question(
     "visual_description",
-    "Describe the appearance of '{description}' for a 2D sprite artist. "
-    "Shape, material, colors, distinctive features. "
+    "Describe '{description}' as a mixed media paper collage — cut from magazines, "
+    "encyclopedias, or children's books and taped together. What paper/cardboard pieces "
+    "make up its shape? What colors and textures are visible? "
     "Max 2 sentences. Reply with ONLY the description.",
     "text",
-    max_tokens=40,
-    default="a {description}",
+    max_tokens=250,
+    default="a {description} made from cut paper and cardboard",
 )
 
 DESTRUCTION_QUESTION = Question(
@@ -260,7 +261,7 @@ DESTRUCTION_QUESTION = Question(
     "Examples: wooden sword -> splinters, glass bottle -> glass shards, balloon -> nothing, "
     "ice block -> puddle, robot -> scrap metal",
     "text",
-    max_tokens=8,
+    max_tokens=30,
     default="nothing",
     gates=(GATE_DESTRUCTIBLE,),
 )
