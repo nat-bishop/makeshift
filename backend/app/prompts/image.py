@@ -25,7 +25,15 @@ from __future__ import annotations
 # ---------------------------------------------------------------------------
 
 # Style wrapper applied to every img2img generation.
-IMG2IMG_STYLE = "mixed media collage style paper cutout, side view, flat lighting, clean edges"
+#
+# Phrasing deliberately treats "paper cutout" as the subject's identity rather
+# than as a material added on top — the original "mixed media collage style"
+# wording made FLUX composite paper onto realistic objects instead of rendering
+# the subjects AS paper. Shipped from H13 sweep (see RESULTS.md).
+IMG2IMG_STYLE = (
+    "paper cutout artwork, layered construction paper with visible cut edges and "
+    "subtle shadows where overlapping layers meet, side view, flat lighting"
+)
 
 # Suffix appended to img2img generations of a single object (destruction, combine).
 IMG2IMG_SUFFIX_OBJECT = "single centered object, contrasting solid background color, no text"
@@ -35,13 +43,18 @@ IMG2IMG_SUFFIX_SCENE = "single centered scene, contrasting solid background colo
 
 
 def build_text_to_image_prompt(name: str, visual_description: str) -> str:
-    """Build the narrative FLUX text-to-image prompt for a new object sprite."""
+    """Build the narrative FLUX text-to-image prompt for a new object sprite.
+
+    Subject-first framing ("{name}, a paper cutout: ...") makes paper-ness an
+    attribute of the subject rather than a material added on top. Includes
+    explicit layer-shadow language for tactile depth. Shipped from H13.hybrid
+    in the step 1.4 sweep (see RESULTS.md).
+    """
     return (
-        f"A mixed media collage of {name} made from cut paper, magazine clippings, "
-        f"and cardboard, held together with visible scotch tape and glue. "
-        f"{visual_description} "
-        f"Side view, single centered object on a solid contrasting background. "
-        f"Flat lighting, clean edges, no text."
+        f"{name}, a paper cutout: {visual_description} "
+        f"Entirely formed from layered construction paper with visible cut edges, "
+        f"slight paper grain, and subtle shadows where overlapping layers meet. "
+        f"Flat lighting, side view, solid contrasting background, no text."
     )
 
 
@@ -50,19 +63,19 @@ def build_text_to_image_prompt(name: str, visual_description: str) -> str:
 # ---------------------------------------------------------------------------
 
 CARRY_INSTRUCTION = (
-    "You write visual descriptions for a sprite image generator. "
-    "A character is carrying an object. You receive descriptions of both. "
-    "Write a visual description of the character holding/carrying the object "
-    "as a single scene. Reference specific visual details from both descriptions. "
-    "Under 25 words. Output ONLY the visual description."
+    "You write short visual descriptions for a sprite image generator. "
+    "The generator receives two reference images: a character (image 1) and an "
+    "object (image 2). It already knows what they look like — do NOT re-describe them. "
+    "Describe ONLY the relationship: how the character holds or carries the object. "
+    "Under 10 words. Output ONLY the description."
 )
 
 RIDE_INSTRUCTION = (
-    "You write visual descriptions for a sprite image generator. "
-    "A character is riding a mount. You receive descriptions of both. "
-    "Write a visual description of the character sitting on/riding the mount "
-    "as a single scene. Reference specific visual details from both descriptions. "
-    "Under 25 words. Output ONLY the visual description."
+    "You write short visual descriptions for a sprite image generator. "
+    "The generator receives two reference images: a character (image 1) and a "
+    "mount (image 2). It already knows what they look like — do NOT re-describe them. "
+    "Describe ONLY the relationship: how the character sits on the mount. "
+    "Under 10 words. Output ONLY the description."
 )
 
 
@@ -73,18 +86,20 @@ def build_carry_ride_prompt(
 ) -> tuple[str, str]:
     """Bundle (system instructions, user message) for the carry/ride LLM call.
 
+    The LLM describes only the character↔object relationship; the reference
+    images passed to FLUX img2img carry all visual detail about the subjects.
+    This "simple-rel" phrasing won the H1 sweep in
+    `backend/experiments/pipeline/RESULTS.md`.
+
     affordance == 1 → ride; anything else → carry. Matches
     `AFFORDANCE_LABELS` on the blueprint.
     """
     if affordance == 1:
-        instructions, action, role = RIDE_INSTRUCTION, "riding", "Mount"
+        instructions = RIDE_INSTRUCTION
+        user_message = f"Describe the character riding the {object_name}:"
     else:
-        instructions, action, role = CARRY_INSTRUCTION, "carrying", "Object"
-    user_message = (
-        f"Character: player\n"
-        f"{role}: {object_name} — {object_visual}\n"
-        f"Describe the player {action} the {role.lower()}:"
-    )
+        instructions = CARRY_INSTRUCTION
+        user_message = f"Describe the character carrying the {object_name}:"
     return instructions, user_message
 
 
