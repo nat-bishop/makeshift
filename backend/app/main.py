@@ -101,6 +101,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     from app.cache.store import CacheStore
 
     cache_path = str(DATA_DIR / "cache.db")
+
+    if settings.clear_cache_on_startup:
+        cache_db = Path(cache_path)
+        if cache_db.exists():
+            cache_db.unlink()
+        for png in (STATIC_DIR / "sprites").glob("*.png"):
+            png.unlink()
+        logger.info("caches_cleared_on_startup")
+
     cache = await CacheStore.open(cache_path)
     app.state.cache = cache
     app.state.scenes = {}  # session_id -> SceneCache (in-memory, per-session)

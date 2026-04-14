@@ -73,10 +73,8 @@ class TestGenerateSprite:
 
         with (
             patch.object(pipeline, "STATIC_DIR", tmp_path),
-            patch("app.config.settings") as mock_settings,
             patch.object(pipeline, "generate_static_sprite", new_callable=AsyncMock) as mock_gen,
         ):
-            mock_settings.sprite_cache_enabled = True
             result = await generate_sprite(blueprint)
 
         assert isinstance(result, SpriteResult)
@@ -91,12 +89,10 @@ class TestGenerateSprite:
 
         with (
             patch.object(pipeline, "STATIC_DIR", tmp_path),
-            patch("app.config.settings") as mock_settings,
             patch.object(
                 pipeline, "generate_static_sprite", new_callable=AsyncMock, return_value=png_bytes
             ),
         ):
-            mock_settings.sprite_cache_enabled = True
             result = await generate_sprite(blueprint)
 
         assert isinstance(result, SpriteResult)
@@ -107,7 +103,6 @@ class TestGenerateSprite:
 
         with (
             patch.object(pipeline, "STATIC_DIR", tmp_path),
-            patch("app.config.settings") as mock_settings,
             patch.object(
                 pipeline,
                 "generate_static_sprite",
@@ -115,30 +110,6 @@ class TestGenerateSprite:
                 side_effect=RuntimeError("boom"),
             ),
         ):
-            mock_settings.sprite_cache_enabled = True
             result = await generate_sprite(blueprint)
 
         assert result is None
-
-    async def test_cache_disabled_skips_existing(self, tmp_path: Path) -> None:
-        blueprint = _make_blueprint()
-        prompt = build_text_to_image_prompt(blueprint.name, blueprint.visual_description)
-        cache_path = get_cached_sprite_path(prompt)
-
-        sprites_dir = tmp_path / "sprites"
-        sprites_dir.mkdir()
-        (sprites_dir / cache_path.name).write_bytes(b"old")
-
-        png_bytes = _make_png()
-        with (
-            patch.object(pipeline, "STATIC_DIR", tmp_path),
-            patch("app.config.settings") as mock_settings,
-            patch.object(
-                pipeline, "generate_static_sprite", new_callable=AsyncMock, return_value=png_bytes
-            ) as mock_gen,
-        ):
-            mock_settings.sprite_cache_enabled = False
-            result = await generate_sprite(blueprint)
-
-        assert result is not None
-        mock_gen.assert_called_once()

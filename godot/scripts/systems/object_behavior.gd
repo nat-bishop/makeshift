@@ -23,6 +23,9 @@ const SPEED_MULTIPLIERS: Dictionary = {0: 0.3, 1: 0.6, 2: 1.0, 3: 1.5, 4: 2.0}
 # Priority level (0-3) → utility weight (mirrors backend PRIORITY_WEIGHTS)
 const PRIORITY_WEIGHTS: Dictionary = {0: 0.0, 1: 25.0, 2: 60.0, 3: 100.0}
 
+# Action id (0-4) → human-readable name (mirrors backend)
+const ACTION_NAMES: Array[String] = ["nothing", "damage", "heal", "consume", "push"]
+
 var _owner: RigidBody2D
 var _owner_name: String
 var _is_autonomous: bool = false
@@ -207,6 +210,11 @@ func _execute_action(entry: Dictionary, target: Node) -> void:
 	var state_action: int = entry.get("state_action", 0)
 	var state_id: int = entry.get("state_id", 0)
 	var force: int = entry.get("force", 0)
+
+	if action != 0:
+		var target_name: String = target.get_object_name() if target.has_method("get_object_name") else str(target.name)
+		var action_name: String = ACTION_NAMES[action] if action >= 0 and action < ACTION_NAMES.size() else "?"
+		Log.info("ObjectBehavior: '%s' → %s on '%s' (%d)" % [_owner_name, action_name, target_name, amount])
 
 	# Primary action
 	match action:

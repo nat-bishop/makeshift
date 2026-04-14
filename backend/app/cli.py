@@ -220,7 +220,7 @@ async def cmd_status() -> None:
             "local_llm_url": settings.local_llm_url,
             "local_image_url": settings.local_image_url,
             "local_image_model": settings.local_image_model,
-            "sprite_cache_enabled": settings.sprite_cache_enabled,
+            "clear_cache_on_startup": settings.clear_cache_on_startup,
         },
         "services": {
             "birefnet": "in-process (GPU)",

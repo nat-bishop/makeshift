@@ -20,6 +20,9 @@ var _state_dirty: bool = false
 const SAVE_PATH: String = "user://save.json"
 const MAX_RECONNECT_DELAY: float = 30.0
 
+const _MOVEMENT_NAMES: Array[String] = ["approach", "flee", "ignore"]
+const _ACTION_NAMES: Array[String] = ["nothing", "damage", "heal", "consume", "push"]
+
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -219,14 +222,51 @@ func _handle_ws_message(text: String) -> void:
 			InteractionCache.load_behavior_batch(subject_name, behaviors)
 			EventBus.behavior_updated.emit(subject_name)
 			Log.info("Backend: Behaviors ready for '%s' (%d entries)" % [subject_name, behaviors.size()])
+			for entry in behaviors:
+				Log.info("  → %s" % _format_behavior_entry(entry))
 		"behavior_updated":
 			var upd_name: String = data.get("subject_name", "")
 			var upd_behaviors: Array = data.get("behaviors", [])
 			InteractionCache.load_behavior_batch(upd_name, upd_behaviors)
 			EventBus.behavior_updated.emit(upd_name)
 			Log.info("Backend: Behavior updated for '%s' (%d entries)" % [upd_name, upd_behaviors.size()])
+			for entry in upd_behaviors:
+				Log.info("  → %s" % _format_behavior_entry(entry))
 		"error":
 			Log.warn("Backend WS error: %s" % data.get("message", "unknown"))
+
+
+func _format_behavior_entry(entry: Dictionary) -> String:
+	var target: String = str(entry.get("target_name", entry.get("target", "?")))
+	var movement_idx: int = int(entry.get("movement", 2))
+	var priority: int = int(entry.get("priority", 0))
+	var action_idx: int = int(entry.get("action", 0))
+	var amount: int = int(entry.get("amount", 0))
+	var state_action: int = int(entry.get("state_action", 0))
+	var state_id: int = int(entry.get("state_id", 0))
+	var force: int = int(entry.get("force", 0))
+
+	var movement_str: String = _MOVEMENT_NAMES[movement_idx] if movement_idx >= 0 and movement_idx < _MOVEMENT_NAMES.size() else "?"
+	var action_str: String = _ACTION_NAMES[action_idx] if action_idx >= 0 and action_idx < _ACTION_NAMES.size() else "?"
+
+	# Actions that carry an amount: damage, heal, push
+	var action_part: String
+	if action_idx == 1 or action_idx == 2 or action_idx == 4:
+		action_part = "%s(%d)" % [action_str, amount]
+	else:
+		action_part = action_str
+
+	var parts: PackedStringArray = ["%s: %s p:%d %s" % [target, movement_str, priority, action_part]]
+
+	if state_action != 0 and state_id > 0 and state_id < StateContradictions.STATE_NAMES.size():
+		var state_name: String = StateContradictions.STATE_NAMES[state_id]
+		var op: String = "+" if state_action == 1 else "-"
+		parts.append("%s%s" % [op, state_name])
+
+	if force == 1:
+		parts.append("+knockback")
+
+	return " ".join(parts)
 
 
 func _fetch_texture(sprite_url: String, label: String) -> Texture2D:

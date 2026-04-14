@@ -30,12 +30,11 @@ _PROFILE_FIELD_MAP: dict[str, str] = {
 class Settings(BaseSettings):
     google_api_key: str = ""
     session_budget_usd: float = 1.00
-    llm_timeout_seconds: int = 30
     image_timeout_seconds: int = 120
-    max_concurrent_image_requests: int = 3
     database_path: str = "data/game.db"
     host: str = "0.0.0.0"
     port: int = 8000
+    clear_cache_on_startup: bool = False
 
     # Model configuration
     llm_model: str = "google-gla:gemini-3.1-flash-lite-preview"
@@ -51,7 +50,6 @@ class Settings(BaseSettings):
     local_image_model: str = "black-forest-labs/FLUX.2-klein-4B"
     local_image_steps: int = 4
     local_image_guidance_scale: float = 1.0
-    sprite_cache_enabled: bool = True
     creation_cache_enabled: bool = True
 
     # Logging

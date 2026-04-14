@@ -176,7 +176,8 @@ func _perform_kick() -> void:
 			if not collider.has_method("is_heavy") or not collider.is_heavy():
 				collider.apply_central_impulse(kick_dir * KICK_FORCE)
 			WorldMutations.apply_damage(collider, KICK_DAMAGE)
-			Log.debug("Player: Kicked '%s'" % collider.name)
+			var kicked_name: String = collider.get_object_name() if collider.has_method("get_object_name") else str(collider.name)
+			Log.info("Player: Kicked '%s'" % kicked_name)
 
 
 func _on_animation_finished() -> void:

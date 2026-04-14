@@ -16,7 +16,6 @@ var _hit_flash_timer: float = 0.0
 
 # Physics-derived flags (set once at creation from blueprint values)
 var _has_bobbing: bool = false  # gravity < 25
-var _has_breathing: bool = false  # autonomous
 var _has_bounce_squash: bool = false  # bounce > 60
 var _bounce_tween: Tween = null
 
@@ -87,13 +86,12 @@ func init_visuals(bp: Dictionary) -> void:
 
 	var phys: Dictionary = bp.get("physics", {})
 	_has_bobbing = phys.get("gravity", 50) < StateVisuals.BOBBING_GRAVITY_THRESHOLD
-	_has_breathing = bp.get("autonomous", false)
 	_has_bounce_squash = phys.get("bounce", 10) > StateVisuals.SQUASH_BOUNCE_THRESHOLD
 
 	if _has_bounce_squash:
 		get_parent().body_entered.connect(_on_bounce_collision)
 
-	if _has_bobbing or _has_breathing:
+	if _has_bobbing:
 		_programmatic_initialized = true
 		set_process(true)
 
@@ -106,11 +104,11 @@ func refresh_state_visuals(states: Array) -> void:
 	_update_state_flash(states)
 
 	# Enable processing if we have flash animations or physics-derived anims
-	var needs_process: bool = _has_bobbing or _has_breathing or not _active_flash_configs.is_empty()
+	var needs_process: bool = _has_bobbing or not _active_flash_configs.is_empty()
 	if needs_process:
 		_programmatic_initialized = true
 		set_process(true)
-	elif not _has_bobbing and not _has_breathing:
+	elif not _has_bobbing:
 		_sprite.modulate = _active_color_shift
 		_programmatic_initialized = false
 		set_process(false)
@@ -217,11 +215,6 @@ func _apply_anims(delta: float) -> void:
 	# Bobbing (physics-derived: gravity < 25)
 	if _has_bobbing:
 		_sprite.position.y = _base_sprite_y + 3.0 * sin(_time * PI)
-
-	# Breathing (physics-derived: autonomous)
-	if _has_breathing and not (_bounce_tween and _bounce_tween.is_running()):
-		var pulse: float = 0.03 * sin(_time * (2.0 * PI / 3.0))
-		_sprite.scale = _base_sprite_scale + Vector2(pulse, pulse)
 
 	# Flash (state-driven)
 	if _hit_flash_timer > 0.0:

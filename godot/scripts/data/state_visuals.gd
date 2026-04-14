@@ -73,5 +73,4 @@ const FROZEN_DAMAGE_MULT: float = 2.0
 # --- Physics-derived visual thresholds ---
 # These aren't state-based — they're derived from blueprint physics values at creation time.
 const BOBBING_GRAVITY_THRESHOLD: int = 25  # gravity < 25 -> bobbing
-const BREATHING_AUTONOMOUS: bool = true  # autonomous == true -> breathing
 const SQUASH_BOUNCE_THRESHOLD: int = 60  # bounce > 60 -> squash/stretch on collision

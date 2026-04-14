@@ -340,14 +340,12 @@ async def generate_sprite(
 
     Returns a SpriteResult with the URL, or None on failure.
     """
-    from app.config import settings
-
     object_id = blueprint.id
     prompt = build_text_to_image_prompt(blueprint.name, blueprint.visual_description)
     cache_path = get_cached_sprite_path(prompt)
     sprite_url = f"/static/sprites/{cache_path.name}"
 
-    if settings.sprite_cache_enabled and cache_path.exists():
+    if cache_path.exists():
         logger.debug("sprite_cache_hit", object_id=object_id)
         return SpriteResult(sprite_url=sprite_url, sprite_bytes=cache_path.read_bytes())
 
