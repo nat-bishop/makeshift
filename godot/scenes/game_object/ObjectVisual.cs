@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Godot;
 using Makeshift.Autoloads;
+using Logger = Makeshift.Autoloads.Logger;
 using Makeshift.Data;
 using Makeshift.Models;
 using Makeshift.Systems;
@@ -28,9 +29,10 @@ public partial class ObjectVisual : Node
 
     // Physics-derived flags
     private bool _hasBobbing;
-    private bool _hasBreathing;
     private bool _hasBounceSquash;
     private Tween? _bounceTween;
+
+    private static GradientTexture2D? _cachedLightTexture;
 
     // State-driven visual state
     private Color _activeColorShift = Colors.White;
@@ -119,7 +121,6 @@ public partial class ObjectVisual : Node
 
         var phys = bp.Physics;
         _hasBobbing = phys.Gravity < StateVisuals.BOBBING_GRAVITY_THRESHOLD;
-        _hasBreathing = bp.Autonomous;
         _hasBounceSquash = phys.Bounce > StateVisuals.SQUASH_BOUNCE_THRESHOLD;
 
         if (_hasBounceSquash && GetParent() is RigidBody2D rb)
@@ -127,7 +128,7 @@ public partial class ObjectVisual : Node
             rb.BodyEntered += OnBounceCollision;
         }
 
-        if (_hasBobbing || _hasBreathing)
+        if (_hasBobbing)
         {
             _programmaticInitialized = true;
             SetProcess(true);
@@ -141,13 +142,13 @@ public partial class ObjectVisual : Node
         UpdateStateLights(states);
         UpdateStateFlash(states);
 
-        bool needsProcess = _hasBobbing || _hasBreathing || _activeFlashConfigs.Count > 0;
+        bool needsProcess = _hasBobbing || _activeFlashConfigs.Count > 0;
         if (needsProcess)
         {
             _programmaticInitialized = true;
             SetProcess(true);
         }
-        else if (!_hasBobbing && !_hasBreathing)
+        else if (!_hasBobbing)
         {
             if (_sprite is not null)
             {
@@ -252,6 +253,28 @@ public partial class ObjectVisual : Node
         }
     }
 
+    private static GradientTexture2D GetLightTexture()
+    {
+        if (_cachedLightTexture is not null)
+        {
+            return _cachedLightTexture;
+        }
+        var gradient = new Gradient();
+        gradient.SetColor(0, Colors.White);
+        gradient.SetColor(1, new Color(1.0f, 1.0f, 1.0f, 0.0f));
+        var tex = new GradientTexture2D
+        {
+            Gradient = gradient,
+            Fill = GradientTexture2D.FillEnum.Radial,
+            FillFrom = new Vector2(0.5f, 0.5f),
+            FillTo = new Vector2(1.0f, 0.5f),
+            Width = 128,
+            Height = 128,
+        };
+        _cachedLightTexture = tex;
+        return tex;
+    }
+
     private PointLight2D CreateStateLight(StateId state)
     {
         var data = StateVisuals.Lights[state];
@@ -259,7 +282,7 @@ public partial class ObjectVisual : Node
         {
             Color = data.Color,
             Energy = data.Energy,
-            Texture = GD.Load<Texture2D>("res://icon.svg"),
+            Texture = GetLightTexture(),
             TextureScale = data.Range / 128.0f,
         };
         AddChild(light);
@@ -299,13 +322,6 @@ public partial class ObjectVisual : Node
             var pos = _sprite.Position;
             pos.Y = _baseSpriteY + 3.0f * Mathf.Sin(_time * Mathf.Pi);
             _sprite.Position = pos;
-        }
-
-        // Breathing
-        if (_hasBreathing && !(_bounceTween is not null && _bounceTween.IsRunning()))
-        {
-            var pulse = 0.03f * Mathf.Sin(_time * (2.0f * Mathf.Pi / 3.0f));
-            _sprite.Scale = _baseSpriteScale + new Vector2(pulse, pulse);
         }
 
         // Flash

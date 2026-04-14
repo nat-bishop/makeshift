@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Godot;
 using Makeshift.Autoloads;
+using Logger = Makeshift.Autoloads.Logger;
 using Makeshift.Data;
 using Makeshift.Interfaces;
 using Makeshift.Models;
@@ -42,6 +43,13 @@ public partial class ObjectBehavior : Node
 
     /// <summary>Priority level (0..3) → utility weight. Mirrors backend PRIORITY_WEIGHTS.</summary>
     private static readonly float[] PriorityWeights = { 0.0f, 25.0f, 60.0f, 100.0f };
+
+    /// <summary>Action id (0..4) → human-readable name (mirrors backend).</summary>
+    private static readonly string[] ActionNames = { "nothing", "damage", "heal", "consume", "push" };
+
+    // Throttle counter for target-selection debug logging (~once/sec at 60fps).
+    private int _debugTick;
+    private const int DebugTickInterval = 60;
 
     private RigidBody2D? _owner;
     private string _ownerName = "";
@@ -87,16 +95,27 @@ public partial class ObjectBehavior : Node
         }
         EventBus.Instance.ObjectCreated += OnObjectCreated;
         EventBus.Instance.BehaviorUpdated += OnBehaviorUpdated;
-        CallDeferred(MethodName.ScanExisting);
+        CallDeferred(MethodName.ScanSceneNodes);
     }
 
-    private void ScanExisting()
+    /// <summary>
+    /// Iterate all scene-known potential targets and attempt to add any not
+    /// already in the pair table. Safe to call repeatedly (e.g. after
+    /// behaviors arrive late and a previous TryAddTarget missed due to an
+    /// empty lookup).
+    /// </summary>
+    private void ScanSceneNodes()
     {
-        if (_owner is null)
+        if (_owner is null || !IsInstanceValid(_owner))
         {
             return;
         }
-        foreach (var node in _owner.GetTree().GetNodesInGroup(GameObjectsGroup))
+        var tree = _owner.GetTree();
+        if (tree is null)
+        {
+            return;
+        }
+        foreach (var node in tree.GetNodesInGroup(GameObjectsGroup))
         {
             if (node == _owner)
             {
@@ -105,7 +124,7 @@ public partial class ObjectBehavior : Node
             TryAddTarget(node);
         }
         // Player is in a separate group.
-        foreach (var node in _owner.GetTree().GetNodesInGroup(PlayerGroup))
+        foreach (var node in tree.GetNodesInGroup(PlayerGroup))
         {
             TryAddTarget(node);
         }
@@ -149,13 +168,25 @@ public partial class ObjectBehavior : Node
         {
             return;
         }
+        if (_pairTable.ContainsKey(targetName))
+        {
+            return;
+        }
         var entry = InteractionCache.Instance.LookupBehavior(_ownerName, targetName);
         if (entry is null)
         {
+            Logger.Instance?.Info($"ObjectBehavior: '{_ownerName}' has no cached behavior for '{targetName}' yet (scan race?)");
             return;
         }
         _pairTable[targetName] = entry;
         _targetNodes[targetName] = node;
+        if (Logger.Instance?.IsDebugEnabled ?? false)
+        {
+            Logger.Instance.Debug(
+                $"ObjectBehavior: '{_ownerName}' added target '{targetName}' " +
+                $"mv:{(int)entry.Movement} p:{entry.Priority} " +
+                $"act:{(int)entry.Action} amt:{entry.Amount}");
+        }
         var capturedName = targetName;
         var callable = Callable.From(() => OnTargetRemoved(capturedName));
         _exitCallables[targetName] = callable;
@@ -175,7 +206,7 @@ public partial class ObjectBehavior : Node
         {
             return;
         }
-        // Refresh all pairs from InteractionCache.
+        // Refresh all existing pairs from InteractionCache.
         var keys = new List<string>(_pairTable.Keys);
         foreach (var tname in keys)
         {
@@ -185,6 +216,11 @@ public partial class ObjectBehavior : Node
                 _pairTable[tname] = entry;
             }
         }
+        // Retry adding any scene nodes that were missed by earlier scans (the
+        // common case: ScanSceneNodes ran before our behaviors_ready WS
+        // message arrived, so LookupBehavior returned null and the target was
+        // skipped).
+        ScanSceneNodes();
     }
 
     public override void _PhysicsProcess(double delta)
@@ -283,6 +319,24 @@ public partial class ObjectBehavior : Node
         var dir = (bestTargetNode2d.GlobalPosition - _owner.GlobalPosition).Normalized();
         var d = _owner.GlobalPosition.DistanceTo(bestTargetNode2d.GlobalPosition);
 
+        _debugTick++;
+        if (_debugTick >= DebugTickInterval)
+        {
+            _debugTick = 0;
+            if (Logger.Instance?.IsDebugEnabled ?? false)
+            {
+                var actionIdx = (int)bestEntry.Action;
+                var actionName = actionIdx >= 0 && actionIdx < ActionNames.Length
+                    ? ActionNames[actionIdx]
+                    : "?";
+                var tname = bestTarget is IObjectNamed bnm ? bnm.GetObjectName() : "?";
+                Logger.Instance.Debug(
+                    $"ObjectBehavior: '{_ownerName}' → '{tname}' " +
+                    $"mv:{(int)bestEntry.Movement} u:{bestUtility:F1} " +
+                    $"dist:{d:F0} act:{actionName}");
+            }
+        }
+
         switch (bestEntry.Movement)
         {
             case Movement.Approach:
@@ -315,10 +369,7 @@ public partial class ObjectBehavior : Node
     private void RecordError(string reason)
     {
         ErrorCount++;
-        if (Logger.Instance?.IsDebugEnabled ?? false)
-        {
-            Logger.Instance.Debug($"ObjectBehavior: Action error for '{_ownerName}' - {reason} ({ErrorCount}/{MaxErrors})");
-        }
+        Logger.Instance?.Warn($"ObjectBehavior: Action error for '{_ownerName}' - {reason} ({ErrorCount}/{MaxErrors})");
     }
 
     private void ExecuteAction(BehaviorEntry entry, Node target)
@@ -338,6 +389,16 @@ public partial class ObjectBehavior : Node
         var stateAction = entry.StateAction;
         var stateId = entry.StateId;
         var force = entry.Force;
+
+        if (action != ActionKind.None)
+        {
+            var tname = target is IObjectNamed nm ? nm.GetObjectName() : target.Name.ToString();
+            var actionIdx = (int)action;
+            var actionName = actionIdx >= 0 && actionIdx < ActionNames.Length
+                ? ActionNames[actionIdx]
+                : "?";
+            Logger.Instance?.Info($"ObjectBehavior: '{_ownerName}' → {actionName} on '{tname}' ({amount})");
+        }
 
         // Primary action
         switch (action)

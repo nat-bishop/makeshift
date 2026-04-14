@@ -25,6 +25,7 @@ EventBus="*res://autoloads/EventBus.cs"
 GameManager="*res://autoloads/GameManager.cs"
 InteractionCache="*res://autoloads/InteractionCache.cs"
 Backend="*res://autoloads/Backend.cs"
+PrespawnCatalog="*res://autoloads/PrespawnCatalog.cs"
 
 [display]
 

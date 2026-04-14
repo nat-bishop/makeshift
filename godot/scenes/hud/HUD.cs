@@ -1,5 +1,6 @@
 using Godot;
 using Makeshift.Autoloads;
+using Logger = Makeshift.Autoloads.Logger;
 using Makeshift.UI;
 
 namespace Makeshift.Scenes.Hud;
@@ -329,7 +330,7 @@ public sealed partial class HUD : CanvasLayer
     {
         _actionHint.Text = _placementActive
             ? "Click: Place  |  Esc: Cancel"
-            : "Tab: Create  |  E: Kick  |  Esc: Menu  |  F3: Debug";
+            : "Tab: Create  |  E: Kick  |  F: Carry  |  Esc: Menu  |  F3: Debug";
     }
 
     public override void _ExitTree()

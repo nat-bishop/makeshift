@@ -29,6 +29,16 @@ public partial class GameObject
         _stateManager?.States
         ?? (System.Collections.Generic.IReadOnlyCollection<StateId>)System.Array.Empty<StateId>();
 
+    /// <summary>True when <paramref name="state"/> is in the blueprint's initial states.</summary>
+    private bool IsInInitialStates(StateId state)
+    {
+        foreach (var sid in InitialStates)
+        {
+            if (sid == state) return true;
+        }
+        return false;
+    }
+
     // --- State change handlers --------------------------------------------
 
     private void OnStateAdded(string state)
@@ -39,8 +49,13 @@ public partial class GameObject
         {
             _objectVisual?.SpawnParticles(color);
         }
-        // State-specific mechanics
-        StateEffects.ApplyStandardDot(this, stateId);
+        // State-specific mechanics. Fire/electrified sources (state in
+        // initial_states) are made of fire/electricity — skip self-DOT so
+        // they don't damage themselves.
+        if (!IsInInitialStates(stateId))
+        {
+            StateEffects.ApplyStandardDot(this, stateId);
+        }
         switch (stateId)
         {
             case StateId.Frozen:

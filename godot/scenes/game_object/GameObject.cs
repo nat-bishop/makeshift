@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using Godot;
 using Makeshift.Autoloads;
+using Logger = Makeshift.Autoloads.Logger;
 using Makeshift.Data;
 using Makeshift.Interfaces;
 using Makeshift.Models;
@@ -104,14 +105,20 @@ public partial class GameObject : RigidBody2D, IObjectNamed, IDamageable, IHeala
     /// </summary>
     public void InitFromBlueprint(Godot.Collections.Dictionary bp)
     {
-        // Extract the runtime-only preloaded sprite reference BEFORE
-        // marshalling — the typed Blueprint record doesn't have a slot for
-        // it, and Texture2D doesn't survive Json.Stringify.
+        // Extract the runtime-only preloaded sprite references BEFORE
+        // marshalling — the typed Blueprint record doesn't have slots for
+        // them, and Texture2D doesn't survive Json.Stringify.
         if (bp.TryGetValue("_preloaded_sprite", out var preloaded) &&
             preloaded.VariantType == Variant.Type.Object)
         {
             PreloadedSprite = preloaded.As<Texture2D>();
             bp.Remove("_preloaded_sprite");
+        }
+        if (bp.TryGetValue("_preloaded_combined_sprite", out var preloadedCombined) &&
+            preloadedCombined.VariantType == Variant.Type.Object)
+        {
+            CombinedTexture = preloadedCombined.As<Texture2D>();
+            bp.Remove("_preloaded_combined_sprite");
         }
 
         var typed = BlueprintMarshal.FromGodotDictionary(bp, "GameObject");

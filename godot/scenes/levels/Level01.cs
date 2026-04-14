@@ -1,5 +1,6 @@
 using Godot;
 using Makeshift.Autoloads;
+using Logger = Makeshift.Autoloads.Logger;
 using Makeshift.Data;
 using Makeshift.Models;
 
@@ -13,25 +14,6 @@ namespace Makeshift.Scenes.Levels;
 [GlobalClass]
 public partial class Level01 : BaseLevel
 {
-    private static Godot.Collections.Dictionary CrateBlueprint() => new()
-    {
-        ["id"] = "crate_level01",
-        ["name"] = "wooden crate",
-        ["description"] = "wooden crate",
-        ["visual_description"] = "a small wooden shipping crate with planks and nails",
-        ["physics"] = new Godot.Collections.Dictionary
-        {
-            ["mass_kg"] = 5.0,
-            ["height_cm"] = 40,
-            ["surface"] = 1,
-            ["bounce"] = 10,
-            ["gravity"] = 55,
-        },
-        ["durability"] = 2,
-        ["affordance"] = 0,
-        ["autonomous"] = false,
-    };
-
     private static Godot.Collections.Dictionary AcidPoolBp() => new()
     {
         ["name"] = "acid pool",
@@ -54,7 +36,7 @@ public partial class Level01 : BaseLevel
         base._Ready();
 
         BuildTerrain();
-        SpawnGameObject(CrateBlueprint(), new Vector2(280, 536));
+        SpawnPrespawn("wooden_crate", new Vector2(280, 536));
 
         // Pre-populate behavior: acid pool damages wooden crate (reactive).
         InteractionCache.Instance.StoreBehavior("acid pool", "wooden crate",

@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Godot;
+using Makeshift.Data;
 using Makeshift.Interfaces;
 using Makeshift.Models;
 using HttpClient = System.Net.Http.HttpClient;
@@ -35,6 +36,9 @@ public sealed partial class Backend : Node
     public const string SavePath = "user://save.json";
     public const double SyncInterval = 10.0;
     public const double MaxReconnectDelay = 30.0;
+
+    private static readonly string[] MovementNames = { "approach", "flee", "ignore" };
+    private static readonly string[] ActionNames = { "nothing", "damage", "heal", "consume", "push" };
 
     // Cached StringName for hot-path group lookup.
     private static readonly StringName WorldGroup = "world";
@@ -161,7 +165,36 @@ public sealed partial class Backend : Node
         return result;
     }
 
+    /// <summary>
+    /// User-initiated creation. Emits ObjectCreated so the placement flow
+    /// engages and tracks the pending sprite.
+    /// </summary>
     public async Task<Godot.Collections.Dictionary> CreateObjectAsync(string description)
+    {
+        var result = await CreateObjectRawAsync(description);
+        if (result.GetBoolOrDefault("error"))
+        {
+            return result;
+        }
+
+        var blueprintDict = result.ContainsKey("blueprint")
+            ? (Godot.Collections.Dictionary)result["blueprint"]
+            : result;
+
+        EventBus.Instance.EmitSignal(EventBus.SignalName.ObjectCreated, blueprintDict);
+        var objectId = blueprintDict.GetStringOrDefault("id", "?");
+        if (!string.IsNullOrEmpty(objectId) && objectId != "?")
+        {
+            _pendingSprites.Add(objectId);
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// HTTP-only object creation. Does NOT emit ObjectCreated, so callers
+    /// (e.g. destruction-debris spawning) don't accidentally trigger placement mode.
+    /// </summary>
+    private async Task<Godot.Collections.Dictionary> CreateObjectRawAsync(string description)
     {
         if (string.IsNullOrEmpty(SessionId))
         {
@@ -184,8 +217,6 @@ public sealed partial class Backend : Node
             return result;
         }
 
-        // Backend may return either {"blueprint": {...}} or the blueprint
-        // fields at the root — unwrap both shapes.
         var blueprintDict = result.ContainsKey("blueprint")
             ? (Godot.Collections.Dictionary)result["blueprint"]
             : result;
@@ -193,12 +224,6 @@ public sealed partial class Backend : Node
         var objName = blueprintDict.GetStringOrDefault("name", "?");
         var objectId = blueprintDict.GetStringOrDefault("id", "?");
         Logger.Instance?.Info($"Backend: Object created '{objName}' (id={objectId})");
-
-        EventBus.Instance.EmitSignal(EventBus.SignalName.ObjectCreated, blueprintDict);
-        if (!string.IsNullOrEmpty(objectId) && objectId != "?")
-        {
-            _pendingSprites.Add(objectId);
-        }
 
         return result;
     }
@@ -227,7 +252,9 @@ public sealed partial class Backend : Node
 
     private async Task RequestDestructionSpawnAsync(string debrisName, Vector2 pos)
     {
-        var result = await CreateObjectAsync(debrisName);
+        // Use raw path: emitting ObjectCreated here would push the debris into
+        // placement mode so the player could re-place it as a duplicate.
+        var result = await CreateObjectRawAsync(debrisName);
         if (result.GetBoolOrDefault("error"))
         {
             Logger.Instance?.Warn($"Backend: Failed to create destruction debris '{debrisName}'");
@@ -541,6 +568,10 @@ public sealed partial class Backend : Node
         StoreBehaviorBatch(m.SubjectName, m.Behaviors);
         EventBus.Instance.EmitSignal(EventBus.SignalName.BehaviorUpdated, m.SubjectName);
         Logger.Instance?.Info($"Backend: Behaviors ready for '{m.SubjectName}' ({m.Behaviors.Length} entries)");
+        foreach (var entry in m.Behaviors)
+        {
+            Logger.Instance?.Info("  → " + FormatBehaviorEntry(entry));
+        }
     }
 
     private void HandleBehaviorUpdated(BehaviorUpdatedMessage m)
@@ -548,6 +579,49 @@ public sealed partial class Backend : Node
         StoreBehaviorBatch(m.SubjectName, m.Behaviors);
         EventBus.Instance.EmitSignal(EventBus.SignalName.BehaviorUpdated, m.SubjectName);
         Logger.Instance?.Info($"Backend: Behavior updated for '{m.SubjectName}' ({m.Behaviors.Length} entries)");
+        foreach (var entry in m.Behaviors)
+        {
+            Logger.Instance?.Info("  → " + FormatBehaviorEntry(entry));
+        }
+    }
+
+    private static string FormatBehaviorEntry(BehaviorEntry entry)
+    {
+        var target = string.IsNullOrEmpty(entry.Target) ? "?" : entry.Target;
+        var movementIdx = (int)entry.Movement;
+        var actionIdx = (int)entry.Action;
+
+        var movementStr = movementIdx >= 0 && movementIdx < MovementNames.Length
+            ? MovementNames[movementIdx]
+            : "?";
+        var actionStr = actionIdx >= 0 && actionIdx < ActionNames.Length
+            ? ActionNames[actionIdx]
+            : "?";
+
+        // Actions that carry an amount: damage, heal, push.
+        var actionPart = actionIdx == 1 || actionIdx == 2 || actionIdx == 4
+            ? $"{actionStr}({entry.Amount})"
+            : actionStr;
+
+        var parts = new List<string> { $"{target}: {movementStr} p:{entry.Priority} {actionPart}" };
+
+        if (entry.StateAction != StateAction.None && entry.StateId != StateId.None)
+        {
+            var stateIdx = (int)entry.StateId;
+            if (stateIdx > 0 && stateIdx < StateContradictions.STATE_NAMES.Length)
+            {
+                var stateName = StateContradictions.STATE_NAMES[stateIdx];
+                var op = entry.StateAction == StateAction.Add ? "+" : "-";
+                parts.Add($"{op}{stateName}");
+            }
+        }
+
+        if (entry.Force == 1)
+        {
+            parts.Add("+knockback");
+        }
+
+        return string.Join(" ", parts);
     }
 
     private static void StoreBehaviorBatch(string subjectName, BehaviorEntry[] entries)

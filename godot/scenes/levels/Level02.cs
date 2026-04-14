@@ -1,5 +1,6 @@
 using Godot;
 using Makeshift.Autoloads;
+using Logger = Makeshift.Autoloads.Logger;
 using Makeshift.Data;
 using Makeshift.Models;
 
@@ -12,45 +13,6 @@ namespace Makeshift.Scenes.Levels;
 [GlobalClass]
 public partial class Level02 : BaseLevel
 {
-    private static Godot.Collections.Dictionary GuardDogBlueprint() => new()
-    {
-        ["id"] = "guard_dog_level02",
-        ["name"] = "guard dog",
-        ["description"] = "guard dog",
-        ["visual_description"] = "a fierce black guard dog with a spiked collar, crouching stance",
-        ["physics"] = new Godot.Collections.Dictionary
-        {
-            ["mass_kg"] = 30.0,
-            ["height_cm"] = 80,
-            ["surface"] = 1,
-            ["bounce"] = 15,
-            ["gravity"] = 50,
-        },
-        ["durability"] = 3,
-        ["affordance"] = 3,
-        ["autonomous"] = true,
-        ["speed"] = 3,
-    };
-
-    private static Godot.Collections.Dictionary BoneBlueprint() => new()
-    {
-        ["id"] = "bone_level02",
-        ["name"] = "bone",
-        ["description"] = "bone",
-        ["visual_description"] = "a white dog bone, cartoon style",
-        ["physics"] = new Godot.Collections.Dictionary
-        {
-            ["mass_kg"] = 0.3,
-            ["height_cm"] = 20,
-            ["surface"] = 1,
-            ["bounce"] = 20,
-            ["gravity"] = 50,
-        },
-        ["durability"] = 2,
-        ["affordance"] = 0,
-        ["autonomous"] = false,
-    };
-
     public override void _Ready()
     {
         level_id = 1;
@@ -59,8 +21,8 @@ public partial class Level02 : BaseLevel
         base._Ready();
 
         BuildTerrain();
-        SpawnGameObject(BoneBlueprint(), new Vector2(200, 536));
-        SpawnGameObject(GuardDogBlueprint(), new Vector2(800, 520));
+        SpawnPrespawn("bone", new Vector2(200, 536));
+        SpawnPrespawn("guard_dog", new Vector2(800, 520));
 
         // Pre-populate behavior: dog approaches and attacks player.
         InteractionCache.Instance.StoreBehavior("guard dog", "player",

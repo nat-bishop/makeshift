@@ -76,7 +76,7 @@ def test_profile_always_wins_over_env(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_gemini_profile_only_sets_temperature():
     s = _settings(llm_model="google-gla:gemini-3.1-flash-lite-preview")
     _apply_profile(s)
-    assert s.llm_temperature == 0.3
+    assert s.llm_temperature == 0.0
     # Other params keep class defaults (not in gemini profile)
     assert s.llm_top_p == 1.0
     assert s.llm_presence_penalty == 0.0

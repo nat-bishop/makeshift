@@ -1,5 +1,6 @@
 using Godot;
 using Makeshift.Autoloads;
+using Logger = Makeshift.Autoloads.Logger;
 using Makeshift.Scenes.Effects;
 using Makeshift.Scenes.Hud;
 using Makeshift.Scenes.Levels;
@@ -149,6 +150,9 @@ public partial class Game : Node2D
     private void OnCreationRequested()
     {
         ClearPending();
+        // Resume the game now that the user has committed — the materialize
+        // effect and cursor tracking need to run while we wait for the backend.
+        GameManager.Instance?.ResumeGame();
         var spawnPos = GetGlobalMousePosition();
         var effect = new MaterializeEffect
         {

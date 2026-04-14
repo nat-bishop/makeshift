@@ -1,5 +1,6 @@
 using Godot;
 using Makeshift.Autoloads;
+using Logger = Makeshift.Autoloads.Logger;
 using Makeshift.Data;
 using Makeshift.Scenes.GameObjects;
 using Makeshift.Systems;
@@ -28,6 +29,8 @@ public partial class BaseLevel : Node2D
 
     protected Marker2D SpawnPoint { get; private set; } = null!;
     protected Area2D GoalArea { get; private set; } = null!;
+
+    private int _prespawnCounter;
 
     public override void _Ready()
     {
@@ -102,6 +105,23 @@ public partial class BaseLevel : Node2D
         obj.GlobalPosition = pos;
         obj.InitFromBlueprint((Godot.Collections.Dictionary)blueprint.Duplicate(deep: true));
         return obj;
+    }
+
+    /// <summary>
+    /// Spawn a hand-authored prespawn by catalog <paramref name="typeId"/>.
+    /// Returns null and logs a warning if the type is unknown.
+    /// </summary>
+    protected Node? SpawnPrespawn(string typeId, Vector2 pos, Godot.Collections.Dictionary? overrides = null)
+    {
+        var bp = PrespawnCatalog.Instance.BuildBlueprint(typeId, overrides);
+        if (bp.Count == 0)
+        {
+            Logger.Instance?.Warn($"BaseLevel: No prespawn '{typeId}' in catalog");
+            return null;
+        }
+        _prespawnCounter++;
+        bp["id"] = $"prespawn_l{level_id}_{_prespawnCounter}_{typeId}";
+        return SpawnGameObject(bp, pos);
     }
 
     protected void CreateKillZone(Vector2 pos, Vector2 size)

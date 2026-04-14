@@ -114,7 +114,6 @@ public static class StateVisuals
     // These aren't state-based — they're derived from blueprint physics values
     // at creation time.
     public const int BOBBING_GRAVITY_THRESHOLD = 25;   // gravity < 25 -> bobbing
-    public const bool BREATHING_AUTONOMOUS = true;     // autonomous == true -> breathing
     public const int SQUASH_BOUNCE_THRESHOLD = 60;     // bounce > 60 -> squash/stretch
 
 }

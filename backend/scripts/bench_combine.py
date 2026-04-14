@@ -139,11 +139,11 @@ async def generate_base_sprite(name: str, visual: str) -> tuple[bytes, bytes]:
     from app.images.pipeline import (
         TEXTURE_RESOLUTION,
         _crop_and_fit,
-        build_prompt,
         remove_bg,
     )
+    from app.prompts.image import build_text_to_image_prompt
 
-    prompt = build_prompt(name, visual)
+    prompt = build_text_to_image_prompt(name, visual)
     raw_bytes = await generate_image(prompt)
     output_bytes = await remove_bg(raw_bytes)
     output_img = Image.open(io.BytesIO(output_bytes)).convert("RGBA")

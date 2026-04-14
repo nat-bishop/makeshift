@@ -1,5 +1,6 @@
 using Godot;
 using Makeshift.Autoloads;
+using Logger = Makeshift.Autoloads.Logger;
 using Makeshift.Data;
 using Makeshift.Models;
 
@@ -12,56 +13,6 @@ namespace Makeshift.Scenes.Levels;
 [GlobalClass]
 public partial class Level03 : BaseLevel
 {
-    private static Godot.Collections.Dictionary WoodenBoxBlueprint()
-    {
-        var bp = new Godot.Collections.Dictionary
-        {
-            ["id"] = "box_level03",
-            ["name"] = "wooden box",
-            ["description"] = "wooden box",
-            ["visual_description"] = "a sturdy wooden storage box, medium sized",
-            ["physics"] = new Godot.Collections.Dictionary
-            {
-                ["mass_kg"] = 8.0,
-                ["height_cm"] = 60,
-                ["surface"] = 1,
-                ["bounce"] = 10,
-                ["gravity"] = 55,
-            },
-            ["durability"] = 2,
-            ["affordance"] = 0,
-            ["autonomous"] = false,
-        };
-        var susceptible = new Godot.Collections.Array { 1 };
-        bp["susceptible_states"] = susceptible;
-        return bp;
-    }
-
-    private static Godot.Collections.Dictionary CampfireBlueprint()
-    {
-        var bp = new Godot.Collections.Dictionary
-        {
-            ["id"] = "campfire_level03",
-            ["name"] = "campfire",
-            ["description"] = "campfire",
-            ["visual_description"] = "a small campfire with logs and orange flames",
-            ["physics"] = new Godot.Collections.Dictionary
-            {
-                ["mass_kg"] = 3.0,
-                ["height_cm"] = 40,
-                ["surface"] = 1,
-                ["bounce"] = 5,
-                ["gravity"] = 55,
-            },
-            ["durability"] = 1,
-            ["affordance"] = 3,
-            ["autonomous"] = false,
-        };
-        var initial = new Godot.Collections.Array { 1 };
-        bp["initial_states"] = initial;
-        return bp;
-    }
-
     private static Godot.Collections.Dictionary FirePitBp() => new()
     {
         ["name"] = "fire pit",
@@ -84,8 +35,8 @@ public partial class Level03 : BaseLevel
         base._Ready();
 
         BuildTerrain();
-        SpawnGameObject(WoodenBoxBlueprint(), new Vector2(200, 536));
-        SpawnGameObject(CampfireBlueprint(), new Vector2(600, 536));
+        SpawnPrespawn("wooden_box", new Vector2(200, 536));
+        SpawnPrespawn("campfire", new Vector2(600, 536));
 
         // Pre-populate behavior: campfire damages wooden box and sets it on fire.
         InteractionCache.Instance.StoreBehavior("campfire", "wooden box",

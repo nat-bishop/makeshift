@@ -179,16 +179,16 @@ async def cmd_image(prompt: str, out_path: Path) -> None:
 
 
 async def cmd_sprite(description: str, out_path: str | None, skip_llm: bool) -> None:
-    from app.images.pipeline import build_prompt
+    from app.prompts.image import build_text_to_image_prompt
 
     timer = Timer()
 
     if skip_llm:
         name = description
-        prompt = build_prompt(name, description)
+        prompt = build_text_to_image_prompt(name, description)
     else:
         blueprint = await _run_llm(description, timer)
-        prompt = build_prompt(blueprint.name, blueprint.visual_description)
+        prompt = build_text_to_image_prompt(blueprint.name, blueprint.visual_description)
         name = blueprint.name
 
     raw_bytes = await _run_image(prompt, timer)
@@ -220,7 +220,7 @@ async def cmd_status() -> None:
             "local_llm_url": settings.local_llm_url,
             "local_image_url": settings.local_image_url,
             "local_image_model": settings.local_image_model,
-            "sprite_cache_enabled": settings.sprite_cache_enabled,
+            "clear_cache_on_startup": settings.clear_cache_on_startup,
         },
         "services": {
             "birefnet": "in-process (GPU)",

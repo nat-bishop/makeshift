@@ -1,57 +1,61 @@
 [gd_scene load_steps=2 format=3 uid="uid://creation_panel"]
 
-[ext_resource type="Script" path="res://scenes/hud/ObjectCreationPanel.cs" id="1_panel"]
+[ext_resource type="Script" path="res://scenes/hud/object_creation_panel.gd" id="1_panel"]
 
 [node name="ObjectCreationPanel" type="PanelContainer"]
 custom_minimum_size = Vector2(400, 0)
 script = ExtResource("1_panel")
 
-[node name="CreationForm" type="VBoxContainer" parent="."]
+[node name="Root" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="CreationForm" type="VBoxContainer" parent="Root"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="TitleLabel" type="Label" parent="CreationForm"]
+[node name="TitleLabel" type="Label" parent="Root/CreationForm"]
 layout_mode = 2
 text = "Create Object"
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 18
 
-[node name="DescriptionInput" type="LineEdit" parent="CreationForm"]
+[node name="DescriptionInput" type="LineEdit" parent="Root/CreationForm"]
 unique_name_in_owner = true
 layout_mode = 2
 placeholder_text = "Describe your object..."
 custom_minimum_size = Vector2(0, 36)
 
-[node name="CreateButton" type="Button" parent="CreationForm"]
+[node name="CreateButton" type="Button" parent="Root/CreationForm"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Create"
 custom_minimum_size = Vector2(0, 32)
 
-[node name="StatusLabel" type="Label" parent="CreationForm"]
+[node name="StatusLabel" type="Label" parent="Root/CreationForm"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 12
 text = ""
 horizontal_alignment = 1
 
-[node name="RevealCard" type="VBoxContainer" parent="."]
+[node name="RevealCard" type="VBoxContainer" parent="Root"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="HeaderRow" type="HBoxContainer" parent="RevealCard"]
+[node name="HeaderRow" type="HBoxContainer" parent="Root/RevealCard"]
 layout_mode = 2
 
-[node name="RevealName" type="Label" parent="RevealCard/HeaderRow"]
+[node name="RevealName" type="Label" parent="Root/RevealCard/HeaderRow"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 20
 
-[node name="CloseButton" type="Button" parent="RevealCard/HeaderRow"]
+[node name="CloseButton" type="Button" parent="Root/RevealCard/HeaderRow"]
 unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(28, 28)
@@ -60,73 +64,40 @@ theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 0.8)
 text = "x"
 flat = true
 
-[node name="Separator1" type="HSeparator" parent="RevealCard"]
+[node name="Separator1" type="HSeparator" parent="Root/RevealCard"]
 layout_mode = 2
 theme_override_styles/separator = null
 
-[node name="TagsLabel" type="Label" parent="RevealCard"]
-layout_mode = 2
-text = "Tags"
-theme_override_font_sizes/font_size = 11
-theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
-
-[node name="RevealTags" type="HFlowContainer" parent="RevealCard"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_constants/h_separation = 4
-theme_override_constants/v_separation = 4
-
-[node name="BehaviorSection" type="VBoxContainer" parent="RevealCard"]
-unique_name_in_owner = true
-visible = false
-layout_mode = 2
-theme_override_constants/separation = 6
-
-[node name="Separator2" type="HSeparator" parent="RevealCard/BehaviorSection"]
-layout_mode = 2
-theme_override_styles/separator = null
-
-[node name="BehaviorsLabel" type="Label" parent="RevealCard/BehaviorSection"]
-layout_mode = 2
-text = "Behaviors"
-theme_override_font_sizes/font_size = 11
-theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
-
-[node name="BehaviorList" type="VBoxContainer" parent="RevealCard/BehaviorSection"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_constants/separation = 2
-
-[node name="StatsRow" type="HBoxContainer" parent="RevealCard"]
+[node name="StatsRow" type="HBoxContainer" parent="Root/RevealCard"]
 layout_mode = 2
 theme_override_constants/separation = 16
 
-[node name="SizeBox" type="VBoxContainer" parent="RevealCard/StatsRow"]
+[node name="SizeBox" type="VBoxContainer" parent="Root/RevealCard/StatsRow"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="SizeHeader" type="Label" parent="RevealCard/StatsRow/SizeBox"]
+[node name="SizeHeader" type="Label" parent="Root/RevealCard/StatsRow/SizeBox"]
 layout_mode = 2
 text = "Size"
 theme_override_font_sizes/font_size = 11
 theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
 
-[node name="RevealSize" type="Label" parent="RevealCard/StatsRow/SizeBox"]
+[node name="RevealSize" type="Label" parent="Root/RevealCard/StatsRow/SizeBox"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 14
 
-[node name="CostBox" type="VBoxContainer" parent="RevealCard/StatsRow"]
+[node name="DurabilityBox" type="VBoxContainer" parent="Root/RevealCard/StatsRow"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="CostHeader" type="Label" parent="RevealCard/StatsRow/CostBox"]
+[node name="DurabilityHeader" type="Label" parent="Root/RevealCard/StatsRow/DurabilityBox"]
 layout_mode = 2
-text = "Power Cost"
+text = "Durability"
 theme_override_font_sizes/font_size = 11
 theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
 
-[node name="RevealCost" type="Label" parent="RevealCard/StatsRow/CostBox"]
+[node name="RevealDurability" type="Label" parent="Root/RevealCard/StatsRow/DurabilityBox"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 14

@@ -1,5 +1,6 @@
 using Godot;
 using Makeshift.Autoloads;
+using Logger = Makeshift.Autoloads.Logger;
 using Makeshift.Models;
 using Makeshift.UI;
 
@@ -16,18 +17,20 @@ public sealed partial class ObjectCreationPanel : PanelContainer
     private const float RevealTimeout = 10.0f;
     private const float FadeDuration = 0.5f;
 
+    private static readonly string[] DurabilityNames =
+    {
+        "fragile", "weak", "normal", "tough", "hardy", "elite", "indestructible",
+    };
+
     private LineEdit _descriptionInput = null!;
     private Button _createButton = null!;
     private Label _statusLabel = null!;
     private VBoxContainer _creationForm = null!;
     private VBoxContainer _revealCard = null!;
     private Label _revealName = null!;
-    private HFlowContainer _revealTags = null!;
     private Label _revealSize = null!;
-    private Label _revealCost = null!;
+    private Label _revealDurability = null!;
     private Button _closeButton = null!;
-    private VBoxContainer _behaviorSection = null!;
-    private VBoxContainer _behaviorList = null!;
 
     private bool _isCreating;
     private bool _isShowingReveal;
@@ -42,12 +45,9 @@ public sealed partial class ObjectCreationPanel : PanelContainer
         _creationForm = GetNode<VBoxContainer>("%CreationForm");
         _revealCard = GetNode<VBoxContainer>("%RevealCard");
         _revealName = GetNode<Label>("%RevealName");
-        _revealTags = GetNode<HFlowContainer>("%RevealTags");
         _revealSize = GetNode<Label>("%RevealSize");
-        _revealCost = GetNode<Label>("%RevealCost");
+        _revealDurability = GetNode<Label>("%RevealDurability");
         _closeButton = GetNode<Button>("%CloseButton");
-        _behaviorSection = GetNode<VBoxContainer>("%BehaviorSection");
-        _behaviorList = GetNode<VBoxContainer>("%BehaviorList");
 
         var style = InfoWidgets.MakeStylebox(
             new Color(0.12f, 0.12f, 0.15f, 0.95f), 8, 16, 12, 1, new Color(0.4f, 0.4f, 0.5f, 0.8f));
@@ -156,42 +156,16 @@ public sealed partial class ObjectCreationPanel : PanelContainer
 
         _revealName.Text = blueprint.GetStringOrDefault("name", "Unknown");
 
-        // Tags
-        foreach (var child in _revealTags.GetChildren())
-        {
-            child.QueueFree();
-        }
-        var tagsVariant = blueprint.GetValueOrDefault("tags", new Godot.Collections.Array());
-        var tags = tagsVariant.AsGodotArray();
-        foreach (var tag in tags)
-        {
-            _revealTags.AddChild(InfoWidgets.CreateTagBadge(tag.ToString() ?? ""));
-        }
+        // Size derived from physics.height_cm
+        var physVariant = blueprint.GetValueOrDefault("physics", new Godot.Collections.Dictionary());
+        var phys = physVariant.AsGodotDictionary();
+        var heightCm = (int)phys.GetValueOrDefault("height_cm", 30).AsInt32();
+        _revealSize.Text = Makeshift.Systems.PhysicsComposer.SizeFromHeight(heightCm).ToUpperInvariant();
 
-        // Behaviors
-        foreach (var child in _behaviorList.GetChildren())
-        {
-            child.QueueFree();
-        }
-        var behaviorsVariant = blueprint.GetValueOrDefault("behaviors", new Godot.Collections.Array());
-        var behaviors = behaviorsVariant.AsGodotArray();
-        _behaviorSection.Visible = behaviors.Count > 0;
-        foreach (var entry in behaviors)
-        {
-            if (entry.VariantType == Variant.Type.Dictionary)
-            {
-                var typed = BehaviorEntryMarshal.FromGodotDictionary(entry.AsGodotDictionary());
-                _behaviorList.AddChild(InfoWidgets.CreateBehaviorLabel(typed));
-            }
-        }
-
-        // Stats
-        var vdVariant = blueprint.GetValueOrDefault("visual_descriptor", new Godot.Collections.Dictionary());
-        var vd = vdVariant.AsGodotDictionary();
-        var sizeCategory = vd.GetStringOrDefault("size_category", "medium");
-        _revealSize.Text = sizeCategory.ToUpperInvariant();
-
-        _revealCost.Text = $"{tags.Count} tags";
+        // Durability label
+        var dur = (int)blueprint.GetValueOrDefault("durability", 2).AsInt32();
+        var durName = dur >= 0 && dur < DurabilityNames.Length ? DurabilityNames[dur] : "?";
+        _revealDurability.Text = durName.ToUpperInvariant();
 
         // Fade-in and start auto-fade timer
         _revealCard.Modulate = new Color(_revealCard.Modulate, 0.0f);

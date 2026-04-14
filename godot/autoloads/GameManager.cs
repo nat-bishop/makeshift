@@ -26,6 +26,7 @@ public sealed partial class GameManager : Node
         new("res://scenes/levels/level_01.tscn", "Level 1: The Acid Moat"),
         new("res://scenes/levels/level_02.tscn", "Level 2: The Sentry"),
         new("res://scenes/levels/level_03.tscn", "Level 3: Reach the Top"),
+        new("res://scenes/levels/level_sandbox.tscn", "Sandbox"),
     ];
 
     public const string GameScene = "res://scenes/game/game.tscn";

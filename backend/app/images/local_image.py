@@ -5,15 +5,37 @@ from __future__ import annotations
 import asyncio
 import base64
 import time
+from contextlib import contextmanager
+from contextvars import ContextVar
+from typing import TYPE_CHECKING
 
 import httpx
 import structlog
 
 from app.config import settings
 
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
 logger = structlog.get_logger()
 
 _http_client: httpx.AsyncClient | None = None
+
+# When set (via `seed_override()`), every call to generate_image /
+# generate_image_edit in the current async context passes this seed
+# through to the FLUX server. Used by experiments to make FLUX output
+# reproducible across harness runs. None → server picks its own seed.
+_seed_override: ContextVar[int | None] = ContextVar("flux_seed_override", default=None)
+
+
+@contextmanager
+def seed_override(seed: int | None) -> Iterator[None]:
+    """Context manager: force a fixed FLUX seed for the duration of the block."""
+    token = _seed_override.set(seed)
+    try:
+        yield
+    finally:
+        _seed_override.reset(token)
 
 
 def _get_http_client() -> httpx.AsyncClient:
@@ -39,19 +61,20 @@ async def generate_image(prompt: str) -> bytes:
     t0 = time.monotonic()
     logger.info("local_generate_start", prompt_len=len(prompt))
     client = _get_http_client()
+    body: dict[str, object] = {
+        "model": settings.local_image_model,
+        "prompt": prompt,
+        "n": 1,
+        "size": "512x512",
+        "response_format": "b64_json",
+        "num_inference_steps": settings.local_image_steps,
+        "guidance_scale": settings.local_image_guidance_scale,
+    }
+    seed = _seed_override.get()
+    if seed is not None:
+        body["seed"] = seed
     resp = await asyncio.wait_for(
-        client.post(
-            "/v1/images/generations",
-            json={
-                "model": settings.local_image_model,
-                "prompt": prompt,
-                "n": 1,
-                "size": "512x512",
-                "response_format": "b64_json",
-                "num_inference_steps": settings.local_image_steps,
-                "guidance_scale": settings.local_image_guidance_scale,
-            },
-        ),
+        client.post("/v1/images/generations", json=body),
         timeout=settings.image_timeout_seconds,
     )
     resp.raise_for_status()
@@ -77,19 +100,19 @@ async def generate_image_edit(prompt: str, images: list[tuple[str, bytes]]) -> b
     logger.info("local_edit_start", prompt_len=len(prompt), num_refs=len(images))
     client = _get_http_client()
     files = [("image", (fname, data, "image/png")) for fname, data in images]
+    data: dict[str, str] = {
+        "model": settings.local_image_model,
+        "prompt": prompt,
+        "n": "1",
+        "size": "512x512",
+        "response_format": "b64_json",
+        "num_inference_steps": str(settings.local_image_steps),
+    }
+    seed = _seed_override.get()
+    if seed is not None:
+        data["seed"] = str(seed)
     resp = await asyncio.wait_for(
-        client.post(
-            "/v1/images/edits",
-            files=files,
-            data={
-                "model": settings.local_image_model,
-                "prompt": prompt,
-                "n": "1",
-                "size": "512x512",
-                "response_format": "b64_json",
-                "num_inference_steps": str(settings.local_image_steps),
-            },
-        ),
+        client.post("/v1/images/edits", files=files, data=data),
         timeout=settings.image_timeout_seconds,
     )
     resp.raise_for_status()

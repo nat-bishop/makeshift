@@ -1,6 +1,7 @@
 using System;
 using Godot;
 using Makeshift.Autoloads;
+using Logger = Makeshift.Autoloads.Logger;
 using Makeshift.Data;
 using Makeshift.Interfaces;
 using Makeshift.Scenes.GameObjects;
@@ -444,6 +445,22 @@ public partial class Player : CharacterBody2D, IObjectNamed, IDamageable, IHeala
             AddChild(_combinedSprite);
         }
         _combinedSprite.Texture = texture;
+
+        // Scale so that the carried/ridden object's sprite-space height
+        // matches its blueprint physics. Floor at the player's normal display
+        // size so small carried items don't shrink the player.
+        var heightCm = 100;
+        if (obj is GameObject gameObj && gameObj.TypedBlueprint is not null)
+        {
+            heightCm = gameObj.TypedBlueprint.Physics.HeightCm;
+        }
+        var objWorldSize = PhysicsComposer.WorldSpriteSize(heightCm);
+        var frameTex = _animSprite.SpriteFrames.GetFrameTexture(_animSprite.Animation, 0);
+        var playerWorldSize = frameTex.GetWidth() * _animSprite.Scale.X;
+        var targetWorldSize = Mathf.Max(objWorldSize, playerWorldSize);
+        var texSize = (float)texture.GetWidth();
+        _combinedSprite.Scale = Vector2.One * (targetWorldSize / texSize);
+
         _combinedSprite.Visible = true;
 
         var objName = obj is IObjectNamed named ? named.GetObjectName() : obj.Name.ToString();

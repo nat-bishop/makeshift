@@ -1,6 +1,10 @@
 .PHONY: dev gpu api stop gpu-restart llm-restart gpu-logs godot play install test lint fix format format-check typecheck check clear-sprites clear-cache cli-create cli-image cli-sprite cli-status eval eval-creation eval-behavior eval-judge bench-tokens help
 
 GODOT ?= godot
+# Console-subsystem binary so stdout/stderr (including script errors) reach the
+# terminal on Windows. Falls back to $(GODOT) on platforms where it's not a
+# separate binary (Linux/macOS).
+GODOT_CONSOLE ?= $(shell command -v godot_console 2>/dev/null || echo $(GODOT))
 VERBOSE ?= 0
 COMPOSE := docker compose --env-file .env -f services/sglang/docker-compose.yml
 
@@ -15,7 +19,7 @@ dev: gpu ## Start all servers + launch game
 	$(wait-services)
 	uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir backend --reload-include '*.py' &
 	@sleep 2
-	$(GODOT) --path godot/
+	$(GODOT_CONSOLE) --path godot/ 2>&1
 	$(MAKE) stop
 
 gpu: ## Start GPU/LLM Docker containers (detached)
@@ -43,9 +47,9 @@ stop: ## Stop all servers and clean up
 godot: ## Open Godot editor
 	$(GODOT) --editor --path godot/
 
-play: ## Run the game (VERBOSE=0 to suppress engine output)
+play: ## Run the game (VERBOSE=1 for engine verbose output)
 	$(GODOT) --headless --import --path godot/
-	$(GODOT) $(if $(filter 1,$(VERBOSE)),--verbose) --path godot/ 2>&1
+	$(GODOT_CONSOLE) $(if $(filter 1,$(VERBOSE)),--verbose) --path godot/ 2>&1
 
 install: ## Install all dependencies
 	uv sync

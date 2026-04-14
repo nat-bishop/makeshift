@@ -1,5 +1,6 @@
 using Godot;
 using Makeshift.Autoloads;
+using Logger = Makeshift.Autoloads.Logger;
 using Makeshift.Scenes.GameObjects;
 using Makeshift.Systems;
 
@@ -67,7 +68,10 @@ public partial class Player
                 rb.ApplyCentralImpulse(kickDir * KICK_FORCE);
             }
             WorldMutations.ApplyDamage(rb, KICK_DAMAGE);
-            Logger.Instance?.Debug($"Player: Kicked '{rb.Name}'");
+            var kickedName = rb is Makeshift.Interfaces.IObjectNamed named
+                ? named.GetObjectName()
+                : rb.Name.ToString();
+            Logger.Instance?.Info($"Player: Kicked '{kickedName}'");
         }
     }
 }

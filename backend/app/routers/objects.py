@@ -297,6 +297,12 @@ async def _run_spawn_integration(
     # Bidirectional screen: which pairs are interesting?
     interesting = await screen_pairs(blueprint, scene_objects)
     if not interesting:
+        logger.info(
+            "spawn_screen_empty",
+            session_id=session_id,
+            object_name=blueprint.name,
+            scene_size=len(scene_objects),
+        )
         return
 
     bp_by_name = {o.name: o for o in scene_objects}
@@ -310,6 +316,12 @@ async def _run_spawn_integration(
         if behaviors:
             entries = format_behaviors(subject.name, behaviors)
             await send_behaviors_ready(session_id, subject.name, entries)
+        else:
+            logger.warning(
+                "empty_behaviors_dict",
+                subject=subject.name,
+                target_count=len(targets),
+            )
 
     tasks = []
 
