@@ -98,7 +98,7 @@ DESTRUCTION_INSTRUCTION = (
     "The debris must look completely different from the original object's silhouette. "
     "It should be a low, flat pile or scatter of broken fragments. "
     "Reference the original's specific colors and material textures. "
-    "Under 20 words. Output ONLY the visual description."
+    "Under 25 words. Output ONLY the visual description."
 )
 
 
