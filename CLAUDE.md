@@ -36,22 +36,26 @@ make eval-behavior             # behavior + screening quality
 - `sessions/manager.py` — aiosqlite (`game.db`). Budget: $1.00/session at $0.041/object
 - `routers/` — `objects.py` (POST create), `sessions.py` (CRUD + sync)
 
-**Godot Client** (`godot/`): Godot 4.6, GDScript.
+**Godot Client** (`godot/`): Godot 4.6 (.NET/Mono), C#, .NET 8. Build: `cd godot && dotnet build` (or let the editor build on launch).
 
-- Autoloads: `EventBus` (signals), `InteractionCache` (behavior lookup), `Backend` (HTTP+WS), `GameManager` (state), `Log`
-- Key systems in `scripts/systems/`: `object_behavior.gd`, `state_manager.gd`, `state_propagator.gd`, `affordance_system.gd`, `physics_composer.gd`, `world_mutations.gd`
-- Data in `scripts/data/`: `state_contradictions.gd` (canonical `STATE_NAMES`), `collision_layers.gd`
+- Autoloads in `autoloads/`: `EventBus`, `InteractionCache`, `Backend`, `GameManager`, `Logger` — all with `public static T Instance { get; private set; } = null!;` pattern
+- Key systems in `scripts/systems/`: `ObjectBehavior.cs`, `StateManager.cs`, `StatePropagator.cs`, `AffordanceSystem.cs`, `PhysicsComposer.cs`, `WorldMutations.cs`
+- Data in `scripts/data/`: `Enums.cs` (canonical enums: `Movement`, `ActionKind`, `StateAction`, `StateId`, `Affordance`, `Durability`, `SpeedTier`, `Surface`), `StateContradictions.cs`, `CollisionLayers.cs`
+- Models in `scripts/models/`: C# records — `Blueprint`, `BehaviorEntry`, `PhysicsData`, `VisualDescriptor`, `WsMessage` hierarchy; `MakeshiftJsonContext` (source-gen JSON, snake_case)
+- Interfaces in `scripts/interfaces/`: `IObjectNamed`, `IDamageable`, `IHealable`, `IStateful`, `IImpulsable`, `IWorld` — replace GDScript duck typing
 
 ## Gotchas
 
-- `ObjectBehavior` runs in `_physics_process()` (~60fps), NOT tick-based. First action fires immediately at CONTACT_RANGE (48 units), then ACTION_COOLDOWN (1.0s). Critical for reactive objects like bombs.
+- `ObjectBehavior` runs in `_PhysicsProcess()` (~60fps), NOT tick-based. First action fires immediately at CONTACT_RANGE (48 units), then ACTION_COOLDOWN (1.0s). Critical for reactive objects like bombs.
 - Background `asyncio.Task`s must be held in a module-level `set` to prevent GC before completion (see `routers/objects.py`, `ws/handler.py`)
 - `@computed_field` properties require `# type: ignore[prop-decorator]` — mypy doesn't support decorators above `@property`
-- GDScript `:=` type inference fails on Variant-returning functions — `abs()`, `clamp()`, `min()`, `max()`, array/dict element access, `instantiate()`. Use explicit type or untyped, never `:=`.
-- `@onready` vars are null before `add_child()` — if a setup method runs before the node enters the tree, `@onready` references are null. Store params in plain vars, apply in `_ready()`.
-- Collision layer bitmask vs UI index — `collision_layer`/`collision_mask` are bitmasks, not UI layer numbers. UI Layer 1 = bit 1, Layer 2 = bit 2, Layer 3 = bit 4 (powers of 2).
-- In Godot 4.x, assigning an untyped `Array` (e.g. from JSON parsing) to a typed `Array[Dictionary]` silently fails. Use untyped `Array` or iterate-and-append.
+- `Timer` type ambiguity in C#: .NET 8 implicit usings pull in `System.Threading.Timer`. Must alias: `using Timer = Godot.Timer;` — affects `WorldMutations`, `StateDecay`, `StatePropagator`. Same pattern for `HttpClient` and `FileAccess` in `Backend.cs`.
+- Async continuations in `Backend.cs` run on threadpool (no Godot `SynchronizationContext`) — use `CallDeferred` for anything touching Godot nodes from a `Task` continuation.
+- `Godot.Collections.Array`/`Dictionary` required for signal parameters with collections — C# generic types cross the marshaling boundary and silently fail or error.
+- `StateId` wire format ordering: `None=0, Burning=1, Frozen=2, Wet=3, Electrified=4` — matches backend and `StateContradictions.STATE_NAMES`. Do NOT reorder.
+- `partial class` required on every Godot-derived class — source generators need it.
 - `Backend` autoload has `process_mode = PROCESS_MODE_ALWAYS` — must process during pause for WS keepalive.
+- Collision layer bitmask vs UI index — `CollisionLayer`/`CollisionMask` are bitmasks, not UI layer numbers. UI Layer 1 = bit 1, Layer 2 = bit 2, Layer 3 = bit 4 (powers of 2).
 - `pytest-asyncio` configured with `asyncio_mode = "auto"` — `async def` tests run without extra markers.
 - `make check` enforces `ruff format --check` before lint/typecheck/test — run `make format` to fix.
 

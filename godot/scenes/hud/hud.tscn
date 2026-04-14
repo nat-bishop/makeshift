@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3 uid="uid://hud_scene"]
 
-[ext_resource type="Script" path="res://scenes/hud/hud.gd" id="1_hud"]
+[ext_resource type="Script" path="res://scenes/hud/HUD.cs" id="1_hud"]
 [ext_resource type="PackedScene" uid="uid://creation_panel" path="res://scenes/hud/object_creation_panel.tscn" id="4_panel"]
 
 [node name="HUD" type="CanvasLayer"]

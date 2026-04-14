@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://creation_panel"]
 
-[ext_resource type="Script" path="res://scenes/hud/object_creation_panel.gd" id="1_panel"]
+[ext_resource type="Script" path="res://scenes/hud/ObjectCreationPanel.cs" id="1_panel"]
 
 [node name="ObjectCreationPanel" type="PanelContainer"]
 custom_minimum_size = Vector2(400, 0)

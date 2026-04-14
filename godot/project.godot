@@ -16,21 +16,25 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 config/name="Makeshift"
 run/main_scene="res://scenes/main_menu/main_menu.tscn"
-config/features=PackedStringArray("4.6", "GL Compatibility")
+config/features=PackedStringArray("4.6", "C#", "GL Compatibility")
 
 [autoload]
 
-Log="*res://autoloads/logger.gd"
-EventBus="*res://autoloads/event_bus.gd"
-GameManager="*res://autoloads/game_manager.gd"
-InteractionCache="*res://autoloads/interaction_cache.gd"
-Backend="*res://autoloads/backend.gd"
+Log="*res://autoloads/Logger.cs"
+EventBus="*res://autoloads/EventBus.cs"
+GameManager="*res://autoloads/GameManager.cs"
+InteractionCache="*res://autoloads/InteractionCache.cs"
+Backend="*res://autoloads/Backend.cs"
 
 [display]
 
 window/size/viewport_width=1280
 window/size/viewport_height=720
 window/stretch/mode="canvas_items"
+
+[dotnet]
+
+project/assembly_name="makeshift"
 
 [input]
 

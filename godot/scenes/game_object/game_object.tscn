@@ -1,8 +1,8 @@
 [gd_scene load_steps=5 format=3 uid="uid://game_object"]
 
-[ext_resource type="Script" path="res://scenes/game_object/game_object.gd" id="1_game_object"]
-[ext_resource type="Script" path="res://scenes/game_object/physics_applicator.gd" id="2_physics"]
-[ext_resource type="Script" path="res://scenes/game_object/object_visual.gd" id="3_visual"]
+[ext_resource type="Script" path="res://scenes/game_object/GameObject.cs" id="1_game_object"]
+[ext_resource type="Script" path="res://scenes/game_object/PhysicsApplicator.cs" id="2_physics"]
+[ext_resource type="Script" path="res://scenes/game_object/ObjectVisual.cs" id="3_visual"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_default"]
 size = Vector2(48, 48)

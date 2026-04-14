@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3 uid="uid://level_03"]
 
-[ext_resource type="Script" path="res://scenes/levels/level_03.gd" id="1_level03"]
+[ext_resource type="Script" path="res://scenes/levels/Level03.cs" id="1_level03"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_goal"]
 size = Vector2(128, 64)

@@ -35,73 +35,66 @@ Level puzzles should be designed around these mechanics. Examples:
 
 ## BaseLevel API
 
-All levels extend `BaseLevel`. Available helpers:
+All levels extend `BaseLevel` (`scenes/levels/BaseLevel.cs`). Available helpers:
 
-```gdscript
-# Spawn a pre-defined game object from blueprint dict
-_spawn_game_object(blueprint: Dictionary, pos: Vector2) -> Node
+```csharp
+// Spawn a pre-defined game object from blueprint dict
+protected Node SpawnGameObject(Godot.Collections.Dictionary blueprint, Vector2 pos)
 
-# Create a kill zone (999 dmg to objects, respawns player)
-_create_kill_zone(pos: Vector2, size: Vector2) -> void
+// Create a kill zone (999 dmg to objects, respawns player)
+protected void CreateKillZone(Vector2 pos, Vector2 size)
+
+// Create a static platform from texture
+protected void CreatePlatform(Vector2 pos, Vector2 size, Texture2D? texture = null)
+
+// Create a non-player environment body (acid moat, etc.)
+protected EnvironmentBody CreateEnvBody(Vector2 pos, Vector2 size, string name,
+    Godot.Collections.Dictionary bp, Color color, bool solid = true)
 ```
 
-`BaseLevel` requires a `$Goal` Area2D node in the scene for level completion detection.
+`BaseLevel` requires a `Goal` Area2D node and a `SpawnPoint` Marker2D in the scene for goal detection and player respawn.
 
 ### Seed Object Blueprint Format
 
-```gdscript
-# Example seed blueprint
-const FIRE_BLUEPRINT := {
-    "id": "fire_01",
-    "name": "Fire",
-    "description": "a small campfire",
-    "visual_description": "a small orange and yellow campfire with flickering flames",
-    "physics": {
-        "mass_kg": 0.1,
-        "height_cm": 40,
-        "surface": 0,      # 0=slippery 1=normal 2=sticky
-        "bounce": 0,
-        "gravity": 10,     # fire rises
-    },
-    "durability": 0,       # fragile (5 HP) — fire dies quickly when hit
-    "affordance": 3,       # 3=nothing
-    "autonomous": false,
-    "speed": 2,
-    "initial_states": [1], # spawns with burning (state 1)
-    "susceptible_states": [],
-    "destruction_result_name": "ash",
-}
+Blueprints are `Godot.Collections.Dictionary` (JSON-compatible). Use `SpawnGameObject()` to place them. State IDs: 1=burning, 2=frozen, 3=wet, 4=electrified.
 
-const WOOD_LOG_BLUEPRINT := {
-    "id": "wood_01",
-    "name": "Wood Log",
-    "description": "a wooden log",
-    "visual_description": "a brown cylindrical wooden log",
-    "physics": {
-        "mass_kg": 5.0,
-        "height_cm": 60,
-        "surface": 1,
-        "bounce": 10,
-        "gravity": 50,
+```csharp
+// In a Level subclass _Ready() override:
+var fireBp = new Godot.Collections.Dictionary
+{
+    ["id"]                    = "fire_01",
+    ["name"]                  = "Fire",
+    ["description"]           = "a small campfire",
+    ["visual_description"]    = "a small orange and yellow campfire with flickering flames",
+    ["physics"]               = new Godot.Collections.Dictionary {
+        ["mass_kg"]   = 0.1f,
+        ["height_cm"] = 40,
+        ["surface"]   = 0,   // 0=slippery 1=normal 2=sticky
+        ["bounce"]    = 0,
+        ["gravity"]   = 10,  // fire rises
     },
-    "durability": 2,          # normal (40 HP)
-    "affordance": 0,          # carry
-    "autonomous": false,
-    "speed": 2,
-    "initial_states": [],
-    "susceptible_states": [1], # catches fire (state 1)
-    "destruction_result_name": "charred wood",
-}
+    ["durability"]            = 0,   // fragile (5 HP)
+    ["affordance"]            = 3,   // 3=nothing
+    ["autonomous"]            = false,
+    ["speed"]                 = 2,
+    ["initial_states"]        = new Godot.Collections.Array { 1 },  // burning
+    ["susceptible_states"]    = new Godot.Collections.Array(),
+    ["destruction_result_name"] = "ash",
+};
+SpawnGameObject(fireBp, new Vector2(400, 300));
 ```
-
-State IDs: 1=burning, 2=frozen, 3=wet, 4=electrified.
 
 ### GameManager Level Registration
 
-```gdscript
-const LEVELS: Array[Dictionary] = [
-    {"scene": "res://scenes/levels/level_01.tscn", "name": "Level 1: ..."},
-    {"scene": "res://scenes/levels/level_02.tscn", "name": "Level 2: ..."},
-    {"scene": "res://scenes/levels/sandbox.tscn",  "name": "Sandbox"},
-]
+Levels are registered as `LevelInfo` records in `GameManager.Levels` (`autoloads/GameManager.cs`):
+
+```csharp
+public static readonly LevelInfo[] Levels =
+[
+    new("res://scenes/levels/level_01.tscn", "Level 1: The Acid Moat"),
+    new("res://scenes/levels/level_02.tscn", "Level 2: The Sentry"),
+    new("res://scenes/levels/level_03.tscn", "Level 3: Reach the Top"),
+];
 ```
+
+Add new level scene files and register them here to make them accessible from the main menu.

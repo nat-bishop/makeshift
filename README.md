@@ -6,7 +6,8 @@
 
 - Python 3.11+
 - [uv](https://docs.astral.sh/uv/) package manager
-- [Godot 4.6](https://godotengine.org/) (for the client)
+- [Godot 4.6 **Mono/.NET**](https://godotengine.org/download/) (the .NET variant — the standard build won't compile the C# client)
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
 - API keys: [Google AI](https://ai.google.dev/) (Gemini — LLM only); GPU server running FLUX (for sprite generation) and BiRefNet (for background removal) via Docker
 
 ## Quick Start
