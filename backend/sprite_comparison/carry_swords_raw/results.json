@@ -1,0 +1,308 @@
+{
+  "ref_size": 512,
+  "swords": [
+    {
+      "name": "iron_longsword",
+      "desc": "a plain iron longsword with a leather-wrapped grip and steel crossguard",
+      "raw_elapsed": 0.28732829983346164,
+      "clean_elapsed": 4.72791439993307,
+      "llm_desc": "The player grips the plain iron longsword's leather-wrapped handle, its steel crossguard gleaming against their armor.",
+      "llm_elapsed": 0.48841070011258125,
+      "full_prompt": "mixed media collage style paper cutout, side view, flat lighting, clean edges, The player grips the plain iron longsword's leather-wrapped handle, its steel crossguard gleaming against their armor., single centered scene, contrasting solid background color, no text"
+    },
+    {
+      "name": "flaming_sword",
+      "desc": "a steel sword wrapped in dancing orange flames along the blade",
+      "raw_elapsed": 0.17723389994353056,
+      "clean_elapsed": 0.24856580002233386,
+      "llm_desc": "The player grips a steel sword wreathed in dancing orange flames, the fire illuminating their stance.",
+      "llm_elapsed": 0.20509939990006387,
+      "full_prompt": "mixed media collage style paper cutout, side view, flat lighting, clean edges, The player grips a steel sword wreathed in dancing orange flames, the fire illuminating their stance., single centered scene, contrasting solid background color, no text"
+    },
+    {
+      "name": "frost_sword",
+      "desc": "a sword encased in glowing pale-blue ice crystals",
+      "raw_elapsed": 0.1834997001569718,
+      "clean_elapsed": 0.24745939997956157,
+      "llm_desc": "The player grips the frost sword, its pale-blue ice crystals glowing softly against their armor.",
+      "llm_elapsed": 0.1898173000663519,
+      "full_prompt": "mixed media collage style paper cutout, side view, flat lighting, clean edges, The player grips the frost sword, its pale-blue ice crystals glowing softly against their armor., single centered scene, contrasting solid background color, no text"
+    },
+    {
+      "name": "cursed_blade",
+      "desc": "a black cursed sword dripping shadowy purple energy",
+      "raw_elapsed": 0.2008483000099659,
+      "clean_elapsed": 0.24743270012550056,
+      "llm_desc": "A player grips a black cursed blade, its haze of dripping shadowy purple energy illuminating their tense stance.",
+      "llm_elapsed": 0.22584879980422556,
+      "full_prompt": "mixed media collage style paper cutout, side view, flat lighting, clean edges, A player grips a black cursed blade, its haze of dripping shadowy purple energy illuminating their tense stance., single centered scene, contrasting solid background color, no text"
+    },
+    {
+      "name": "golden_sword",
+      "desc": "an ornate golden sword with a jeweled red pommel and engraved blade",
+      "raw_elapsed": 0.1796669999603182,
+      "clean_elapsed": 0.2434656999539584,
+      "llm_desc": "A player grips an ornate golden sword, its engraved blade gleaming beside a jeweled red pommel.",
+      "llm_elapsed": 0.23024089983664453,
+      "full_prompt": "mixed media collage style paper cutout, side view, flat lighting, clean edges, A player grips an ornate golden sword, its engraved blade gleaming beside a jeweled red pommel., single centered scene, contrasting solid background color, no text"
+    },
+    {
+      "name": "crystal_sword",
+      "desc": "a translucent purple crystal sword that refracts light",
+      "raw_elapsed": 0.21550339995883405,
+      "clean_elapsed": 0.2568143999669701,
+      "llm_desc": "The player grips the translucent purple crystal sword, its blade refracting light in vibrant hues.",
+      "llm_elapsed": 0.18881589989177883,
+      "full_prompt": "mixed media collage style paper cutout, side view, flat lighting, clean edges, The player grips the translucent purple crystal sword, its blade refracting light in vibrant hues., single centered scene, contrasting solid background color, no text"
+    },
+    {
+      "name": "wooden_practice",
+      "desc": "a chipped wooden practice sword with a rough handle",
+      "raw_elapsed": 0.1778301999438554,
+      "clean_elapsed": 0.25640579988248646,
+      "llm_desc": "The player grips the chipped wooden practice sword's rough handle, its worn wood gleaming under dim light.",
+      "llm_elapsed": 0.22366280015558004,
+      "full_prompt": "mixed media collage style paper cutout, side view, flat lighting, clean edges, The player grips the chipped wooden practice sword's rough handle, its worn wood gleaming under dim light., single centered scene, contrasting solid background color, no text"
+    },
+    {
+      "name": "broken_sword",
+      "desc": "an old steel sword broken in half with jagged edges",
+      "raw_elapsed": 0.18241330003365874,
+      "clean_elapsed": 0.2492023000959307,
+      "llm_desc": "The player grips the jagged, broken steel blade by its hilt, the severed edge gleaming dully against their worn armor.",
+      "llm_elapsed": 0.2507996999192983,
+      "full_prompt": "mixed media collage style paper cutout, side view, flat lighting, clean edges, The player grips the jagged, broken steel blade by its hilt, the severed edge gleaming dully against their worn armor., single centered scene, contrasting solid background color, no text"
+    },
+    {
+      "name": "saw_sword",
+      "desc": "a serrated saw-blade sword with rusted iron teeth",
+      "raw_elapsed": 0.18118549999780953,
+      "clean_elapsed": 0.258228300139308,
+      "llm_desc": "The player grips the rusted, serrated saw-blade sword by its hilt, its jagged iron teeth gleaming dully in the dim light.",
+      "llm_elapsed": 0.28326929989270866,
+      "full_prompt": "mixed media collage style paper cutout, side view, flat lighting, clean edges, The player grips the rusted, serrated saw-blade sword by its hilt, its jagged iron teeth gleaming dully in the dim light., single centered scene, contrasting solid background color, no text"
+    },
+    {
+      "name": "katana",
+      "desc": "a curved Japanese katana with red silk-wrapped handle and lacquered scabbard",
+      "raw_elapsed": 0.1760738999582827,
+      "clean_elapsed": 0.2507649001199752,
+      "llm_desc": "The player grips a curved katana, its red silk handle contrasting against the dark lacquered scabbard at their hip.",
+      "llm_elapsed": 0.2448853999376297,
+      "full_prompt": "mixed media collage style paper cutout, side view, flat lighting, clean edges, The player grips a curved katana, its red silk handle contrasting against the dark lacquered scabbard at their hip., single centered scene, contrasting solid background color, no text"
+    },
+    {
+      "name": "claymore",
+      "desc": "a massive Scottish claymore with a basket hilt",
+      "raw_elapsed": 0.1812208998017013,
+      "clean_elapsed": 0.2555405998136848,
+      "llm_desc": "The player struggles under the weight of a massive Scottish claymore, its intricate basket hilt resting heavily on their shoulder.",
+      "llm_elapsed": 0.2368789000902325,
+      "full_prompt": "mixed media collage style paper cutout, side view, flat lighting, clean edges, The player struggles under the weight of a massive Scottish claymore, its intricate basket hilt resting heavily on their shoulder., single centered scene, contrasting solid background color, no text"
+    },
+    {
+      "name": "dagger",
+      "desc": "a small steel dagger with a carved bone handle",
+      "raw_elapsed": 0.1804107001516968,
+      "clean_elapsed": 0.24437440000474453,
+      "llm_desc": "The player grips the small steel dagger, its carved bone handle contrasting against their hand.",
+      "llm_elapsed": 0.18516429979354143,
+      "full_prompt": "mixed media collage style paper cutout, side view, flat lighting, clean edges, The player grips the small steel dagger, its carved bone handle contrasting against their hand., single centered scene, contrasting solid background color, no text"
+    },
+    {
+      "name": "scimitar",
+      "desc": "a curved Persian scimitar with an engraved silver blade",
+      "raw_elapsed": 0.1981762999203056,
+      "clean_elapsed": 0.2475370999891311,
+      "llm_desc": "The player grips a curved Persian scimitar, its engraved silver blade gleaming in the light.",
+      "llm_elapsed": 0.21347910002805293,
+      "full_prompt": "mixed media collage style paper cutout, side view, flat lighting, clean edges, The player grips a curved Persian scimitar, its engraved silver blade gleaming in the light., single centered scene, contrasting solid background color, no text"
+    },
+    {
+      "name": "zweihander",
+      "desc": "a huge two-handed German zweihander sword with side rings",
+      "raw_elapsed": 0.18890419998206198,
+      "clean_elapsed": 0.24215160007588565,
+      "llm_desc": "The player grips the massive German zweihander with side rings, struggling under its immense weight.",
+      "llm_elapsed": 0.23083829996176064,
+      "full_prompt": "mixed media collage style paper cutout, side view, flat lighting, clean edges, The player grips the massive German zweihander with side rings, struggling under its immense weight., single centered scene, contrasting solid background color, no text"
+    },
+    {
+      "name": "obsidian_sword",
+      "desc": "a black obsidian sword with glassy razor edges",
+      "raw_elapsed": 0.18540040007792413,
+      "clean_elapsed": 0.2564517999999225,
+      "llm_desc": "The player grips the glassy black obsidian sword, its razor edges catching the light against their silhouette.",
+      "llm_elapsed": 0.21964100003242493,
+      "full_prompt": "mixed media collage style paper cutout, side view, flat lighting, clean edges, The player grips the glassy black obsidian sword, its razor edges catching the light against their silhouette., single centered scene, contrasting solid background color, no text"
+    }
+  ],
+  "edits": [
+    {
+      "sword": "iron_longsword",
+      "raw": {
+        "elapsed": 0.35023660003207624,
+        "bytes": 193900
+      },
+      "clean": {
+        "elapsed": 0.35606849985197186,
+        "bytes": 193900
+      }
+    },
+    {
+      "sword": "flaming_sword",
+      "raw": {
+        "elapsed": 0.3530761001165956,
+        "bytes": 188999
+      },
+      "clean": {
+        "elapsed": 0.35838290001265705,
+        "bytes": 188999
+      }
+    },
+    {
+      "sword": "frost_sword",
+      "raw": {
+        "elapsed": 0.3448840999044478,
+        "bytes": 198023
+      },
+      "clean": {
+        "elapsed": 0.3499976000748575,
+        "bytes": 198023
+      }
+    },
+    {
+      "sword": "cursed_blade",
+      "raw": {
+        "elapsed": 0.34963169996626675,
+        "bytes": 202495
+      },
+      "clean": {
+        "elapsed": 0.35891069984063506,
+        "bytes": 202495
+      }
+    },
+    {
+      "sword": "golden_sword",
+      "raw": {
+        "elapsed": 0.3663719000760466,
+        "bytes": 163281
+      },
+      "clean": {
+        "elapsed": 0.3423858000896871,
+        "bytes": 163281
+      }
+    },
+    {
+      "sword": "crystal_sword",
+      "raw": {
+        "elapsed": 0.3464027000591159,
+        "bytes": 172031
+      },
+      "clean": {
+        "elapsed": 0.3670254999306053,
+        "bytes": 172031
+      }
+    },
+    {
+      "sword": "wooden_practice",
+      "raw": {
+        "elapsed": 0.3429141000378877,
+        "bytes": 116805
+      },
+      "clean": {
+        "elapsed": 0.3480736000929028,
+        "bytes": 116805
+      }
+    },
+    {
+      "sword": "broken_sword",
+      "raw": {
+        "elapsed": 0.34884089999832213,
+        "bytes": 175020
+      },
+      "clean": {
+        "elapsed": 0.34907309990376234,
+        "bytes": 175020
+      }
+    },
+    {
+      "sword": "saw_sword",
+      "raw": {
+        "elapsed": 0.33513679984025657,
+        "bytes": 106310
+      },
+      "clean": {
+        "elapsed": 0.34793940000236034,
+        "bytes": 106310
+      }
+    },
+    {
+      "sword": "katana",
+      "raw": {
+        "elapsed": 0.34840539982542396,
+        "bytes": 201594
+      },
+      "clean": {
+        "elapsed": 0.35305569996125996,
+        "bytes": 201594
+      }
+    },
+    {
+      "sword": "claymore",
+      "raw": {
+        "elapsed": 0.35844229999929667,
+        "bytes": 198432
+      },
+      "clean": {
+        "elapsed": 0.3512009000405669,
+        "bytes": 198432
+      }
+    },
+    {
+      "sword": "dagger",
+      "raw": {
+        "elapsed": 0.34098959993571043,
+        "bytes": 129682
+      },
+      "clean": {
+        "elapsed": 0.35390680003911257,
+        "bytes": 129682
+      }
+    },
+    {
+      "sword": "scimitar",
+      "raw": {
+        "elapsed": 0.35931410011835396,
+        "bytes": 119356
+      },
+      "clean": {
+        "elapsed": 0.35862159985117614,
+        "bytes": 119356
+      }
+    },
+    {
+      "sword": "zweihander",
+      "raw": {
+        "elapsed": 0.35140999988652766,
+        "bytes": 202542
+      },
+      "clean": {
+        "elapsed": 0.35062590008601546,
+        "bytes": 202542
+      }
+    },
+    {
+      "sword": "obsidian_sword",
+      "raw": {
+        "elapsed": 0.3593075000680983,
+        "bytes": 165475
+      },
+      "clean": {
+        "elapsed": 0.3550151998642832,
+        "bytes": 165475
+      }
+    }
+  ],
+  "edit_total_elapsed": 10.80969740008004
+}

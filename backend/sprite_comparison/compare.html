@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sprite Prompt Comparison</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: #1a1a2e; color: #e0e0e0; padding: 24px; }
+  h1 { text-align: center; margin-bottom: 8px; font-size: 1.6rem; color: #fff; }
+  .subtitle { text-align: center; color: #888; margin-bottom: 32px; font-size: 0.9rem; }
+  .legend { display: flex; justify-content: center; gap: 32px; margin-bottom: 24px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; }
+  .dot-v1 { background: #ff6b6b; }
+  .dot-v2 { background: #ffd93d; }
+  .dot-v3 { background: #6bcb77; }
+
+  .row { display: grid; grid-template-columns: 160px 1fr 1fr 1fr; gap: 16px; margin-bottom: 24px; align-items: start; }
+  .row-label { padding-top: 80px; }
+  .row-label h2 { font-size: 1.1rem; color: #fff; margin-bottom: 4px; }
+  .row-label .input { color: #888; font-size: 0.8rem; font-style: italic; }
+
+  .card { background: #16213e; border-radius: 12px; padding: 12px; border: 2px solid #0f3460; }
+  .card.v1 { border-color: #ff6b6b; }
+  .card.v2 { border-color: #ffd93d; }
+  .card.v3 { border-color: #6bcb77; }
+
+  .card-header { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .v1 .card-header { color: #ff6b6b; }
+  .v2 .card-header { color: #ffd93d; }
+  .v3 .card-header { color: #6bcb77; }
+
+  .card img { width: 100%; aspect-ratio: 1; object-fit: contain; background: repeating-conic-gradient(#222 0% 25%, #2a2a2a 0% 50%) 50% / 20px 20px; border-radius: 8px; cursor: pointer; }
+  .card img:hover { transform: scale(1.02); transition: transform 0.15s; }
+
+  .prompt-text { font-size: 0.7rem; color: #aaa; margin-top: 8px; line-height: 1.4; max-height: 80px; overflow-y: auto; word-break: break-word; }
+  .prompt-text .highlight { color: #ffd93d; font-weight: 500; }
+
+  .section-divider { border: none; border-top: 1px solid #0f3460; margin: 8px 0 24px 0; }
+
+  /* Modal for zoomed view */
+  .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 100; justify-content: center; align-items: center; cursor: pointer; }
+  .modal.active { display: flex; }
+  .modal img { max-width: 90vw; max-height: 90vh; object-fit: contain; background: repeating-conic-gradient(#333 0% 25%, #3a3a3a 0% 50%) 50% / 20px 20px; border-radius: 8px; }
+</style>
+</head>
+<body>
+
+<h1>Sprite Prompt A/B Comparison</h1>
+<p class="subtitle">Comparing 3 prompt strategies across 5 test objects &mdash; FLUX.2-klein local backend</p>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot dot-v1"></div> V1: Baseline (keyword list)</div>
+  <div class="legend-item"><div class="legend-dot dot-v2"></div> V2: Narrative wrap only</div>
+  <div class="legend-item"><div class="legend-dot dot-v3"></div> V3: Full (narrative + craft descriptions)</div>
+</div>
+
+<hr class="section-divider">
+
+<!-- Fire Sword -->
+<div class="row">
+  <div class="row-label">
+    <h2>Fire Sword</h2>
+    <div class="input">Player typed: "fire sword"</div>
+  </div>
+  <div class="card v1">
+    <div class="card-header">V1: Baseline</div>
+    <img src="baseline/fire_sword.png" onclick="zoom(this)">
+    <div class="prompt-text">mixed media collage style paper cutout, side view, flat lighting, clean edges, Inferno Blade, The blade is a jagged, obsidian-like slab of black glass that appears to be melting, with a core of searing orange and yellow fire leaking through cracks in the hilt. Distinct, single centered object, contrasting solid background color, no text</div>
+  </div>
+  <div class="card v2">
+    <div class="card-header">V2: Narrative wrap</div>
+    <img src="improved/fire_sword_v2_narrative.png" onclick="zoom(this)">
+    <div class="prompt-text">A mixed media collage of Inferno Blade made from cut paper, magazine clippings, and cardboard, held together with visible scotch tape and glue. <span class="highlight">The blade is a jagged, obsidian-like slab of black glass</span> &hellip; Side view, single centered object on a solid contrasting background. Flat lighting, clean edges, no text.</div>
+  </div>
+  <div class="card v3">
+    <div class="card-header">V3: Full improvement</div>
+    <img src="improved/fire_sword_v3_full.png" onclick="zoom(this)">
+    <div class="prompt-text">A mixed media collage of Fire sword made from cut paper, magazine clippings, and cardboard, held together with visible scotch tape and glue. <span class="highlight">The blade is constructed from jagged strips of orange newsprint and red magazine cutouts layered over textured yellow construction paper, while the hilt emerges from a sturdy piece of brown cardboard wrapped in blue book pages. Visible glue smudges and torn edges give the weapon a chaotic, flickering texture</span> Side view, single centered object on a solid contrasting background. Flat lighting, clean edges, no text.</div>
+  </div>
+</div>
+
+<!-- Wooden Barrel -->
+<div class="row">
+  <div class="row-label">
+    <h2>Wooden Barrel</h2>
+    <div class="input">Player typed: "wooden barrel"</div>
+  </div>
+  <div class="card v1">
+    <div class="card-header">V1: Baseline</div>
+    <img src="baseline/wooden_barrel.png" onclick="zoom(this)">
+    <div class="prompt-text">mixed media collage style paper cutout, side view, flat lighting, clean edges, wooden barrel, The sprite depicts a stout, cylindrical barrel with bulging sides&hellip; bound by two or three dark metal hoops. Its surface features rough, vertical wooden planks in warm brow, single centered object, contrasting solid background color, no text</div>
+  </div>
+  <div class="card v2">
+    <div class="card-header">V2: Narrative wrap</div>
+    <img src="improved/wooden_barrel_v2_narrative.png" onclick="zoom(this)">
+    <div class="prompt-text">A mixed media collage of wooden barrel made from cut paper, magazine clippings, and cardboard, held together with visible scotch tape and glue. <span class="highlight">The sprite depicts a stout, cylindrical barrel&hellip;</span> Side view, single centered object on a solid contrasting background. Flat lighting, clean edges, no text.</div>
+  </div>
+  <div class="card v3">
+    <div class="card-header">V3: Full improvement</div>
+    <img src="improved/wooden_barrel_v3_full.png" onclick="zoom(this)">
+    <div class="prompt-text">A mixed media collage of wooden barrel made from cut paper, magazine clippings, and cardboard, held together with visible scotch tape and glue. <span class="highlight">The barrel's curved staves are formed from strips of brown construction paper and weathered magazine clippings, while the metal hoops are cut from glossy blue encyclopedia pages. Roughly torn edges and visible tape seams create a tactile, layered texture that contrasts the smooth, printed wood grain with the matte</span> Side view, single centered object on a solid contrasting background. Flat lighting, clean edges, no text.</div>
+  </div>
+</div>
+
+<!-- Robot -->
+<div class="row">
+  <div class="row-label">
+    <h2>Robot</h2>
+    <div class="input">Player typed: "robot"</div>
+  </div>
+  <div class="card v1">
+    <div class="card-header">V1: Baseline</div>
+    <img src="baseline/robot.png" onclick="zoom(this)">
+    <div class="prompt-text">mixed media collage style paper cutout, side view, flat lighting, clean edges, robot, The robot features a boxy, industrial silhouette with rounded corners, constructed from brushed steel plates and matte black chassis panels. Its most distinctive feature is a single, glowing amber optical sensor centered on its face, single centered object, contrasting solid background color, no text</div>
+  </div>
+  <div class="card v2">
+    <div class="card-header">V2: Narrative wrap</div>
+    <img src="improved/robot_v2_narrative.png" onclick="zoom(this)">
+    <div class="prompt-text">A mixed media collage of robot made from cut paper, magazine clippings, and cardboard, held together with visible scotch tape and glue. <span class="highlight">The robot features a boxy, industrial silhouette&hellip; brushed steel plates</span> Side view, single centered object on a solid contrasting background. Flat lighting, clean edges, no text.</div>
+  </div>
+  <div class="card v3">
+    <div class="card-header">V3: Full improvement</div>
+    <img src="improved/robot_v3_full.png" onclick="zoom(this)">
+    <div class="prompt-text">A mixed media collage of robot made from cut paper, magazine clippings, and cardboard, held together with visible scotch tape and glue. <span class="highlight">The robot's angular form is constructed from a patchwork of glossy magazine advertisements and textured encyclopedia pages, featuring metallic silver foil scraps for joints and vibrant primary-colored cutouts for its chest panel. Its surface reveals a chaotic yet cohesive texture where the smooth sheen of children's book illustrations clashes with the rough</span> Side view, single centered object on a solid contrasting background. Flat lighting, clean edges, no text.</div>
+  </div>
+</div>
+
+<!-- Campfire -->
+<div class="row">
+  <div class="row-label">
+    <h2>Campfire</h2>
+    <div class="input">Player typed: "campfire"</div>
+  </div>
+  <div class="card v1">
+    <div class="card-header">V1: Baseline</div>
+    <img src="baseline/campfire.png" onclick="zoom(this)">
+    <div class="prompt-text">mixed media collage style paper cutout, side view, flat lighting, clean edges, Campfire, The sprite features a rough, semi-circular mound of dark charcoal and grey stones supporting a dynamic flame composed of layered teardrop shapes in gradients from deep orange at the base to bright yellow and white, single centered object, contrasting solid background color, no text</div>
+  </div>
+  <div class="card v2">
+    <div class="card-header">V2: Narrative wrap</div>
+    <img src="improved/campfire_v2_narrative.png" onclick="zoom(this)">
+    <div class="prompt-text">A mixed media collage of Campfire made from cut paper, magazine clippings, and cardboard, held together with visible scotch tape and glue. <span class="highlight">The sprite features a rough, semi-circular mound&hellip;</span> Side view, single centered object on a solid contrasting background. Flat lighting, clean edges, no text.</div>
+  </div>
+  <div class="card v3">
+    <div class="card-header">V3: Full improvement</div>
+    <img src="improved/campfire_v3_full.png" onclick="zoom(this)">
+    <div class="prompt-text">A mixed media collage of Campfire made from cut paper, magazine clippings, and cardboard, held together with visible scotch tape and glue. <span class="highlight">The fire's jagged shape is constructed from torn orange and yellow magazine clippings layered over crumpled brown cardboard for the log base, while textured blue construction paper forms the night sky. Glittery gold confetti specks the flames to mimic sparks, contrasting with the rough, fibrous</span> Side view, single centered object on a solid contrasting background. Flat lighting, clean edges, no text.</div>
+  </div>
+</div>
+
+<!-- Treasure Chest -->
+<div class="row">
+  <div class="row-label">
+    <h2>Treasure Chest</h2>
+    <div class="input">Player typed: "treasure chest"</div>
+  </div>
+  <div class="card v1">
+    <div class="card-header">V1: Baseline</div>
+    <img src="baseline/treasure_chest.png" onclick="zoom(this)">
+    <div class="prompt-text">mixed media collage style paper cutout, side view, flat lighting, clean edges, treasure chest, The chest is a sturdy, rounded-rectangular box made of dark oak planks bound by thick, rusted iron bands. Its front features an ornate, golden lock plate with a single key, single centered object, contrasting solid background color, no text</div>
+  </div>
+  <div class="card v2">
+    <div class="card-header">V2: Narrative wrap</div>
+    <img src="improved/treasure_chest_v2_narrative.png" onclick="zoom(this)">
+    <div class="prompt-text">A mixed media collage of treasure chest made from cut paper, magazine clippings, and cardboard, held together with visible scotch tape and glue. <span class="highlight">The chest is a sturdy, rounded-rectangular box made of dark oak planks&hellip;</span> Side view, single centered object on a solid contrasting background. Flat lighting, clean edges, no text.</div>
+  </div>
+  <div class="card v3">
+    <div class="card-header">V3: Full improvement</div>
+    <img src="improved/treasure_chest_v3_full.png" onclick="zoom(this)">
+    <div class="prompt-text">A mixed media collage of treasure chest made from cut paper, magazine clippings, and cardboard, held together with visible scotch tape and glue. <span class="highlight">The chest's rigid form is constructed from layered cardboard scraps and glossy magazine clippings, with a lid formed by a cut-out illustration of a golden lock&hellip;</span> Side view, single centered object on a solid contrasting background. Flat lighting, clean edges, no text.</div>
+  </div>
+</div>
+
+<div class="modal" id="modal" onclick="this.classList.remove('active')">
+  <img id="modal-img" src="">
+</div>
+
+<script>
+function zoom(el) {
+  document.getElementById('modal-img').src = el.src;
+  document.getElementById('modal').classList.add('active');
+}
+</script>
+</body>
+</html>

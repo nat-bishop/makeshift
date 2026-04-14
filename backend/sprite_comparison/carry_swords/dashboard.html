@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FLUX.2 Klein - sword carry + transparency A/B</title>
+<style>
+  body { font-family: -apple-system, system-ui, sans-serif; background: #14161a; color: #e6e6e6;
+         margin: 0; padding: 24px; }
+  h1 { margin: 0 0 4px 0; font-weight: 600; }
+  .sub { color: #888; margin-bottom: 6px; font-size: 14px; }
+  .note { color: #888; margin-bottom: 24px; font-size: 13px; max-width: 980px; line-height: 1.5; }
+
+  .summary { display: flex; gap: 32px; margin-bottom: 28px; padding: 16px 20px;
+              background: #1c1f25; border-radius: 8px; max-width: 800px; }
+  .stat .label { color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat .value { font-size: 22px; font-weight: 600; font-family: ui-monospace, monospace; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(820px, 1fr)); gap: 16px; }
+  .card { background: #1c1f25; border-radius: 10px; padding: 16px; }
+  .card-header { margin-bottom: 12px; }
+  .oname { font-weight: 600; font-size: 15px; }
+  .odesc { font-size: 11px; color: #888; margin-top: 2px; }
+  .img-row { display: flex; gap: 14px; }
+  .img-cell { flex-shrink: 0; }
+  .img-cell img { display: block; width: 240px; height: 240px; object-fit: contain;
+                   border-radius: 6px; }
+  /* Checkered bg so transparent images are visible */
+  .checker {
+    background-color: #2a2d33;
+    background-image:
+      linear-gradient(45deg, #14161a 25%, transparent 25%),
+      linear-gradient(-45deg, #14161a 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #14161a 75%),
+      linear-gradient(-45deg, transparent 75%, #14161a 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+  }
+  .img-label { font-size: 11px; color: #aaa; padding-top: 4px; text-align: center; }
+  .img-meta { font-size: 10px; color: #666; padding-top: 2px; text-align: center;
+               font-family: ui-monospace, monospace; }
+  .tag-white { background: #4a3a1a; color: #e8d29a; padding: 1px 5px; border-radius: 3px; font-size: 9px; }
+  .tag-trans { background: #1a3a4a; color: #9adbe8; padding: 1px 5px; border-radius: 3px; font-size: 9px; }
+  .llm-desc { font-size: 11px; color: #6aa9d4; margin-top: 12px; line-height: 1.45;
+               border-left: 2px solid #2a4d6a; padding-left: 8px; }
+</style>
+</head>
+<body>
+  <h1>FLUX.2 Klein - sword carry pipeline + transparency A/B (15 swords)</h1>
+  <div class="sub">Real game pipeline · ref size 512 · output 512x512 · 2 edits per sword (white-bg vs transparent)</div>
+  <div class="note">
+    Each sword is rendered through the carry pipeline twice. <span class="tag-white">white-bg ref</span>
+    flattens the alpha to white pixels (this is what <code>prepare_reference()</code> in <code>pipeline.py</code> does today).
+    <span class="tag-trans">transparent ref</span> keeps the alpha channel intact. Same prompt, same LLM
+    description, same player reference, same generation seed (random) — the only variable is the reference image background.
+    Compare side-by-side to judge whether flattening to white affects edit quality.
+  </div>
+
+  <div class="summary">
+    <div class="stat"><div class="label">swords</div><div class="value">15</div></div>
+    <div class="stat"><div class="label">white-bg mean</div><div class="value">0.35s</div></div>
+    <div class="stat"><div class="label">transparent mean</div><div class="value">0.35s</div></div>
+    <div class="stat"><div class="label">total edits</div><div class="value">10.65s</div></div>
+  </div>
+
+  <div class="grid">
+        <div class="card">
+          <div class="card-header">
+            <div class="oname">iron_longsword</div>
+            <div class="odesc">a plain iron longsword with a leather-wrapped grip and steel crossguard</div>
+          </div>
+          <div class="img-row">
+            <div class="img-cell">
+              <img src="sword_iron_longsword.png" alt="iron_longsword" class="checker">
+              <div class="img-label">sword input</div>
+              <div class="img-meta">4.99s · t2i</div>
+            </div>
+            <div class="img-cell">
+              <img src="carry_iron_longsword_white.png" alt="carry white" class="checker">
+              <div class="img-label">carry · <span class="tag-white">white-bg ref</span></div>
+              <div class="img-meta">0.33s · 95KB</div>
+            </div>
+            <div class="img-cell">
+              <img src="carry_iron_longsword_transparent.png" alt="carry transparent" class="checker">
+              <div class="img-label">carry · <span class="tag-trans">transparent ref</span></div>
+              <div class="img-meta">0.33s · 93KB</div>
+            </div>
+          </div>
+          <div class="llm-desc">LLM: The player grips the plain iron longsword, its leather-wrapped handle and steel crossguard visible.</div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header">
+            <div class="oname">flaming_sword</div>
+            <div class="odesc">a steel sword wrapped in dancing orange flames along the blade</div>
+          </div>
+          <div class="img-row">
+            <div class="img-cell">
+              <img src="sword_flaming_sword.png" alt="flaming_sword" class="checker">
+              <div class="img-label">sword input</div>
+              <div class="img-meta">0.25s · t2i</div>
+            </div>
+            <div class="img-cell">
+              <img src="carry_flaming_sword_white.png" alt="carry white" class="checker">
+              <div class="img-label">carry · <span class="tag-white">white-bg ref</span></div>
+              <div class="img-meta">0.37s · 184KB</div>
+            </div>
+            <div class="img-cell">
+              <img src="carry_flaming_sword_transparent.png" alt="carry transparent" class="checker">
+              <div class="img-label">carry · <span class="tag-trans">transparent ref</span></div>
+              <div class="img-meta">0.37s · 190KB</div>
+            </div>
+          </div>
+          <div class="llm-desc">LLM: The player grips a steel sword wreathed in dancing orange flames, the fire illuminating their stance.</div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header">
+            <div class="oname">frost_sword</div>
+            <div class="odesc">a sword encased in glowing pale-blue ice crystals</div>
+          </div>
+          <div class="img-row">
+            <div class="img-cell">
+              <img src="sword_frost_sword.png" alt="frost_sword" class="checker">
+              <div class="img-label">sword input</div>
+              <div class="img-meta">0.25s · t2i</div>
+            </div>
+            <div class="img-cell">
+              <img src="carry_frost_sword_white.png" alt="carry white" class="checker">
+              <div class="img-label">carry · <span class="tag-white">white-bg ref</span></div>
+              <div class="img-meta">0.35s · 182KB</div>
+            </div>
+            <div class="img-cell">
+              <img src="carry_frost_sword_transparent.png" alt="carry transparent" class="checker">
+              <div class="img-label">carry · <span class="tag-trans">transparent ref</span></div>
+              <div class="img-meta">0.34s · 187KB</div>
+            </div>
+          </div>
+          <div class="llm-desc">LLM: The player grips the frost_sword, its blade encased in glowing pale-blue ice crystals that cast a cool light on their hands.</div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header">
+            <div class="oname">cursed_blade</div>
+            <div class="odesc">a black cursed sword dripping shadowy purple energy</div>
+          </div>
+          <div class="img-row">
+            <div class="img-cell">
+              <img src="sword_cursed_blade.png" alt="cursed_blade" class="checker">
+              <div class="img-label">sword input</div>
+              <div class="img-meta">0.26s · t2i</div>
+            </div>
+            <div class="img-cell">
+              <img src="carry_cursed_blade_white.png" alt="carry white" class="checker">
+              <div class="img-label">carry · <span class="tag-white">white-bg ref</span></div>
+              <div class="img-meta">0.36s · 177KB</div>
+            </div>
+            <div class="img-cell">
+              <img src="carry_cursed_blade_transparent.png" alt="carry transparent" class="checker">
+              <div class="img-label">carry · <span class="tag-trans">transparent ref</span></div>
+              <div class="img-meta">0.34s · 185KB</div>
+            </div>
+          </div>
+          <div class="llm-desc">LLM: The player grips the black cursed blade, its shadowy purple energy dripping heavily from the hilt.</div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header">
+            <div class="oname">golden_sword</div>
+            <div class="odesc">an ornate golden sword with a jeweled red pommel and engraved blade</div>
+          </div>
+          <div class="img-row">
+            <div class="img-cell">
+              <img src="sword_golden_sword.png" alt="golden_sword" class="checker">
+              <div class="img-label">sword input</div>
+              <div class="img-meta">0.25s · t2i</div>
+            </div>
+            <div class="img-cell">
+              <img src="carry_golden_sword_white.png" alt="carry white" class="checker">
+              <div class="img-label">carry · <span class="tag-white">white-bg ref</span></div>
+              <div class="img-meta">0.34s · 179KB</div>
+            </div>
+            <div class="img-cell">
+              <img src="carry_golden_sword_transparent.png" alt="carry transparent" class="checker">
+              <div class="img-label">carry · <span class="tag-trans">transparent ref</span></div>
+              <div class="img-meta">0.34s · 161KB</div>
+            </div>
+          </div>
+          <div class="llm-desc">LLM: The player grips the ornate golden sword, its engraved blade gleaming beneath a jeweled red pommel.</div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header">
+            <div class="oname">crystal_sword</div>
+            <div class="odesc">a translucent purple crystal sword that refracts light</div>
+          </div>
+          <div class="img-row">
+            <div class="img-cell">
+              <img src="sword_crystal_sword.png" alt="crystal_sword" class="checker">
+              <div class="img-label">sword input</div>
+              <div class="img-meta">0.25s · t2i</div>
+            </div>
+            <div class="img-cell">
+              <img src="carry_crystal_sword_white.png" alt="carry white" class="checker">
+              <div class="img-label">carry · <span class="tag-white">white-bg ref</span></div>
+              <div class="img-meta">0.34s · 164KB</div>
+            </div>
+            <div class="img-cell">
+              <img src="carry_crystal_sword_transparent.png" alt="carry transparent" class="checker">
+              <div class="img-label">carry · <span class="tag-trans">transparent ref</span></div>
+              <div class="img-meta">0.37s · 171KB</div>
+            </div>
+          </div>
+          <div class="llm-desc">LLM: The player grips the translucent purple crystal sword, its blade refracting vibrant light around their form.</div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header">
+            <div class="oname">wooden_practice</div>
+            <div class="odesc">a chipped wooden practice sword with a rough handle</div>
+          </div>
+          <div class="img-row">
+            <div class="img-cell">
+              <img src="sword_wooden_practice.png" alt="wooden_practice" class="checker">
+              <div class="img-label">sword input</div>
+              <div class="img-meta">0.26s · t2i</div>
+            </div>
+            <div class="img-cell">
+              <img src="carry_wooden_practice_white.png" alt="carry white" class="checker">
+              <div class="img-label">carry · <span class="tag-white">white-bg ref</span></div>
+              <div class="img-meta">0.34s · 122KB</div>
+            </div>
+            <div class="img-cell">
+              <img src="carry_wooden_practice_transparent.png" alt="carry transparent" class="checker">
+              <div class="img-label">carry · <span class="tag-trans">transparent ref</span></div>
+              <div class="img-meta">0.35s · 119KB</div>
+            </div>
+          </div>
+          <div class="llm-desc">LLM: The player grips the chipped wooden practice sword's rough handle, its worn blade angled downward.</div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header">
+            <div class="oname">broken_sword</div>
+            <div class="odesc">an old steel sword broken in half with jagged edges</div>
+          </div>
+          <div class="img-row">
+            <div class="img-cell">
+              <img src="sword_broken_sword.png" alt="broken_sword" class="checker">
+              <div class="img-label">sword input</div>
+              <div class="img-meta">0.25s · t2i</div>
+            </div>
+            <div class="img-cell">
+              <img src="carry_broken_sword_white.png" alt="carry white" class="checker">
+              <div class="img-label">carry · <span class="tag-white">white-bg ref</span></div>
+              <div class="img-meta">0.34s · 111KB</div>
+            </div>
+            <div class="img-cell">
+              <img src="carry_broken_sword_transparent.png" alt="carry transparent" class="checker">
+              <div class="img-label">carry · <span class="tag-trans">transparent ref</span></div>
+              <div class="img-meta">0.34s · 112KB</div>
+            </div>
+          </div>
+          <div class="llm-desc">LLM: The player grips the jagged, broken steel hilt of the sword, its shattered blade dangling heavily from their calloused hand.</div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header">
+            <div class="oname">saw_sword</div>
+            <div class="odesc">a serrated saw-blade sword with rusted iron teeth</div>
+          </div>
+          <div class="img-row">
+            <div class="img-cell">
+              <img src="sword_saw_sword.png" alt="saw_sword" class="checker">
+              <div class="img-label">sword input</div>
+              <div class="img-meta">0.25s · t2i</div>
+            </div>
+            <div class="img-cell">
+              <img src="carry_saw_sword_white.png" alt="carry white" class="checker">
+              <div class="img-label">carry · <span class="tag-white">white-bg ref</span></div>
+              <div class="img-meta">0.34s · 191KB</div>
+            </div>
+            <div class="img-cell">
+              <img src="carry_saw_sword_transparent.png" alt="carry transparent" class="checker">
+              <div class="img-label">carry · <span class="tag-trans">transparent ref</span></div>
+              <div class="img-meta">0.35s · 197KB</div>
+            </div>
+          </div>
+          <div class="llm-desc">LLM: The player grips the rusted iron-toothed saw-blade sword, its jagged serrations glinting against their grip.</div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header">
+            <div class="oname">katana</div>
+            <div class="odesc">a curved Japanese katana with red silk-wrapped handle and lacquered scabbard</div>
+          </div>
+          <div class="img-row">
+            <div class="img-cell">
+              <img src="sword_katana.png" alt="katana" class="checker">
+              <div class="img-label">sword input</div>
+              <div class="img-meta">0.25s · t2i</div>
+            </div>
+            <div class="img-cell">
+              <img src="carry_katana_white.png" alt="carry white" class="checker">
+              <div class="img-label">carry · <span class="tag-white">white-bg ref</span></div>
+              <div class="img-meta">0.35s · 213KB</div>
+            </div>
+            <div class="img-cell">
+              <img src="carry_katana_transparent.png" alt="carry transparent" class="checker">
+              <div class="img-label">carry · <span class="tag-trans">transparent ref</span></div>
+              <div class="img-meta">0.34s · 228KB</div>
+            </div>
+          </div>
+          <div class="llm-desc">LLM: The player grips the red silk-wrapped handle of a curved katana, its lacquered scabbard resting against their hip.</div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header">
+            <div class="oname">claymore</div>
+            <div class="odesc">a massive Scottish claymore with a basket hilt</div>
+          </div>
+          <div class="img-row">
+            <div class="img-cell">
+              <img src="sword_claymore.png" alt="claymore" class="checker">
+              <div class="img-label">sword input</div>
+              <div class="img-meta">0.25s · t2i</div>
+            </div>
+            <div class="img-cell">
+              <img src="carry_claymore_white.png" alt="carry white" class="checker">
+              <div class="img-label">carry · <span class="tag-white">white-bg ref</span></div>
+              <div class="img-meta">0.35s · 163KB</div>
+            </div>
+            <div class="img-cell">
+              <img src="carry_claymore_transparent.png" alt="carry transparent" class="checker">
+              <div class="img-label">carry · <span class="tag-trans">transparent ref</span></div>
+              <div class="img-meta">0.35s · 170KB</div>
+            </div>
+          </div>
+          <div class="llm-desc">LLM: The player hefts the massive Scottish claymore, its intricate basket hilt resting against their shoulder as they stride forward.</div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header">
+            <div class="oname">dagger</div>
+            <div class="odesc">a small steel dagger with a carved bone handle</div>
+          </div>
+          <div class="img-row">
+            <div class="img-cell">
+              <img src="sword_dagger.png" alt="dagger" class="checker">
+              <div class="img-label">sword input</div>
+              <div class="img-meta">0.25s · t2i</div>
+            </div>
+            <div class="img-cell">
+              <img src="carry_dagger_white.png" alt="carry white" class="checker">
+              <div class="img-label">carry · <span class="tag-white">white-bg ref</span></div>
+              <div class="img-meta">0.33s · 126KB</div>
+            </div>
+            <div class="img-cell">
+              <img src="carry_dagger_transparent.png" alt="carry transparent" class="checker">
+              <div class="img-label">carry · <span class="tag-trans">transparent ref</span></div>
+              <div class="img-meta">0.34s · 127KB</div>
+            </div>
+          </div>
+          <div class="llm-desc">LLM: The player grips the small steel dagger, its carved bone handle contrasting against their hand.</div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header">
+            <div class="oname">scimitar</div>
+            <div class="odesc">a curved Persian scimitar with an engraved silver blade</div>
+          </div>
+          <div class="img-row">
+            <div class="img-cell">
+              <img src="sword_scimitar.png" alt="scimitar" class="checker">
+              <div class="img-label">sword input</div>
+              <div class="img-meta">0.27s · t2i</div>
+            </div>
+            <div class="img-cell">
+              <img src="carry_scimitar_white.png" alt="carry white" class="checker">
+              <div class="img-label">carry · <span class="tag-white">white-bg ref</span></div>
+              <div class="img-meta">0.35s · 155KB</div>
+            </div>
+            <div class="img-cell">
+              <img src="carry_scimitar_transparent.png" alt="carry transparent" class="checker">
+              <div class="img-label">carry · <span class="tag-trans">transparent ref</span></div>
+              <div class="img-meta">0.35s · 160KB</div>
+            </div>
+          </div>
+          <div class="llm-desc">LLM: The player grips a curved Persian scimitar, its engraved silver blade gleaming against their silhouette.</div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header">
+            <div class="oname">zweihander</div>
+            <div class="odesc">a huge two-handed German zweihander sword with side rings</div>
+          </div>
+          <div class="img-row">
+            <div class="img-cell">
+              <img src="sword_zweihander.png" alt="zweihander" class="checker">
+              <div class="img-label">sword input</div>
+              <div class="img-meta">0.25s · t2i</div>
+            </div>
+            <div class="img-cell">
+              <img src="carry_zweihander_white.png" alt="carry white" class="checker">
+              <div class="img-label">carry · <span class="tag-white">white-bg ref</span></div>
+              <div class="img-meta">0.37s · 198KB</div>
+            </div>
+            <div class="img-cell">
+              <img src="carry_zweihander_transparent.png" alt="carry transparent" class="checker">
+              <div class="img-label">carry · <span class="tag-trans">transparent ref</span></div>
+              <div class="img-meta">0.35s · 210KB</div>
+            </div>
+          </div>
+          <div class="llm-desc">LLM: A player grips the massive German zweihander, its heavy blade and distinctive side rings dominating their silhouette.</div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header">
+            <div class="oname">obsidian_sword</div>
+            <div class="odesc">a black obsidian sword with glassy razor edges</div>
+          </div>
+          <div class="img-row">
+            <div class="img-cell">
+              <img src="sword_obsidian_sword.png" alt="obsidian_sword" class="checker">
+              <div class="img-label">sword input</div>
+              <div class="img-meta">0.26s · t2i</div>
+            </div>
+            <div class="img-cell">
+              <img src="carry_obsidian_sword_white.png" alt="carry white" class="checker">
+              <div class="img-label">carry · <span class="tag-white">white-bg ref</span></div>
+              <div class="img-meta">0.33s · 170KB</div>
+            </div>
+            <div class="img-cell">
+              <img src="carry_obsidian_sword_transparent.png" alt="carry transparent" class="checker">
+              <div class="img-label">carry · <span class="tag-trans">transparent ref</span></div>
+              <div class="img-meta">0.35s · 178KB</div>
+            </div>
+          </div>
+          <div class="llm-desc">LLM: The player grips the obsidian sword, its glassy black blade gleaming with razor-sharp edges.</div>
+        </div>
+        </div>
+</body>
+</html>

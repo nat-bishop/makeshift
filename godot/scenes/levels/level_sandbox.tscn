@@ -1,0 +1,23 @@
+[gd_scene load_steps=3 format=3 uid="uid://level_sandbox"]
+
+[ext_resource type="Script" path="res://scenes/levels/level_sandbox.gd" id="1_sandbox"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_goal"]
+size = Vector2(16, 16)
+
+[node name="LevelSandbox" type="Node2D"]
+script = ExtResource("1_sandbox")
+level_id = 3
+objective_text = ""
+next_level_path = ""
+
+[node name="SpawnPoint" type="Marker2D" parent="."]
+position = Vector2(128, 540)
+
+[node name="Goal" type="Area2D" parent="."]
+position = Vector2(-9999, -9999)
+collision_layer = 16
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Goal"]
+shape = SubResource("RectangleShape2D_goal")

@@ -1,0 +1,242 @@
+[
+  {
+    "character": "knight",
+    "description": "a knight in plate armor wielding a longsword",
+    "size": 256,
+    "filename": "knight_256.png",
+    "elapsed": 0.18424890004098415,
+    "bytes": 8459
+  },
+  {
+    "character": "knight",
+    "description": "a knight in plate armor wielding a longsword",
+    "size": 512,
+    "filename": "knight_512.png",
+    "elapsed": 0.16606399999000132,
+    "bytes": 21905
+  },
+  {
+    "character": "knight",
+    "description": "a knight in plate armor wielding a longsword",
+    "size": 1024,
+    "filename": "knight_1024.png",
+    "elapsed": 0.5091614001430571,
+    "bytes": 67486
+  },
+  {
+    "character": "samurai",
+    "description": "a samurai warrior in red lacquered armor holding a katana",
+    "size": 256,
+    "filename": "samurai_256.png",
+    "elapsed": 0.11078240000642836,
+    "bytes": 8478
+  },
+  {
+    "character": "samurai",
+    "description": "a samurai warrior in red lacquered armor holding a katana",
+    "size": 512,
+    "filename": "samurai_512.png",
+    "elapsed": 0.16874140012077987,
+    "bytes": 24866
+  },
+  {
+    "character": "samurai",
+    "description": "a samurai warrior in red lacquered armor holding a katana",
+    "size": 1024,
+    "filename": "samurai_1024.png",
+    "elapsed": 0.5105545001570135,
+    "bytes": 72307
+  },
+  {
+    "character": "wizard",
+    "description": "an old wizard in a star-patterned robe holding a glowing enchanted sword",
+    "size": 256,
+    "filename": "wizard_256.png",
+    "elapsed": 0.11864090012386441,
+    "bytes": 8384
+  },
+  {
+    "character": "wizard",
+    "description": "an old wizard in a star-patterned robe holding a glowing enchanted sword",
+    "size": 512,
+    "filename": "wizard_512.png",
+    "elapsed": 0.17422499996609986,
+    "bytes": 28877
+  },
+  {
+    "character": "wizard",
+    "description": "an old wizard in a star-patterned robe holding a glowing enchanted sword",
+    "size": 1024,
+    "filename": "wizard_1024.png",
+    "elapsed": 0.5156016000546515,
+    "bytes": 76132
+  },
+  {
+    "character": "viking",
+    "description": "a viking berserker with fur cloak and braided beard wielding a heavy broadsword",
+    "size": 256,
+    "filename": "viking_256.png",
+    "elapsed": 0.11137399985454977,
+    "bytes": 9153
+  },
+  {
+    "character": "viking",
+    "description": "a viking berserker with fur cloak and braided beard wielding a heavy broadsword",
+    "size": 512,
+    "filename": "viking_512.png",
+    "elapsed": 0.1726945999544114,
+    "bytes": 26798
+  },
+  {
+    "character": "viking",
+    "description": "a viking berserker with fur cloak and braided beard wielding a heavy broadsword",
+    "size": 1024,
+    "filename": "viking_1024.png",
+    "elapsed": 0.5065349000506103,
+    "bytes": 88361
+  },
+  {
+    "character": "pirate",
+    "description": "a pirate captain with tricorn hat and red coat brandishing a curved cutlass",
+    "size": 256,
+    "filename": "pirate_256.png",
+    "elapsed": 0.11105720000341535,
+    "bytes": 8453
+  },
+  {
+    "character": "pirate",
+    "description": "a pirate captain with tricorn hat and red coat brandishing a curved cutlass",
+    "size": 512,
+    "filename": "pirate_512.png",
+    "elapsed": 0.16740179993212223,
+    "bytes": 20728
+  },
+  {
+    "character": "pirate",
+    "description": "a pirate captain with tricorn hat and red coat brandishing a curved cutlass",
+    "size": 1024,
+    "filename": "pirate_1024.png",
+    "elapsed": 0.5062549998983741,
+    "bytes": 69535
+  },
+  {
+    "character": "ninja",
+    "description": "a ninja in dark blue garb holding a short straight ninjato blade",
+    "size": 256,
+    "filename": "ninja_256.png",
+    "elapsed": 0.11298739979974926,
+    "bytes": 6753
+  },
+  {
+    "character": "ninja",
+    "description": "a ninja in dark blue garb holding a short straight ninjato blade",
+    "size": 512,
+    "filename": "ninja_512.png",
+    "elapsed": 0.16942099994048476,
+    "bytes": 17753
+  },
+  {
+    "character": "ninja",
+    "description": "a ninja in dark blue garb holding a short straight ninjato blade",
+    "size": 1024,
+    "filename": "ninja_1024.png",
+    "elapsed": 0.5086819999851286,
+    "bytes": 57227
+  },
+  {
+    "character": "gladiator",
+    "description": "a roman gladiator with crested helm and round shield holding a short gladius",
+    "size": 256,
+    "filename": "gladiator_256.png",
+    "elapsed": 0.1092024000827223,
+    "bytes": 9343
+  },
+  {
+    "character": "gladiator",
+    "description": "a roman gladiator with crested helm and round shield holding a short gladius",
+    "size": 512,
+    "filename": "gladiator_512.png",
+    "elapsed": 0.16948559996671975,
+    "bytes": 25884
+  },
+  {
+    "character": "gladiator",
+    "description": "a roman gladiator with crested helm and round shield holding a short gladius",
+    "size": 1024,
+    "filename": "gladiator_1024.png",
+    "elapsed": 0.5089555000886321,
+    "bytes": 77012
+  },
+  {
+    "character": "dark_elf",
+    "description": "a dark elf rogue with white hair and black leather wielding a curved scimitar",
+    "size": 256,
+    "filename": "dark_elf_256.png",
+    "elapsed": 0.11366900010034442,
+    "bytes": 7542
+  },
+  {
+    "character": "dark_elf",
+    "description": "a dark elf rogue with white hair and black leather wielding a curved scimitar",
+    "size": 512,
+    "filename": "dark_elf_512.png",
+    "elapsed": 0.17051149997860193,
+    "bytes": 19985
+  },
+  {
+    "character": "dark_elf",
+    "description": "a dark elf rogue with white hair and black leather wielding a curved scimitar",
+    "size": 1024,
+    "filename": "dark_elf_1024.png",
+    "elapsed": 0.5091907999012619,
+    "bytes": 52172
+  },
+  {
+    "character": "paladin",
+    "description": "a paladin in golden armor with a blue tabard holding a massive two-handed greatsword",
+    "size": 256,
+    "filename": "paladin_256.png",
+    "elapsed": 0.11000520014204085,
+    "bytes": 9906
+  },
+  {
+    "character": "paladin",
+    "description": "a paladin in golden armor with a blue tabard holding a massive two-handed greatsword",
+    "size": 512,
+    "filename": "paladin_512.png",
+    "elapsed": 0.16443010000512004,
+    "bytes": 26623
+  },
+  {
+    "character": "paladin",
+    "description": "a paladin in golden armor with a blue tabard holding a massive two-handed greatsword",
+    "size": 1024,
+    "filename": "paladin_1024.png",
+    "elapsed": 0.5071469000540674,
+    "bytes": 71543
+  },
+  {
+    "character": "musketeer",
+    "description": "a swashbuckling musketeer in feathered hat and blue cape thrusting a thin rapier",
+    "size": 256,
+    "filename": "musketeer_256.png",
+    "elapsed": 0.11002929997630417,
+    "bytes": 8189
+  },
+  {
+    "character": "musketeer",
+    "description": "a swashbuckling musketeer in feathered hat and blue cape thrusting a thin rapier",
+    "size": 512,
+    "filename": "musketeer_512.png",
+    "elapsed": 0.16699469997547567,
+    "bytes": 23104
+  },
+  {
+    "character": "musketeer",
+    "description": "a swashbuckling musketeer in feathered hat and blue cape thrusting a thin rapier",
+    "size": 1024,
+    "filename": "musketeer_1024.png",
+    "elapsed": 0.5009169999975711,
+    "bytes": 75433
+  }
+]

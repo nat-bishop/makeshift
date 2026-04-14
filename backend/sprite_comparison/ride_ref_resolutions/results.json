@@ -1,0 +1,175 @@
+{
+  "mounts": [
+    {
+      "name": "horse",
+      "desc": "a brown horse with a flowing mane and saddle",
+      "gen_elapsed": 4.95131879998371,
+      "llm_desc": "A player sits atop a brown horse, its flowing mane billowing as they ride with the saddle secured beneath them.",
+      "llm_elapsed": 0.47931379987858236,
+      "full_prompt": "mixed media collage style paper cutout, side view, flat lighting, clean edges, A player sits atop a brown horse, its flowing mane billowing as they ride with the saddle secured beneath them., single centered scene, contrasting solid background color, no text"
+    },
+    {
+      "name": "dragon",
+      "desc": "a small green wyrm dragon with leathery wings and spiked tail",
+      "gen_elapsed": 0.25389910000376403,
+      "llm_desc": "The player sits atop the small green wyrm dragon, its leathery wings folded and spiked tail curling beneath them.",
+      "llm_elapsed": 0.24463470000773668,
+      "full_prompt": "mixed media collage style paper cutout, side view, flat lighting, clean edges, The player sits atop the small green wyrm dragon, its leathery wings folded and spiked tail curling beneath them., single centered scene, contrasting solid background color, no text"
+    },
+    {
+      "name": "ostrich",
+      "desc": "a large speckled racing ostrich with long pink legs",
+      "gen_elapsed": 0.2579795999918133,
+      "llm_desc": "A player rides atop a large, speckled racing ostrich with long pink legs.",
+      "llm_elapsed": 0.18615780002437532,
+      "full_prompt": "mixed media collage style paper cutout, side view, flat lighting, clean edges, A player rides atop a large, speckled racing ostrich with long pink legs., single centered scene, contrasting solid background color, no text"
+    },
+    {
+      "name": "giant_spider",
+      "desc": "a huge furry tarantula with eight thick legs and red eyes",
+      "gen_elapsed": 0.26439959998242557,
+      "llm_desc": "A player sits atop a giant, furry tarantula with eight thick legs and glowing red eyes.",
+      "llm_elapsed": 0.20138030010275543,
+      "full_prompt": "mixed media collage style paper cutout, side view, flat lighting, clean edges, A player sits atop a giant, furry tarantula with eight thick legs and glowing red eyes., single centered scene, contrasting solid background color, no text"
+    },
+    {
+      "name": "griffin",
+      "desc": "a majestic golden griffin with eagle head and lion body",
+      "gen_elapsed": 0.26250359998084605,
+      "llm_desc": "A player sits atop a majestic golden griffin, its eagle head soaring above the lion's powerful body.",
+      "llm_elapsed": 0.20894389995373785,
+      "full_prompt": "mixed media collage style paper cutout, side view, flat lighting, clean edges, A player sits atop a majestic golden griffin, its eagle head soaring above the lion's powerful body., single centered scene, contrasting solid background color, no text"
+    }
+  ],
+  "edits": [
+    {
+      "mount": "horse",
+      "ref_size": 256,
+      "elapsed": 0.2834872000385076,
+      "filename": "ride_horse_ref256.png",
+      "bytes": 204264
+    },
+    {
+      "mount": "horse",
+      "ref_size": 512,
+      "elapsed": 0.36918479995802045,
+      "filename": "ride_horse_ref512.png",
+      "bytes": 223294
+    },
+    {
+      "mount": "horse",
+      "ref_size": 1024,
+      "elapsed": 0.7063777998555452,
+      "filename": "ride_horse_ref1024.png",
+      "bytes": 195458
+    },
+    {
+      "mount": "dragon",
+      "ref_size": 256,
+      "elapsed": 0.3168183001689613,
+      "filename": "ride_dragon_ref256.png",
+      "bytes": 258061
+    },
+    {
+      "mount": "dragon",
+      "ref_size": 512,
+      "elapsed": 0.3482905998826027,
+      "filename": "ride_dragon_ref512.png",
+      "bytes": 243966
+    },
+    {
+      "mount": "dragon",
+      "ref_size": 1024,
+      "elapsed": 0.6891799001023173,
+      "filename": "ride_dragon_ref1024.png",
+      "bytes": 254089
+    },
+    {
+      "mount": "ostrich",
+      "ref_size": 256,
+      "elapsed": 0.3011427999008447,
+      "filename": "ride_ostrich_ref256.png",
+      "bytes": 145014
+    },
+    {
+      "mount": "ostrich",
+      "ref_size": 512,
+      "elapsed": 0.3596725999377668,
+      "filename": "ride_ostrich_ref512.png",
+      "bytes": 148602
+    },
+    {
+      "mount": "ostrich",
+      "ref_size": 1024,
+      "elapsed": 0.6885854001156986,
+      "filename": "ride_ostrich_ref1024.png",
+      "bytes": 161649
+    },
+    {
+      "mount": "giant_spider",
+      "ref_size": 256,
+      "elapsed": 0.28332020016387105,
+      "filename": "ride_giant_spider_ref256.png",
+      "bytes": 212420
+    },
+    {
+      "mount": "giant_spider",
+      "ref_size": 512,
+      "elapsed": 0.37286100001074374,
+      "filename": "ride_giant_spider_ref512.png",
+      "bytes": 222301
+    },
+    {
+      "mount": "giant_spider",
+      "ref_size": 1024,
+      "elapsed": 0.7029399999883026,
+      "filename": "ride_giant_spider_ref1024.png",
+      "bytes": 216849
+    },
+    {
+      "mount": "griffin",
+      "ref_size": 256,
+      "elapsed": 0.3315119999460876,
+      "filename": "ride_griffin_ref256.png",
+      "bytes": 257131
+    },
+    {
+      "mount": "griffin",
+      "ref_size": 512,
+      "elapsed": 0.39286800008267164,
+      "filename": "ride_griffin_ref512.png",
+      "bytes": 242806
+    },
+    {
+      "mount": "griffin",
+      "ref_size": 1024,
+      "elapsed": 0.7169792999047786,
+      "filename": "ride_griffin_ref1024.png",
+      "bytes": 261499
+    }
+  ],
+  "summary": {
+    "256": {
+      "mean": 0.30325610004365444,
+      "median": 0.3011427999008447,
+      "min": 0.28332020016387105,
+      "max": 0.3315119999460876,
+      "stdev": 0.02106563967969545
+    },
+    "512": {
+      "mean": 0.36857539997436106,
+      "median": 0.36918479995802045,
+      "min": 0.3482905998826027,
+      "max": 0.39286800008267164,
+      "stdev": 0.01658011700266619
+    },
+    "1024": {
+      "mean": 0.7008124799933284,
+      "median": 0.7029399999883026,
+      "min": 0.6885854001156986,
+      "max": 0.7169792999047786,
+      "stdev": 0.012059058729869397
+    }
+  },
+  "total_edit_elapsed": 7.2179361002054065
+}
