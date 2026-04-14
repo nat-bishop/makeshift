@@ -3,17 +3,6 @@ extends BaseLevel
 ## Two platforms separated by a 480px acid-filled pit. Player must create
 ## a durable bridge to cross. Stone resists acid; wood corrodes.
 
-const CRATE_BLUEPRINT := {
-	"id": "crate_level01",
-	"name": "wooden crate",
-	"description": "wooden crate",
-	"visual_description": "a small wooden shipping crate with planks and nails",
-	"physics": {"mass_kg": 5.0, "height_cm": 40, "surface": 1, "bounce": 10, "gravity": 55},
-	"durability": 2,
-	"affordance": 0,
-	"autonomous": false,
-}
-
 const ACID_POOL_BP := {
 	"name": "acid pool",
 	"physics": {"mass_kg": 100.0, "height_cm": 10, "surface": 0, "bounce": 0, "gravity": 50},
@@ -27,7 +16,7 @@ func _ready() -> void:
 	next_level_path = "res://scenes/levels/level_02.tscn"
 	super._ready()
 	_build_terrain()
-	_spawn_game_object(CRATE_BLUEPRINT, Vector2(280, 536))
+	_spawn_prespawn("wooden_crate", Vector2(280, 536))
 
 	# Pre-populate behavior: acid pool damages wooden crate (reactive)
 	InteractionCache.store_behavior("acid pool", "wooden crate", {

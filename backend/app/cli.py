@@ -179,16 +179,16 @@ async def cmd_image(prompt: str, out_path: Path) -> None:
 
 
 async def cmd_sprite(description: str, out_path: str | None, skip_llm: bool) -> None:
-    from app.images.pipeline import build_prompt
+    from app.prompts.image import build_text_to_image_prompt
 
     timer = Timer()
 
     if skip_llm:
         name = description
-        prompt = build_prompt(name, description)
+        prompt = build_text_to_image_prompt(name, description)
     else:
         blueprint = await _run_llm(description, timer)
-        prompt = build_prompt(blueprint.name, blueprint.visual_description)
+        prompt = build_text_to_image_prompt(blueprint.name, blueprint.visual_description)
         name = blueprint.name
 
     raw_bytes = await _run_image(prompt, timer)

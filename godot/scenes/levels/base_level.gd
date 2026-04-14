@@ -10,6 +10,8 @@ extends Node2D
 @onready var spawn_point: Marker2D = $SpawnPoint
 @onready var goal_area: Area2D = $Goal
 
+var _prespawn_counter: int = 0
+
 
 func _ready() -> void:
 	Log.info("Level: Ready — id=%d path=%s" % [level_id, scene_file_path])
@@ -70,6 +72,17 @@ func _spawn_game_object(blueprint: Dictionary, pos: Vector2) -> Node:
 	obj.global_position = pos
 	obj.init_from_blueprint(blueprint.duplicate(true))
 	return obj
+
+
+func _spawn_prespawn(type_id: String, pos: Vector2, overrides: Dictionary = {}) -> Node:
+	## Spawn a hand-authored prespawn by catalog type_id.
+	var bp: Dictionary = PrespawnCatalog.build_blueprint(type_id, overrides)
+	if bp.is_empty():
+		Log.warn("BaseLevel: No prespawn '%s' in catalog" % type_id)
+		return null
+	_prespawn_counter += 1
+	bp["id"] = "prespawn_l%d_%d_%s" % [level_id, _prespawn_counter, type_id]
+	return _spawn_game_object(bp, pos)
 
 
 func _create_kill_zone(pos: Vector2, size: Vector2) -> void:

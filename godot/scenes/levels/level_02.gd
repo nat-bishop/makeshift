@@ -3,29 +3,6 @@ extends BaseLevel
 ## A hostile creature guards the goal. Player must create something
 ## to distract, defeat, or bypass it.
 
-const GUARD_DOG_BLUEPRINT := {
-	"id": "guard_dog_level02",
-	"name": "guard dog",
-	"description": "guard dog",
-	"visual_description": "a fierce black guard dog with a spiked collar, crouching stance",
-	"physics": {"mass_kg": 30.0, "height_cm": 80, "surface": 1, "bounce": 15, "gravity": 50},
-	"durability": 3,
-	"affordance": 3,
-	"autonomous": true,
-	"speed": 3,
-}
-
-const BONE_BLUEPRINT := {
-	"id": "bone_level02",
-	"name": "bone",
-	"description": "bone",
-	"visual_description": "a white dog bone, cartoon style",
-	"physics": {"mass_kg": 0.3, "height_cm": 20, "surface": 1, "bounce": 20, "gravity": 50},
-	"durability": 2,
-	"affordance": 0,
-	"autonomous": false,
-}
-
 
 func _ready() -> void:
 	level_id = 1
@@ -33,8 +10,8 @@ func _ready() -> void:
 	next_level_path = "res://scenes/levels/level_03.tscn"
 	super._ready()
 	_build_terrain()
-	_spawn_game_object(BONE_BLUEPRINT, Vector2(200, 536))
-	_spawn_game_object(GUARD_DOG_BLUEPRINT, Vector2(800, 520))
+	_spawn_prespawn("bone", Vector2(200, 536))
+	_spawn_prespawn("guard_dog", Vector2(800, 520))
 
 	# Pre-populate behavior: dog approaches and attacks player
 	InteractionCache.store_behavior("guard dog", "player", {

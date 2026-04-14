@@ -105,7 +105,7 @@ def _mock_websocket() -> AsyncMock:
 
 @patch("app.ws.handler.SessionManager")
 @patch("app.ws.handler.get_cached_sprite_path")
-@patch("app.ws.handler.build_prompt")
+@patch("app.ws.handler.build_text_to_image_prompt")
 async def test_handle_request_sprite_cached(
     mock_build_prompt: MagicMock,
     mock_get_cached: MagicMock,
@@ -158,7 +158,7 @@ async def test_handle_request_sprite_no_blueprint(
 
 @patch("app.ws.handler.SessionManager")
 @patch("app.ws.handler.get_cached_sprite_path")
-@patch("app.ws.handler.build_prompt")
+@patch("app.ws.handler.build_text_to_image_prompt")
 async def test_handle_request_sprite_not_on_disk(
     mock_build_prompt: MagicMock,
     mock_get_cached: MagicMock,

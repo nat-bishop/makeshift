@@ -12,6 +12,16 @@ import structlog
 from PIL import Image
 
 from app.images.local_image import generate_image, generate_image_edit
+from app.prompts.image import (
+    IMG2IMG_STYLE,
+    IMG2IMG_SUFFIX_OBJECT,
+    IMG2IMG_SUFFIX_SCENE,
+    build_carry_ride_prompt,
+    build_combine_order_prompt,
+    build_combine_prompt,
+    build_destruction_prompt,
+    build_text_to_image_prompt,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -51,59 +61,8 @@ FILL_FRACTION = 0.9
 REFERENCE_SIZE = 256
 
 
-# ── img2img prompt templates (art style wrapping, never LLM-generated) ──
-IMG2IMG_STYLE = "mixed media collage style paper cutout, side view, flat lighting, clean edges"
-IMG2IMG_SUFFIX_OBJECT = "single centered object, contrasting solid background color, no text"
-IMG2IMG_SUFFIX_SCENE = "single centered scene, contrasting solid background color, no text"
-
 # Headroom for LLM overshooting the ~20-25 word cap in the instructions.
 _IMG2IMG_MAX_TOKENS = 250
-
-
-# ── LLM instructions for each img2img use case ──
-_CARRY_LLM_INSTRUCTION = (
-    "You write visual descriptions for a sprite image generator. "
-    "A character is carrying an object. You receive descriptions of both. "
-    "Write a visual description of the character holding/carrying the object "
-    "as a single scene. Reference specific visual details from both descriptions. "
-    "Under 25 words. Output ONLY the visual description."
-)
-
-_RIDE_LLM_INSTRUCTION = (
-    "You write visual descriptions for a sprite image generator. "
-    "A character is riding a mount. You receive descriptions of both. "
-    "Write a visual description of the character sitting on/riding the mount "
-    "as a single scene. Reference specific visual details from both descriptions. "
-    "Under 25 words. Output ONLY the visual description."
-)
-
-_DESTRUCTION_LLM_INSTRUCTION = (
-    "You write visual descriptions for a mixed media collage paper cutout game. "
-    "An object was smashed. Describe the debris as a single paper cutout sprite. "
-    "The debris must look completely different from the original object's silhouette. "
-    "It should be a low, flat pile or scatter of broken fragments. "
-    "Reference the original's specific colors and material textures. "
-    "Under 20 words. Output ONLY the visual description."
-)
-
-_COMBINE_LLM_INSTRUCTION = (
-    "You write visual descriptions for a sprite image generator. "
-    "Two objects are being combined. Choose the best approach:\n"
-    "- MATERIAL: 'the shape of B but made from/constructed of A' "
-    "(when A is a material-like thing)\n"
-    "- THEMED: 'B with A elements, accents, and motifs woven into its design' "
-    "(when A is an aesthetic)\n"
-    "- SEMANTIC: 'an A B, combining elements of both into one object' "
-    "(when both contribute equally)\n"
-    "Pick the best fit. Reference specific visual details from both source descriptions. "
-    "Under 25 words. Output ONLY the visual description."
-)
-
-_COMBINE_ORDER_INSTRUCTION = (
-    "Two objects are being combined into one sprite image. "
-    "The first reference image has more influence on the overall shape and form. "
-    "Pick which object should be the primary shape reference."
-)
 
 
 @dataclass
@@ -117,17 +76,6 @@ class SpriteResult:
 def _prompt_hash(prompt: str) -> str:
     """Hash the image prompt for cache keying. Same prompt → same image."""
     return hashlib.sha256(prompt.encode()).hexdigest()[:16]
-
-
-def build_prompt(name: str, visual_description: str) -> str:
-    """Build a narrative image prompt from a name and visual description."""
-    return (
-        f"A mixed media collage of {name} made from cut paper, magazine clippings, "
-        f"and cardboard, held together with visible scotch tape and glue. "
-        f"{visual_description} "
-        f"Side view, single centered object on a solid contrasting background. "
-        f"Flat lighting, clean edges, no text."
-    )
 
 
 def get_cached_sprite_path(prompt: str) -> Path:
@@ -263,24 +211,11 @@ async def generate_carry_ride_sprite(
     """
     from app.creator.llm import ask_text
 
-    if affordance == 1:
-        instruction = _RIDE_LLM_INSTRUCTION
-        action = "riding"
-        role = "Mount"
-    else:
-        instruction = _CARRY_LLM_INSTRUCTION
-        action = "carrying"
-        role = "Object"
-
-    user_prompt = (
-        f"Character: player\n"
-        f"{role}: {object_name} — {object_visual}\n"
-        f"Describe the player {action} the {role.lower()}:"
-    )
+    instructions, user_prompt = build_carry_ride_prompt(affordance, object_name, object_visual)
     llm_desc = await ask_text(
         user_prompt,
         max_tokens=_IMG2IMG_MAX_TOKENS,
-        instructions=instruction,
+        instructions=instructions,
     )
     full_prompt = f"{IMG2IMG_STYLE}, {llm_desc}, {IMG2IMG_SUFFIX_SCENE}"
 
@@ -315,15 +250,13 @@ async def generate_destruction_sprite(
     """
     from app.creator.llm import ask_text
 
-    user_prompt = (
-        f"Object: {object_name} — {object_visual}\n"
-        f"Debris name: {destruction_result_name}\n"
-        f"Describe the destroyed remains:"
+    instructions, user_prompt = build_destruction_prompt(
+        object_name, object_visual, destruction_result_name
     )
     llm_desc = await ask_text(
         user_prompt,
         max_tokens=_IMG2IMG_MAX_TOKENS,
-        instructions=_DESTRUCTION_LLM_INSTRUCTION,
+        instructions=instructions,
     )
     full_prompt = f"{IMG2IMG_STYLE}, {llm_desc}, {IMG2IMG_SUFFIX_OBJECT}"
 
@@ -360,24 +293,20 @@ async def generate_combination_sprite(
     """
     from app.creator.llm import ask_choice, ask_text
 
-    order_prompt = f"1: {name_a}\n2: {name_b}"
-    desc_prompt = (
-        f"Object A: {name_a} — {visual_a}\n"
-        f"Object B: {name_b} — {visual_b}\n"
-        f"Write the visual description for combining A with B:"
-    )
+    order_instructions, order_prompt = build_combine_order_prompt(name_a, name_b)
+    desc_instructions, desc_prompt = build_combine_prompt(name_a, visual_a, name_b, visual_b)
 
     order_str, llm_desc = await asyncio.gather(
         ask_choice(
             order_prompt,
             choices=("1", "2"),
             default="1",
-            instructions=_COMBINE_ORDER_INSTRUCTION,
+            instructions=order_instructions,
         ),
         ask_text(
             desc_prompt,
             max_tokens=_IMG2IMG_MAX_TOKENS,
-            instructions=_COMBINE_LLM_INSTRUCTION,
+            instructions=desc_instructions,
         ),
     )
 
@@ -414,7 +343,7 @@ async def generate_sprite(
     from app.config import settings
 
     object_id = blueprint.id
-    prompt = build_prompt(blueprint.name, blueprint.visual_description)
+    prompt = build_text_to_image_prompt(blueprint.name, blueprint.visual_description)
     cache_path = get_cached_sprite_path(prompt)
     sprite_url = f"/static/sprites/{cache_path.name}"
 

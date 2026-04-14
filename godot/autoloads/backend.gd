@@ -65,6 +65,20 @@ func restore_session(id: String) -> Dictionary:
 
 
 func create_object(description: String) -> Dictionary:
+	## User-initiated creation. Emits object_created so the placement flow engages.
+	var result: Dictionary = await _create_object_raw(description)
+	if not result.get("error", false):
+		var blueprint: Dictionary = result.get("blueprint", result)
+		EventBus.object_created.emit(blueprint)
+		var object_id: String = blueprint.get("id", "")
+		if object_id != "":
+			_pending_sprites.append(object_id)
+	return result
+
+
+func _create_object_raw(description: String) -> Dictionary:
+	## HTTP-only object creation. Does NOT emit EventBus.object_created, so callers
+	## (e.g. destruction-debris spawning) don't accidentally trigger placement mode.
 	if session_id.is_empty():
 		return {"error": true, "message": "No active session"}
 
@@ -80,11 +94,6 @@ func create_object(description: String) -> Dictionary:
 	else:
 		var blueprint: Dictionary = result.get("blueprint", result)
 		Log.info("Backend: Object created '%s' (id=%s)" % [blueprint.get("name", "?"), blueprint.get("id", "?")])
-		EventBus.object_created.emit(blueprint)
-		# Track pending sprite
-		var object_id: String = blueprint.get("id", "")
-		if object_id != "":
-			_pending_sprites.append(object_id)
 
 	return result
 
@@ -92,7 +101,9 @@ func create_object(description: String) -> Dictionary:
 func request_destruction_spawn(debris_name: String, pos: Vector2) -> void:
 	## Fire-and-forget: create the debris object and spawn it at the death position.
 	## The source object may already be freed by the time this completes.
-	var result: Dictionary = await create_object(debris_name)
+	## Uses _create_object_raw to avoid emitting object_created (which would trigger
+	## placement mode and let the player re-place the debris as a duplicate).
+	var result: Dictionary = await _create_object_raw(debris_name)
 	if result.get("error", false):
 		Log.warn("Backend: Failed to create destruction debris '%s'" % debris_name)
 		return

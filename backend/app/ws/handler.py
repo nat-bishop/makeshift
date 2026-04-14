@@ -6,7 +6,8 @@ from typing import TYPE_CHECKING
 import structlog
 from fastapi import WebSocket, WebSocketDisconnect
 
-from app.images.pipeline import build_prompt, get_cached_sprite_path
+from app.images.pipeline import get_cached_sprite_path
+from app.prompts.image import build_text_to_image_prompt
 from app.sessions.manager import SessionManager
 
 if TYPE_CHECKING:
@@ -105,7 +106,7 @@ async def _handle_request_sprite(websocket: WebSocket, session_id: str, object_i
         logger.debug("request_sprite_not_found", session_id=session_id, object_id=object_id)
         return
 
-    prompt = build_prompt(blueprint.name, blueprint.visual_description)
+    prompt = build_text_to_image_prompt(blueprint.name, blueprint.visual_description)
     cache_path = get_cached_sprite_path(prompt)
     if not cache_path.exists():
         logger.debug("request_sprite_not_ready", session_id=session_id, object_id=object_id)

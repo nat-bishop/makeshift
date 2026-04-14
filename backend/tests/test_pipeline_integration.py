@@ -10,12 +10,12 @@ import app.images.pipeline as pipeline
 import pytest
 from app.images.pipeline import (
     SpriteResult,
-    build_prompt,
     generate_sprite,
     generate_static_sprite,
     get_cached_sprite_path,
 )
 from app.models.blueprint import GameObjectBlueprint, PhysicsProperties
+from app.prompts.image import build_text_to_image_prompt
 from PIL import Image
 
 if TYPE_CHECKING:
@@ -64,7 +64,7 @@ class TestGenerateStaticSprite:
 class TestGenerateSprite:
     async def test_cache_hit(self, tmp_path: Path) -> None:
         blueprint = _make_blueprint()
-        prompt = build_prompt(blueprint.name, blueprint.visual_description)
+        prompt = build_text_to_image_prompt(blueprint.name, blueprint.visual_description)
         cache_path = get_cached_sprite_path(prompt)
 
         sprites_dir = tmp_path / "sprites"
@@ -85,7 +85,7 @@ class TestGenerateSprite:
 
     async def test_cache_miss_generates_and_writes(self, tmp_path: Path) -> None:
         blueprint = _make_blueprint()
-        prompt = build_prompt(blueprint.name, blueprint.visual_description)
+        prompt = build_text_to_image_prompt(blueprint.name, blueprint.visual_description)
         cache_path = get_cached_sprite_path(prompt)
         png_bytes = _make_png()
 
@@ -122,7 +122,7 @@ class TestGenerateSprite:
 
     async def test_cache_disabled_skips_existing(self, tmp_path: Path) -> None:
         blueprint = _make_blueprint()
-        prompt = build_prompt(blueprint.name, blueprint.visual_description)
+        prompt = build_text_to_image_prompt(blueprint.name, blueprint.visual_description)
         cache_path = get_cached_sprite_path(prompt)
 
         sprites_dir = tmp_path / "sprites"

@@ -1,0 +1,44 @@
+{
+    "wooden_crate": {
+        "name": "wooden crate",
+        "sprite": "res://assets/prespawn/wooden_crate.png",
+        "visual_description": "a small wooden shipping crate with planks and nails",
+        "physics": {"mass_kg": 5.0, "height_cm": 40, "bounce": 10, "gravity": 55, "surface": 1},
+        "durability": 2,
+        "affordance": 0
+    },
+    "guard_dog": {
+        "name": "guard dog",
+        "sprite": "res://assets/prespawn/guard_dog.png",
+        "visual_description": "a fierce black guard dog with a spiked collar, crouching stance",
+        "physics": {"mass_kg": 30.0, "height_cm": 80, "bounce": 15, "gravity": 50, "surface": 1},
+        "durability": 3,
+        "autonomous": true,
+        "speed": 3
+    },
+    "bone": {
+        "name": "bone",
+        "sprite": "res://assets/prespawn/bone.png",
+        "visual_description": "a white dog bone, cartoon style",
+        "physics": {"mass_kg": 0.3, "height_cm": 20, "bounce": 20, "gravity": 50, "surface": 1},
+        "durability": 2,
+        "affordance": 0
+    },
+    "wooden_box": {
+        "name": "wooden box",
+        "sprite": "res://assets/prespawn/wooden_box.png",
+        "visual_description": "a sturdy wooden storage box, medium sized",
+        "physics": {"mass_kg": 8.0, "height_cm": 60, "bounce": 10, "gravity": 55, "surface": 1},
+        "durability": 2,
+        "affordance": 0,
+        "susceptible_states": [1]
+    },
+    "campfire": {
+        "name": "campfire",
+        "sprite": "res://assets/prespawn/campfire.png",
+        "visual_description": "a small campfire with logs and orange flames",
+        "physics": {"mass_kg": 3.0, "height_cm": 40, "bounce": 5, "gravity": 55, "surface": 1},
+        "durability": 1,
+        "initial_states": [1]
+    }
+}

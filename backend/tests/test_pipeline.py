@@ -8,51 +8,51 @@ from app.images.pipeline import (
     STATIC_DIR,
     _crop_and_fit,
     _prompt_hash,
-    build_prompt,
     get_cached_sprite_path,
 )
+from app.prompts.image import build_text_to_image_prompt
 from PIL import Image
 
 
 def test_prompt_hash_deterministic() -> None:
-    prompt = build_prompt("Cube", "a gray stone cube")
+    prompt = build_text_to_image_prompt("Cube", "a gray stone cube")
     assert _prompt_hash(prompt) == _prompt_hash(prompt)
 
 
 def test_prompt_hash_different_inputs() -> None:
-    a = build_prompt("Cube", "a gray cube")
-    b = build_prompt("Sphere", "a red sphere")
+    a = build_text_to_image_prompt("Cube", "a gray cube")
+    b = build_text_to_image_prompt("Sphere", "a red sphere")
     assert _prompt_hash(a) != _prompt_hash(b)
 
 
 def test_prompt_hash_length() -> None:
-    h = _prompt_hash(build_prompt("Cube", "a gray stone cube"))
+    h = _prompt_hash(build_text_to_image_prompt("Cube", "a gray stone cube"))
     assert len(h) == 16
     assert re.fullmatch(r"[0-9a-f]{16}", h)
 
 
 def test_build_prompt_content() -> None:
-    prompt = build_prompt("Fire Sword", "a silver iron sword with black hilt")
+    prompt = build_text_to_image_prompt("Fire Sword", "a silver iron sword with black hilt")
     assert "Fire Sword" in prompt
     assert "silver iron sword" in prompt
     assert "contrasting solid background color" in prompt
 
 
 def test_build_prompt_no_double_commas() -> None:
-    prompt = build_prompt("Test", "a gray stone cube")
+    prompt = build_text_to_image_prompt("Test", "a gray stone cube")
     assert ",," not in prompt
     assert ", ," not in prompt
 
 
 def test_get_cached_sprite_path() -> None:
-    prompt = build_prompt("Cube", "a gray stone cube")
+    prompt = build_text_to_image_prompt("Cube", "a gray stone cube")
     path = get_cached_sprite_path(prompt)
     assert path.suffix == ".png"
     assert path.parent == STATIC_DIR / "sprites"
 
 
 def test_get_cached_sprite_path_deterministic() -> None:
-    prompt = build_prompt("Cube", "a gray stone cube")
+    prompt = build_text_to_image_prompt("Cube", "a gray stone cube")
     assert get_cached_sprite_path(prompt) == get_cached_sprite_path(prompt)
 
 

@@ -84,6 +84,9 @@ func _on_level_completed(_level_id: int) -> void:
 
 func _on_creation_requested() -> void:
 	_clear_pending()
+	# Resume the game now that the user has committed — materialize effect and
+	# cursor tracking need to run while we wait for the backend to respond.
+	GameManager.resume_game()
 	var spawn_pos: Vector2 = get_global_mouse_position()
 	var effect := Node2D.new()
 	effect.set_script(MaterializeEffect)

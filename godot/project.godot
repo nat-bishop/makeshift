@@ -25,6 +25,7 @@ EventBus="*res://autoloads/event_bus.gd"
 GameManager="*res://autoloads/game_manager.gd"
 InteractionCache="*res://autoloads/interaction_cache.gd"
 Backend="*res://autoloads/backend.gd"
+PrespawnCatalog="*res://autoloads/prespawn_catalog.gd"
 
 [display]
 

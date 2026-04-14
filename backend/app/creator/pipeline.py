@@ -25,11 +25,11 @@ import structlog
 from app.config import settings
 from app.creator.llm import ask_text
 from app.creator.question_graph import run_questions
-from app.creator.questions import ALL_CREATION_QUESTIONS, NAME_QUESTION
 from app.models.blueprint import (
     GameObjectBlueprint,
     PhysicsProperties,
 )
+from app.prompts.creation import ALL_CREATION_QUESTIONS, NAME_QUESTION
 
 if TYPE_CHECKING:
     from app.cache.store import CacheStore

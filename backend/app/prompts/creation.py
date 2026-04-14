@@ -1,9 +1,11 @@
-"""Data-driven question definitions for all LLM call pipelines.
+"""Data-driven question definitions for the object creation pipeline.
 
-Creation and creature questions are all defined here as Question
-instances. Edit this file to add, remove, or tweak object properties during
-playtesting. Gate conditions control conditional fan-out (e.g. speed
-only fires when autonomous=true).
+Every LLM call that runs during object creation is defined here as a
+`Question` instance. Edit this file to add, remove, or tweak object
+properties during playtesting. Gate conditions control conditional fan-out
+(e.g. `speed` only fires when `autonomous=true`).
+
+Consumed by `app.creator.pipeline.create_object` via `run_questions()`.
 """
 
 from __future__ import annotations
@@ -231,7 +233,7 @@ CREATION_QUESTIONS: list[Question] = [
     ),
 ]
 
-# Text questions — also Question instances with gates
+# ---- Text questions — also Question instances with gates ----
 
 NAME_QUESTION = Question(
     "name",
