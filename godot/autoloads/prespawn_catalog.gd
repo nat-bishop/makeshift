@@ -12,6 +12,7 @@ extends Node
 ##   3. Reference it from a level with `_spawn_prespawn("type_id", pos)`.
 
 const CATALOG_PATH: String = "res://data/prespawns.json"
+const AffordanceSystem: GDScript = preload("res://scripts/systems/affordance_system.gd")
 
 var _entries: Dictionary = {}
 
@@ -54,6 +55,18 @@ func build_blueprint(type_id: String, overrides: Dictionary = {}) -> Dictionary:
 			bp["_preloaded_sprite"] = texture
 		else:
 			Log.warn("PrespawnCatalog: Failed to load sprite '%s' for '%s'" % [sprite_path, type_id])
+
+	# Prespawns bypass the backend img2img pipeline, so the "player holding object"
+	# sprite that AffordanceSystem needs on pickup has to be baked offline.
+	var aff: int = bp.get("affordance", AffordanceSystem.Affordance.NONE)
+	if aff == AffordanceSystem.Affordance.CARRY or aff == AffordanceSystem.Affordance.MOUNT:
+		var combined_path: String = "res://assets/prespawn/combined_%s.png" % type_id
+		if ResourceLoader.exists(combined_path):
+			var combined_tex: Texture2D = load(combined_path) as Texture2D
+			if combined_tex != null:
+				bp["_preloaded_combined_sprite"] = combined_tex
+		else:
+			Log.warn("PrespawnCatalog: Missing combined sprite for carry prespawn '%s'" % type_id)
 
 	return bp
 

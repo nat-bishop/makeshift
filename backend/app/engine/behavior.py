@@ -114,16 +114,29 @@ async def screen_pairs(
     try:
         raw = await ask_text(prompt, max_tokens=30, default="none")
         if "none" in raw.lower():
+            logger.info(
+                "screen_result",
+                subject=new_obj.name,
+                selected=[],
+                candidates=[o.name for o in scene_objects],
+                reason="llm_none",
+            )
             return []
 
         nums = [int(x) for x in re.findall(r"\d+", raw)]
         valid = [scene_objects[n - 1].name for n in nums if 1 <= n <= len(scene_objects)]
         if not valid:
-            logger.warning("screen_no_valid_indices", raw=raw)
+            logger.warning("screen_no_valid_indices", subject=new_obj.name, raw=raw)
             return [o.name for o in scene_objects]
+        logger.info(
+            "screen_result",
+            subject=new_obj.name,
+            selected=valid,
+            candidates=[o.name for o in scene_objects],
+        )
         return valid
     except Exception:
-        logger.warning("screen_failed", exc_info=True)
+        logger.warning("screen_failed", subject=new_obj.name, exc_info=True)
         return [o.name for o in scene_objects]
 
 
@@ -324,11 +337,25 @@ async def evaluate_behaviors(
         behaviors[name] = behavior
         scene.put_behavior(subject.name, name, behavior)
 
+    pair_breakdown = [
+        {
+            "target": name,
+            "movement": b.movement,
+            "priority": b.priority,
+            "action": b.action,
+            "amount": b.amount,
+            "state_action": b.state_action,
+            "state_id": b.state_id,
+            "force": b.force,
+        }
+        for name, b in behaviors.items()
+    ]
     logger.info(
         "behavior_eval",
         subject=subject.name,
         pairs=len(stage1_results),
         active=len(active_pairs),
+        entries=pair_breakdown,
     )
     return behaviors
 

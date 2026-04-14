@@ -45,6 +45,10 @@ var current_target_distance: float = 0.0
 var _move_speed: float = BASE_MOVE_SPEED
 var _flee_speed: float = BASE_FLEE_SPEED
 
+# Throttle counter for target-selection debug logging (~once per second at 60fps)
+var _debug_tick: int = 0
+const _DEBUG_TICK_INTERVAL: int = 60
+
 
 func init_object(owner: RigidBody2D, obj_name: String, speed_tier: int = 2, is_autonomous: bool = false) -> void:
 	_owner = owner
@@ -63,6 +67,15 @@ func init_object(owner: RigidBody2D, obj_name: String, speed_tier: int = 2, is_a
 
 
 func _scan_existing() -> void:
+	_scan_scene_nodes()
+
+
+func _scan_scene_nodes() -> void:
+	## Iterate all scene-known potential targets and attempt to add any not
+	## already in _pairs. Safe to call repeatedly (e.g. after behaviors arrive
+	## late and a previous _try_add_target missed due to an empty lookup).
+	if not is_instance_valid(_owner) or _owner.get_tree() == null:
+		return
 	for node in _owner.get_tree().get_nodes_in_group("game_objects"):
 		if node == _owner:
 			continue
@@ -95,12 +108,23 @@ func _try_add_target(node: Node) -> void:
 	var target_name: String = node.get_object_name()
 	if target_name.is_empty() or target_name == _owner_name:
 		return
+	if target_name in _pairs:
+		return
 	var entry: Dictionary = InteractionCache.lookup_behavior(_owner_name, target_name)
-	if not entry.is_empty():
-		_pairs[target_name] = entry
-		_target_nodes[target_name] = node
-		if not node.tree_exiting.is_connected(_on_target_removed):
-			node.tree_exiting.connect(_on_target_removed.bind(target_name))
+	if entry.is_empty():
+		Log.info("ObjectBehavior: '%s' has no cached behavior for '%s' yet (scan race?)" % [_owner_name, target_name])
+		return
+	_pairs[target_name] = entry
+	_target_nodes[target_name] = node
+	Log.debug("ObjectBehavior: '%s' added target '%s' mv:%d p:%d act:%d amt:%d" % [
+		_owner_name, target_name,
+		int(entry.get("movement", 2)),
+		int(entry.get("priority", 0)),
+		int(entry.get("action", 0)),
+		int(entry.get("amount", 0)),
+	])
+	if not node.tree_exiting.is_connected(_on_target_removed):
+		node.tree_exiting.connect(_on_target_removed.bind(target_name))
 
 
 func _on_target_removed(target_name: String) -> void:
@@ -111,11 +135,15 @@ func _on_target_removed(target_name: String) -> void:
 func _on_behavior_updated(subject_name: String) -> void:
 	if subject_name.to_lower() != _owner_name.to_lower():
 		return
-	# Refresh all pairs from InteractionCache
+	# Refresh all existing pairs from InteractionCache
 	for tname in _pairs.keys():
 		var entry: Dictionary = InteractionCache.lookup_behavior(_owner_name, tname)
 		if not entry.is_empty():
 			_pairs[tname] = entry
+	# Retry adding any scene nodes that were missed by earlier scans (the
+	# common case: _scan_existing ran before our behaviors_ready WS message
+	# arrived, so lookup_behavior returned empty and the target was skipped).
+	_scan_scene_nodes()
 
 
 func _physics_process(delta: float) -> void:
@@ -180,6 +208,15 @@ func _physics_process(delta: float) -> void:
 	var dir: Vector2 = (best_target.global_position - _owner.global_position).normalized()
 	var dist: float = _owner.global_position.distance_to(best_target.global_position)
 
+	_debug_tick += 1
+	if _debug_tick >= _DEBUG_TICK_INTERVAL:
+		_debug_tick = 0
+		var action_idx: int = int(best_entry.get("action", 0))
+		var action_name: String = ACTION_NAMES[action_idx] if action_idx >= 0 and action_idx < ACTION_NAMES.size() else "?"
+		Log.debug("ObjectBehavior: '%s' → '%s' mv:%d u:%.1f dist:%.0f act:%s" % [
+			_owner_name, current_target_name, movement, best_utility, dist, action_name,
+		])
+
 	match movement:
 		0:  # approach
 			if _is_autonomous:
@@ -198,7 +235,7 @@ func _physics_process(delta: float) -> void:
 
 func _record_error(reason: String) -> void:
 	_error_count += 1
-	Log.debug("ObjectBehavior: Action error for '%s' - %s (%d/%d)" % [_owner_name, reason, _error_count, MAX_ERRORS])
+	Log.warn("ObjectBehavior: Action error for '%s' - %s (%d/%d)" % [_owner_name, reason, _error_count, MAX_ERRORS])
 
 
 func _execute_action(entry: Dictionary, target: Node) -> void:

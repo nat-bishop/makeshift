@@ -10,6 +10,7 @@ const LEVELS: Array[Dictionary] = [
 	{"scene": "res://scenes/levels/level_01.tscn", "name": "Level 1: The Acid Moat"},
 	{"scene": "res://scenes/levels/level_02.tscn", "name": "Level 2: The Sentry"},
 	{"scene": "res://scenes/levels/level_03.tscn", "name": "Level 3: Reach the Top"},
+	{"scene": "res://scenes/levels/level_sandbox.tscn", "name": "Sandbox"},
 ]
 
 const GAME_SCENE: String = "res://scenes/game/game.tscn"

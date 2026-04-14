@@ -58,6 +58,8 @@ func init_from_blueprint(bp: Dictionary) -> void:
 
 	# Classification
 	affordance = bp.get("affordance", 3)
+	if bp.has("_preloaded_combined_sprite"):
+		set_meta("combined_texture", bp["_preloaded_combined_sprite"])
 	autonomous = bp.get("autonomous", false)
 	speed_tier = bp.get("speed", 2)
 	destruction_result_name = bp.get("destruction_result_name", "")
@@ -175,16 +177,19 @@ func _on_state_added(state: String) -> void:
 	# State-specific mechanics
 	match state:
 		"burning":
-			WorldMutations.apply_dot(self, StateVisuals.BURNING_DOT, StateVisuals.BURNING_TICK,
-				StateVisuals.BURNING_DURATION, StateVisuals.COLORS.get("burning", Color.WHITE), "_dot_burning")
+			# Fire sources (burning in initial_states) are made of fire — skip self-DOT.
+			if not (1 in initial_states):
+				WorldMutations.apply_dot(self, StateVisuals.BURNING_DOT, StateVisuals.BURNING_TICK,
+					StateVisuals.BURNING_DURATION, StateVisuals.COLORS.get("burning", Color.WHITE), "_dot_burning")
 		"frozen":
 			freeze = true
 		"wet":
 			if physics_material_override:
 				physics_material_override.friction = PhysicsComposer.SURFACE_FRICTION[0]  # slippery
 		"electrified":
-			WorldMutations.apply_dot(self, StateVisuals.ELECTRIFIED_DOT, StateVisuals.ELECTRIFIED_TICK,
-				StateVisuals.ELECTRIFIED_DURATION, StateVisuals.COLORS.get("electrified", Color.WHITE), "_dot_electrified")
+			if not (4 in initial_states):
+				WorldMutations.apply_dot(self, StateVisuals.ELECTRIFIED_DOT, StateVisuals.ELECTRIFIED_TICK,
+					StateVisuals.ELECTRIFIED_DURATION, StateVisuals.COLORS.get("electrified", Color.WHITE), "_dot_electrified")
 
 
 func _on_states_changed(_updated_states: Array) -> void:

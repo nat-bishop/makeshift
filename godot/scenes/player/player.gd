@@ -340,6 +340,19 @@ func swap_to_combined_sprite(texture: Texture2D, obj: Node) -> void:
 		_combined_sprite = Sprite2D.new()
 		add_child(_combined_sprite)
 	_combined_sprite.texture = texture
+
+	var phys: Dictionary = obj.blueprint.get("physics", {}) if "blueprint" in obj else {}
+	var height_cm: int = phys.get("height_cm", 100)
+	var obj_world_size: float = PhysicsComposer.world_sprite_size(height_cm)
+	# Floor at the player's normal display size so small carried items don't shrink the player.
+	var frame_tex: Texture2D = _anim_sprite.sprite_frames.get_frame_texture(
+		_anim_sprite.animation, 0
+	)
+	var player_world_size: float = float(frame_tex.get_width()) * _anim_sprite.scale.x
+	var target_world_size: float = maxf(obj_world_size, player_world_size)
+	var tex_size: float = float(texture.get_width())
+	_combined_sprite.scale = Vector2.ONE * (target_world_size / tex_size)
+
 	_combined_sprite.visible = true
 	Log.info("Player: Swapped to combined sprite (holding '%s')" % obj.get_object_name())
 

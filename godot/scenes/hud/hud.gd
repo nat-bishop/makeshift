@@ -252,4 +252,4 @@ func _update_action_hint() -> void:
 	if _placement_active:
 		_action_hint.text = "Click: Place  |  Esc: Cancel"
 	else:
-		_action_hint.text = "Tab: Create  |  E: Kick  |  Esc: Menu  |  F3: Debug"
+		_action_hint.text = "Tab: Create  |  E: Kick  |  F: Carry  |  Esc: Menu  |  F3: Debug"

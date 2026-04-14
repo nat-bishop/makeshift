@@ -45,10 +45,10 @@ State modifiers. Set at creation via `initial_states` (e.g., fire spawns burning
 | # | State | Mechanic | Contradicts |
 |---|---|---|---|
 | 0 | none | — | — |
-| 1 | burning | DOT 5 dmg/s, 10s duration. Spreads to `susceptible_states=[1]` neighbors | frozen, wet |
+| 1 | burning | DOT 5 dmg/s, 10s duration. Skipped if burning is in `initial_states` (fire sources don't self-damage). Spreads to `susceptible_states=[1]` neighbors | frozen, wet |
 | 2 | frozen | Immobilize (freeze=true) + brittle (2× incoming damage) | burning |
 | 3 | wet | Friction → 0.05. Spreads to `susceptible_states=[3]` neighbors | burning |
-| 4 | electrified | DOT 8 dmg/1.5s, 8s duration. Spreads to `susceptible_states=[4]` neighbors | — |
+| 4 | electrified | DOT 8 dmg/1.5s, 8s duration. Skipped if electrified is in `initial_states` (electrified sources don't self-damage). Spreads to `susceptible_states=[4]` neighbors | — |
 
 This set is extensible — add new states when they have clear mechanics. States without game effects don't belong here.
 
