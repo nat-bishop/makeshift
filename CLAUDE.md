@@ -36,7 +36,7 @@ make eval-behavior             # behavior + screening quality
 - `sessions/manager.py` — aiosqlite (`game.db`). Budget: $1.00/session at $0.041/object
 - `routers/` — `objects.py` (POST create), `sessions.py` (CRUD + sync)
 
-**Godot Client** (`godot/`): Godot 4.6 (.NET/Mono), C#, .NET 8. Build: `cd godot && dotnet build` (or let the editor build on launch).
+**Godot Client** (`godot/`): Godot 4.6 **.NET/Mono build** (version string must read `.mono.official` — the standard build has no `.cs` resource loader and will fail with "No loader found for resource" on every autoload), C#, .NET 8. `Godot.NET.Sdk` version in `godot/makeshift.csproj` must match the editor's minor version. `make play` / `make dev` run `cd godot && dotnet build` before launching Godot.
 
 - Autoloads in `autoloads/`: `EventBus`, `InteractionCache`, `Backend`, `GameManager`, `Logger` — all with `public static T Instance { get; private set; } = null!;` pattern
 - Key systems in `scripts/systems/`: `ObjectBehavior.cs`, `StateManager.cs`, `StatePropagator.cs`, `AffordanceSystem.cs`, `PhysicsComposer.cs`, `WorldMutations.cs`
@@ -50,6 +50,7 @@ make eval-behavior             # behavior + screening quality
 - Background `asyncio.Task`s must be held in a module-level `set` to prevent GC before completion (see `routers/objects.py`, `ws/handler.py`)
 - `@computed_field` properties require `# type: ignore[prop-decorator]` — mypy doesn't support decorators above `@property`
 - `Timer` type ambiguity in C#: .NET 8 implicit usings pull in `System.Threading.Timer`. Must alias: `using Timer = Godot.Timer;` — affects `WorldMutations`, `StateDecay`, `StatePropagator`. Same pattern for `HttpClient` and `FileAccess` in `Backend.cs`.
+- `Logger` name collision in Godot 4.6+: `Godot.Logger` now exists and collides with `Makeshift.Autoloads.Logger`. Any file with `using Makeshift.Autoloads;` + `using Godot;` must also have `using Logger = Makeshift.Autoloads.Logger;`.
 - Async continuations in `Backend.cs` run on threadpool (no Godot `SynchronizationContext`) — use `CallDeferred` for anything touching Godot nodes from a `Task` continuation.
 - `Godot.Collections.Array`/`Dictionary` required for signal parameters with collections — C# generic types cross the marshaling boundary and silently fail or error.
 - `StateId` wire format ordering: `None=0, Burning=1, Frozen=2, Wet=3, Electrified=4` — matches backend and `StateContradictions.STATE_NAMES`. Do NOT reorder.

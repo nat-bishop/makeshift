@@ -38,7 +38,7 @@ SPEED_NAMES: dict[int, str] = {
     4: "rapid",
 }
 
-# Speed tier → movement multiplier applied to base speeds in object_behavior.gd.
+# Speed tier → movement multiplier applied to base speeds in ObjectBehavior.cs.
 SPEED_MULTIPLIER: dict[int, float] = {
     0: 0.3,
     1: 0.6,

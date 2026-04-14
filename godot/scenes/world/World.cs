@@ -1,5 +1,6 @@
 using Godot;
 using Makeshift.Autoloads;
+using Logger = Makeshift.Autoloads.Logger;
 using Makeshift.Interfaces;
 using Makeshift.Models;
 using Makeshift.Scenes.GameObjects;

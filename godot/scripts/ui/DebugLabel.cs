@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Text;
 using Godot;
 using Makeshift.Autoloads;
+using Logger = Makeshift.Autoloads.Logger;
 using Makeshift.Data;
 using Makeshift.Models;
 using Makeshift.Scenes.GameObjects;

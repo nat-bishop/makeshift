@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Godot;
 using Makeshift.Autoloads;
+using Logger = Makeshift.Autoloads.Logger;
 
 namespace Makeshift.Models;
 
@@ -32,12 +33,22 @@ public static class BlueprintMarshal
                 }
             }
             var json = Godot.Json.Stringify(filtered);
-            return JsonSerializer.Deserialize(json, MakeshiftJsonContext.Default.Blueprint);
+            try
+            {
+                return JsonSerializer.Deserialize(json, MakeshiftJsonContext.Default.Blueprint);
+            }
+            catch (System.Exception deserEx)
+            {
+                var tag = string.IsNullOrEmpty(callerTag) ? "BlueprintMarshal" : callerTag;
+                Logger.Instance?.Warn($"{tag}: Blueprint deserialize failed: {deserEx.Message}");
+                Logger.Instance?.Warn($"{tag}: Failing JSON: {json}");
+                return null;
+            }
         }
         catch (System.Exception e)
         {
             var tag = string.IsNullOrEmpty(callerTag) ? "BlueprintMarshal" : callerTag;
-            Logger.Instance?.Warn($"{tag}: Blueprint deserialize failed: {e.Message}");
+            Logger.Instance?.Warn($"{tag}: Blueprint marshal error: {e.Message}");
             return null;
         }
     }
