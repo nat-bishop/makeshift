@@ -170,12 +170,32 @@ func _update_state_lights(states: Array) -> void:
 			_light_nodes[state_key] = _create_state_light(state_key)
 
 
+static var _cached_light_texture: GradientTexture2D = null
+
+
+static func _get_light_texture() -> GradientTexture2D:
+	if _cached_light_texture != null:
+		return _cached_light_texture
+	var gradient := Gradient.new()
+	gradient.set_color(0, Color.WHITE)
+	gradient.set_color(1, Color(1.0, 1.0, 1.0, 0.0))
+	var tex := GradientTexture2D.new()
+	tex.gradient = gradient
+	tex.fill = GradientTexture2D.FILL_RADIAL
+	tex.fill_from = Vector2(0.5, 0.5)
+	tex.fill_to = Vector2(1.0, 0.5)
+	tex.width = 128
+	tex.height = 128
+	_cached_light_texture = tex
+	return tex
+
+
 func _create_state_light(state_key: String) -> PointLight2D:
 	var data: Dictionary = StateVisuals.LIGHTS[state_key]
 	var light := PointLight2D.new()
 	light.color = data["color"]
 	light.energy = data["energy"]
-	light.texture = preload("res://icon.svg")  # Fallback — replace with light texture
+	light.texture = _get_light_texture()
 	light.texture_scale = data["range"] / 128.0
 	add_child(light)
 	return light

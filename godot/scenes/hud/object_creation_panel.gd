@@ -6,12 +6,9 @@ extends PanelContainer
 @onready var _creation_form: VBoxContainer = %CreationForm
 @onready var _reveal_card: VBoxContainer = %RevealCard
 @onready var _reveal_name: Label = %RevealName
-@onready var _reveal_tags: HFlowContainer = %RevealTags
 @onready var _reveal_size: Label = %RevealSize
-@onready var _reveal_cost: Label = %RevealCost
+@onready var _reveal_durability: Label = %RevealDurability
 @onready var _close_button: Button = %CloseButton
-@onready var _behavior_section: VBoxContainer = %BehaviorSection
-@onready var _behavior_list: VBoxContainer = %BehaviorList
 
 var _is_creating := false
 var _is_showing_reveal := false
@@ -20,6 +17,9 @@ var _fade_timer: float = -1.0
 
 const REVEAL_TIMEOUT: float = 10.0
 const FADE_DURATION: float = 0.5
+const DURABILITY_NAMES: Array[String] = [
+	"fragile", "weak", "normal", "tough", "hardy", "elite", "indestructible"
+]
 
 
 func _ready() -> void:
@@ -116,26 +116,15 @@ func _show_reveal(blueprint: Dictionary) -> void:
 
 	_reveal_name.text = blueprint.get("name", "Unknown")
 
-	# Tags
-	for child in _reveal_tags.get_children():
-		child.queue_free()
-	var tags: Array = blueprint.get("tags", [])
-	for tag in tags:
-		_reveal_tags.add_child(InfoWidgets.create_tag_badge(str(tag)))
+	# Size derived from physics.height_cm
+	var phys: Dictionary = blueprint.get("physics", {})
+	var height_cm: int = phys.get("height_cm", 30)
+	_reveal_size.text = PhysicsComposer.size_from_height(height_cm).to_upper()
 
-	# Behaviors
-	for child in _behavior_list.get_children():
-		child.queue_free()
-	var behaviors: Array = blueprint.get("behaviors", [])
-	_behavior_section.visible = not behaviors.is_empty()
-	for b in behaviors:
-		_behavior_list.add_child(InfoWidgets.create_behavior_label(b))
-
-	# Stats
-	var vd: Dictionary = blueprint.get("visual_descriptor", {})
-	_reveal_size.text = vd.get("size_category", "medium").to_upper()
-
-	_reveal_cost.text = "%d tags" % tags.size()
+	# Durability label
+	var dur: int = blueprint.get("durability", 2)
+	var dur_name: String = DURABILITY_NAMES[dur] if dur >= 0 and dur < DURABILITY_NAMES.size() else "?"
+	_reveal_durability.text = dur_name.to_upper()
 
 	# Fade-in and start auto-fade timer
 	_reveal_card.modulate.a = 0.0

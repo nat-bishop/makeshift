@@ -13,7 +13,6 @@ var _initially_solid: bool = true
 var _visual: ColorRect
 var _initial_color: Color
 var _field_area: Area2D
-var _object_field: Node = null
 
 const FIELD_MARGIN: float = 32.0
 
@@ -65,13 +64,6 @@ func init_env(name: String, bp: Dictionary, size: Vector2, color: Color, solid: 
 
 	# Group for interaction targeting
 	add_to_group("game_objects")
-
-	# Use ObjectField for periodic tick (env bodies are always fields)
-	var field_script = preload("res://scripts/systems/object_field.gd")
-	_object_field = field_script.new()
-	_object_field.name = "ObjectField"
-	add_child(_object_field)
-	_object_field.init_field(self, FIELD_MARGIN)
 
 	Log.info("EnvironmentBody: Initialized '%s', solid=%s" % [env_name, solid])
 
