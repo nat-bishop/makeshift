@@ -1,4 +1,4 @@
-.PHONY: dev gpu api stop gpu-restart llm-restart gpu-logs godot play install test lint fix format format-check typecheck check clear-sprites clear-cache cli-create cli-image cli-sprite cli-status eval eval-creation eval-behavior eval-judge bench-tokens help
+.PHONY: dev gpu api stop gpu-restart llm-restart gpu-logs godot play build install test lint fix format format-check typecheck check clear-sprites clear-cache cli-create cli-image cli-sprite cli-status eval eval-creation eval-behavior eval-judge bench-tokens help
 
 GODOT ?= godot
 # Console-subsystem binary so stdout/stderr (including script errors) reach the
@@ -15,12 +15,15 @@ define wait-services
 	@until curl -sf http://127.0.0.1:5200/health > /dev/null 2>&1; do sleep 2; done; echo "LLM ready"
 endef
 
-dev: gpu ## Start all servers + launch game
+dev: gpu build ## Start all servers + launch game
 	$(wait-services)
 	uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir backend --reload-include '*.py' &
 	@sleep 2
 	$(GODOT_CONSOLE) --path godot/ 2>&1
 	$(MAKE) stop
+
+build: ## Rebuild the C# Godot assembly (command-line launch doesn't auto-build)
+	cd godot && dotnet build
 
 gpu: ## Start GPU/LLM Docker containers (detached)
 	$(COMPOSE) up -d --build
@@ -47,7 +50,7 @@ stop: ## Stop all servers and clean up
 godot: ## Open Godot editor
 	$(GODOT) --editor --path godot/
 
-play: ## Run the game (VERBOSE=1 for engine verbose output)
+play: build ## Run the game (VERBOSE=1 for engine verbose output)
 	$(GODOT) --headless --import --path godot/
 	$(GODOT_CONSOLE) $(if $(filter 1,$(VERBOSE)),--verbose) --path godot/ 2>&1
 

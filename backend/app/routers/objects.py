@@ -328,8 +328,25 @@ async def _run_spawn_integration(
     # New object → interesting scene objects
     tasks.append(_eval_direction(blueprint, interesting_bps))
 
-    # Each interesting scene object → new object
-    tasks.extend(_eval_direction(target_bp, [blueprint]) for target_bp in interesting_bps)
+    # Reverse direction: only evaluate when the scene-object subject can actually
+    # act on the result. Non-autonomous props never tick ObjectBehavior, and the
+    # Player is user-controlled even though PLAYER_BLUEPRINT.autonomous is True.
+    def _can_act(bp: GameObjectBlueprint) -> bool:
+        return bp.autonomous and bp.id != "player"
+
+    skipped = [bp.name for bp in interesting_bps if not _can_act(bp)]
+    if skipped:
+        logger.info(
+            "reverse_eval_skipped",
+            session_id=session_id,
+            new_object=blueprint.name,
+            skipped_subjects=skipped,
+        )
+    tasks.extend(
+        _eval_direction(target_bp, [blueprint])
+        for target_bp in interesting_bps
+        if _can_act(target_bp)
+    )
 
     results = await asyncio.gather(*tasks, return_exceptions=True)
     for result in results:
