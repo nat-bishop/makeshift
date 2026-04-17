@@ -17,7 +17,7 @@ public sealed record Blueprint
 
     public Durability Durability { get; init; } = Durability.Normal;
     public Affordance Affordance { get; init; } = Affordance.None;
-    public bool Autonomous { get; init; }
+    public bool Active { get; init; }
     public SpeedTier Speed { get; init; } = SpeedTier.Normal;
     public string DestructionResultName { get; init; } = "";
 

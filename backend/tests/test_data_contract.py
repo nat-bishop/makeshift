@@ -222,7 +222,7 @@ class TestModelRoundtrips:
             ),
             durability=3,
             affordance=0,
-            autonomous=False,
+            active=False,
             speed=2,
             initial_states=[1],
             susceptible_states=[1, 3],
@@ -247,7 +247,7 @@ class TestModelRoundtrips:
             "physics": {"mass_kg": 5.0, "height_cm": 20, "surface": 1, "bounce": 10, "gravity": 60},
             "durability": 4,
             "affordance": 3,
-            "autonomous": False,
+            "active": False,
         }
         bp = GameObjectBlueprint.model_validate(d)
         assert bp.speed == 2

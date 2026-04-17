@@ -63,7 +63,7 @@ public enum Durability
     Indestructible = 6,
 }
 
-/// <summary>Autonomous movement speed tier.</summary>
+/// <summary>Active object movement speed tier.</summary>
 public enum SpeedTier
 {
     Sluggish = 0,

@@ -59,16 +59,16 @@ def _obj_summary(bp: GameObjectBlueprint) -> str:
     durability_name = DURABILITY_NAMES.get(bp.durability, "normal")
     parts.append(durability_name)
     parts.append(SURFACE_NAMES.get(bp.physics.surface, "normal-surface"))
-    if bp.autonomous:
-        parts.append("autonomous")
+    if bp.active:
+        parts.append("active")
     return f"{bp.name} ({', '.join(parts)})"
 
 
 def _target_context(bp: GameObjectBlueprint) -> str:
     """Compact target description for behavior prompts."""
     labels: list[str] = []
-    if bp.autonomous:
-        labels.append("autonomous")
+    if bp.active:
+        labels.append("active")
     aff_label = AFFORDANCE_LABELS.get(bp.affordance)
     if aff_label:
         labels.append(aff_label)

@@ -329,10 +329,10 @@ async def _run_spawn_integration(
     tasks.append(_eval_direction(blueprint, interesting_bps))
 
     # Reverse direction: only evaluate when the scene-object subject can actually
-    # act on the result. Non-autonomous props never tick ObjectBehavior, and the
-    # Player is user-controlled even though PLAYER_BLUEPRINT.autonomous is True.
+    # act on the result. Passive props never tick ObjectBehavior, and the
+    # Player is user-controlled even though PLAYER_BLUEPRINT.active is True.
     def _can_act(bp: GameObjectBlueprint) -> bool:
-        return bp.autonomous and bp.id != "player"
+        return bp.active and bp.id != "player"
 
     skipped = [bp.name for bp in interesting_bps if not _can_act(bp)]
     if skipped:

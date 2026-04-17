@@ -14,9 +14,9 @@ See [llm-design-patterns.md](llm-design-patterns.md) for inference constraints. 
 
 One system handles all object interactions — active creatures (wolf, zombie) AND reactive objects (bomb, fan, acid). Both use the same `BehaviorEntry` (movement, priority, action, amount, state_action, state_id, force) and the same staged evaluation pipeline.
 
-**Active objects** (autonomous=true, movement=approach/flee) move toward or away from targets and execute on-arrival actions.
+**Active objects** (`active=true`, movement=approach/flee) move toward or away from targets and execute on-arrival actions.
 
-**Reactive objects** (autonomous=true, movement=ignore, priority>0) never move but act immediately when a target enters CONTACT_RANGE. A bomb ignores everything until something touches it.
+**Reactive objects** (`active=true`, movement=ignore, priority>0) never move but act immediately when a target enters CONTACT_RANGE. A bomb ignores everything until something touches it.
 
 A firefighter doesn't have one behavior. It extinguishes fire, rescues people, and chases arsonists. The LLM decides what each object does with EACH specific thing it encounters.
 
@@ -89,7 +89,7 @@ Results delivered via `behavior_updated` WS message. Client updates `Interaction
 
 ## Creation cache
 
-Separate from the behavior cache. Maps object names to their creation-time LLM answers (physics, affordance, destructibility, states, autonomous).
+Separate from the behavior cache. Maps object names to their creation-time LLM answers (physics, affordance, destructibility, states, active).
 
 First "fire sword" → mass 2.0, affordance carry, etc. All subsequent "fire sword" creations return the same values. This is a correctness requirement, not optimization — two identical objects should have identical physics. Without this, players can't predict what they're creating.
 
@@ -115,7 +115,7 @@ State spreading is handled by `StatePropagator` — a tick-based (2s) area compo
 
 ### The creation pipeline is not a graph
 
-The parallel LLM calls are a **fan-out/fan-in** pattern, not a DAG or state machine. 13 independent calls fire in parallel, results are assembled, then a conditional batch runs if the object is autonomous. There's no branching, no cycles, no node-to-node data flow.
+The parallel LLM calls are a **fan-out/fan-in** pattern, not a DAG or state machine. 13 independent calls fire in parallel, results are assembled, then a conditional batch runs if the object is active. There's no branching, no cycles, no node-to-node data flow.
 
 **pydantic-ai Graph is the wrong tool.** It's a finite state machine — nodes execute sequentially, each node's return type picks the next node. No built-in parallelism. Using it would mean stuffing all parallel calls inside a single node's `run()` method, making the Graph wrapper pure boilerplate.
 
@@ -137,7 +137,7 @@ async def create_object(name: str) -> dict:
     results = dict(await asyncio.gather(*[
         ask(q.prompt.format(name=name), q.max_tokens) for q in CREATION_QUESTIONS
     ]))
-    if results["autonomous"] == "1":
+    if results["active"] == "1":
         results["behaviors"] = await ask_behaviors(name)
     return results
 ```

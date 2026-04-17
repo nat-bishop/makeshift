@@ -54,7 +54,7 @@ def _make_blueprint(obj_id: str = "test-obj-1", name: str = "test rock") -> Game
         physics=PhysicsProperties(mass_kg=5.0, height_cm=30, surface=1, bounce=5, gravity=60),
         durability=3,
         affordance=3,
-        autonomous=False,
+        active=False,
     )
 
 

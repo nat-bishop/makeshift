@@ -3,7 +3,7 @@
 Every LLM call that runs during object creation is defined here as a
 `Question` instance. Edit this file to add, remove, or tweak object
 properties during playtesting. Gate conditions control conditional fan-out
-(e.g. `speed` only fires when `autonomous=true`).
+(e.g. `speed` only fires when `active=true`).
 
 Consumed by `app.creator.pipeline.create_object` via `run_questions()`.
 """
@@ -14,7 +14,7 @@ from app.creator.question_graph import Gate, Question
 
 # ---- Reusable gate conditions ----
 
-GATE_AUTONOMOUS = Gate("autonomous", lambda v: bool(v))
+GATE_ACTIVE = Gate("active", lambda v: bool(v))
 GATE_DESTRUCTIBLE = Gate("durability", lambda v: int(v) < 6)  # type: ignore[call-overload]
 
 # ---- Creation questions ----
@@ -43,7 +43,11 @@ CREATION_QUESTIONS: list[Question] = [
         30,
         instructions=(
             "Estimate the real-world height of the given object in centimeters. "
-            "Examples: coin=2, apple=8, cat=25, chair=90, person=175, tree=800, mountain=5000. "
+            "Use the OVERALL size including any rotors, wings, masts, tails, or extensions — "
+            "not just the main body or cabin. "
+            "Examples: coin=2, apple=8, cat=25, chair=90, person=175, "
+            "drone=40, helicopter=400 (body + rotor), airplane=500 (tail), "
+            "tree=800, sailing ship=2000 (mast), mountain=5000. "
             "Return only an integer."
         ),
     ),
@@ -76,14 +80,24 @@ CREATION_QUESTIONS: list[Question] = [
     Question(
         "gravity",
         "{description}",
-        "int",
+        "choice",
+        default="falls",
         instructions=(
-            "Rate how the given object falls when unsupported. "
-            "0=floats upward (balloon, helium), 10=drifts slowly (feather, smoke), "
-            "50=falls normally (person, ball), 65=falls heavily (anvil, boulder), "
-            "75=very heavy fall (lead block). "
-            "Immovable objects that sit on the ground use 50-65, not 100."
+            "How does this object behave vertically during normal operation? "
+            "rises = actively moves upward (helium balloon, smoke, hot ember). "
+            "hovers = maintains altitude under its own power "
+            "(helicopter, drone, bird, hot air balloon, flying monster). "
+            "drifts = slow fall due to air resistance (feather, leaf, snowflake, dust mote). "
+            "falls = falls normally, the default "
+            "(person, ball, anvil, book, car, boulder, everything else). "
+            "For powered aircraft and flying creatures, pick the active flying state, "
+            "not what would happen if the engine stopped."
         ),
+        choices=("rises", "hovers", "drifts", "falls"),
+        # Ints are chosen so GravityToScale in PhysicsApplicator.cs yields the
+        # desired Godot GravityScale: rises=-1.0, hovers=0.0, drifts~0.5, falls~1.1.
+        # If that piecewise map changes, recompute these.
+        choice_map=(("rises", 0), ("hovers", 25), ("drifts", 38), ("falls", 55)),
     ),
     # Durability
     Question(
@@ -112,27 +126,29 @@ CREATION_QUESTIONS: list[Question] = [
             ("permanent", 6),
         ),
     ),
-    # Autonomous
+    # Active
     Question(
-        "autonomous",
+        "active",
         "{description}",
         "choice",
-        default="no",
+        default="passive",
         instructions=(
-            "Does this object move and act on its own? "
-            "Animals, creatures, monsters, robots, and people are autonomous. "
-            "Plants, tools, furniture, and terrain are not."
+            "Does this object do something during gameplay, or is it inert physics? "
+            "Active: animals, creatures, monsters, robots, people, vehicles, aircraft, "
+            "and any machine, device, or substance that moves or reacts on its own "
+            "(a bomb explodes on contact, a fan blows air, acid corrodes). "
+            "Passive: plants, hand tools, furniture, terrain, food, and inert props."
         ),
-        choices=("yes", "no"),
-        choice_map=(("yes", 1), ("no", 0)),
+        choices=("active", "passive"),
+        choice_map=(("active", 1), ("passive", 0)),
     ),
-    # Gated on autonomous=true
+    # Gated on active=true
     Question(
         "speed",
         "{description}",
         "choice",
         default="normal",
-        gates=(GATE_AUTONOMOUS,),
+        gates=(GATE_ACTIVE,),
         instructions=(
             "Rate this creature's movement speed. "
             "crawl=snail/turtle, slow=zombie/slug, normal=person/dog, "
@@ -157,42 +173,25 @@ CREATION_QUESTIONS: list[Question] = [
         choice_map=(("carry", 0), ("ride", 1), ("scale", 2), ("none", 3)),
     ),
     # ---- State properties (initial + susceptible) ----
-    # Initial states — does this object spawn with these states?
+    # Initial state — what elemental state, if any, does this object spawn as?
+    # Single-pick: an object's elemental identity is one axis. The susceptibility
+    # questions below cover the orthogonal "what can be applied to it" axis.
     Question(
-        "initially_burning",
+        "initial_state",
         "{description}",
         "choice",
-        default="no",
-        instructions="Does this object produce fire or heat?",
-        choices=("yes", "no"),
-        choice_map=(("yes", 1), ("no", 0)),
-    ),
-    Question(
-        "initially_frozen",
-        "{description}",
-        "choice",
-        default="no",
-        instructions="Is this object frozen or ice-cold?",
-        choices=("yes", "no"),
-        choice_map=(("yes", 1), ("no", 0)),
-    ),
-    Question(
-        "initially_wet",
-        "{description}",
-        "choice",
-        default="no",
-        instructions="Is this object wet or made of water or liquid?",
-        choices=("yes", "no"),
-        choice_map=(("yes", 1), ("no", 0)),
-    ),
-    Question(
-        "initially_electrified",
-        "{description}",
-        "choice",
-        default="no",
-        instructions="Does this object produce electricity?",
-        choices=("yes", "no"),
-        choice_map=(("yes", 1), ("no", 0)),
+        default="none",
+        instructions=(
+            "When this object spawns into the world, is it actively a source of any "
+            "elemental state? "
+            "burning=produces fire/heat (torch, lava, flame); "
+            "frozen=is solid ice or radiates cold (ice block, frost crystal); "
+            "wet=is liquid water or actively dripping (water, puddle, soaked sponge); "
+            "electrified=is actively conducting/emitting electricity (live wire, lightning); "
+            "none=an ordinary inert object (rock, wood, metal box)."
+        ),
+        choices=("none", "burning", "frozen", "wet", "electrified"),
+        choice_map=(("none", 0), ("burning", 1), ("frozen", 2), ("wet", 3), ("electrified", 4)),
     ),
     # Susceptible states — can these states spread to this object?
     Question(

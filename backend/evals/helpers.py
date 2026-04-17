@@ -119,7 +119,7 @@ def make_blueprint(
         ),
         durability=int(data.get("durability", 2)),
         affordance=int(data.get("affordance", 3)),
-        autonomous=bool(data.get("autonomous", False)),
+        active=bool(data.get("active", False)),
         speed=int(data.get("speed", 2)),
         initial_states=data.get("initial_states", []),
         susceptible_states=data.get("susceptible_states", []),
@@ -135,7 +135,7 @@ def _extract_category(field_name: str) -> str:
     """Extract the category (field type) from an assertion name.
 
     Behavior assertions: 'zombie_vs_person.action' -> 'action'
-    Creation assertions: 'mass_kg', 'initially_burning' -> as-is
+    Creation assertions: 'mass_kg', 'initial_state', 'catches_fire' -> as-is
     Screening assertions: 'includes_wood', 'excludes_rock' -> 'includes' / 'excludes'
     """
     if "." in field_name:

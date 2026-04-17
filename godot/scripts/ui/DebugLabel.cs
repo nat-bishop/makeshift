@@ -12,7 +12,7 @@ namespace Makeshift.UI;
 
 /// <summary>
 /// Debug overlay attached above each game object: shows identity, HP, physics,
-/// velocity, active/born/susceptible states, and (for autonomous objects) a
+/// velocity, active/born/susceptible states, and (for active objects) a
 /// live behavior-pair table with current target, utility, distance and
 /// cooldown.
 /// </summary>
@@ -62,7 +62,7 @@ public sealed partial class DebugLabel : PanelContainer
     public void Init(GameObject gameObj)
     {
         _gameObject = gameObj;
-        _isCreature = gameObj.Autonomous;
+        _isCreature = gameObj.Active;
         _behavior = gameObj.GetObjectBehavior();
         Visible = GameManager.Instance.DebugMode;
         SetProcess(Visible);

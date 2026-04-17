@@ -22,6 +22,7 @@ from app.config import settings
 from app.creator.llm import ask_int, reset_agents
 from app.creator.pipeline import create_object
 from app.models.blueprint import GameObjectBlueprint
+from app.prompts.creation import ALL_CREATION_QUESTIONS
 from pydantic_evals import Case, Dataset
 from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorContext, LLMJudge
 
@@ -52,37 +53,42 @@ FIELD_TO_ATTR: dict[str, str] = {
     "speed": "speed",
 }
 
-# State boolean fields → (state_id, blueprint list attribute)
-# Maps creation question names to membership checks on initial_states / susceptible_states.
+# Susceptibility boolean fields → (state_id, blueprint list attribute).
+# Maps creation question names to membership checks on susceptible_states.
+# Initial state is scored separately via _score_initial_state below — it is a
+# single-pick enum in the fixture (e.g. `initial_state: burning`), not a bool.
 STATE_FIELD_MAP: dict[str, tuple[int, str]] = {
-    "initially_burning": (1, "initial_states"),
-    "initially_frozen": (2, "initial_states"),
-    "initially_wet": (3, "initial_states"),
-    "initially_electrified": (4, "initial_states"),
     "catches_fire": (1, "susceptible_states"),
     "can_freeze": (2, "susceptible_states"),
     "gets_wet": (3, "susceptible_states"),
     "conducts_electricity": (4, "susceptible_states"),
 }
 
-
-# Human-readable labels for creation field values
+# Label ↔ int mappings derived from the canonical Question.choice_map —
+# single source of truth in prompts/creation.py. Covers every choice question
+# (gravity, surface, durability, affordance, speed, initial_state, and the
+# yes/no susceptibility questions, which are harmless here since those fields
+# are handled by STATE_FIELD_MAP before reaching the label branches).
+_CREATION_LABEL_TO_INT: dict[str, dict[str, int]] = {
+    q.key: dict(q.choice_map)
+    for q in ALL_CREATION_QUESTIONS
+    if q.qtype == "choice" and q.choice_map
+}
 _CREATION_LABELS: dict[str, dict[int, str]] = {
-    "affordance": {0: "carry", 1: "ride", 2: "scale", 3: "none"},
-    "surface": {0: "slick", 1: "normal", 2: "sticky"},
-    "durability": {
-        0: "soft",
-        1: "weak",
-        2: "normal",
-        3: "tough",
-        4: "hardy",
-        5: "fortified",
-        6: "permanent",
-    },
-    "speed": {0: "crawl", 1: "slow", 2: "normal", 3: "fast", 4: "rapid"},
+    field: {v: k for k, v in mapping.items()} for field, mapping in _CREATION_LABEL_TO_INT.items()
 }
 
-_STATE_NAMES: dict[int, str] = {1: "burning", 2: "frozen", 3: "wet", 4: "electrified"}
+_STATE_NAME_TO_ID: dict[str, int] = _CREATION_LABEL_TO_INT["initial_state"]
+_STATE_NAMES: dict[int, str] = {v: k for k, v in _STATE_NAME_TO_ID.items() if v != 0}
+
+
+def _coerce_label(field: str, val: object) -> float:
+    """Accept either a numeric value or a label string, return numeric."""
+    if isinstance(val, str):
+        mapping = _CREATION_LABEL_TO_INT.get(field, {})
+        if val in mapping:
+            return float(mapping[val])
+    return float(val)  # type: ignore[arg-type]
 
 
 def _creation_label(field: str, value: object) -> str:
@@ -119,9 +125,21 @@ class CreationEvaluator(Evaluator[str, GameObjectBlueprint, dict[str, Any]]):
         results: dict[str, EvaluationReason] = {}
 
         for field, val in expected.items():
-            if field in STATE_FIELD_MAP:
+            if field == "initial_state":
+                expected_name = str(val).lower()
+                expected_id = _STATE_NAME_TO_ID.get(expected_name)
+                if expected_id is None:
+                    continue  # unknown state name in fixture — skip rather than crash
+                actual_list = bp.initial_states
+                passed = len(actual_list) == 0 if expected_id == 0 else expected_id in actual_list
+                actual_names = [_STATE_NAMES.get(s, str(s)) for s in actual_list] or ["none"]
+                results[field] = EvaluationReason(
+                    value=passed,
+                    reason=None if passed else f"got {actual_names}, expected {expected_name}",
+                )
+            elif field in STATE_FIELD_MAP:
                 state_id, attr_name = STATE_FIELD_MAP[field]
-                actual_list: list[int] = getattr(bp, attr_name)
+                actual_list = getattr(bp, attr_name)
                 actual_present = state_id in actual_list
                 passed = actual_present == bool(val)
                 state_name = _STATE_NAMES.get(state_id, str(state_id))
@@ -135,7 +153,8 @@ class CreationEvaluator(Evaluator[str, GameObjectBlueprint, dict[str, Any]]):
             elif isinstance(val, list) and len(val) == 2:
                 attr_path: str = FIELD_TO_ATTR.get(field, field)
                 actual_num = float(_get_nested(bp, attr_path))  # type: ignore[arg-type]
-                lo, hi = float(val[0]), float(val[1])
+                lo = _coerce_label(field, val[0])
+                hi = _coerce_label(field, val[1])
                 passed = in_range(actual_num, lo, hi)
                 actual_lbl = _creation_label(field, actual_num)
                 lo_lbl = _creation_label(field, lo)
@@ -144,12 +163,15 @@ class CreationEvaluator(Evaluator[str, GameObjectBlueprint, dict[str, Any]]):
                     value=passed,
                     reason=None if passed else f"got {actual_lbl}, expected [{lo_lbl}, {hi_lbl}]",
                 )
-            elif isinstance(val, (bool, int)):
+            elif isinstance(val, (bool, int)) or (
+                isinstance(val, str) and field in _CREATION_LABEL_TO_INT
+            ):
                 attr_path = FIELD_TO_ATTR.get(field, field)
                 actual = _get_nested(bp, attr_path)
-                passed = actual == val
+                expected_num = _coerce_label(field, val) if isinstance(val, str) else val
+                passed = actual == expected_num
                 got = _creation_label(field, actual)
-                exp = _creation_label(field, val)
+                exp = _creation_label(field, expected_num)
                 results[field] = EvaluationReason(
                     value=passed,
                     reason=None if passed else f"got {got}, expected {exp}",

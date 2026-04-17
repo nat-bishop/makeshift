@@ -29,7 +29,7 @@ Level puzzles should be designed around these mechanics. Examples:
 - Creating a wet object near electrified ones is dangerous (wet susceptible to electrified)
 - Creatures with high priority toward specific states (firefighter → burning) create natural puzzles
 
-**Seed object blueprints** use the `GameObjectBlueprint` format with `initial_states`, `susceptible_states`, `autonomous`, `durability`, and `affordance`. See `models/blueprint.py` for the complete structure.
+**Seed object blueprints** use the `GameObjectBlueprint` format with `initial_states`, `susceptible_states`, `active`, `durability`, and `affordance`. See `models/blueprint.py` for the complete structure.
 
 ---
 
@@ -75,7 +75,7 @@ var fireBp = new Godot.Collections.Dictionary
     },
     ["durability"]            = 0,   // fragile (5 HP)
     ["affordance"]            = 3,   // 3=nothing
-    ["autonomous"]            = false,
+    ["active"]                = false,
     ["speed"]                 = 2,
     ["initial_states"]        = new Godot.Collections.Array { 1 },  // burning
     ["susceptible_states"]    = new Godot.Collections.Array(),

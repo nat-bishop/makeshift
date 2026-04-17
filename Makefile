@@ -104,21 +104,21 @@ cli-status: ## Check health of configured services
 cli-animate: ## Test I2V animation (SPRITE=path.png PROMPT="walk cycle")
 	cd backend && uv run python -m experiments.i2v_animation_test $(if $(SPRITE),--sprite "$(SPRITE)") $(if $(PROMPT),--prompt "$(PROMPT)")
 
-eval: ## Run all quality evals (LLM, costs money, REPEATS=3)
+eval: ## Run all quality evals (LLM, REPEATS=3)
 	cd backend && RUN_TS=$$(date +%Y%m%d_%H%M%S) && \
 		EVAL_RUN_DIR=$$RUN_TS uv run python -m evals.run_creation --repeat $(REPEATS) && \
 		EVAL_RUN_DIR=$$RUN_TS uv run python -m evals.run_behavior --repeat $(REPEATS)
 
-eval-creation: ## Creation quality eval (LLM, costs money, REPEATS=3)
+eval-creation: ## Creation quality eval (LLM, REPEATS=3)
 	cd backend && uv run python -m evals.run_creation --repeat $(REPEATS)
 
-eval-behavior: ## Behavior + screening eval (LLM, costs money, REPEATS=3)
+eval-behavior: ## Behavior + screening eval (LLM, REPEATS=3)
 	cd backend && uv run python -m evals.run_behavior --repeat $(REPEATS)
 
 bench-tokens: ## Measure token overhead: tool call vs plain text (LLM, cheap)
 	cd backend && uv run python scripts/benchmark_token_overhead.py
 
-eval-judge: ## All evals + LLM judge (LLM, costs more money, REPEATS=3)
+eval-judge: ## All evals + LLM judge (LLM, REPEATS=3)
 	cd backend && RUN_TS=$$(date +%Y%m%d_%H%M%S) && \
 		EVAL_RUN_DIR=$$RUN_TS uv run python -m evals.run_creation --judge --repeat $(REPEATS) && \
 		EVAL_RUN_DIR=$$RUN_TS uv run python -m evals.run_behavior --repeat $(REPEATS)

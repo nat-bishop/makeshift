@@ -24,16 +24,13 @@ _BASE_ANSWERS: dict[str, object] = {
     "surface": 1,
     "bounce": 10,
     "gravity": 50,
-    "initially_burning": False,
-    "initially_frozen": False,
-    "initially_wet": False,
-    "initially_electrified": False,
+    "initial_state": 0,
     "catches_fire": False,
     "can_freeze": False,
     "gets_wet": False,
     "conducts_electricity": False,
     "durability": 2,
-    "autonomous": False,
+    "active": False,
     "affordance": 0,
     "visual_description": "a flaming steel sword",
     "speed": 2,
@@ -80,7 +77,7 @@ async def test_cache_hit_returns_cached_blueprint() -> None:
         "physics": {"mass_kg": 1.5, "height_cm": 120, "surface": 1, "bounce": 10, "gravity": 50},
         "durability": 4,
         "affordance": 0,
-        "autonomous": False,
+        "active": False,
         "initial_states": [1],
         "susceptible_states": [1, 3],
         "destruction_result_name": "",
@@ -115,7 +112,7 @@ async def test_full_pipeline_cache_miss() -> None:
     assert bp.physics.height_cm == 120
     assert bp.durability == 2
     assert bp.affordance == 0
-    assert bp.autonomous is False
+    assert bp.active is False
     assert bp.visual_description == "a flaming steel sword"
     cache.put_creation.assert_awaited_once()
 
@@ -189,19 +186,28 @@ async def test_destruction_name_none_becomes_empty() -> None:
     assert bp.destruction_result_name == ""
 
 
-# ---------- 7. Initial states assembled from booleans ----------
+# ---------- 7. Initial state assembled from single-pick enum ----------
 
 
-async def test_initial_states_assembled_from_bools() -> None:
+async def test_initial_state_burning_assembled() -> None:
     cache = _make_cache()
-    answers = {**_BASE_ANSWERS, "initially_burning": True, "initially_wet": True}
+    answers = {**_BASE_ANSWERS, "initial_state": 1}  # BURNING
 
-    async with _pipeline_mocks(name="Lava Rock", answers=answers):
-        bp = await create_object("lava rock", cache)
+    async with _pipeline_mocks(name="Torch", answers=answers):
+        bp = await create_object("torch", cache)
 
-    assert 1 in bp.initial_states  # BURNING
-    assert 3 in bp.initial_states  # WET
-    assert len(bp.initial_states) == 2
+    assert bp.initial_states == [1]
+
+
+async def test_initial_state_none_yields_empty_list() -> None:
+    cache = _make_cache()
+    # _BASE_ANSWERS already has initial_state=0; this just makes the intent explicit
+    answers = {**_BASE_ANSWERS, "initial_state": 0}
+
+    async with _pipeline_mocks(name="Rock", answers=answers):
+        bp = await create_object("rock", cache)
+
+    assert bp.initial_states == []
 
 
 async def test_susceptible_states_assembled_from_bools() -> None:

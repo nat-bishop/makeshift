@@ -15,13 +15,13 @@ archetypes:
   wooden shield: { mass_kg: 2.0, height_cm: 60, bounce: 15, gravity: 55, surface: 1, durability: 3 }
   wooden sword: { mass_kg: 1.0, height_cm: 80, bounce: 15, gravity: 55, surface: 1 }
   sword: { mass_kg: 2.0, height_cm: 90, bounce: 15, gravity: 60, surface: 1 }
-  campfire: { mass_kg: 5.0, height_cm: 60, bounce: 5, gravity: 55, surface: 1, autonomous: true, initial_states: [1] }
-  fire: { mass_kg: 0.1, height_cm: 40, bounce: 5, gravity: 10, surface: 0, autonomous: true, initial_states: [1] }
-  lava: { mass_kg: 10.0, height_cm: 20, bounce: 5, gravity: 60, surface: 1, autonomous: true, initial_states: [1] }
-  zombie: { mass_kg: 70.0, height_cm: 175, bounce: 10, gravity: 55, autonomous: true, speed: 1, surface: 1, susceptible_states: [1, 2, 3, 4] }
-  horse: { mass_kg: 400.0, height_cm: 200, bounce: 10, gravity: 55, autonomous: true, speed: 3, surface: 1, susceptible_states: [1, 2, 3, 4] }
-  person: { mass_kg: 70.0, height_cm: 175, bounce: 10, gravity: 55, autonomous: true, speed: 2, surface: 1, susceptible_states: [1, 2, 3, 4] }
-  rabbit: { mass_kg: 2.0, height_cm: 25, bounce: 15, gravity: 50, autonomous: true, speed: 3, surface: 1, susceptible_states: [1, 2, 3] }
+  campfire: { mass_kg: 5.0, height_cm: 60, bounce: 5, gravity: 55, surface: 1, active: true, initial_states: [1] }
+  fire: { mass_kg: 0.1, height_cm: 40, bounce: 5, gravity: 10, surface: 0, active: true, initial_states: [1] }
+  lava: { mass_kg: 10.0, height_cm: 20, bounce: 5, gravity: 60, surface: 1, active: true, initial_states: [1] }
+  zombie: { mass_kg: 70.0, height_cm: 175, bounce: 10, gravity: 55, active: true, speed: 1, surface: 1, susceptible_states: [1, 2, 3, 4] }
+  horse: { mass_kg: 400.0, height_cm: 200, bounce: 10, gravity: 55, active: true, speed: 3, surface: 1, susceptible_states: [1, 2, 3, 4] }
+  person: { mass_kg: 70.0, height_cm: 175, bounce: 10, gravity: 55, active: true, speed: 2, surface: 1, susceptible_states: [1, 2, 3, 4] }
+  rabbit: { mass_kg: 2.0, height_cm: 25, bounce: 15, gravity: 50, active: true, speed: 3, surface: 1, susceptible_states: [1, 2, 3] }
   glass bottle: { mass_kg: 0.4, height_cm: 25, bounce: 10, gravity: 55, surface: 1, durability: 1 }
   glass window: { mass_kg: 2.0, height_cm: 100, bounce: 10, gravity: 55, surface: 0, durability: 1 }
   glass vase: { mass_kg: 0.5, height_cm: 30, bounce: 10, gravity: 55, surface: 1, durability: 1 }
@@ -37,56 +37,56 @@ archetypes:
   feather: { mass_kg: 0.005, height_cm: 15, bounce: 10, gravity: 15, surface: 1, susceptible_states: [1] }
   smoke cloud: { mass_kg: 0.01, height_cm: 100, bounce: 0, gravity: 5, surface: 0 }
   balloon: { mass_kg: 0.05, height_cm: 30, bounce: 40, gravity: 10, surface: 1, susceptible_states: [1] }
-  dynamite: { mass_kg: 0.5, height_cm: 20, bounce: 10, gravity: 55, surface: 1, autonomous: true }
-  bomb: { mass_kg: 3.0, height_cm: 25, bounce: 10, gravity: 60, surface: 1, autonomous: true }
+  dynamite: { mass_kg: 0.5, height_cm: 20, bounce: 10, gravity: 55, surface: 1, active: true }
+  bomb: { mass_kg: 3.0, height_cm: 25, bounce: 10, gravity: 60, surface: 1, active: true }
   lightning rod: { mass_kg: 3.0, height_cm: 150, bounce: 10, gravity: 60, surface: 1, susceptible_states: [4] }
-  live wire: { mass_kg: 0.5, height_cm: 200, bounce: 5, gravity: 55, surface: 1, autonomous: true, initial_states: [4] }
-  lightning: { mass_kg: 0.01, height_cm: 500, bounce: 0, gravity: 5, surface: 0, autonomous: true, initial_states: [4] }
+  live wire: { mass_kg: 0.5, height_cm: 200, bounce: 5, gravity: 55, surface: 1, active: true, initial_states: [4] }
+  lightning: { mass_kg: 0.01, height_cm: 500, bounce: 0, gravity: 5, surface: 0, active: true, initial_states: [4] }
   water: { mass_kg: 2.0, height_cm: 10, bounce: 5, gravity: 50, surface: 0, initial_states: [3] }
   water puddle: { mass_kg: 1.0, height_cm: 5, bounce: 5, gravity: 50, surface: 0, initial_states: [3] }
-  acid: { mass_kg: 1.0, height_cm: 10, bounce: 5, gravity: 50, surface: 0, autonomous: true }
-  fan: { mass_kg: 3.0, height_cm: 40, bounce: 10, gravity: 55, surface: 1, autonomous: true }
-  tornado: { mass_kg: 0.1, height_cm: 500, bounce: 0, gravity: 10, surface: 0, autonomous: true }
-  magnet: { mass_kg: 1.0, height_cm: 10, bounce: 10, gravity: 55, surface: 1, autonomous: true }
+  acid: { mass_kg: 1.0, height_cm: 10, bounce: 5, gravity: 50, surface: 0, active: true }
+  fan: { mass_kg: 3.0, height_cm: 40, bounce: 10, gravity: 55, surface: 1, active: true }
+  tornado: { mass_kg: 0.1, height_cm: 500, bounce: 0, gravity: 10, surface: 0, active: true }
+  magnet: { mass_kg: 1.0, height_cm: 10, bounce: 10, gravity: 55, surface: 1, active: true }
   poison mushroom: { mass_kg: 0.1, height_cm: 10, bounce: 10, gravity: 50, surface: 1 }
   mirror shield: { mass_kg: 3.0, height_cm: 60, bounce: 30, gravity: 55, surface: 1, durability: 3 }
   frozen statue: { mass_kg: 50.0, height_cm: 180, bounce: 5, gravity: 65, surface: 0, initial_states: [2] }
   tar pit: { mass_kg: 100.0, height_cm: 30, bounce: 0, gravity: 60, surface: 2, susceptible_states: [1] }
   brain: { mass_kg: 1.4, height_cm: 15, bounce: 10, gravity: 50, surface: 1 }
   burning tree: { mass_kg: 200.0, height_cm: 400, bounce: 5, gravity: 60, surface: 1, initial_states: [1], susceptible_states: [3] }
-  injured person: { mass_kg: 70.0, height_cm: 175, bounce: 10, gravity: 55, autonomous: true, speed: 1, surface: 1, susceptible_states: [1, 2, 3, 4] }
-  mouse: { mass_kg: 0.03, height_cm: 5, bounce: 15, gravity: 50, autonomous: true, speed: 2, surface: 1 }
-  dog: { mass_kg: 25.0, height_cm: 60, bounce: 10, gravity: 55, autonomous: true, speed: 3, surface: 1 }
+  injured person: { mass_kg: 70.0, height_cm: 175, bounce: 10, gravity: 55, active: true, speed: 1, surface: 1, susceptible_states: [1, 2, 3, 4] }
+  mouse: { mass_kg: 0.03, height_cm: 5, bounce: 15, gravity: 50, active: true, speed: 2, surface: 1 }
+  dog: { mass_kg: 25.0, height_cm: 60, bounce: 10, gravity: 55, active: true, speed: 3, surface: 1 }
   ball of yarn: { mass_kg: 0.1, height_cm: 10, bounce: 30, gravity: 50, surface: 1 }
-  player: { mass_kg: 70.0, height_cm: 175, bounce: 10, gravity: 55, autonomous: true, speed: 2, surface: 1, susceptible_states: [1, 2, 3, 4] }
-  criminal: { mass_kg: 75.0, height_cm: 180, bounce: 10, gravity: 55, autonomous: true, speed: 2, surface: 1, susceptible_states: [1, 2, 3, 4] }
+  player: { mass_kg: 70.0, height_cm: 175, bounce: 10, gravity: 55, active: true, speed: 2, surface: 1, susceptible_states: [1, 2, 3, 4] }
+  criminal: { mass_kg: 75.0, height_cm: 180, bounce: 10, gravity: 55, active: true, speed: 2, surface: 1, susceptible_states: [1, 2, 3, 4] }
   flower: { mass_kg: 0.05, height_cm: 30, bounce: 10, gravity: 50, surface: 1 }
-  bear: { mass_kg: 300.0, height_cm: 150, bounce: 5, gravity: 60, autonomous: true, speed: 2, surface: 1 }
+  bear: { mass_kg: 300.0, height_cm: 150, bounce: 5, gravity: 60, active: true, speed: 2, surface: 1 }
   garlic: { mass_kg: 0.05, height_cm: 5, bounce: 10, gravity: 50, surface: 1 }
-  wolf: { mass_kg: 40.0, height_cm: 80, bounce: 10, gravity: 55, autonomous: true, speed: 3, surface: 1 }
+  wolf: { mass_kg: 40.0, height_cm: 80, bounce: 10, gravity: 55, active: true, speed: 3, surface: 1 }
   lava pool: { mass_kg: 10.0, height_cm: 20, bounce: 5, gravity: 60, surface: 1, initial_states: [1] }
-  sheep: { mass_kg: 60.0, height_cm: 100, bounce: 10, gravity: 55, autonomous: true, speed: 1, surface: 1, susceptible_states: [1, 2, 3] }
+  sheep: { mass_kg: 60.0, height_cm: 100, bounce: 10, gravity: 55, active: true, speed: 1, surface: 1, susceptible_states: [1, 2, 3] }
   grass: { mass_kg: 0.1, height_cm: 20, bounce: 5, gravity: 50, surface: 1, susceptible_states: [1] }
   car: { mass_kg: 1500.0, height_cm: 150, bounce: 10, gravity: 60, surface: 1, durability: 3 }
   apple: { mass_kg: 0.2, height_cm: 8, bounce: 15, gravity: 50, surface: 1, durability: 0 }
   wooden chair: { mass_kg: 8.0, height_cm: 90, bounce: 10, gravity: 55, surface: 1, durability: 2, susceptible_states: [1] }
   tree: { mass_kg: 500.0, height_cm: 800, bounce: 5, gravity: 60, surface: 1, durability: 3, susceptible_states: [1] }
-  robot: { mass_kg: 80.0, height_cm: 150, bounce: 10, gravity: 55, autonomous: true, speed: 2, surface: 1, durability: 4, susceptible_states: [4] }
+  robot: { mass_kg: 80.0, height_cm: 150, bounce: 10, gravity: 55, active: true, speed: 2, surface: 1, durability: 4, susceptible_states: [4] }
   oil puddle: { mass_kg: 1.0, height_cm: 5, bounce: 5, gravity: 50, surface: 0, susceptible_states: [1] }
   pillow: { mass_kg: 0.5, height_cm: 40, bounce: 40, gravity: 50, surface: 1, durability: 0, susceptible_states: [1, 3] }
-  dragon: { mass_kg: 2000.0, height_cm: 500, bounce: 5, gravity: 55, autonomous: true, speed: 3, surface: 1, durability: 4, initial_states: [1] }
+  dragon: { mass_kg: 2000.0, height_cm: 500, bounce: 5, gravity: 55, active: true, speed: 3, surface: 1, durability: 4, initial_states: [1] }
   steak: { mass_kg: 0.3, height_cm: 5, bounce: 10, gravity: 50, surface: 1, durability: 0 }
   # Creature-only archetypes
-  firefighter: { mass_kg: 80.0, height_cm: 180, bounce: 10, gravity: 55, autonomous: true, speed: 2, surface: 1, susceptible_states: [1, 3] }
-  guard dog: { mass_kg: 35.0, height_cm: 60, bounce: 10, gravity: 55, autonomous: true, speed: 3, surface: 1 }
-  doctor: { mass_kg: 75.0, height_cm: 175, bounce: 10, gravity: 55, autonomous: true, speed: 2, surface: 1 }
-  bee: { mass_kg: 0.001, height_cm: 2, bounce: 10, gravity: 40, autonomous: true, speed: 3, surface: 1 }
-  vampire: { mass_kg: 70.0, height_cm: 180, bounce: 10, gravity: 55, autonomous: true, speed: 3, surface: 1 }
-  chicken: { mass_kg: 3.0, height_cm: 40, bounce: 10, gravity: 50, autonomous: true, speed: 2, surface: 1 }
-  cat: { mass_kg: 4.0, height_cm: 25, bounce: 15, gravity: 50, autonomous: true, speed: 3, surface: 1 }
+  firefighter: { mass_kg: 80.0, height_cm: 180, bounce: 10, gravity: 55, active: true, speed: 2, surface: 1, susceptible_states: [1, 3] }
+  guard dog: { mass_kg: 35.0, height_cm: 60, bounce: 10, gravity: 55, active: true, speed: 3, surface: 1 }
+  doctor: { mass_kg: 75.0, height_cm: 175, bounce: 10, gravity: 55, active: true, speed: 2, surface: 1 }
+  bee: { mass_kg: 0.001, height_cm: 2, bounce: 10, gravity: 40, active: true, speed: 3, surface: 1 }
+  vampire: { mass_kg: 70.0, height_cm: 180, bounce: 10, gravity: 55, active: true, speed: 3, surface: 1 }
+  chicken: { mass_kg: 3.0, height_cm: 40, bounce: 10, gravity: 50, active: true, speed: 2, surface: 1 }
+  cat: { mass_kg: 4.0, height_cm: 25, bounce: 15, gravity: 50, active: true, speed: 3, surface: 1 }
   # Elemental archetypes (for behavior eval state_id coverage)
-  ice elemental: { mass_kg: 50.0, height_cm: 150, bounce: 10, gravity: 55, autonomous: true, speed: 2, surface: 0, initial_states: [2] }
-  water elemental: { mass_kg: 80.0, height_cm: 160, bounce: 10, gravity: 55, autonomous: true, speed: 2, surface: 0, initial_states: [3] }
+  ice elemental: { mass_kg: 50.0, height_cm: 150, bounce: 10, gravity: 55, active: true, speed: 2, surface: 0, initial_states: [2] }
+  water elemental: { mass_kg: 80.0, height_cm: 160, bounce: 10, gravity: 55, active: true, speed: 2, surface: 0, initial_states: [3] }
 
 
 # ---------------------------------------------------------------------------
@@ -101,7 +101,7 @@ creation_tests:
       height_cm: [50, 120]
       bounce: [5, 30]
       gravity: [50, 75]
-      autonomous: false
+      active: false
       affordance: 0
       surface: 1
       durability: [3, 4]
@@ -122,9 +122,7 @@ creation_tests:
       gravity: [20, 65]
       affordance: 3
       durability: [2, 3]
-      initially_burning: true
-      initially_frozen: false
-      initially_electrified: false
+      initial_state: burning
       can_freeze: false
 
   - name: zombie
@@ -132,7 +130,7 @@ creation_tests:
       mass_kg: [40, 120]
       height_cm: [140, 200]
       gravity: [40, 65]
-      autonomous: true
+      active: true
       speed: [0, 2]
       affordance: 3
 
@@ -153,7 +151,7 @@ creation_tests:
       gravity: [40, 60]
       durability: [1, 3]
       affordance: 0
-      initially_burning: false
+      initial_state: none
 
   - name: mountain
     expected:
@@ -172,15 +170,14 @@ creation_tests:
       gravity: [40, 60]
       surface: 0
       durability: [0, 1]
-      initially_frozen: true
-      initially_burning: false
+      initial_state: frozen
 
   - name: horse
     expected:
       mass_kg: [150, 1200]
       height_cm: [120, 200]
       bounce: [0, 25]
-      autonomous: true
+      active: true
       speed: [2, 4]
       affordance: 1
 
@@ -195,8 +192,7 @@ creation_tests:
       gravity: [40, 75]
       affordance: 3
       durability: [3, 6]
-      initially_burning: true
-      initially_frozen: false
+      initial_state: burning
 
   - name: feather
     expected:
@@ -217,7 +213,7 @@ creation_tests:
       gravity: [50, 80]
       affordance: 3
       durability: [3, 5]
-      initially_burning: false
+      initial_state: none
       catches_fire: false
 
   - name: smoke cloud
@@ -245,14 +241,14 @@ creation_tests:
     expected:
       mass_kg: [0.2, 3.0]
       durability: [1, 2]
-      initially_burning: true
+      initial_state: burning
 
   - name: cat
     expected:
       mass_kg: [2, 10]
       height_cm: [15, 40]
       bounce: [0, 25]
-      autonomous: true
+      active: true
       speed: [2, 4]
       affordance: 0
       durability: [1, 2]
@@ -320,7 +316,7 @@ creation_tests:
     expected:
       mass_kg: [10, 500]
       height_cm: [30, 200]
-      autonomous: true
+      active: true
       speed: [1, 3]
       durability: [3, 5]
       affordance: [1, 3]
@@ -329,7 +325,7 @@ creation_tests:
   - name: oil puddle
     expected:
       surface: 0
-      initially_electrified: false
+      initial_state: none
 
   - name: pillow
     expected:
@@ -344,11 +340,11 @@ creation_tests:
     expected:
       mass_kg: [200, 10000]
       height_cm: [180, 3000]
-      autonomous: true
+      active: true
       speed: [2, 4]
       durability: [3, 5]
       affordance: [1, 3]
-      initially_burning: true
+      initial_state: burning
 
   - name: tar pit
     expected:
@@ -356,7 +352,7 @@ creation_tests:
       height_cm: [10, 200]
       surface: 2
       affordance: 3
-      autonomous: false
+      active: false
       durability: [2, 6]
       catches_fire: true
 
@@ -367,8 +363,7 @@ creation_tests:
       surface: 0
       affordance: 3
       durability: [0, 2]
-      initially_wet: true
-      initially_burning: false
+      initial_state: wet
       can_freeze: true
 
   - name: lightning bolt
@@ -376,8 +371,7 @@ creation_tests:
       mass_kg: [0.0001, 1]
       height_cm: [50, 10000]
       gravity: [0, 30]
-      initially_electrified: true
-      initially_frozen: false
+      initial_state: electrified
 
   - name: snowball
     expected:
@@ -385,15 +379,14 @@ creation_tests:
       height_cm: [3, 25]
       bounce: [0, 30]
       durability: [0, 1]
-      initially_frozen: true
-      initially_burning: false
+      initial_state: frozen
 
   - name: bicycle
     expected:
       mass_kg: [5, 25]
       height_cm: [80, 140]
       affordance: 1
-      autonomous: false
+      active: false
       durability: [1, 3]
 
   - name: skateboard
@@ -401,7 +394,7 @@ creation_tests:
       mass_kg: [1, 5]
       height_cm: [10, 100]
       affordance: 1
-      autonomous: false
+      active: false
       durability: [1, 3]
 
   - name: rope
@@ -425,6 +418,41 @@ creation_tests:
       affordance: [2, 3]
       durability: [3, 6]
       catches_fire: false
+
+  - name: helicopter
+    expected:
+      mass_kg: [500, 5000]
+      height_cm: [200, 600]
+      gravity: [rises, hovers]
+      bounce: [0, 30]
+      active: true
+      speed: [normal, rapid]
+      affordance: ride
+      durability: [normal, hardy]
+
+  - name: drone
+    expected:
+      gravity: [rises, hovers]
+      active: true
+      speed: [normal, rapid]
+
+  - name: hot air balloon
+    expected:
+      gravity: [rises, hovers]
+      affordance: ride
+
+  - name: airplane
+    expected:
+      gravity: [rises, hovers]
+      active: true
+      affordance: ride
+      speed: [fast, rapid]
+
+  - name: bird
+    expected:
+      gravity: [rises, hovers]
+      active: true
+      speed: [normal, rapid]
 
 
 # ---------------------------------------------------------------------------

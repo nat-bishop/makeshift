@@ -125,7 +125,7 @@ All parallel (~60ms wall):
 
 **When to use:** Questions have no dependencies. Each answer doesn't affect any other question's prompt or meaning.
 
-**Used in:** Object creation — all physics properties, destructibility, field, autonomous flag.
+**Used in:** Object creation — all physics properties, destructibility, field, active flag.
 
 ### 2. Sequential seeding
 
@@ -183,13 +183,13 @@ The full object creation pipeline combines multiple patterns:
 Batch 1 — Parallel fan-out (~60ms):
   Physics: mass, height, friction, bounce, gravity     → 5 calls
   Destructibility: armor, HP, indestructible            → 3 calls  
-  Classification: field, autonomous, affordance         → 3 calls
+  Classification: field, active, affordance             → 3 calls
 
 Batch 1b — Parallel with batch 1 (~200ms):
   Visual description                                    → 1 call, ~25 tokens
 
 Conditional — depends on batch 1 results:
-  If autonomous → behavior evaluation for this object vs all existing objects
+  If active → behavior evaluation for this object vs all existing objects
 
 Spawn integration — depends on creation results:
   Behavior screening (pattern 5: batch screening)

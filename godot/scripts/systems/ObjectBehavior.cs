@@ -11,7 +11,7 @@ namespace Makeshift.Systems;
 
 /// <summary>
 /// Unified object behavior runtime: per-pair utility-based targeting.
-/// Handles BOTH active autonomous objects (approach / flee) and reactive
+/// Handles BOTH active movers (approach / flee) and reactive
 /// objects (ignore + priority &gt; 0). Each subject x target pair carries
 /// movement / priority / action / amount / state_action / state_id / force.
 ///
@@ -53,7 +53,7 @@ public partial class ObjectBehavior : Node
 
     private RigidBody2D? _owner;
     private string _ownerName = "";
-    private bool _isAutonomous;
+    private bool _isActive;
 
     private readonly Dictionary<string, BehaviorEntry> _pairTable = new();
     private readonly Dictionary<string, Node> _targetNodes = new();
@@ -76,12 +76,12 @@ public partial class ObjectBehavior : Node
     /// <summary>Strongly-typed view of the current pair table.</summary>
     public IReadOnlyDictionary<string, BehaviorEntry> Pairs => _pairTable;
 
-    public void InitObject(RigidBody2D owner, string objName, SpeedTier speedTier = SpeedTier.Normal, bool isAutonomous = false)
+    public void InitObject(RigidBody2D owner, string objName, SpeedTier speedTier = SpeedTier.Normal, bool isActive = false)
     {
         _owner = owner;
         _ownerName = objName;
-        _isAutonomous = isAutonomous;
-        if (isAutonomous)
+        _isActive = isActive;
+        if (isActive)
         {
             var idx = (int)speedTier;
             var mult = idx >= 0 && idx < SpeedMultipliers.Length ? SpeedMultipliers[idx] : 1.0f;
@@ -340,7 +340,7 @@ public partial class ObjectBehavior : Node
         switch (bestEntry.Movement)
         {
             case Movement.Approach:
-                if (_isAutonomous)
+                if (_isActive)
                 {
                     WorldMutations.ApplyMovementForce(_owner, dir, MoveSpeed, MoveSpeed);
                 }
@@ -351,7 +351,7 @@ public partial class ObjectBehavior : Node
                 }
                 break;
             case Movement.Flee:
-                if (_isAutonomous)
+                if (_isActive)
                 {
                     WorldMutations.ApplyMovementForce(_owner, -dir, FleeSpeed, FleeSpeed);
                 }

@@ -63,7 +63,7 @@ make cli-status                       # check health of configured services
 
 ### Evals
 
-LLM quality gates — call a real LLM and cost money. Separate from `make test`.
+LLM quality gates — call a real LLM. Separate from `make test`.
 
 ```bash
 make eval              # run all evals

@@ -4,9 +4,9 @@ Flow:
   1. Check creation cache (description -> cached blueprint)
   2. Fan-out: name + all questions in parallel (all use {description})
      - Unconditional: mass, height, surface, bounce, gravity,
-       durability, autonomous, affordance, visual_description,
-       initial state bools (4), susceptible state bools (4)
-     - Gated on autonomous: speed
+       durability, active, affordance, visual_description,
+       initial_state (5-way pick), susceptible state bools (4)
+     - Gated on active: speed
      - Gated on durability<6: destruction_result_name
   3. Parse and assemble GameObjectBlueprint
   4. Cache creation result
@@ -75,20 +75,17 @@ async def create_object(description: str, cache: CacheStore) -> GameObjectBluepr
         gravity=int(answers.get("gravity", 50)),
     )
 
-    # Collect initial/susceptible states from boolean answers
-    _INITIAL_KEYS = {
-        1: "initially_burning",
-        2: "initially_frozen",
-        3: "initially_wet",
-        4: "initially_electrified",
-    }
+    # Collect initial/susceptible states from answers.
+    # initial_state is a single-pick enum (0=none, 1=burning, 2=frozen, 3=wet, 4=electrified);
+    # susceptibility remains 4 independent booleans because materials genuinely combine.
+    initial_state = int(answers.get("initial_state", 0))
+    initial_states = [initial_state] if initial_state else []
     _SUSCEPTIBLE_KEYS = {
         1: "catches_fire",
         2: "can_freeze",
         3: "gets_wet",
         4: "conducts_electricity",
     }
-    initial_states = [sid for sid, key in _INITIAL_KEYS.items() if answers.get(key)]
     susceptible_states = [sid for sid, key in _SUSCEPTIBLE_KEYS.items() if answers.get(key)]
 
     destruction_raw = str(answers.get("destruction_result_name", "nothing"))
@@ -100,7 +97,7 @@ async def create_object(description: str, cache: CacheStore) -> GameObjectBluepr
         "physics": physics.model_dump(),
         "durability": int(answers.get("durability", 2)),
         "affordance": int(answers.get("affordance", 3)),
-        "autonomous": bool(answers.get("autonomous", False)),
+        "active": bool(answers.get("active", False)),
         "speed": int(answers.get("speed", 2)),
         "initial_states": initial_states,
         "susceptible_states": susceptible_states,

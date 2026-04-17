@@ -20,7 +20,7 @@ When a creature picks up a holdable object, generate a combined sprite ("zombie 
 
 ## Creature death remains
 
-When an autonomous creature dies, generate a "dead creature" sprite instead of just playing a death animation and removing it.
+When an active creature dies, generate a "dead creature" sprite instead of just playing a death animation and removing it.
 
 **How:** Same as destruction results — "A [zombie cop] is killed. What does the body look like? 3-5 words." → "fallen cop in tattered uniform" → background image gen.
 

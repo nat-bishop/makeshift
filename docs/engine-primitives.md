@@ -122,7 +122,7 @@ No separate affordance needed for:
 
 ## Object behavior (per-pair)
 
-All autonomous objects share one system — active creatures (wolf, zombie) AND reactive objects (bomb, fan, acid). Each subject×object relationship is evaluated independently at spawn time.
+All active objects share one system — active creatures (wolf, zombie) AND reactive objects (bomb, fan, acid). Each subject×object relationship is evaluated independently at spawn time.
 
 **Active objects** (movement=approach/flee) move toward or away from targets and execute composite actions on contact.
 
@@ -175,13 +175,15 @@ If creatures need obstacle avoidance (curve around garlic to reach human), that'
 
 ## State properties (replaces Fields)
 
-Instead of `has_field`/`field_range_cm`, objects declare what states they spawn with and what states can spread to them. Eight boolean creation questions:
+Instead of `has_field`/`field_range_cm`, objects declare what state they spawn with and what states can spread to them. One single-pick + four boolean creation questions:
 
-**Initial states** (does this object spawn with this state?):
-- `initially_burning` — fire, campfire, lava
-- `initially_frozen` — ice, frozen lake
-- `initially_wet` — water, rain, puddle
-- `initially_electrified` — lightning bolt, electric eel
+**Initial state** (single 5-way pick — what state, if any, does this object spawn as?):
+- `initial_state` ∈ {`none`, `burning`, `frozen`, `wet`, `electrified`}
+  - `burning` — fire, campfire, lava
+  - `frozen` — ice, frozen lake
+  - `wet` — water, rain, puddle
+  - `electrified` — lightning bolt, electric eel
+  - `none` — ordinary inert object
 
 **Susceptible states** (can this state spread to this object?):
 - `catches_fire` — wood, paper, cloth

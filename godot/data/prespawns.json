@@ -13,7 +13,7 @@
         "visual_description": "a fierce black guard dog with a spiked collar, crouching stance",
         "physics": {"mass_kg": 30.0, "height_cm": 80, "bounce": 15, "gravity": 50, "surface": 1},
         "durability": 3,
-        "autonomous": true,
+        "active": true,
         "speed": 3
     },
     "bone": {

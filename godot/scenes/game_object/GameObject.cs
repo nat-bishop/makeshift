@@ -31,7 +31,7 @@ public partial class GameObject : RigidBody2D, IObjectNamed, IDamageable, IHeala
     public string ObjectName { get; set; } = "";
     public int CurrentHp { get; set; } = 50;
     public int MaxHp { get; set; } = 50;
-    public bool Autonomous { get; set; }
+    public bool Active { get; set; }
     public string DestructionResultName { get; set; } = "";
 
     /// <summary>Typed Blueprint record. Preferred for C# callers.</summary>
@@ -142,7 +142,7 @@ public partial class GameObject : RigidBody2D, IObjectNamed, IDamageable, IHeala
 
         ObjectId = TypedBlueprint?.Id ?? "";
         ObjectName = TypedBlueprint?.Name ?? "";
-        Autonomous = TypedBlueprint?.Autonomous ?? false;
+        Active = TypedBlueprint?.Active ?? false;
         DestructionResultName = TypedBlueprint?.DestructionResultName ?? "";
 
         var durIdx = (int)Durability;
@@ -182,7 +182,7 @@ public partial class GameObject : RigidBody2D, IObjectNamed, IDamageable, IHeala
 
         // Groups
         AddToGroup("game_objects");
-        if (Autonomous)
+        if (Active)
         {
             AddToGroup("living");
         }
@@ -201,7 +201,7 @@ public partial class GameObject : RigidBody2D, IObjectNamed, IDamageable, IHeala
         }
 
         // Object behavior (active creatures + reactive objects like bombs/fans)
-        if (Autonomous)
+        if (Active)
         {
             CreateObjectBehavior();
         }
@@ -219,13 +219,13 @@ public partial class GameObject : RigidBody2D, IObjectNamed, IDamageable, IHeala
     {
         var ob = new ObjectBehavior { Name = "ObjectBehavior" };
         AddChild(ob);
-        ob.InitObject(this, ObjectName, Speed, Autonomous);
+        ob.InitObject(this, ObjectName, Speed, Active);
         _objectBehavior = ob;
     }
 
     /// <summary>
     /// Expose the child <see cref="Systems.ObjectBehavior"/> (if any) for the
-    /// typed debug overlay. Returns <c>null</c> for non-autonomous objects.
+    /// typed debug overlay. Returns <c>null</c> for passive objects.
     /// </summary>
     public ObjectBehavior? GetObjectBehavior() => _objectBehavior as ObjectBehavior;
 

@@ -17,9 +17,9 @@ All fired simultaneously after name resolves:
 2.  Height in cm                 → 120
 3.  Surface (slick/normal/sticky)→ normal
 4.  Bounce 0-100                 → 10
-5.  Gravity 0-100                → 50
+5.  Gravity (rises/hovers/drifts/falls) → falls
 6.  Durability (soft→permanent)  → normal
-7.  Autonomous? yes/no           → no
+7.  Active? active/passive       → passive
 8.  Affordance (carry/ride/scale/none) → carry
 9.  Initially burning? yes/no    → yes   ← NEW state property
 10. Initially frozen? yes/no     → no
@@ -30,7 +30,7 @@ All fired simultaneously after name resolves:
 15. Gets wet? yes/no             → no
 16. Conducts electricity? yes/no → no
 
-Gated on autonomous=true:
+Gated on active=true:
 17. Speed (crawl→rapid)          → (skipped)
 
 === Batch 1b: Concurrent with batch 1 ===
@@ -101,7 +101,7 @@ Stage 2 (parallel, pairs where approach OR priority>0):
 
 ## Call budget
 
-### 7-object scene, 1 autonomous object
+### 7-object scene, 1 active object
 
 | Phase | Calls | Wall time |
 |---|---|---|
@@ -111,7 +111,7 @@ Stage 2 (parallel, pairs where approach OR priority>0):
 | Behavior stage 2 (~1 interesting pair, up to 4 calls) | ~3 | ~60ms |
 | **Total** | **~25** | **~410ms** |
 
-### 15-object scene, 3 autonomous objects
+### 15-object scene, 3 active objects
 
 | Phase | Calls | Wall time |
 |---|---|---|
@@ -119,9 +119,9 @@ Stage 2 (parallel, pairs where approach OR priority>0):
 | Behavior screening (1 call) | 1 | ~125ms |
 | Behavior stage 1 (3 subjects × 1 object × 2 questions) | 6 | ~60ms |
 | Behavior stage 2 (~3 interesting pairs × ~3 calls) | ~9 | ~60ms |
-| **Total (new non-autonomous)** | **~35** | **~445ms** |
+| **Total (new passive)** | **~35** | **~445ms** |
 
-If new object is autonomous, add: stage 1 (14 objects × 2 questions = 28 calls), stage 2 (~5 interesting pairs × ~3 calls = 15) = **~78 calls, ~605ms**.
+If new object is active, add: stage 1 (14 objects × 2 questions = 28 calls), stage 2 (~5 interesting pairs × ~3 calls = 15) = **~78 calls, ~605ms**.
 
 All spawn integration runs during the 2-5s sprite gen window. Player sees no interaction latency.
 

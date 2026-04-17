@@ -1,4 +1,4 @@
-"""V3 game object blueprint — LLM-generated physics, affordance, autonomous flag."""
+"""V3 game object blueprint — LLM-generated physics, affordance, active flag."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ SURFACE_NAMES: dict[int, str] = {0: "slick", 1: "normal", 2: "sticky"}
 
 AFFORDANCE_LABELS: dict[int, str] = {0: "carryable", 1: "mountable", 2: "climbable"}
 
-# Speed tier → name mapping (autonomous creatures only).
+# Speed tier → name mapping (active creatures only).
 SPEED_NAMES: dict[int, str] = {
     0: "sluggish",
     1: "slow",
@@ -105,8 +105,8 @@ class GameObjectBlueprint(BaseModel):
     physics: PhysicsProperties
     durability: int = Field(ge=0, le=6, default=2)  # 0=fragile .. 6=indestructible
     affordance: int = Field(ge=0, le=3, default=3)  # 0=carry 1=mount 2=climb 3=nothing
-    autonomous: bool = False
-    speed: int = Field(ge=0, le=4, default=2)  # 0=sluggish .. 4=rapid (autonomous only)
+    active: bool = False
+    speed: int = Field(ge=0, le=4, default=2)  # 0=sluggish .. 4=rapid (active only)
     initial_states: list[int] = Field(default_factory=list)  # state IDs this object spawns with
     susceptible_states: list[int] = Field(default_factory=list)  # state IDs that can spread to this
     destruction_result_name: str = ""
@@ -147,6 +147,6 @@ PLAYER_BLUEPRINT = GameObjectBlueprint(
     ),
     durability=2,
     affordance=3,
-    autonomous=True,
+    active=True,
     speed=2,
 )

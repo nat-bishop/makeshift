@@ -38,7 +38,7 @@ def _make_blueprint() -> GameObjectBlueprint:
         physics=PhysicsProperties(mass_kg=1.5, height_cm=120, surface=1, bounce=10, gravity=50),
         durability=4,
         affordance=0,
-        autonomous=False,
+        active=False,
     )
 
 
@@ -153,7 +153,7 @@ async def test_create_object_blueprint_v3_structure() -> None:
             "physics",
             "durability",
             "affordance",
-            "autonomous",
+            "active",
             "visual_description",
         ):
             assert key in blueprint, f"Missing V3 key: {key}"

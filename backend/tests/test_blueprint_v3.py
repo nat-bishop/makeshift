@@ -118,7 +118,7 @@ class TestGameObjectBlueprint:
             physics=PhysicsProperties(mass_kg=1.5, height_cm=120, surface=1, bounce=10, gravity=50),
             durability=4,
             affordance=0,
-            autonomous=False,
+            active=False,
         )
         assert bp.name == "fire sword"
         assert bp.affordance == 0
@@ -182,7 +182,7 @@ class TestGameObjectBlueprint:
             physics=PhysicsProperties(mass_kg=50, height_cm=60, surface=1, bounce=5, gravity=65),
             durability=3,
             affordance=3,
-            autonomous=False,
+            active=False,
         )
         json_str = bp.model_dump_json()
         restored = GameObjectBlueprint.model_validate_json(json_str)
