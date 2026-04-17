@@ -50,7 +50,7 @@ class Question:
 
 async def run_questions(
     questions: Sequence[Question],
-    context: dict[str, str],
+    context: dict[str, object],
     on_resolved: dict[str, Callable[[object], object]] | None = None,
 ) -> dict[str, int | float | bool | str]:
     """Execute a question graph with maximum parallelism.
@@ -79,13 +79,14 @@ async def run_questions(
 
         # Dispatch to the appropriate ask_* function
         prompt = q.prompt.format_map(context)
+        instructions = q.instructions.format_map(context) if q.instructions else ""
         try:
             if q.qtype == "choice":
                 token = await ask_choice(
                     prompt,
                     q.choices,
                     default=str(q.default),
-                    instructions=q.instructions,
+                    instructions=instructions,
                 )
                 mapping = dict(q.choice_map)
                 results[q.key] = mapping.get(token, mapping.get(str(q.default), 0))
@@ -95,7 +96,7 @@ async def run_questions(
                     float(q.lo),
                     float(q.hi),
                     float(q.default),
-                    instructions=q.instructions,
+                    instructions=instructions,
                 )
             elif q.qtype == "bool":
                 results[q.key] = await ask_bool(prompt)
@@ -104,7 +105,7 @@ async def run_questions(
                     prompt,
                     max_tokens=q.max_tokens,
                     default=str(q.default),
-                    instructions=q.instructions,
+                    instructions=instructions,
                 )
             else:
                 results[q.key] = await ask_int(
@@ -112,7 +113,7 @@ async def run_questions(
                     int(q.lo),
                     int(q.hi),
                     int(q.default),
-                    instructions=q.instructions,
+                    instructions=instructions,
                 )
         except Exception:
             logger.warning("question_failed", key=q.key, prompt=prompt[:80])

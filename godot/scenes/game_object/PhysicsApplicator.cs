@@ -48,8 +48,9 @@ public partial class PhysicsApplicator : Node
         var scale = PhysicsComposer.ScaleFromHeight(heightCm);
         var sizeCat = PhysicsComposer.SizeFromHeight(heightCm);
 
-        // Mass (real-world kg * continuous scale)
-        _body.Mass = massKg * scale;
+        // Mass (real-world kg * continuous scale), clamped so an LLM-assigned
+        // near-zero mass can't cause infinite knockback velocity on impact.
+        _body.Mass = Mathf.Max(massKg * scale, 0.5f);
 
         // Gravity: piecewise linear mapping
         //   0-50 -> -1.0 to 1.0 (floating up to normal)
@@ -72,7 +73,7 @@ public partial class PhysicsApplicator : Node
         }
 
         Logger.Instance?.Debug(
-            $"PhysicsApplicator: '{objectName}' mass={_body.Mass:F2} gravity={_body.GravityScale:F2} " +
+            $"PhysicsApplicator: '{objectName}' mass={_body.Mass:F3} gravity={_body.GravityScale:F2} " +
             $"friction={mat.Friction:F2} bounce={mat.Bounce:F2} damp={_body.LinearDamp:F2} " +
             $"size={sizeCat} scale={scale:F2}");
     }

@@ -19,38 +19,44 @@ from app.creator.question_graph import Question
 # Stage 1: movement + priority (parallel across all pairs)
 # ---------------------------------------------------------------------------
 
-STAGE1_QUESTIONS: list[Question] = [
-    Question(
-        "movement",
-        "{subject} → {target} {state_context}",
-        "choice",
-        default="ignore",
-        instructions=(
-            "Would this creature move toward or away from the target? "
-            "Think about predator/prey, desires, fears, and duties. "
-            "approach=move toward (hunt, eat, help, play, investigate), "
-            "flee=run away (fear, repulsion, danger), "
-            "ignore=no movement reaction (unrelated, or object cannot move). "
-            "If the subject cannot move on its own, always use ignore."
-        ),
-        choices=("approach", "flee", "ignore"),
-        choice_map=(("approach", 0), ("flee", 1), ("ignore", 2)),
+_MOVEMENT_QUESTION = Question(
+    "movement",
+    "{subject} → {target} {state_context}",
+    "choice",
+    default="ignore",
+    instructions=(
+        "Would this creature move toward or away from the target? "
+        "Think about predator/prey, desires, fears, and duties. "
+        "approach=move toward (hunt, eat, help, play, investigate), "
+        "flee=run away (fear, repulsion, danger), "
+        "ignore=no movement reaction (unrelated, or object cannot move). "
+        "If the subject cannot move on its own, always use ignore."
     ),
-    Question(
-        "priority",
-        "{subject} → {target} {state_context}",
-        "choice",
-        default="ignore",
-        instructions=(
-            "How strongly does this creature react to the target? "
-            "ignore=no interest, mild=slight interest, moderate=clear drive, "
-            "driven=high priority. For reactive objects that always act on contact, "
-            "use moderate or driven."
-        ),
-        choices=("ignore", "mild", "moderate", "driven"),
-        choice_map=(("ignore", 0), ("mild", 1), ("moderate", 2), ("driven", 3)),
+    choices=("approach", "flee", "ignore"),
+    choice_map=(("approach", 0), ("flee", 1), ("ignore", 2)),
+)
+
+_PRIORITY_QUESTION = Question(
+    "priority",
+    "{subject} → {target} {state_context}",
+    "choice",
+    default="ignore",
+    instructions=(
+        "How strongly does this creature react to the target? "
+        "ignore=no interest, mild=slight interest, moderate=clear drive, "
+        "driven=high priority. For reactive objects that always act on contact, "
+        "use moderate or driven."
     ),
-]
+    choices=("ignore", "mild", "moderate", "driven"),
+    choice_map=(("ignore", 0), ("mild", 1), ("moderate", 2), ("driven", 3)),
+)
+
+# Active subjects: both movement + priority (parallel).
+STAGE1_QUESTIONS: list[Question] = [_MOVEMENT_QUESTION, _PRIORITY_QUESTION]
+
+# Inactive subjects: priority only — they can't move, so movement is forced to ignore (2).
+# Saves one LLM call per pair and eliminates the "approach with MoveSpeed=0" contradiction.
+STAGE1_INACTIVE_QUESTIONS: list[Question] = [_PRIORITY_QUESTION]
 
 
 # ---------------------------------------------------------------------------
@@ -63,7 +69,11 @@ ACTION_QUESTION = Question(
     "choice",
     default="nothing",
     instructions=(
+        "Subject's current intent: {movement_label}, priority {priority}. "
         "What does the subject do to the target when nearby? "
+        "A fleeing subject usually does 'nothing' or a defensive action; "
+        "a reactive subject (ignore + priority>0) typically triggers a single "
+        "decisive effect on contact (contact damage, explosion, drain). "
         "nothing=no effect, attack=damage/harm, heal=repair/help, "
         "consume=eat/absorb/destroy, push=knock away/blow with force."
     ),
@@ -97,7 +107,10 @@ STATE_ACTION_QUESTION = Question(
     "choice",
     default="nothing",
     instructions=(
-        "Does this interaction also cause an elemental state change? "
+        "Does this interaction also cause an elemental state change?"
+        "{subject_states} "
+        "A subject that embodies an element usually imparts it (ignite); "
+        "an opposing element usually removes it (cleanse). "
         "nothing=no state effect, ignite=apply a state, cleanse=remove a state."
     ),
     choices=("nothing", "ignite", "cleanse"),
@@ -110,7 +123,9 @@ STATE_ID_QUESTION = Question(
     "choice",
     default="burn",
     instructions=(
-        "Which elemental state? burn=fire/heat, freeze=ice/cold, wet=water/liquid, zap=electricity."
+        "Which elemental state?{subject_states} "
+        "Pick the state that best matches the subject's own nature when possible. "
+        "burn=fire/heat, freeze=ice/cold, wet=water/liquid, zap=electricity."
     ),
     choices=("burn", "freeze", "wet", "zap"),
     choice_map=(("burn", 1), ("freeze", 2), ("wet", 3), ("zap", 4)),

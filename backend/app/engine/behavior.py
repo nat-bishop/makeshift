@@ -32,6 +32,7 @@ from app.prompts.behavior import (
     ACTION_QUESTION,
     AMOUNT_QUESTION,
     FORCE_MODIFIER_QUESTION,
+    STAGE1_INACTIVE_QUESTIONS,
     STAGE1_QUESTIONS,
     STATE_ACTION_QUESTION,
     STATE_ID_QUESTION,
@@ -145,18 +146,39 @@ async def screen_pairs(
 # ---------------------------------------------------------------------------
 
 
+_MOVEMENT_LABELS: dict[int, str] = {0: "approach", 1: "flee", 2: "ignore"}
+
+
+def _subject_states_ctx(subject: GameObjectBlueprint) -> str:
+    """Render subject's initial_states as a short phrase for state-choice prompts."""
+    names = [STATE_NAMES[s] for s in subject.initial_states if s in STATE_NAMES]
+    if not names:
+        return ""
+    return f" Subject currently embodies: {', '.join(names)}."
+
+
 async def _evaluate_pair_action(
-    subject_name: str,
+    subject: GameObjectBlueprint,
     target_name: str,
     target_bp: GameObjectBlueprint,
+    movement: int,
+    priority: int,
 ) -> dict[str, int]:
     """Run the composite action pipeline for one pair.
 
-    Call 1: primary action
+    Call 1: primary action (conditioned on Stage 1 movement + priority)
     Then conditional parallel follow-ups based on action type.
+    STATE_ACTION and STATE_ID see the subject's own initial_states so
+    element-based reactions (fire→burn, ice→freeze) stay coherent.
     Returns dict with keys: action, amount, state_action, state_id, force.
     """
-    ctx = {"subject": subject_name, "target": _target_context(target_bp)}
+    ctx = {
+        "subject": subject.name,
+        "target": _target_context(target_bp),
+        "movement_label": _MOVEMENT_LABELS.get(movement, "ignore"),
+        "priority": priority,
+        "subject_states": _subject_states_ctx(subject),
+    }
 
     # Call 1: primary action
     r1 = await run_questions([ACTION_QUESTION], ctx)
@@ -272,13 +294,18 @@ async def evaluate_behaviors(
     bp_by_name: dict[str, GameObjectBlueprint] = {t.name: t for t in targets}
     target_states = target_states or {}
 
-    # --- Stage 1: movement + priority (parallel, all pairs) ---
+    # --- Stage 1: priority always; movement only for active subjects ---
+
+    # Inactive subjects can't move (MoveSpeed=0 in Godot ObjectBehavior.cs), so
+    # skip the movement question and hard-code movement=2 (ignore). Saves one
+    # LLM call per pair and prevents the "approach with no movement" contradiction.
+    stage1_questions = STAGE1_QUESTIONS if subject.active else STAGE1_INACTIVE_QUESTIONS
 
     target_names_s1 = [t.name for t in targets]
     stage1_raw = await asyncio.gather(
         *[
             run_questions(
-                STAGE1_QUESTIONS,
+                stage1_questions,
                 {
                     "subject": subject.name,
                     "target": _target_context(t),
@@ -295,7 +322,8 @@ async def evaluate_behaviors(
     for t in targets:
         if t.name in stage1:
             r = stage1[t.name]
-            stage1_results.append((t.name, int(r.get("movement", 2)), int(r.get("priority", 0))))
+            movement = int(r.get("movement", 2)) if subject.active else 2
+            stage1_results.append((t.name, movement, int(r.get("priority", 0))))
         else:
             stage1_results.append((t.name, 2, 0))  # ignore, no priority
 
@@ -309,8 +337,8 @@ async def evaluate_behaviors(
         pair_names = [name for name, _, _ in active_pairs]
         stage2_raw = await asyncio.gather(
             *[
-                _evaluate_pair_action(subject.name, name, bp_by_name[name])
-                for name, _, _ in active_pairs
+                _evaluate_pair_action(subject, name, bp_by_name[name], mv, pri)
+                for name, mv, pri in active_pairs
             ],
             return_exceptions=True,
         )

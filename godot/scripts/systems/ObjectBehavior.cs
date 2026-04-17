@@ -16,14 +16,15 @@ namespace Makeshift.Systems;
 /// movement / priority / action / amount / state_action / state_id / force.
 ///
 /// CRITICAL (CLAUDE.md gotcha): runs in <see cref="_PhysicsProcess"/> at
-/// ~60 fps. The first action fires immediately at <see cref="ContactRange"/>
-/// (48 units), then on a 1.0s cooldown. Bombs and reactive objects depend on
-/// this timing.
+/// ~60 fps. The first action fires immediately when the two collision rects
+/// are touching (edge distance ≤ <see cref="ContactBuffer"/>), then on a 1.0s
+/// cooldown. Bombs and reactive objects depend on this timing.
 /// </summary>
 public partial class ObjectBehavior : Node
 {
     public const float PerceptionRange = 500.0f;
-    public const float ContactRange = 48.0f;
+    /// <summary>Edge-to-edge pixel tolerance for the damage gate (collision rects already tight-fit to opaque pixels).</summary>
+    public const float ContactBuffer = 8.0f;
     public const float FleeMultiplier = 1.5f;
     public const float ActionCooldown = 1.0f;
     public const float BaseMoveSpeed = 200.0f;
@@ -318,6 +319,8 @@ public partial class ObjectBehavior : Node
 
         var dir = (bestTargetNode2d.GlobalPosition - _owner.GlobalPosition).Normalized();
         var d = _owner.GlobalPosition.DistanceTo(bestTargetNode2d.GlobalPosition);
+        var edge = EdgeDistance(_owner, bestTargetNode2d);
+        var inContact = edge <= ContactBuffer;
 
         _debugTick++;
         if (_debugTick >= DebugTickInterval)
@@ -330,10 +333,11 @@ public partial class ObjectBehavior : Node
                     ? ActionNames[actionIdx]
                     : "?";
                 var tname = bestTarget is IObjectNamed bnm ? bnm.GetObjectName() : "?";
+                var gate = inContact ? "" : " [out-of-range]";
                 Logger.Instance.Debug(
                     $"ObjectBehavior: '{_ownerName}' → '{tname}' " +
                     $"mv:{(int)bestEntry.Movement} u:{bestUtility:F1} " +
-                    $"dist:{d:F0} act:{actionName}");
+                    $"dist:{d:F0} edge:{edge:F0} act:{actionName}{gate}");
             }
         }
 
@@ -344,7 +348,7 @@ public partial class ObjectBehavior : Node
                 {
                     WorldMutations.ApplyMovementForce(_owner, dir, MoveSpeed, MoveSpeed);
                 }
-                if (d <= ContactRange && ActionTimer <= 0.0f)
+                if (inContact && ActionTimer <= 0.0f)
                 {
                     ExecuteAction(bestEntry, bestTarget);
                     ActionTimer = ActionCooldown;
@@ -357,13 +361,40 @@ public partial class ObjectBehavior : Node
                 }
                 break;
             case Movement.Ignore:
-                if (d <= ContactRange && ActionTimer <= 0.0f)
+                if (inContact && ActionTimer <= 0.0f)
                 {
                     ExecuteAction(bestEntry, bestTarget);
                     ActionTimer = ActionCooldown;
                 }
                 break;
         }
+    }
+
+    /// <summary>
+    /// Axis-aligned separation between two collision rectangles in world space,
+    /// measured from opaque-pixel edges (<see cref="PhysicsApplicator.UpdateShapeFromSprite"/>
+    /// tight-fits rects to <c>image.GetUsedRect()</c>). Returns 0 when the rects overlap.
+    /// </summary>
+    private static float EdgeDistance(Node2D a, Node2D b)
+    {
+        var ra = GetGlobalCollisionRect(a);
+        var rb = GetGlobalCollisionRect(b);
+        var dx = MathF.Max(0f, MathF.Max(ra.Position.X - rb.End.X, rb.Position.X - ra.End.X));
+        var dy = MathF.Max(0f, MathF.Max(ra.Position.Y - rb.End.Y, rb.Position.Y - ra.End.Y));
+        return MathF.Sqrt(dx * dx + dy * dy);
+    }
+
+    private static Rect2 GetGlobalCollisionRect(Node2D node)
+    {
+        var shape = node.GetNodeOrNull<CollisionShape2D>("CollisionShape2D");
+        if (shape?.Shape is RectangleShape2D rs)
+        {
+            var half = rs.Size / 2f;
+            var center = shape.GlobalPosition;
+            return new Rect2(center - half, rs.Size);
+        }
+        // Fallback for Player (CharacterBody2D with non-named shape) or pre-sprite objects.
+        return new Rect2(node.GlobalPosition - new Vector2(24f, 24f), new Vector2(48f, 48f));
     }
 
     private void RecordError(string reason)

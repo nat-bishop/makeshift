@@ -17,8 +17,8 @@ public static class PhysicsComposer
     /// <summary>Scale floor.</summary>
     public const float MIN_SCALE = 0.2f;
 
-    /// <summary>Scale ceiling.</summary>
-    public const float MAX_SCALE = 12.0f;
+    /// <summary>Scale ceiling — keeps huge objects playable on a 2D screen.</summary>
+    public const float MAX_SCALE = 4.0f;
 
     /// <summary>Height clamp for the log curve — minimum cm.</summary>
     public const float MIN_CM = 1.0f;
@@ -43,7 +43,7 @@ public static class PhysicsComposer
         };
 
     /// <summary>
-    /// Logarithmic scale: <c>log2(height/100)</c> compressed by 0.7, clamped
+    /// Logarithmic scale: <c>log2(height/100)</c> compressed by 0.55, clamped
     /// to <see cref="MIN_SCALE"/>..<see cref="MAX_SCALE"/>.
     /// </summary>
     public static float ScaleFromHeight(int heightCm)
@@ -51,7 +51,7 @@ public static class PhysicsComposer
         var h = Math.Clamp((float)heightCm, MIN_CM, MAX_CM);
         var logRatio = MathF.Log(h / REFERENCE_CM) / MathF.Log(2.0f); // log2
         // Map logRatio to scale: 0 → 1.0x, each ±1 doubles/halves
-        var rawScale = MathF.Pow(2.0f, logRatio * 0.7f); // 0.7 compresses extremes
+        var rawScale = MathF.Pow(2.0f, logRatio * 0.55f); // 0.55 compresses extremes
         return Math.Clamp(rawScale, MIN_SCALE, MAX_SCALE);
     }
 
