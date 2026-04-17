@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -52,9 +53,24 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
 
     # Warm up image pipeline singletons (player sprite extraction)
-    from app.images.pipeline import get_player_sprite
+    from app.images.pipeline import generate_static_sprite, get_player_sprite
 
     get_player_sprite()
+
+    # Kick off FLUX + BiRefNet warmup in the background. The first FLUX
+    # inference loads model weights into VRAM and JIT-compiles CUDA kernels
+    # (20-30s); running it now means the user's first real creation lands on
+    # a warm pipeline. Fire-and-forget: if FLUX isn't running, the warmup
+    # fails loudly in logs but startup continues.
+    async def _warmup_image_pipeline() -> None:
+        try:
+            logger.info("flux_warmup_start")
+            await generate_static_sprite("warmup")
+            logger.info("flux_warmup_complete")
+        except Exception:
+            logger.warning("flux_warmup_failed", exc_info=True)
+
+    app.state.warmup_task = asyncio.create_task(_warmup_image_pipeline())
 
     # Initialize game.db (sessions + objects)
     import aiosqlite
@@ -120,6 +136,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     yield
 
     logger.info("server_stopping")
+
+    warmup_task: asyncio.Task[None] | None = getattr(app.state, "warmup_task", None)
+    if warmup_task is not None and not warmup_task.done():
+        warmup_task.cancel()
 
     from app.images.local_image import close_http_client as close_local_client
 
