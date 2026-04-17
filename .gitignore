@@ -37,6 +37,7 @@ backend/static/sprites/
 # Claude Code
 .claude/settings.local.json
 .claude/worktrees/
+.claude/scheduled_tasks.lock
 backend/.claude/
 
 # Coverage
@@ -55,7 +56,7 @@ backend/experiments/*.png
 
 # CLI-generated images and test outputs
 backend/*.png
-backend/backend/*.png
+backend/backend/
 backend/scripts/*.png
 
 # Benchmark outputs
