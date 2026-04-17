@@ -22,12 +22,14 @@ from app.config import settings
 from app.creator.llm import ask_int, reset_agents
 from app.creator.pipeline import create_object
 from app.models.blueprint import GameObjectBlueprint
-from app.prompts.creation import ALL_CREATION_QUESTIONS
 from pydantic_evals import Case, Dataset
 from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorContext, LLMJudge
 
 from evals.helpers import (
+    CREATION_LABEL_TO_INT,
+    CREATION_LABELS,
     SummaryEvaluator,
+    coerce_label,
     generate_summary,
     get_run_dir,
     in_range,
@@ -64,36 +66,13 @@ STATE_FIELD_MAP: dict[str, tuple[int, str]] = {
     "conducts_electricity": (4, "susceptible_states"),
 }
 
-# Label ↔ int mappings derived from the canonical Question.choice_map —
-# single source of truth in prompts/creation.py. Covers every choice question
-# (gravity, surface, durability, affordance, speed, initial_state, and the
-# yes/no susceptibility questions, which are harmless here since those fields
-# are handled by STATE_FIELD_MAP before reaching the label branches).
-_CREATION_LABEL_TO_INT: dict[str, dict[str, int]] = {
-    q.key: dict(q.choice_map)
-    for q in ALL_CREATION_QUESTIONS
-    if q.qtype == "choice" and q.choice_map
-}
-_CREATION_LABELS: dict[str, dict[int, str]] = {
-    field: {v: k for k, v in mapping.items()} for field, mapping in _CREATION_LABEL_TO_INT.items()
-}
-
-_STATE_NAME_TO_ID: dict[str, int] = _CREATION_LABEL_TO_INT["initial_state"]
+_STATE_NAME_TO_ID: dict[str, int] = CREATION_LABEL_TO_INT["initial_state"]
 _STATE_NAMES: dict[int, str] = {v: k for k, v in _STATE_NAME_TO_ID.items() if v != 0}
-
-
-def _coerce_label(field: str, val: object) -> float:
-    """Accept either a numeric value or a label string, return numeric."""
-    if isinstance(val, str):
-        mapping = _CREATION_LABEL_TO_INT.get(field, {})
-        if val in mapping:
-            return float(mapping[val])
-    return float(val)  # type: ignore[arg-type]
 
 
 def _creation_label(field: str, value: object) -> str:
     """Return human-readable label for a creation field value."""
-    labels = _CREATION_LABELS.get(field)
+    labels = CREATION_LABELS.get(field)
     if labels and isinstance(value, (int, float)):
         return labels.get(int(value), str(value))
     return str(value)
@@ -153,8 +132,8 @@ class CreationEvaluator(Evaluator[str, GameObjectBlueprint, dict[str, Any]]):
             elif isinstance(val, list) and len(val) == 2:
                 attr_path: str = FIELD_TO_ATTR.get(field, field)
                 actual_num = float(_get_nested(bp, attr_path))  # type: ignore[arg-type]
-                lo = _coerce_label(field, val[0])
-                hi = _coerce_label(field, val[1])
+                lo = coerce_label(field, val[0])
+                hi = coerce_label(field, val[1])
                 passed = in_range(actual_num, lo, hi)
                 actual_lbl = _creation_label(field, actual_num)
                 lo_lbl = _creation_label(field, lo)
@@ -164,11 +143,11 @@ class CreationEvaluator(Evaluator[str, GameObjectBlueprint, dict[str, Any]]):
                     reason=None if passed else f"got {actual_lbl}, expected [{lo_lbl}, {hi_lbl}]",
                 )
             elif isinstance(val, (bool, int)) or (
-                isinstance(val, str) and field in _CREATION_LABEL_TO_INT
+                isinstance(val, str) and field in CREATION_LABEL_TO_INT
             ):
                 attr_path = FIELD_TO_ATTR.get(field, field)
                 actual = _get_nested(bp, attr_path)
-                expected_num = _coerce_label(field, val) if isinstance(val, str) else val
+                expected_num = coerce_label(field, val) if isinstance(val, str) else val
                 passed = actual == expected_num
                 got = _creation_label(field, actual)
                 exp = _creation_label(field, expected_num)

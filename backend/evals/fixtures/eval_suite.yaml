@@ -11,82 +11,82 @@
 # ---------------------------------------------------------------------------
 
 archetypes:
-  iron sword: { mass_kg: 2.0, height_cm: 90, bounce: 15, gravity: 60, surface: 1 }
-  wooden shield: { mass_kg: 2.0, height_cm: 60, bounce: 15, gravity: 55, surface: 1, durability: 3 }
-  wooden sword: { mass_kg: 1.0, height_cm: 80, bounce: 15, gravity: 55, surface: 1 }
-  sword: { mass_kg: 2.0, height_cm: 90, bounce: 15, gravity: 60, surface: 1 }
-  campfire: { mass_kg: 5.0, height_cm: 60, bounce: 5, gravity: 55, surface: 1, active: true, initial_states: [1] }
-  fire: { mass_kg: 0.1, height_cm: 40, bounce: 5, gravity: 10, surface: 0, active: true, initial_states: [1] }
-  lava: { mass_kg: 10.0, height_cm: 20, bounce: 5, gravity: 60, surface: 1, active: true, initial_states: [1] }
-  zombie: { mass_kg: 70.0, height_cm: 175, bounce: 10, gravity: 55, active: true, speed: 1, surface: 1, susceptible_states: [1, 2, 3, 4] }
-  horse: { mass_kg: 400.0, height_cm: 200, bounce: 10, gravity: 55, active: true, speed: 3, surface: 1, susceptible_states: [1, 2, 3, 4] }
-  person: { mass_kg: 70.0, height_cm: 175, bounce: 10, gravity: 55, active: true, speed: 2, surface: 1, susceptible_states: [1, 2, 3, 4] }
-  rabbit: { mass_kg: 2.0, height_cm: 25, bounce: 15, gravity: 50, active: true, speed: 3, surface: 1, susceptible_states: [1, 2, 3] }
-  glass bottle: { mass_kg: 0.4, height_cm: 25, bounce: 10, gravity: 55, surface: 1, durability: 1 }
-  glass window: { mass_kg: 2.0, height_cm: 100, bounce: 10, gravity: 55, surface: 0, durability: 1 }
-  glass vase: { mass_kg: 0.5, height_cm: 30, bounce: 10, gravity: 55, surface: 1, durability: 1 }
-  bouncy ball: { mass_kg: 0.2, height_cm: 10, bounce: 80, gravity: 50, surface: 1 }
-  mountain: { mass_kg: 50000.0, height_cm: 5000, bounce: 5, gravity: 70, surface: 1 }
-  boulder: { mass_kg: 100.0, height_cm: 80, bounce: 5, gravity: 70, surface: 1, durability: 4 }
-  rock: { mass_kg: 5.0, height_cm: 20, bounce: 10, gravity: 60, surface: 1, durability: 4 }
-  stone wall: { mass_kg: 200.0, height_cm: 300, bounce: 5, gravity: 70, surface: 1, durability: 6 }
-  ice cube: { mass_kg: 0.3, height_cm: 8, bounce: 20, gravity: 50, surface: 0, initial_states: [2] }
-  ice: { mass_kg: 2.0, height_cm: 30, bounce: 20, gravity: 52, surface: 0, initial_states: [2] }
-  wood: { mass_kg: 3.0, height_cm: 50, bounce: 15, gravity: 55, surface: 1, susceptible_states: [1, 3] }
-  ladder: { mass_kg: 5.0, height_cm: 200, bounce: 10, gravity: 55, surface: 1 }
-  feather: { mass_kg: 0.005, height_cm: 15, bounce: 10, gravity: 15, surface: 1, susceptible_states: [1] }
-  smoke cloud: { mass_kg: 0.01, height_cm: 100, bounce: 0, gravity: 5, surface: 0 }
-  balloon: { mass_kg: 0.05, height_cm: 30, bounce: 40, gravity: 10, surface: 1, susceptible_states: [1] }
-  dynamite: { mass_kg: 0.5, height_cm: 20, bounce: 10, gravity: 55, surface: 1, active: true }
-  bomb: { mass_kg: 3.0, height_cm: 25, bounce: 10, gravity: 60, surface: 1, active: true }
-  lightning rod: { mass_kg: 3.0, height_cm: 150, bounce: 10, gravity: 60, surface: 1, susceptible_states: [4] }
-  live wire: { mass_kg: 0.5, height_cm: 200, bounce: 5, gravity: 55, surface: 1, active: true, initial_states: [4] }
-  lightning: { mass_kg: 0.01, height_cm: 500, bounce: 0, gravity: 5, surface: 0, active: true, initial_states: [4] }
-  water: { mass_kg: 2.0, height_cm: 10, bounce: 5, gravity: 50, surface: 0, initial_states: [3] }
-  water puddle: { mass_kg: 1.0, height_cm: 5, bounce: 5, gravity: 50, surface: 0, initial_states: [3] }
-  acid: { mass_kg: 1.0, height_cm: 10, bounce: 5, gravity: 50, surface: 0, active: true }
-  fan: { mass_kg: 3.0, height_cm: 40, bounce: 10, gravity: 55, surface: 1, active: true }
-  tornado: { mass_kg: 0.1, height_cm: 500, bounce: 0, gravity: 10, surface: 0, active: true }
-  magnet: { mass_kg: 1.0, height_cm: 10, bounce: 10, gravity: 55, surface: 1, active: true }
-  poison mushroom: { mass_kg: 0.1, height_cm: 10, bounce: 10, gravity: 50, surface: 1 }
-  mirror shield: { mass_kg: 3.0, height_cm: 60, bounce: 30, gravity: 55, surface: 1, durability: 3 }
-  frozen statue: { mass_kg: 50.0, height_cm: 180, bounce: 5, gravity: 65, surface: 0, initial_states: [2] }
-  tar pit: { mass_kg: 100.0, height_cm: 30, bounce: 0, gravity: 60, surface: 2, susceptible_states: [1] }
-  brain: { mass_kg: 1.4, height_cm: 15, bounce: 10, gravity: 50, surface: 1 }
-  burning tree: { mass_kg: 200.0, height_cm: 400, bounce: 5, gravity: 60, surface: 1, initial_states: [1], susceptible_states: [3] }
-  injured person: { mass_kg: 70.0, height_cm: 175, bounce: 10, gravity: 55, active: true, speed: 1, surface: 1, susceptible_states: [1, 2, 3, 4] }
-  mouse: { mass_kg: 0.03, height_cm: 5, bounce: 15, gravity: 50, active: true, speed: 2, surface: 1 }
-  dog: { mass_kg: 25.0, height_cm: 60, bounce: 10, gravity: 55, active: true, speed: 3, surface: 1 }
-  ball of yarn: { mass_kg: 0.1, height_cm: 10, bounce: 30, gravity: 50, surface: 1 }
-  player: { mass_kg: 70.0, height_cm: 175, bounce: 10, gravity: 55, active: true, speed: 2, surface: 1, susceptible_states: [1, 2, 3, 4] }
-  criminal: { mass_kg: 75.0, height_cm: 180, bounce: 10, gravity: 55, active: true, speed: 2, surface: 1, susceptible_states: [1, 2, 3, 4] }
-  flower: { mass_kg: 0.05, height_cm: 30, bounce: 10, gravity: 50, surface: 1 }
-  bear: { mass_kg: 300.0, height_cm: 150, bounce: 5, gravity: 60, active: true, speed: 2, surface: 1 }
-  garlic: { mass_kg: 0.05, height_cm: 5, bounce: 10, gravity: 50, surface: 1 }
-  wolf: { mass_kg: 40.0, height_cm: 80, bounce: 10, gravity: 55, active: true, speed: 3, surface: 1 }
-  lava pool: { mass_kg: 10.0, height_cm: 20, bounce: 5, gravity: 60, surface: 1, initial_states: [1] }
-  sheep: { mass_kg: 60.0, height_cm: 100, bounce: 10, gravity: 55, active: true, speed: 1, surface: 1, susceptible_states: [1, 2, 3] }
-  grass: { mass_kg: 0.1, height_cm: 20, bounce: 5, gravity: 50, surface: 1, susceptible_states: [1] }
-  car: { mass_kg: 1500.0, height_cm: 150, bounce: 10, gravity: 60, surface: 1, durability: 3 }
-  apple: { mass_kg: 0.2, height_cm: 8, bounce: 15, gravity: 50, surface: 1, durability: 0 }
-  wooden chair: { mass_kg: 8.0, height_cm: 90, bounce: 10, gravity: 55, surface: 1, durability: 2, susceptible_states: [1] }
-  tree: { mass_kg: 500.0, height_cm: 800, bounce: 5, gravity: 60, surface: 1, durability: 3, susceptible_states: [1] }
-  robot: { mass_kg: 80.0, height_cm: 150, bounce: 10, gravity: 55, active: true, speed: 2, surface: 1, durability: 4, susceptible_states: [4] }
-  oil puddle: { mass_kg: 1.0, height_cm: 5, bounce: 5, gravity: 50, surface: 0, susceptible_states: [1] }
-  pillow: { mass_kg: 0.5, height_cm: 40, bounce: 40, gravity: 50, surface: 1, durability: 0, susceptible_states: [1, 3] }
-  dragon: { mass_kg: 2000.0, height_cm: 500, bounce: 5, gravity: 55, active: true, speed: 3, surface: 1, durability: 4, initial_states: [1] }
-  steak: { mass_kg: 0.3, height_cm: 5, bounce: 10, gravity: 50, surface: 1, durability: 0 }
+  iron sword: { mass_kg: 2.0, height_cm: 90, bounce: 15, gravity: falls, surface: normal }
+  wooden shield: { mass_kg: 2.0, height_cm: 60, bounce: 15, gravity: falls, surface: normal, durability: solid }
+  wooden sword: { mass_kg: 1.0, height_cm: 80, bounce: 15, gravity: falls, surface: normal }
+  sword: { mass_kg: 2.0, height_cm: 90, bounce: 15, gravity: falls, surface: normal }
+  campfire: { mass_kg: 5.0, height_cm: 60, bounce: 5, gravity: falls, surface: normal, active: true, initial_states: [burning] }
+  fire: { mass_kg: 0.1, height_cm: 40, bounce: 5, gravity: rises, surface: slick, active: true, initial_states: [burning] }
+  lava: { mass_kg: 10.0, height_cm: 20, bounce: 5, gravity: falls, surface: normal, active: true, initial_states: [burning] }
+  zombie: { mass_kg: 70.0, height_cm: 175, bounce: 10, gravity: falls, active: true, speed: slow, surface: normal, susceptible_states: [burning, frozen, wet, electrified] }
+  horse: { mass_kg: 400.0, height_cm: 200, bounce: 10, gravity: falls, active: true, speed: fast, surface: normal, susceptible_states: [burning, frozen, wet, electrified] }
+  person: { mass_kg: 70.0, height_cm: 175, bounce: 10, gravity: falls, active: true, speed: normal, surface: normal, susceptible_states: [burning, frozen, wet, electrified] }
+  rabbit: { mass_kg: 2.0, height_cm: 25, bounce: 15, gravity: falls, active: true, speed: fast, surface: normal, susceptible_states: [burning, frozen, wet] }
+  glass bottle: { mass_kg: 0.4, height_cm: 25, bounce: 10, gravity: falls, surface: normal, durability: weak }
+  glass window: { mass_kg: 2.0, height_cm: 100, bounce: 10, gravity: falls, surface: slick, durability: weak }
+  glass vase: { mass_kg: 0.5, height_cm: 30, bounce: 10, gravity: falls, surface: normal, durability: weak }
+  bouncy ball: { mass_kg: 0.2, height_cm: 10, bounce: 80, gravity: falls, surface: normal }
+  mountain: { mass_kg: 50000.0, height_cm: 5000, bounce: 5, gravity: falls, surface: normal }
+  boulder: { mass_kg: 100.0, height_cm: 80, bounce: 5, gravity: falls, surface: normal, durability: strong }
+  rock: { mass_kg: 5.0, height_cm: 20, bounce: 10, gravity: falls, surface: normal, durability: strong }
+  stone wall: { mass_kg: 200.0, height_cm: 300, bounce: 5, gravity: falls, surface: normal, durability: permanent }
+  ice cube: { mass_kg: 0.3, height_cm: 8, bounce: 20, gravity: falls, surface: slick, initial_states: [frozen] }
+  ice: { mass_kg: 2.0, height_cm: 30, bounce: 20, gravity: falls, surface: slick, initial_states: [frozen] }
+  wood: { mass_kg: 3.0, height_cm: 50, bounce: 15, gravity: falls, surface: normal, susceptible_states: [burning, wet] }
+  ladder: { mass_kg: 5.0, height_cm: 200, bounce: 10, gravity: falls, surface: normal }
+  feather: { mass_kg: 0.005, height_cm: 15, bounce: 10, gravity: drifts, surface: normal, susceptible_states: [burning] }
+  smoke cloud: { mass_kg: 0.01, height_cm: 100, bounce: 0, gravity: rises, surface: slick }
+  balloon: { mass_kg: 0.05, height_cm: 30, bounce: 40, gravity: rises, surface: normal, susceptible_states: [burning] }
+  dynamite: { mass_kg: 0.5, height_cm: 20, bounce: 10, gravity: falls, surface: normal, active: true }
+  bomb: { mass_kg: 3.0, height_cm: 25, bounce: 10, gravity: falls, surface: normal, active: true }
+  lightning rod: { mass_kg: 3.0, height_cm: 150, bounce: 10, gravity: falls, surface: normal, susceptible_states: [electrified] }
+  live wire: { mass_kg: 0.5, height_cm: 200, bounce: 5, gravity: falls, surface: normal, active: true, initial_states: [electrified] }
+  lightning: { mass_kg: 0.01, height_cm: 500, bounce: 0, gravity: rises, surface: slick, active: true, initial_states: [electrified] }
+  water: { mass_kg: 2.0, height_cm: 10, bounce: 5, gravity: falls, surface: slick, initial_states: [wet] }
+  water puddle: { mass_kg: 1.0, height_cm: 5, bounce: 5, gravity: falls, surface: slick, initial_states: [wet] }
+  acid: { mass_kg: 1.0, height_cm: 10, bounce: 5, gravity: falls, surface: slick, active: true }
+  fan: { mass_kg: 3.0, height_cm: 40, bounce: 10, gravity: falls, surface: normal, active: true }
+  tornado: { mass_kg: 0.1, height_cm: 500, bounce: 0, gravity: rises, surface: slick, active: true }
+  magnet: { mass_kg: 1.0, height_cm: 10, bounce: 10, gravity: falls, surface: normal, active: true }
+  poison mushroom: { mass_kg: 0.1, height_cm: 10, bounce: 10, gravity: falls, surface: normal }
+  mirror shield: { mass_kg: 3.0, height_cm: 60, bounce: 30, gravity: falls, surface: normal, durability: solid }
+  frozen statue: { mass_kg: 50.0, height_cm: 180, bounce: 5, gravity: falls, surface: slick, initial_states: [frozen] }
+  tar pit: { mass_kg: 100.0, height_cm: 30, bounce: 0, gravity: falls, surface: sticky, susceptible_states: [burning] }
+  brain: { mass_kg: 1.4, height_cm: 15, bounce: 10, gravity: falls, surface: normal }
+  burning tree: { mass_kg: 200.0, height_cm: 400, bounce: 5, gravity: falls, surface: normal, initial_states: [burning], susceptible_states: [wet] }
+  injured person: { mass_kg: 70.0, height_cm: 175, bounce: 10, gravity: falls, active: true, speed: slow, surface: normal, susceptible_states: [burning, frozen, wet, electrified] }
+  mouse: { mass_kg: 0.03, height_cm: 5, bounce: 15, gravity: falls, active: true, speed: normal, surface: normal }
+  dog: { mass_kg: 25.0, height_cm: 60, bounce: 10, gravity: falls, active: true, speed: fast, surface: normal }
+  ball of yarn: { mass_kg: 0.1, height_cm: 10, bounce: 30, gravity: falls, surface: normal }
+  player: { mass_kg: 70.0, height_cm: 175, bounce: 10, gravity: falls, active: true, speed: normal, surface: normal, susceptible_states: [burning, frozen, wet, electrified] }
+  criminal: { mass_kg: 75.0, height_cm: 180, bounce: 10, gravity: falls, active: true, speed: normal, surface: normal, susceptible_states: [burning, frozen, wet, electrified] }
+  flower: { mass_kg: 0.05, height_cm: 30, bounce: 10, gravity: falls, surface: normal }
+  bear: { mass_kg: 300.0, height_cm: 150, bounce: 5, gravity: falls, active: true, speed: normal, surface: normal }
+  garlic: { mass_kg: 0.05, height_cm: 5, bounce: 10, gravity: falls, surface: normal }
+  wolf: { mass_kg: 40.0, height_cm: 80, bounce: 10, gravity: falls, active: true, speed: fast, surface: normal }
+  lava pool: { mass_kg: 10.0, height_cm: 20, bounce: 5, gravity: falls, surface: normal, initial_states: [burning] }
+  sheep: { mass_kg: 60.0, height_cm: 100, bounce: 10, gravity: falls, active: true, speed: slow, surface: normal, susceptible_states: [burning, frozen, wet] }
+  grass: { mass_kg: 0.1, height_cm: 20, bounce: 5, gravity: falls, surface: normal, susceptible_states: [burning] }
+  car: { mass_kg: 1500.0, height_cm: 150, bounce: 10, gravity: falls, surface: normal, durability: solid }
+  apple: { mass_kg: 0.2, height_cm: 8, bounce: 15, gravity: falls, surface: normal, durability: soft }
+  wooden chair: { mass_kg: 8.0, height_cm: 90, bounce: 10, gravity: falls, surface: normal, durability: normal, susceptible_states: [burning] }
+  tree: { mass_kg: 500.0, height_cm: 800, bounce: 5, gravity: falls, surface: normal, durability: solid, susceptible_states: [burning] }
+  robot: { mass_kg: 80.0, height_cm: 150, bounce: 10, gravity: falls, active: true, speed: normal, surface: normal, durability: strong, susceptible_states: [electrified] }
+  oil puddle: { mass_kg: 1.0, height_cm: 5, bounce: 5, gravity: falls, surface: slick, susceptible_states: [burning] }
+  pillow: { mass_kg: 0.5, height_cm: 40, bounce: 40, gravity: falls, surface: normal, durability: soft, susceptible_states: [burning, wet] }
+  dragon: { mass_kg: 2000.0, height_cm: 500, bounce: 5, gravity: falls, active: true, speed: fast, surface: normal, durability: strong, initial_states: [burning] }
+  steak: { mass_kg: 0.3, height_cm: 5, bounce: 10, gravity: falls, surface: normal, durability: soft }
   # Creature-only archetypes
-  firefighter: { mass_kg: 80.0, height_cm: 180, bounce: 10, gravity: 55, active: true, speed: 2, surface: 1, susceptible_states: [1, 3] }
-  guard dog: { mass_kg: 35.0, height_cm: 60, bounce: 10, gravity: 55, active: true, speed: 3, surface: 1 }
-  doctor: { mass_kg: 75.0, height_cm: 175, bounce: 10, gravity: 55, active: true, speed: 2, surface: 1 }
-  bee: { mass_kg: 0.001, height_cm: 2, bounce: 10, gravity: 40, active: true, speed: 3, surface: 1 }
-  vampire: { mass_kg: 70.0, height_cm: 180, bounce: 10, gravity: 55, active: true, speed: 3, surface: 1 }
-  chicken: { mass_kg: 3.0, height_cm: 40, bounce: 10, gravity: 50, active: true, speed: 2, surface: 1 }
-  cat: { mass_kg: 4.0, height_cm: 25, bounce: 15, gravity: 50, active: true, speed: 3, surface: 1 }
+  firefighter: { mass_kg: 80.0, height_cm: 180, bounce: 10, gravity: falls, active: true, speed: normal, surface: normal, susceptible_states: [burning, wet] }
+  guard dog: { mass_kg: 35.0, height_cm: 60, bounce: 10, gravity: falls, active: true, speed: fast, surface: normal }
+  doctor: { mass_kg: 75.0, height_cm: 175, bounce: 10, gravity: falls, active: true, speed: normal, surface: normal }
+  bee: { mass_kg: 0.001, height_cm: 2, bounce: 10, gravity: hovers, active: true, speed: fast, surface: normal }
+  vampire: { mass_kg: 70.0, height_cm: 180, bounce: 10, gravity: falls, active: true, speed: fast, surface: normal }
+  chicken: { mass_kg: 3.0, height_cm: 40, bounce: 10, gravity: falls, active: true, speed: normal, surface: normal }
+  cat: { mass_kg: 4.0, height_cm: 25, bounce: 15, gravity: falls, active: true, speed: fast, surface: normal }
   # Elemental archetypes (for behavior eval state_id coverage)
-  ice elemental: { mass_kg: 50.0, height_cm: 150, bounce: 10, gravity: 55, active: true, speed: 2, surface: 0, initial_states: [2] }
-  water elemental: { mass_kg: 80.0, height_cm: 160, bounce: 10, gravity: 55, active: true, speed: 2, surface: 0, initial_states: [3] }
+  ice elemental: { mass_kg: 50.0, height_cm: 150, bounce: 10, gravity: falls, active: true, speed: normal, surface: slick, initial_states: [frozen] }
+  water elemental: { mass_kg: 80.0, height_cm: 160, bounce: 10, gravity: falls, active: true, speed: normal, surface: slick, initial_states: [wet] }
 
 
 # ---------------------------------------------------------------------------

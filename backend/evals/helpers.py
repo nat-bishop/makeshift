@@ -16,6 +16,7 @@ from app.models.blueprint import (
     PhysicsProperties,
 )
 from app.models.state import State
+from app.prompts.creation import ALL_CREATION_QUESTIONS
 from pydantic import TypeAdapter
 from pydantic_evals.evaluators import ReportEvaluator, ReportEvaluatorContext
 from pydantic_evals.reporting import EvaluationReport, ReportAnalysis
@@ -67,6 +68,32 @@ def in_range(actual: float, lo: float, hi: float) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Label ↔ int mappings derived from Question.choice_map (single source of
+# truth in prompts/creation.py). Used by the creation evaluator for range /
+# label comparisons AND by make_blueprint so archetypes in the YAML fixture
+# can use labels (e.g. `gravity: rises`) instead of raw ints.
+# ---------------------------------------------------------------------------
+
+CREATION_LABEL_TO_INT: dict[str, dict[str, int]] = {
+    q.key: dict(q.choice_map)
+    for q in ALL_CREATION_QUESTIONS
+    if q.qtype == "choice" and q.choice_map
+}
+CREATION_LABELS: dict[str, dict[int, str]] = {
+    field: {v: k for k, v in mapping.items()} for field, mapping in CREATION_LABEL_TO_INT.items()
+}
+
+
+def coerce_label(field: str, val: object) -> float:
+    """Accept either a numeric value or a label string, return numeric."""
+    if isinstance(val, str):
+        mapping = CREATION_LABEL_TO_INT.get(field, {})
+        if val in mapping:
+            return float(mapping[val])
+    return float(val)  # type: ignore[arg-type]
+
+
+# ---------------------------------------------------------------------------
 # Unified fixture loader
 # ---------------------------------------------------------------------------
 
@@ -105,6 +132,19 @@ def make_blueprint(
 
     data = {**archetype, **overrides}
 
+    def _int_field(field: str, default: int) -> int:
+        raw = data.get(field, default)
+        return int(coerce_label(field, raw)) if isinstance(raw, str) else int(raw)
+
+    # State lists (initial_states, susceptible_states) can be ints or labels.
+    # Labels resolve via the initial_state choice_map (none=0, burning=1, ...).
+    state_map = CREATION_LABEL_TO_INT.get("initial_state", {})
+
+    def _state_list(field: str) -> list[int]:
+        return [
+            state_map[item] if isinstance(item, str) else int(item) for item in data.get(field, [])
+        ]
+
     return GameObjectBlueprint(
         id=f"eval-{name}",
         name=name,
@@ -113,16 +153,16 @@ def make_blueprint(
         physics=PhysicsProperties(
             mass_kg=float(data.get("mass_kg", 1.0)),
             height_cm=int(data.get("height_cm", 30)),
-            surface=int(data.get("surface", 1)),
+            surface=_int_field("surface", 1),
             bounce=int(data.get("bounce", 10)),
-            gravity=int(data.get("gravity", 50)),
+            gravity=_int_field("gravity", 50),
         ),
-        durability=int(data.get("durability", 2)),
-        affordance=int(data.get("affordance", 3)),
+        durability=_int_field("durability", 2),
+        affordance=_int_field("affordance", 3),
         active=bool(data.get("active", False)),
-        speed=int(data.get("speed", 2)),
-        initial_states=data.get("initial_states", []),
-        susceptible_states=data.get("susceptible_states", []),
+        speed=_int_field("speed", 2),
+        initial_states=_state_list("initial_states"),
+        susceptible_states=_state_list("susceptible_states"),
     )
 
 
