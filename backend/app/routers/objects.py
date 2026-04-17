@@ -312,10 +312,13 @@ async def _run_spawn_integration(
     async def _eval_direction(
         subject: GameObjectBlueprint, targets: list[GameObjectBlueprint]
     ) -> None:
+        from app.engine.projectile import trigger_projectile_generation
+
         behaviors = await evaluate_behaviors(subject, targets, scene)
         if behaviors:
             entries = format_behaviors(subject.name, behaviors)
             await send_behaviors_ready(session_id, subject.name, entries)
+            trigger_projectile_generation(session_id, entries, cache, _background_tasks)
         else:
             logger.warning(
                 "empty_behaviors_dict",

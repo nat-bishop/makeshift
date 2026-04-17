@@ -7,7 +7,10 @@ Two sequential stages, each parallel internally:
     Conditional follow-ups (parallel):
       - amount (damage/heal/push)
       - state_modifier + state_id (damage/heal/consume)
-      - force_modifier (damage only)
+      - delivery (damage/heal/push) — contact vs projectile
+  Stage 3: projectile_name — one LLM call per subject, applied to every
+    pair the subject delivers via projectile. Skipped if no pairs picked
+    delivery=projectile.
 
 State-aware: Stage 1 prompts include target's current active states,
 so re-evaluation after state_changed produces meaningful results.
@@ -31,7 +34,8 @@ from app.models.state import STATE_NAMES
 from app.prompts.behavior import (
     ACTION_QUESTION,
     AMOUNT_QUESTION,
-    FORCE_MODIFIER_QUESTION,
+    DELIVERY_QUESTION,
+    PROJECTILE_NAME_QUESTION,
     STAGE1_INACTIVE_QUESTIONS,
     STAGE1_QUESTIONS,
     STATE_ACTION_QUESTION,
@@ -170,7 +174,8 @@ async def _evaluate_pair_action(
     Then conditional parallel follow-ups based on action type.
     STATE_ACTION and STATE_ID see the subject's own initial_states so
     element-based reactions (fire→burn, ice→freeze) stay coherent.
-    Returns dict with keys: action, amount, state_action, state_id, force.
+    Returns dict with keys: action, amount, state_action, state_id, delivery.
+    `projectile_name` is resolved at the subject level by `evaluate_behaviors`.
     """
     ctx = {
         "subject": subject.name,
@@ -185,7 +190,7 @@ async def _evaluate_pair_action(
     action = int(r1.get("action", 0))
 
     if action == 0:  # nothing
-        return {"action": 0, "amount": 0, "state_action": 0, "state_id": 0, "force": 0}
+        return {"action": 0, "amount": 0, "state_action": 0, "state_id": 0, "delivery": 0}
 
     action_verb = _ACTION_VERBS.get(action, "affect")
     action_ctx = {**ctx, "action_verb": action_verb}
@@ -207,12 +212,12 @@ async def _evaluate_pair_action(
             )
         )
 
-    # Force modifier: fires for damage(1) ONLY.
-    if action == 1:
+    # Delivery: fires for damage(1), heal(2), push(4). consume(3) is always contact.
+    if action in (1, 2, 4):
         tasks.append(
             (
-                "force",
-                asyncio.ensure_future(run_questions([FORCE_MODIFIER_QUESTION], action_ctx)),
+                "delivery",
+                asyncio.ensure_future(run_questions([DELIVERY_QUESTION], action_ctx)),
             )
         )
 
@@ -228,7 +233,7 @@ async def _evaluate_pair_action(
 
     amount = int(results_map.get("amount", {}).get("amount", 0))
     state_action = int(results_map.get("state", {}).get("state_action", 0))
-    force = int(results_map.get("force", {}).get("force", 0))
+    delivery = int(results_map.get("delivery", {}).get("delivery", 0))
 
     # Sequential: state_id if state_action != 0
     state_id = 0
@@ -245,8 +250,29 @@ async def _evaluate_pair_action(
         "amount": amount,
         "state_action": state_action,
         "state_id": state_id,
-        "force": force,
+        "delivery": delivery,
     }
+
+
+async def _resolve_projectile_name(
+    subject: GameObjectBlueprint,
+    sample_target_bp: GameObjectBlueprint,
+) -> str:
+    """One LLM call to name the subject's projectile. Used for every pair the
+    subject delivers via projectile, so all entries from one firer share a name."""
+    ctx: dict[str, object] = {
+        "subject": subject.name,
+        "target": _target_context(sample_target_bp),
+    }
+    try:
+        result = await run_questions([PROJECTILE_NAME_QUESTION], ctx)
+    except Exception:
+        logger.warning("projectile_name_failed", subject=subject.name, exc_info=True)
+        return ""
+    raw = str(result.get("projectile_name", "")).strip()
+    # Trim to 3 words and strip surrounding punctuation
+    words = re.findall(r"[A-Za-z][A-Za-z\-']*", raw)
+    return " ".join(words[:3]).lower()
 
 
 # ---------------------------------------------------------------------------
@@ -350,9 +376,19 @@ async def evaluate_behaviors(
             else:
                 stage2[name] = result
 
+    # --- Stage 3: projectile name (one call per subject if any pair fires ranged) ---
+
+    projectile_name = ""
+    ranged_target_names = [name for name, s2 in stage2.items() if int(s2.get("delivery", 0)) == 1]
+    if ranged_target_names:
+        sample_target = bp_by_name.get(ranged_target_names[0])
+        if sample_target is not None:
+            projectile_name = await _resolve_projectile_name(subject, sample_target)
+
     # --- Assemble all behaviors ---
     for name, movement, priority in stage1_results:
         s2 = stage2.get(name, {})
+        delivery = int(s2.get("delivery", 0))
         behavior = BehaviorEntry(
             movement=movement,
             priority=priority,
@@ -360,7 +396,8 @@ async def evaluate_behaviors(
             amount=int(s2.get("amount", 0)),
             state_action=int(s2.get("state_action", 0)),
             state_id=int(s2.get("state_id", 0)),
-            force=int(s2.get("force", 0)),
+            delivery=delivery,
+            projectile_name=projectile_name if delivery == 1 else "",
         )
         behaviors[name] = behavior
         scene.put_behavior(subject.name, name, behavior)
@@ -374,7 +411,8 @@ async def evaluate_behaviors(
             "amount": b.amount,
             "state_action": b.state_action,
             "state_id": b.state_id,
-            "force": b.force,
+            "delivery": b.delivery,
+            "projectile_name": b.projectile_name,
         }
         for name, b in behaviors.items()
     ]

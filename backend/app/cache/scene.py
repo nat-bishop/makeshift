@@ -18,10 +18,11 @@ class BehaviorEntry:
     One entry per directed pair — if both objects have behaviors,
     two entries exist (one keyed subject::target each way).
 
-    Actions are composite: primary action + optional state modifier + optional force.
+    Actions are composite: primary action + optional state modifier + optional delivery.
     Action enum: 0=nothing, 1=damage, 2=heal, 3=consume, 4=push
     State action: 0=nothing, 1=add_state, 2=remove_state
-    Force: 0=nothing, 1=push (modifier on damage only)
+    Delivery: 0=contact, 1=projectile. Knockback emerges from impactor momentum
+    (contact lunge, projectile mass x velocity) — no separate force flag.
     """
 
     movement: int = 2  # 0=approach, 1=flee, 2=ignore
@@ -30,7 +31,8 @@ class BehaviorEntry:
     amount: int = 0  # 0-100 intensity (damage/heal/push)
     state_action: int = 0  # 0=nothing, 1=add_state, 2=remove_state
     state_id: int = 0  # 1-4 State enum value (if state_action != 0)
-    force: int = 0  # 0=nothing, 1=push (modifier on damage only)
+    delivery: int = 0  # 0=contact, 1=projectile (for damage/heal/push)
+    projectile_name: str = ""  # e.g. "missile", "arrow"; "" when delivery=contact
 
     def to_dict(self) -> dict:
         return {
@@ -40,7 +42,8 @@ class BehaviorEntry:
             "amount": self.amount,
             "state_action": self.state_action,
             "state_id": self.state_id,
-            "force": self.force,
+            "delivery": self.delivery,
+            "projectile_name": self.projectile_name,
         }
 
     @classmethod
@@ -52,7 +55,8 @@ class BehaviorEntry:
             amount=d.get("amount", 0),
             state_action=d.get("state_action", 0),
             state_id=d.get("state_id", 0),
-            force=d.get("force", 0),
+            delivery=d.get("delivery", 0),
+            projectile_name=d.get("projectile_name", ""),
         )
 
 

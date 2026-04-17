@@ -13,18 +13,24 @@ namespace Makeshift.Systems;
 /// Unified object behavior runtime: per-pair utility-based targeting.
 /// Handles BOTH active movers (approach / flee) and reactive
 /// objects (ignore + priority &gt; 0). Each subject x target pair carries
-/// movement / priority / action / amount / state_action / state_id / force.
+/// movement / priority / action / amount / state_action / state_id /
+/// delivery / projectile_name.
 ///
 /// CRITICAL (CLAUDE.md gotcha): runs in <see cref="_PhysicsProcess"/> at
-/// ~60 fps. The first action fires immediately when the two collision rects
-/// are touching (edge distance ≤ <see cref="ContactBuffer"/>), then on a 1.0s
-/// cooldown. Bombs and reactive objects depend on this timing.
+/// ~60 fps. Contact actions fire immediately when the two collision rects
+/// are touching (edge distance ≤ <see cref="ContactBuffer"/>); ranged
+/// (projectile) actions fire as soon as the target enters
+/// <see cref="ProjectileFireRange"/>. Both then respect
+/// <see cref="ActionCooldown"/>. Bombs and reactive objects depend on
+/// this timing.
 /// </summary>
 public partial class ObjectBehavior : Node
 {
     public const float PerceptionRange = 500.0f;
     /// <summary>Edge-to-edge pixel tolerance for the damage gate (collision rects already tight-fit to opaque pixels).</summary>
     public const float ContactBuffer = 8.0f;
+    /// <summary>Center-to-center distance at which a projectile-delivery attack will fire.</summary>
+    public const float ProjectileFireRange = 450.0f;
     public const float FleeMultiplier = 1.5f;
     public const float ActionCooldown = 1.0f;
     public const float BaseMoveSpeed = 200.0f;
@@ -33,7 +39,13 @@ public partial class ObjectBehavior : Node
     public const int LethalThreshold = 100;
     public const float InstantKillDamage = 99999.0f;
     public const float ForceScale = 5.0f;
-    public const float ForceModifierImpulse = 40.0f;
+
+    /// <summary>Contact-damage knockback: impulse = clamp(mass × LungeMultiplier, 0, LungeImpulseCap) × ForceScale. Cap keeps 3000kg helicopter slams from reaching escape velocity while still letting a boulder shove harder than a bee.</summary>
+    public const float LungeMultiplier = 10.0f;
+    public const float LungeImpulseCap = 600.0f;
+
+    /// <summary>Retry interval for ranged actions waiting on a not-yet-cached projectile blueprint. Chosen over 0 to stop a 60 Hz retry loop while a background FLUX generation is in flight.</summary>
+    public const float ProjectileRetryCooldown = 0.25f;
 
     /// <summary>Speed tier (0..4) → multiplier. Mirrors backend SPEED_MULTIPLIER.</summary>
     private static readonly float[] SpeedMultipliers = { 0.3f, 0.6f, 1.0f, 1.5f, 2.0f };
@@ -321,6 +333,10 @@ public partial class ObjectBehavior : Node
         var d = _owner.GlobalPosition.DistanceTo(bestTargetNode2d.GlobalPosition);
         var edge = EdgeDistance(_owner, bestTargetNode2d);
         var inContact = edge <= ContactBuffer;
+        var isRanged = bestEntry.Delivery == Delivery.Projectile
+                       && bestEntry.Action == ActionKind.Damage;
+        var inFiringRange = isRanged && d <= ProjectileFireRange;
+        var canFire = isRanged ? inFiringRange : inContact;
 
         _debugTick++;
         if (_debugTick >= DebugTickInterval)
@@ -333,7 +349,7 @@ public partial class ObjectBehavior : Node
                     ? ActionNames[actionIdx]
                     : "?";
                 var tname = bestTarget is IObjectNamed bnm ? bnm.GetObjectName() : "?";
-                var gate = inContact ? "" : " [out-of-range]";
+                var gate = canFire ? "" : (isRanged ? " [out-of-firing-range]" : " [out-of-range]");
                 Logger.Instance.Debug(
                     $"ObjectBehavior: '{_ownerName}' → '{tname}' " +
                     $"mv:{(int)bestEntry.Movement} u:{bestUtility:F1} " +
@@ -348,7 +364,7 @@ public partial class ObjectBehavior : Node
                 {
                     WorldMutations.ApplyMovementForce(_owner, dir, MoveSpeed, MoveSpeed);
                 }
-                if (inContact && ActionTimer <= 0.0f)
+                if (canFire && ActionTimer <= 0.0f)
                 {
                     ExecuteAction(bestEntry, bestTarget);
                     ActionTimer = ActionCooldown;
@@ -361,7 +377,7 @@ public partial class ObjectBehavior : Node
                 }
                 break;
             case Movement.Ignore:
-                if (inContact && ActionTimer <= 0.0f)
+                if (canFire && ActionTimer <= 0.0f)
                 {
                     ExecuteAction(bestEntry, bestTarget);
                     ActionTimer = ActionCooldown;
@@ -419,7 +435,7 @@ public partial class ObjectBehavior : Node
         var amount = entry.Amount;
         var stateAction = entry.StateAction;
         var stateId = entry.StateId;
-        var force = entry.Force;
+        var delivery = entry.Delivery;
 
         if (action != ActionKind.None)
         {
@@ -428,10 +444,37 @@ public partial class ObjectBehavior : Node
             var actionName = actionIdx >= 0 && actionIdx < ActionNames.Length
                 ? ActionNames[actionIdx]
                 : "?";
-            Logger.Instance?.Info($"ObjectBehavior: '{_ownerName}' → {actionName} on '{tname}' ({amount})");
+            var via = delivery == Delivery.Projectile && action == ActionKind.Damage
+                ? $" via {entry.ProjectileName}"
+                : "";
+            Logger.Instance?.Info($"ObjectBehavior: '{_ownerName}' → {actionName} on '{tname}' ({amount}){via}");
         }
 
-        // Primary action
+        // Ranged damage: spawn a projectile that carries the damage + state effect.
+        // Projectile applies them on impact; we do NOT apply damage here.
+        if (action == ActionKind.Damage && delivery == Delivery.Projectile)
+        {
+            if (target is not Node2D rangedTarget)
+            {
+                RecordError("ranged target not Node2D");
+                return;
+            }
+            var fired = WorldMutations.SpawnProjectile(
+                _owner,
+                entry.ProjectileName,
+                rangedTarget.GlobalPosition,
+                amount,
+                stateAction,
+                stateId);
+            if (!fired)
+            {
+                // Blueprint still generating — back off at ~4 Hz instead of 60.
+                ActionTimer = ProjectileRetryCooldown;
+            }
+            return;
+        }
+
+        // Primary action (contact path)
         switch (action)
         {
             case ActionKind.None:
@@ -447,6 +490,15 @@ public partial class ObjectBehavior : Node
                     ? InstantKillDamage
                     : (amount > 0 ? amount : 15.0f);
                 WorldMutations.ApplyDamage(target, effective);
+
+                if (target is Node2D dtn2d)
+                {
+                    var lungeDir = (dtn2d.GlobalPosition - _owner.GlobalPosition).Normalized();
+                    var subjectMass = _owner.Mass;
+                    var rawImpulse = subjectMass * LungeMultiplier;
+                    var lungeImpulse = MathF.Min(LungeImpulseCap, rawImpulse) * ForceScale;
+                    WorldMutations.ApplyImpulse(target, lungeDir, lungeImpulse);
+                }
                 break;
             }
             case ActionKind.Heal:
@@ -495,13 +547,6 @@ public partial class ObjectBehavior : Node
             {
                 WorldMutations.ApplyRemoveState(target, stateId);
             }
-        }
-
-        // Force modifier (knockback on damage only)
-        if (force == 1 && action == ActionKind.Damage && target is Node2D node2D)
-        {
-            var forceDir = (node2D.GlobalPosition - _owner.GlobalPosition).Normalized();
-            WorldMutations.ApplyImpulse(target, forceDir, ForceModifierImpulse * ForceScale);
         }
     }
 

@@ -49,7 +49,6 @@ public partial class Level01 : BaseLevel
                 Amount = 15,
                 StateAction = StateAction.None,
                 StateId = StateId.None,
-                Force = 0,
             });
     }
 

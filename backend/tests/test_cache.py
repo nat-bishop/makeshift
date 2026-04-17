@@ -90,7 +90,8 @@ class TestBehaviorCache:
             amount=50,
             state_action=1,
             state_id=2,
-            force=1,
+            delivery=1,
+            projectile_name="missile",
         )
         d = entry.to_dict()
         assert d["movement"] == 0
@@ -99,7 +100,8 @@ class TestBehaviorCache:
         assert d["amount"] == 50
         assert d["state_action"] == 1
         assert d["state_id"] == 2
-        assert d["force"] == 1
+        assert d["delivery"] == 1
+        assert d["projectile_name"] == "missile"
 
     def test_behavior_entry_from_dict(self):
         entry = BehaviorEntry.from_dict({"movement": 1, "priority": 2})
@@ -107,7 +109,8 @@ class TestBehaviorCache:
         assert entry.priority == 2
         assert entry.action == 0  # default
         assert entry.state_action == 0  # default
-        assert entry.force == 0  # default
+        assert entry.delivery == 0  # default
+        assert entry.projectile_name == ""  # default
 
     def test_behavior_entry_from_dict_full(self):
         entry = BehaviorEntry.from_dict(
@@ -118,7 +121,8 @@ class TestBehaviorCache:
                 "amount": 80,
                 "state_action": 2,
                 "state_id": 1,
-                "force": 1,
+                "delivery": 1,
+                "projectile_name": "fireball",
             }
         )
         assert entry.movement == 0
@@ -127,4 +131,5 @@ class TestBehaviorCache:
         assert entry.amount == 80
         assert entry.state_action == 2
         assert entry.state_id == 1
-        assert entry.force == 1
+        assert entry.delivery == 1
+        assert entry.projectile_name == "fireball"

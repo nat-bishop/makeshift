@@ -177,6 +177,9 @@ async def _handle_state_changed(
             if part != target_norm:
                 reactors.add(part)
 
+    cache = websocket.app.state.cache
+    from app.engine.projectile import trigger_projectile_generation
+
     async def _reeval(reactor_name: str) -> None:
         reactor_bp = bp_by_name.get(reactor_name)
         if reactor_bp is None:
@@ -190,6 +193,7 @@ async def _handle_state_changed(
         if behaviors:
             entries = format_behaviors(reactor_bp.name, behaviors)
             await send_behavior_updated(session_id, reactor_bp.name, entries)
+            trigger_projectile_generation(session_id, entries, cache, _background_tasks)
 
     # Re-evaluate the changed object's own outgoing behaviors (only stale targets)
     async def _reeval_changed() -> None:
@@ -211,6 +215,7 @@ async def _handle_state_changed(
         if behaviors:
             entries = format_behaviors(changed_bp.name, behaviors)
             await send_behavior_updated(session_id, changed_bp.name, entries)
+            trigger_projectile_generation(session_id, entries, cache, _background_tasks)
 
     tasks = [_reeval(name) for name in reactors]
     tasks.append(_reeval_changed())
@@ -338,5 +343,22 @@ async def send_behavior_updated(session_id: str, subject_name: str, behaviors: l
             "type": "behavior_updated",
             "subject_name": subject_name,
             "behaviors": behaviors,
+        },
+    )
+
+
+async def send_projectile_ready(session_id: str, projectile: dict) -> None:
+    """Deliver a freshly generated ProjectileBlueprint so the client can spawn
+    it on demand when an ObjectBehavior fires a ranged attack."""
+    logger.info(
+        "send_projectile_ready",
+        session_id=session_id,
+        name=projectile.get("name"),
+    )
+    await _broadcast(
+        session_id,
+        {
+            "type": "projectile_ready",
+            "projectile": projectile,
         },
     )

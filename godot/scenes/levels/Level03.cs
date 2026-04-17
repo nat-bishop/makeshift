@@ -49,7 +49,6 @@ public partial class Level03 : BaseLevel
                 Amount = 10,
                 StateAction = StateAction.Add,
                 StateId = StateId.Burning,
-                Force = 0,
             });
     }
 

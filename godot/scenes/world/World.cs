@@ -1,9 +1,11 @@
 using Godot;
 using Makeshift.Autoloads;
 using Logger = Makeshift.Autoloads.Logger;
+using Makeshift.Data;
 using Makeshift.Interfaces;
 using Makeshift.Models;
 using Makeshift.Scenes.GameObjects;
+using Makeshift.Scenes.Projectiles;
 
 namespace Makeshift.Scenes.World;
 
@@ -68,6 +70,40 @@ public partial class World : Node2D, IWorld
         Logger.Instance?.Debug(
             $"World: Object count after spawn: {_objectsContainer.GetChildCount()}");
         return obj;
+    }
+
+    /// <summary>
+    /// Spawn a projectile fired by an active object. Looks up the named
+    /// blueprint from <see cref="Backend"/>; if it's not cached yet (sprite
+    /// still generating), returns false so the caller can retry on the next
+    /// physics tick.
+    /// </summary>
+    public bool SpawnProjectile(
+        RigidBody2D firer,
+        string projectileName,
+        Vector2 fromPos,
+        Vector2 towardPos,
+        float damage,
+        StateAction stateAction,
+        StateId stateId)
+    {
+        if (string.IsNullOrEmpty(projectileName))
+        {
+            return false;
+        }
+
+        var bp = Backend.Instance?.GetProjectileBlueprint(projectileName);
+        if (bp is null)
+        {
+            return false;
+        }
+
+        var texture = Backend.Instance?.GetProjectileSprite(projectileName);
+
+        var projectile = new Projectile { Name = $"Projectile_{projectileName}" };
+        _objectsContainer.AddChild(projectile);
+        projectile.InitProjectile(bp, texture, firer, fromPos, towardPos, damage, stateAction, stateId);
+        return true;
     }
 
     public void ClearObjects()

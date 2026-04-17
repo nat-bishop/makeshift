@@ -1,7 +1,8 @@
 """Unified cache backed by SQLite (cache.db), separate from game.db.
 
-Cache type:
+Cache types:
   - creation: object name -> physics/affordance/etc (persistent, global)
+  - projectile: projectile name -> ProjectileBlueprint dict (persistent, global)
 
 Object behavior is scene-local and lives only in BehaviorCache (scene.py).
 """
@@ -109,6 +110,17 @@ class CacheStore:
 
     async def put_creation(self, name: str, value: dict, model_version: str = "") -> None:
         await self.put("creation", normalize_name(name), value, model_version)
+
+    # --- Projectile cache ---
+
+    async def get_projectile(self, name: str) -> dict | None:
+        return await self.get("projectile", normalize_name(name))
+
+    async def exists_projectile(self, name: str) -> bool:
+        return await self.exists("projectile", normalize_name(name))
+
+    async def put_projectile(self, name: str, value: dict, model_version: str = "") -> None:
+        await self.put("projectile", normalize_name(name), value, model_version)
 
     # --- Lifecycle ---
 

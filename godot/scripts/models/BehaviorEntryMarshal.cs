@@ -7,7 +7,8 @@ namespace Makeshift.Models;
 /// Bidirectional helper for <see cref="BehaviorEntry"/> &lt;-&gt;
 /// <see cref="Godot.Collections.Dictionary"/> conversion, mirroring the backend
 /// wire field names (<c>target_name</c>/<c>movement</c>/<c>priority</c>/
-/// <c>action</c>/<c>amount</c>/<c>state_action</c>/<c>state_id</c>/<c>force</c>).
+/// <c>action</c>/<c>amount</c>/<c>state_action</c>/<c>state_id</c>/
+/// <c>delivery</c>/<c>projectile_name</c>).
 /// </summary>
 public static class BehaviorEntryMarshal
 {
@@ -33,7 +34,8 @@ public static class BehaviorEntryMarshal
             Amount = GetInt(dict, "amount"),
             StateAction = (StateAction)GetInt(dict, "state_action"),
             StateId = (StateId)GetInt(dict, "state_id"),
-            Force = GetInt(dict, "force"),
+            Delivery = (Delivery)GetInt(dict, "delivery"),
+            ProjectileName = GetString(dict, "projectile_name"),
         };
     }
 
@@ -53,7 +55,8 @@ public static class BehaviorEntryMarshal
             ["amount"] = entry.Amount,
             ["state_action"] = (int)entry.StateAction,
             ["state_id"] = (int)entry.StateId,
-            ["force"] = entry.Force,
+            ["delivery"] = (int)entry.Delivery,
+            ["projectile_name"] = entry.ProjectileName,
         };
     }
 

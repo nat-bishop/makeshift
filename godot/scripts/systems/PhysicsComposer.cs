@@ -1,4 +1,5 @@
 using System;
+using Godot;
 using Makeshift.Data;
 
 namespace Makeshift.Systems;
@@ -85,5 +86,20 @@ public static class PhysicsComposer
     {
         var raw = heightCm / 100.0f;
         return Math.Clamp(raw, 0.5f, 2.0f);
+    }
+
+    /// <summary>
+    /// Piecewise linear map from the LLM's 0..100 gravity answer to Godot
+    /// <see cref="Godot.RigidBody2D.GravityScale"/>. 0-50 maps linearly to
+    /// -1.0 (helium-like rise) … 1.0 (normal fall); 50-100 continues to 2.0
+    /// (extra heavy). Mirrors the backend choice_map in prompts/creation.py.
+    /// </summary>
+    public static float GravityToScale(int g)
+    {
+        if (g <= 50)
+        {
+            return Mathf.Lerp(-1.0f, 1.0f, g / 50.0f);
+        }
+        return Mathf.Lerp(1.0f, 2.0f, (g - 50) / 50.0f);
     }
 }

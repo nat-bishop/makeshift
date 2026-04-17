@@ -35,7 +35,6 @@ public partial class Level02 : BaseLevel
                 Amount = 20,
                 StateAction = StateAction.None,
                 StateId = StateId.None,
-                Force = 0,
             });
         // Dog approaches bone (distraction, higher priority than player).
         InteractionCache.Instance.StoreBehavior("guard dog", "bone",
@@ -48,7 +47,6 @@ public partial class Level02 : BaseLevel
                 Amount = 0,
                 StateAction = StateAction.None,
                 StateId = StateId.None,
-                Force = 0,
             });
     }
 

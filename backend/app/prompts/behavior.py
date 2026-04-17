@@ -3,11 +3,12 @@
 Consumed by `app.engine.behavior`:
   - Stage 1 fan-out: `STAGE1_QUESTIONS` (movement + priority, all subject x target pairs)
   - Stage 2 per-pair: `ACTION_QUESTION` + conditional `AMOUNT_QUESTION`,
-    `STATE_ACTION_QUESTION`, `STATE_ID_QUESTION`, `FORCE_MODIFIER_QUESTION`
+    `STATE_ACTION_QUESTION`, `STATE_ID_QUESTION`, `DELIVERY_QUESTION`,
+    and `PROJECTILE_NAME_QUESTION` (only when delivery=projectile)
   - Pre-screening: `screen_pairs_prompt()`
 
 Each `Question` embeds its own system instructions, user-message template,
-and answer shape (choice/int/float). Context strings like `{subject}` and
+and answer shape (choice/int/float/text). Context strings like `{subject}` and
 `{target}` are interpolated at call time by `run_questions()`.
 """
 
@@ -131,16 +132,32 @@ STATE_ID_QUESTION = Question(
     choice_map=(("burn", 1), ("freeze", 2), ("wet", 3), ("zap", 4)),
 )
 
-FORCE_MODIFIER_QUESTION = Question(
-    "force",
-    "{subject} attacks {target}.",
+DELIVERY_QUESTION = Question(
+    "delivery",
+    "{subject} will {action_verb} {target}.",
     "choice",
-    default="nothing",
+    default="contact",
     instructions=(
-        "Does this attack also apply a physical knockback force? nothing=no force, push=knock away."
+        "Does the subject deliver this action by direct contact, or by launching "
+        "a projectile (arrow, bullet, missile, fireball, thrown rock, etc.)? "
+        "Pick projectile only when the subject naturally has a way to fire something "
+        "at range — a helicopter, archer, wizard, gun-toting robot, or sentry turret. "
+        "Bites, slashes, slams, rams, and most melee creatures use contact. "
+        "contact=close-range hit, projectile=fire something at the target."
     ),
-    choices=("nothing", "push"),
-    choice_map=(("nothing", 0), ("push", 1)),
+    choices=("contact", "projectile"),
+    choice_map=(("contact", 0), ("projectile", 1)),
+)
+
+PROJECTILE_NAME_QUESTION = Question(
+    "projectile_name",
+    "What does {subject} fire at {target}? "
+    "Reply with a 1-3 word name for the projectile only. "
+    "Examples: helicopter -> missile, archer -> arrow, fire wizard -> fireball, "
+    "ice mage -> ice dart, sentry -> bullet, robot -> laser bolt.",
+    "text",
+    max_tokens=20,
+    default="bolt",
 )
 
 

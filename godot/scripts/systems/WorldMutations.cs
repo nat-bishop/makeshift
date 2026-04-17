@@ -134,6 +134,39 @@ public static class WorldMutations
         }
     }
 
+    // ------------------------------------------------------------- projectile
+
+    /// <summary>
+    /// Fire a projectile from <paramref name="firer"/> toward
+    /// <paramref name="towardPos"/>. Looks up the named projectile blueprint
+    /// (delivered earlier via <c>projectile_ready</c>); returns false if it
+    /// isn't cached yet so the caller can leave its action timer at zero and
+    /// try again next physics tick.
+    /// </summary>
+    public static bool SpawnProjectile(
+        RigidBody2D firer,
+        string projectileName,
+        Vector2 towardPos,
+        float damage,
+        StateAction stateAction,
+        StateId stateId)
+    {
+        var tree = firer.GetTree();
+        var worldNode = tree?.GetFirstNodeInGroup("world");
+        if (worldNode is not IWorld world)
+        {
+            return false;
+        }
+        return world.SpawnProjectile(
+            firer,
+            projectileName,
+            firer.GlobalPosition,
+            towardPos,
+            damage,
+            stateAction,
+            stateId);
+    }
+
     // -------------------------------------------------------------------- dot
 
     /// <summary>

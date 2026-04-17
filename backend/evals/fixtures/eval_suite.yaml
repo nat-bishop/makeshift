@@ -87,6 +87,11 @@ archetypes:
   # Elemental archetypes (for behavior eval state_id coverage)
   ice elemental: { mass_kg: 50.0, height_cm: 150, bounce: 10, gravity: falls, active: true, speed: normal, surface: slick, initial_states: [frozen] }
   water elemental: { mass_kg: 80.0, height_cm: 160, bounce: 10, gravity: falls, active: true, speed: normal, surface: slick, initial_states: [wet] }
+  # Ranged-attack archetypes (delivery=projectile coverage)
+  helicopter: { mass_kg: 3000.0, height_cm: 400, bounce: 5, gravity: hovers, active: true, speed: fast, surface: normal, durability: solid }
+  archer: { mass_kg: 70.0, height_cm: 175, bounce: 10, gravity: falls, active: true, speed: normal, surface: normal, susceptible_states: [burning, wet] }
+  fire wizard: { mass_kg: 70.0, height_cm: 175, bounce: 10, gravity: falls, active: true, speed: normal, surface: normal, initial_states: [burning] }
+  sentry turret: { mass_kg: 200.0, height_cm: 100, bounce: 5, gravity: falls, active: true, speed: crawl, surface: normal, durability: strong }
 
 
 # ---------------------------------------------------------------------------
@@ -543,9 +548,9 @@ behaviors:
           action: 1
           amount: {min: 15, max: 100}
           state_action: 0
-          force: 0
+          delivery: 0
           priority: {min: 2, max: 3}
-        note: "zombie attacks living people — no elemental, no knockback"
+        note: "zombie attacks living people — contact bite/swipe, no projectile"
 
   - subject: firefighter
     targets:
@@ -626,6 +631,11 @@ behaviors:
           movement: [0, 1]
           action: [0, 1]
         note: "bee may attack or flee — both reasonable for a lone bee vs bear"
+      - name: person
+        expected:
+          action: [0, 1]
+          delivery: 0
+        note: "bee uses contact sting, never projectile"
 
   - subject: vampire
     targets:
@@ -728,9 +738,8 @@ behaviors:
           movement: 0
           action: 1
           amount: {min: 30, max: 100}
-          force: [0, 1]
           priority: {min: 2, max: 3}
-        note: "dragon attacks people — may or may not knock back"
+        note: "dragon attacks people — knockback emerges from physics, no fixed expectation"
       - name: sheep
         expected:
           movement: 0
@@ -752,15 +761,14 @@ behaviors:
           priority: {min: 2, max: 3}
           action: 1
           amount: {min: 50, max: 100}
-          force: 1
-        note: "bomb explodes on contact — movement is ambiguous (stationary object)"
+          delivery: [0, 1]
+        note: "bomb harms nearby person — either contact explosion or 'thrown' projectile (LLM reads it as 'bomb attacks' which is genuinely ambiguous)"
       - name: rock
         expected:
           movement: 2
           priority: {min: 0, max: 3}
           action: [0, 1]
-          force: [0, 1]
-        note: "bomb may damage rock or have no effect — force possible if action=attack"
+        note: "bomb may damage rock or have no effect"
 
   - subject: fan
     targets:
@@ -873,7 +881,52 @@ behaviors:
           action: 1
           amount: {min: 30, max: 100}
           state_action: [0, 1]
-          force: [0, 1]
           priority: {min: 2, max: 3}
-        note: "lightning strikes person — strong damage, may also electrify and knock back"
+        note: "lightning strikes person — strong damage, may also electrify"
+
+  # -- Ranged-delivery cases (delivery=1 = projectile) --
+  - subject: helicopter
+    targets:
+      - name: player
+        expected:
+          movement: 0
+          action: 1
+          amount: {min: 30, max: 100}
+          delivery: 1
+          priority: {min: 2, max: 3}
+        note: "helicopter shoots missiles at the player — should pick projectile delivery, not slam attack"
+
+  - subject: archer
+    targets:
+      - name: person
+        expected:
+          movement: [0, 1]
+          action: 1
+          amount: {min: 10, max: 60}
+          delivery: 1
+          priority: {min: 1, max: 3}
+        note: "archer fires arrows at people — projectile delivery"
+
+  - subject: fire wizard
+    targets:
+      - name: person
+        expected:
+          movement: [0, 1]
+          action: 1
+          amount: {min: 15, max: 100}
+          delivery: 1
+          priority: {min: 1, max: 3}
+        note: "fire wizard hurls fireballs — projectile delivery; state_action may add burning"
+
+  - subject: sentry turret
+    targets:
+      - name: criminal
+        expected:
+          movement: 2
+          action: 1
+          amount: {min: 15, max: 100}
+          delivery: 1
+          priority: {min: 2, max: 3}
+        note: "stationary sentry turret tracks and shoots — ignore movement, projectile delivery"
+
 

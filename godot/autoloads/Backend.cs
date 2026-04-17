@@ -65,6 +65,8 @@ public sealed partial class Backend : Node
     private readonly LruTextureCache _spriteCache = new(SpriteCacheCapacity);
     private readonly LruTextureCache _combinedSpriteCache = new(SpriteCacheCapacity);
     private readonly LruTextureCache _destructionSpriteCache = new(SpriteCacheCapacity);
+    private readonly LruTextureCache _projectileSpriteCache = new(SpriteCacheCapacity);
+    private readonly Dictionary<string, ProjectileBlueprint> _projectileBlueprints = new();
     private readonly HashSet<string> _pendingSprites = new();
 
     private readonly CancellationTokenSource _shutdown = new();
@@ -321,6 +323,14 @@ public sealed partial class Backend : Node
     public Texture2D? GetDestructionSprite(string debrisName) =>
         _destructionSpriteCache.Get(debrisName);
 
+    /// <summary>Look up a cached projectile blueprint by name (lower-cased).</summary>
+    public ProjectileBlueprint? GetProjectileBlueprint(string name) =>
+        _projectileBlueprints.TryGetValue(name.ToLowerInvariant(), out var bp) ? bp : null;
+
+    /// <summary>Look up the sprite texture for a known projectile.</summary>
+    public Texture2D? GetProjectileSprite(string name) =>
+        _projectileSpriteCache.Get(name.ToLowerInvariant());
+
     public void MarkDirty()
     {
         _stateDirty = true;
@@ -437,10 +447,43 @@ public sealed partial class Backend : Node
             case BehaviorUpdatedMessage m:
                 HandleBehaviorUpdated(m);
                 break;
+            case ProjectileReadyMessage m:
+                TrackBackground(HandleProjectileReadyAsync(m));
+                break;
             case WsErrorMessage m:
                 HandleWsError(m);
                 break;
         }
+    }
+
+    private async Task HandleProjectileReadyAsync(ProjectileReadyMessage m)
+    {
+        var bp = m.Projectile;
+        if (string.IsNullOrEmpty(bp.Name) || string.IsNullOrEmpty(bp.SpriteUrl))
+        {
+            Logger.Instance?.Warn(
+                $"Backend: Malformed projectile_ready (name='{bp.Name}', url='{bp.SpriteUrl}')");
+            return;
+        }
+
+        var texture = await FetchTextureAsync(bp.SpriteUrl, "projectile sprite");
+        if (texture is null)
+        {
+            return;
+        }
+
+        // Closure crosses the threadpool → main-thread boundary so the typed
+        // record survives without going through Variant marshalling.
+        Callable.From(() => ApplyProjectileReady(bp, texture)).CallDeferred();
+    }
+
+    private void ApplyProjectileReady(ProjectileBlueprint bp, Texture2D texture)
+    {
+        var key = bp.Name.ToLowerInvariant();
+        _projectileBlueprints[key] = bp;
+        _projectileSpriteCache.Set(key, texture);
+        Logger.Instance?.Info($"Backend: Projectile blueprint cached for '{key}'");
+        EventBus.Instance.EmitSignal(EventBus.SignalName.ProjectileReady, key);
     }
 
     private async Task<Texture2D?> FetchTextureAsync(string spriteUrl, string label)
@@ -616,9 +659,10 @@ public sealed partial class Backend : Node
             }
         }
 
-        if (entry.Force == 1)
+        if (entry.Delivery == Delivery.Projectile)
         {
-            parts.Add("+knockback");
+            var pname = string.IsNullOrEmpty(entry.ProjectileName) ? "?" : entry.ProjectileName;
+            parts.Add($"→{pname}");
         }
 
         return string.Join(" ", parts);

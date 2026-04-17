@@ -23,5 +23,13 @@ public sealed record BehaviorEntry
     public int Amount { get; init; }
     public StateAction StateAction { get; init; } = StateAction.None;
     public StateId StateId { get; init; } = StateId.None;
-    public int Force { get; init; }
+
+    /// <summary>Whether this attack lands by contact or via a fired projectile.</summary>
+    public Delivery Delivery { get; init; } = Delivery.Contact;
+
+    /// <summary>
+    /// Name of the projectile fired when <see cref="Delivery"/> is
+    /// <see cref="Delivery.Projectile"/>. Empty for contact attacks.
+    /// </summary>
+    public string ProjectileName { get; init; } = "";
 }

@@ -11,7 +11,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from app.models.state import State
-from app.prompts.behavior import ACTION_QUESTION, STAGE1_QUESTIONS, STATE_ACTION_QUESTION
+from app.prompts.behavior import (
+    ACTION_QUESTION,
+    DELIVERY_QUESTION,
+    STAGE1_QUESTIONS,
+    STATE_ACTION_QUESTION,
+)
 from app.prompts.creation import ALL_CREATION_QUESTIONS
 
 if TYPE_CHECKING:
@@ -61,6 +66,10 @@ def test_parity_state_id() -> None:
     godot = set(GODOT["StateId"].values())
     py = {s.value for s in State}
     assert godot == py | {0}, f"Godot={godot}, Python|{{0}}={py | {0}}"
+
+
+def test_parity_delivery() -> None:
+    assert set(GODOT["Delivery"].values()) == _values(DELIVERY_QUESTION)
 
 
 def test_parity_choice_fields() -> None:

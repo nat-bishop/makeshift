@@ -52,24 +52,27 @@ class TestBehaviorEntry:
         be = BehaviorEntry(
             movement=0,
             priority=3,
-            action=4,
+            action=1,
             amount=80,
             state_action=1,
             state_id=2,
-            force=1,
+            delivery=1,
+            projectile_name="missile",
         )
         d = be.to_dict()
         be2 = BehaviorEntry.from_dict(d)
         assert be2.movement == 0
         assert be2.priority == 3
-        assert be2.action == 4
+        assert be2.action == 1
         assert be2.amount == 80
         assert be2.state_action == 1
         assert be2.state_id == 2
-        assert be2.force == 1
+        assert be2.delivery == 1
+        assert be2.projectile_name == "missile"
 
     def test_defaults(self):
         be = BehaviorEntry.from_dict({})
         assert be.movement == 2
         assert be.state_action == 0
-        assert be.force == 0
+        assert be.delivery == 0
+        assert be.projectile_name == ""

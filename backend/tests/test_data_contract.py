@@ -103,11 +103,13 @@ class TestStateMapping:
                         assert 0 <= v <= 2, (
                             f"invalid state_action {v} for {entry['subject']} vs {t['name']}"
                         )
-                if "force" in exp:
-                    vals = exp["force"] if isinstance(exp["force"], list) else [exp["force"]]
+                if "delivery" in exp:
+                    vals = (
+                        exp["delivery"] if isinstance(exp["delivery"], list) else [exp["delivery"]]
+                    )
                     for v in vals:
                         assert 0 <= v <= 1, (
-                            f"invalid force {v} for {entry['subject']} vs {t['name']}"
+                            f"invalid delivery {v} for {entry['subject']} vs {t['name']}"
                         )
 
     def test_state_string_to_code_covers_all_states(self) -> None:
@@ -182,11 +184,12 @@ class TestModelRoundtrips:
         be = BehaviorEntry(
             movement=0,
             priority=3,
-            action=4,
+            action=1,
             amount=50,
             state_action=1,
             state_id=2,
-            force=1,
+            delivery=1,
+            projectile_name="missile",
         )
         d = be.to_dict()
         be2 = BehaviorEntry.from_dict(d)
@@ -200,7 +203,8 @@ class TestModelRoundtrips:
         assert be.amount == 0
         assert be.state_action == 0
         assert be.state_id == 0
-        assert be.force == 0
+        assert be.delivery == 0
+        assert be.projectile_name == ""
 
     def test_behavior_entry_extra_keys_ignored(self) -> None:
         be = BehaviorEntry.from_dict({"movement": 1, "priority": 2, "bogus_key": 999})

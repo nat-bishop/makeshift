@@ -13,6 +13,7 @@ namespace Makeshift.Models;
 [JsonDerivedType(typeof(DestructionSpriteReadyMessage), "destruction_sprite_ready")]
 [JsonDerivedType(typeof(BehaviorsReadyMessage), "behaviors_ready")]
 [JsonDerivedType(typeof(BehaviorUpdatedMessage), "behavior_updated")]
+[JsonDerivedType(typeof(ProjectileReadyMessage), "projectile_ready")]
 [JsonDerivedType(typeof(WsErrorMessage), "error")]
 public abstract record WsMessage;
 
@@ -56,6 +57,12 @@ public sealed record BehaviorUpdatedMessage : WsMessage
 {
     public string SubjectName { get; init; } = "";
     public BehaviorEntry[] Behaviors { get; init; } = [];
+}
+
+/// <summary>Projectile blueprint ready — cache by name for later spawn requests.</summary>
+public sealed record ProjectileReadyMessage : WsMessage
+{
+    public ProjectileBlueprint Projectile { get; init; } = new();
 }
 
 /// <summary>Generic WS error channel.</summary>

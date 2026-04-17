@@ -13,6 +13,20 @@ public interface IWorld
     void SpawnObject(Blueprint blueprint, Vector2 position);
 
     /// <summary>
+    /// Spawn a projectile fired by <paramref name="firer"/> toward
+    /// <paramref name="towardPos"/>. Returns false if the named projectile
+    /// blueprint isn't yet cached (caller should retry).
+    /// </summary>
+    bool SpawnProjectile(
+        Godot.RigidBody2D firer,
+        string projectileName,
+        Vector2 fromPos,
+        Vector2 towardPos,
+        float damage,
+        Makeshift.Data.StateAction stateAction,
+        Makeshift.Data.StateId stateId);
+
+    /// <summary>
     /// Snapshot of every currently spawned object's blueprint + position,
     /// serialized as a <see cref="Godot.Collections.Array"/> of dictionaries
     /// so it can feed the session-sync JSON payload unchanged.

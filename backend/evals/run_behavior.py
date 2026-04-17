@@ -106,7 +106,7 @@ _FIELD_LABELS: dict[str, dict[int, str]] = {
     "action": {0: "nothing", 1: "damage", 2: "heal", 3: "consume", 4: "push"},
     "state_action": {0: "nothing", 1: "apply", 2: "remove"},
     "state_id": {0: "none", 1: "burn", 2: "freeze", 3: "wet", 4: "zap"},
-    "force": {0: "nothing", 1: "push"},
+    "delivery": {0: "contact", 1: "projectile"},
 }
 
 

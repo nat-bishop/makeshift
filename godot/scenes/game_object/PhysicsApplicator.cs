@@ -52,10 +52,7 @@ public partial class PhysicsApplicator : Node
         // near-zero mass can't cause infinite knockback velocity on impact.
         _body.Mass = Mathf.Max(massKg * scale, 0.5f);
 
-        // Gravity: piecewise linear mapping
-        //   0-50 -> -1.0 to 1.0 (floating up to normal)
-        //   50-100 -> 1.0 to 2.0 (normal to extra heavy)
-        _body.GravityScale = GravityToScale(gravity100);
+        _body.GravityScale = PhysicsComposer.GravityToScale(gravity100);
 
         // Damping derived from height and mass
         _body.LinearDamp = Mathf.Clamp(heightCm / (massKg * 100.0f + 10.0f), 0.0f, 10.0f);
@@ -76,15 +73,6 @@ public partial class PhysicsApplicator : Node
             $"PhysicsApplicator: '{objectName}' mass={_body.Mass:F3} gravity={_body.GravityScale:F2} " +
             $"friction={mat.Friction:F2} bounce={mat.Bounce:F2} damp={_body.LinearDamp:F2} " +
             $"size={sizeCat} scale={scale:F2}");
-    }
-
-    private static float GravityToScale(int g)
-    {
-        if (g <= 50)
-        {
-            return Mathf.Lerp(-1.0f, 1.0f, g / 50.0f);
-        }
-        return Mathf.Lerp(1.0f, 2.0f, (g - 50) / 50.0f);
     }
 
     /// <summary>

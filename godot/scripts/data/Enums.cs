@@ -80,3 +80,10 @@ public enum Surface
     Normal = 1,
     Sticky = 2,
 }
+
+/// <summary>How an attack reaches its target. Wire format from backend.</summary>
+public enum Delivery
+{
+    Contact = 0,
+    Projectile = 1,
+}

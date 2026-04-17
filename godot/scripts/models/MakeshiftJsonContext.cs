@@ -20,6 +20,7 @@ namespace Makeshift.Models;
 [JsonSerializable(typeof(BehaviorEntry[]))]
 [JsonSerializable(typeof(PhysicsData))]
 [JsonSerializable(typeof(VisualDescriptor))]
+[JsonSerializable(typeof(ProjectileBlueprint))]
 [JsonSerializable(typeof(WsMessage))]
 [JsonSerializable(typeof(SpriteReadyMessage))]
 [JsonSerializable(typeof(SpriteFailedMessage))]
@@ -27,5 +28,6 @@ namespace Makeshift.Models;
 [JsonSerializable(typeof(DestructionSpriteReadyMessage))]
 [JsonSerializable(typeof(BehaviorsReadyMessage))]
 [JsonSerializable(typeof(BehaviorUpdatedMessage))]
+[JsonSerializable(typeof(ProjectileReadyMessage))]
 [JsonSerializable(typeof(WsErrorMessage))]
 internal partial class MakeshiftJsonContext : JsonSerializerContext { }

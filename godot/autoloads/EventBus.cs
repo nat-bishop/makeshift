@@ -89,4 +89,8 @@ public sealed partial class EventBus : Node
 
     [Signal]
     public delegate void BehaviorUpdatedEventHandler(string subjectName);
+
+    /// <summary>Fired when a ProjectileBlueprint + sprite become available.</summary>
+    [Signal]
+    public delegate void ProjectileReadyEventHandler(string projectileName);
 }

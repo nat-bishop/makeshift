@@ -58,7 +58,7 @@ public static class BehaviorFormat
     /// <summary>
     /// Produce the one-line summary of a behavior entry used by the
     /// object-creation reveal card:
-    /// <c>target  movement action[:amount]  [+state|-state]  [kb]</c>
+    /// <c>target  movement action[:amount]  [+state|-state]  [→projectile]</c>
     /// </summary>
     public static string FormatBehaviorEntry(BehaviorEntry entry)
     {
@@ -89,9 +89,10 @@ public static class BehaviorFormat
             sb.Append(StateContradictions.GetName(entry.StateId));
         }
 
-        if (entry.Force == 1)
+        if (entry.Delivery == Delivery.Projectile)
         {
-            sb.Append("  kb");
+            sb.Append("  →");
+            sb.Append(string.IsNullOrEmpty(entry.ProjectileName) ? "?" : entry.ProjectileName);
         }
 
         return sb.ToString();
@@ -99,7 +100,7 @@ public static class BehaviorFormat
 
     /// <summary>
     /// Terse debug-row form used by <c>DebugLabel</c>:
-    /// <c>target P{pri} movAbbr actAbbr[:amt] [±state] [kb]</c>.
+    /// <c>target P{pri} movAbbr actAbbr[:amt] [±state] [→projectile]</c>.
     /// </summary>
     public static string FormatPairDebugRow(string targetName, BehaviorEntry entry)
     {
@@ -124,9 +125,10 @@ public static class BehaviorFormat
             text.Append($" {StateActNames[sa]}{StateContradictions.STATE_NAMES[sid]}");
         }
 
-        if (entry.Force == 1)
+        if (entry.Delivery == Delivery.Projectile)
         {
-            text.Append(" kb");
+            var pname = string.IsNullOrEmpty(entry.ProjectileName) ? "?" : entry.ProjectileName;
+            text.Append($" →{pname}");
         }
 
         return text.ToString();

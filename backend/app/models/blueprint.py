@@ -131,6 +131,34 @@ class GameObjectBlueprint(BaseModel):
         return self.durability >= 6
 
 
+class ProjectileBlueprint(BaseModel):
+    """Lightweight blueprint for a fired projectile.
+
+    Spawned by ObjectBehavior when a behavior with delivery=projectile fires.
+    Cached by name in cache.db (one entry per distinct projectile name across
+    all firers — e.g. every helicopter that shoots "missile" reuses one entry).
+
+    Stripped vs GameObjectBlueprint: no durability, affordance, behavior eval
+    against scene, or destruction sprite. Physics drives the ballistic flight
+    (mass x velocity -> knockback on impact; gravity -> arc).
+    """
+
+    name: str
+    visual_description: str
+    physics: PhysicsProperties
+    sprite_url: str = ""
+
+    @field_validator("name")
+    @classmethod
+    def check_name(cls, name: str) -> str:
+        name = name.strip()
+        if not name:
+            raise ValueError("Projectile name cannot be empty")
+        if len(name.split()) > 5:
+            raise ValueError(f'Projectile name "{name}" exceeds 5 words')
+        return name
+
+
 # Synthetic blueprint for the player character — used by the behavior system
 # so creatures can be evaluated against the player at spawn time.
 PLAYER_BLUEPRINT = GameObjectBlueprint(
