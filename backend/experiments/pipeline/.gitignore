@@ -1,6 +1,0 @@
-# Regenerable experiment artifacts — all rebuilt by
-# `uv run python scripts/bench_pipeline.py --step 1.x`.
-# Commit PLAN.md, RESULTS.md, and llm_cache/ only.
-index.html
-bases/
-sprites/

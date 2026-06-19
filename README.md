@@ -1,5 +1,13 @@
 # Makeshift
 
+<p align="center">
+  <img src="godot/assets/prespawn/campfire.png" height="150" alt="campfire">
+  <img src="godot/assets/prespawn/guard_dog.png" height="150" alt="guard dog">
+  <img src="godot/assets/prespawn/wooden_crate.png" height="150" alt="wooden crate">
+  <img src="godot/assets/prespawn/combined_bone.png" height="150" alt="character carrying a bone">
+</p>
+<p align="center"><em>Every object is generated on the fly from a text prompt — sprite art (local FLUX) plus a physics blueprint (LLM).</em></p>
+
 "Scribblenauts meets Terraria" — a 2D physics sandbox where you type text descriptions to create game objects. An LLM generates physics blueprints via parallel 1-token calls, FLUX generates sprites locally, and objects interact through a unified behavior system with state propagation.
 
 ## Prerequisites
@@ -77,3 +85,9 @@ Eval cases in `backend/evals/fixtures/eval_suite.yaml`. Results in `backend/eval
 
 - [Design Documentation](docs/index.md) — architecture, engine primitives, creation pipeline, caching, LLM design patterns
 - [CLAUDE.md](CLAUDE.md) — developer quick-reference (conventions, gotchas, API endpoints)
+
+## License
+
+© 2026 Nat Bishop. All rights reserved. This repository is published for portfolio
+and evaluation purposes only; it is not licensed for reuse, redistribution, or
+derivative works.
